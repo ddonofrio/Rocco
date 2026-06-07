@@ -1,0 +1,57 @@
+# Sprite System
+
+The sprite system manages animated entities such as player characters, NPCs, and interactive props.
+
+## Files
+
+- `types.ts` - Sprite definitions, instances, frames, clips, action profiles, walk maps, motion, facing, depth, and system types.
+- `store.ts` - Definition validation and instance creation.
+- `system.ts` - Sprite state, movement, animation, walk maps, hit testing, and depth sorting.
+- `walkmap.ts` - Walk-map creation from image data or URI.
+- `auto-crop.ts` - Automatic frame extraction from transparent sprite sheets.
+- `pixi-renderer.ts` - PixiJS sprite renderer.
+- `index.ts` - Barrel export.
+
+## Core Concepts
+
+### Definition and Instance
+
+- A definition is a reusable blueprint with images, frames, animation clips, actions, motion profiles, and hit areas.
+- An instance is a live runtime object with position, visibility, motion state, animation state, and facing.
+- Load a definition with `engine.loadSpriteDefinition()`.
+- Create instances with `engine.createSpriteFromDefinition()`.
+
+### Actions
+
+An action profile groups:
+
+- A named action ID such as `walk`, `idle`, or `kick`.
+- Directional animation mappings.
+- Optional movement speed and playback rate.
+
+### Walk Maps
+
+Walk maps are alpha-mask images. Opaque pixels are walkable and transparent pixels are blocked.
+
+Use `loadRoccoSpriteWalkMapFromImage()`, register the map with the engine, and bind it to a sprite before using walk-map-constrained movement.
+
+### Depth Modes
+
+| Mode            | Description                                   |
+| --------------- | --------------------------------------------- |
+| `fixed`         | Static z-index                                |
+| `y-sort`        | Z-index follows Y position                    |
+| `baseline-sort` | Z-index follows the sprite baseline           |
+| `manual`        | Z-index is set explicitly by cartridge logic  |
+
+### Auto Crop
+
+`createRoccoSpriteAutoCroppedFrames()` extracts component frames from transparent sprite sheets. It is useful for assets such as Pelikan flight and feeding sheets.
+
+## Facing Directions
+
+The engine supports:
+
+```text
+right, down-right, down, down-left, left, up-left, up, up-right
+```

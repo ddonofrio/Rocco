@@ -1,0 +1,8 @@
+export const pierBackgroundAssetUrls = {
+  back: new URL('./assets/background-back.png', import.meta.url).href,
+  front: new URL('./assets/background-front.png', import.meta.url).href,
+} as const;
+
+export const pierCloudAssetUrl = new URL('./assets/cloud.png', import.meta.url).href;
+
+export const pierWalkMapAssetUrl = new URL('./assets/walking-path.png', import.meta.url).href;

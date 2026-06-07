@@ -1,0 +1,27 @@
+# Rocco Inventory
+
+This directory contains inventory state for the `rocco-default` cartridge.
+
+The inventory belongs to the cartridge. The engine provides generic slot-panel UI, slot movement, and cursor item payloads through `engine.video.gridMenus` and the cursor host.
+
+## Files
+
+- `types.ts` - Rocco inventory item shape.
+- `rocco-inventory.ts` - Inventory storage, item factories, slot updates, and grid-menu definition projection.
+- `rocco-inventory.test.ts` - Unit tests for inventory behavior.
+- `index.ts` - Barrel export.
+
+## Behavior
+
+- Items are stored in memory for the active cartridge run.
+- The default Pier inventory starts with `rocco-twenty-euros`.
+- Collected keys are added as `rocco-keys`.
+- Items keep a slot index so grid reorder operations can persist.
+- The inventory projects its current items into a reorderable 3x3 grid menu definition.
+- Pier exits check whether `rocco-keys` exists in this inventory.
+
+## UI Boundary
+
+Inventory code does not import PixiJS and does not draw directly. It returns a `RoccoGridMenuDefinition`, and the engine renders that definition through the generic grid menu subsystem.
+
+The console owns the cursor and only carries generic grid item payloads. Rocco inventory code owns item identity, slot persistence, labels, and game-specific use responses.

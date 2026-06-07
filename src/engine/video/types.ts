@@ -1,0 +1,45 @@
+import type { RoccoGraphicPlane, RoccoPlaneScene } from './planes';
+import type { RoccoPrimitiveSystem } from './primitives';
+import type { RoccoRenderLayer } from './render-layers';
+import type { RoccoSpriteSystem } from './sprites';
+import type { RoccoActionMenuSystem } from './action-menu';
+import type { RoccoGridMenuSystem } from './grid-menu';
+import type { RoccoSpriteMessageSystem } from './messages';
+import type { RoccoTitleSystem } from './titles';
+import type { RoccoDisplayProfile } from './display';
+import type { RoccoViewportHost } from './viewport';
+
+export interface RoccoVideoPlaneModule {
+  loadScene(scene: RoccoPlaneScene): void;
+  serializeScene(sceneId: string): RoccoPlaneScene;
+  updatePlane(sceneId: string, planeId: string, patch: Partial<RoccoGraphicPlane>): void;
+  resolvePlane(sceneId: string, planeId: string): RoccoGraphicPlane | undefined;
+}
+
+export interface RoccoVideoDisplayModule {
+  setProfile(profile: Partial<RoccoDisplayProfile>): void;
+  getProfile(): Partial<RoccoDisplayProfile>;
+}
+
+export interface RoccoVideoViewportModule {
+  setHost(host: RoccoViewportHost | undefined): void;
+  getHost(): RoccoViewportHost | undefined;
+}
+
+export interface RoccoVideoSystem {
+  planes: RoccoVideoPlaneModule;
+  sprites: RoccoSpriteSystem;
+  actionMenus: RoccoActionMenuSystem;
+  gridMenus: RoccoGridMenuSystem;
+  messages: RoccoSpriteMessageSystem;
+  primitives: RoccoPrimitiveSystem;
+  titles: RoccoTitleSystem;
+  display: RoccoVideoDisplayModule;
+  viewport: RoccoVideoViewportModule;
+
+  setRenderLayerOrder(layers: RoccoRenderLayer[]): void;
+  getRenderLayerOrder(): RoccoRenderLayer[];
+
+  update(deltaMs: number): void;
+  render(delta: number): void;
+}

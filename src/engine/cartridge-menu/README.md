@@ -1,0 +1,120 @@
+# Cartridge Menu
+
+The cartridge menu is the boot-time selection UI shown when multiple cartridges are available and no configured cartridge bypasses selection.
+
+## Files
+
+- `cartridge-menu.ts` - `RoccoCartridgeMenu`, the PixiJS menu UI and input handler.
+- `cartridge-menu-assets.ts` - Menu sound asset URIs.
+- `assets/insert-coin.mp3` - Insert coin sound played when the menu opens.
+
+## Role in Boot
+
+`RoccoCartridgeManager` creates the menu after cartridge manifests are discovered and before a cartridge is mounted.
+
+The menu resolves with:
+
+```typescript
+interface CartridgeMenuResult {
+  selectedId: string;
+  selectedLocale?: string;
+}
+```
+
+`selectedId` chooses the cartridge. `selectedLocale` is present when the selected cartridge has localized manifest metadata and the user chooses a locale.
+
+## Visual Design
+
+- Dark green monochrome palette.
+- LucasArts-inspired boot-screen layout.
+- Cartridge list on the left.
+- Detail panel on the right.
+- Uppercase monospaced labels.
+- Scanline overlay.
+- Mouse and keyboard support.
+
+## Cartridge List
+
+Each list item shows:
+
+- Title.
+- Publisher or author.
+- Genre.
+- Release year when present.
+- Version.
+
+The list supports scrolling when more cartridges exist than fit on screen.
+
+## Detail Panel
+
+The selected cartridge detail panel shows:
+
+- Title.
+- Description.
+- Publisher or author.
+- Year.
+- Genre.
+- Players.
+- Version.
+- Cartridge ID.
+- Tags.
+- Language radio buttons when localized metadata exists.
+- `LOAD` button.
+
+## Navigation
+
+- Arrow up and arrow down select cartridges.
+- Enter and Space load the selected cartridge.
+- Clicking a cartridge selects it.
+- Clicking scroll arrows moves the list window.
+- Clicking `LOAD` loads the selected cartridge.
+- Clicking a language radio button changes the selected locale and redraws localized metadata.
+
+Radio button hit areas are local to their option container. Keep the container position and hit-area coordinates aligned when changing layout.
+
+## Localization
+
+Manifests can include `localizations`, keyed by locale. The menu uses the selected locale to display localized manifest fields.
+
+The base manifest is treated as English by convention. Additional locale keys come from `manifest.localizations`.
+
+For `rocco-default`, the menu shows `EN` and `ES`. The selected value is persisted by `RoccoCartridgeManager` and passed to the cartridge through `RoccoCartridgeContext.locale`.
+
+Cartridges without `localizations` do not show language controls.
+
+## Layout Constants
+
+- Design resolution: `960 x 540`.
+- Header height: `90`.
+- Footer height: `52`.
+- Item height: `64`.
+- Visible items: calculated from available height.
+- Item margin: `6`.
+
+## Palette
+
+| Element          | Color     |
+| ---------------- | --------- |
+| Background       | `#0d110c` |
+| Selected item    | `#1f3c1b` |
+| Selected border  | `#5cb84a` |
+| Brand title      | `#8ecf6e` |
+| Item title       | `#d4ecc8` |
+| Detail labels    | `#4a6b42` |
+| Detail values    | `#b0c8a8` |
+| Scanlines        | `#000000` |
+
+## Usage
+
+```typescript
+const menu = new RoccoCartridgeMenu(app);
+const result = await menu.show(manifests, {
+  initialLocales: {
+    'rocco-default': 'en',
+  },
+});
+
+menu.dispose();
+```
+
+The menu owns its Pixi containers while displayed and removes them on disposal.

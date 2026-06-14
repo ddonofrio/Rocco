@@ -39,7 +39,7 @@ interface RoccoCartridgeContext {
 }
 ```
 
-`engine` is the only runtime API cartridge code should use. `locale` is set by the cartridge menu when a localized cartridge is loaded.
+`engine` is the only runtime interface cartridge code should use. Cartridges reach console capabilities through `RoccoEngine` and the subsystem handles it exposes, such as `engine.video`, `engine.audio`, `engine.effects`, `engine.jukebox`, and `engine.persistence`. `locale` is set by the cartridge menu when a localized cartridge is loaded.
 
 ## Cartridge Actions
 

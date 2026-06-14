@@ -1,8 +1,8 @@
 import type {
   RoccoGridMenuActivation,
+  RoccoGridMenuCarriedItem,
   RoccoGridMenuDefinition,
   RoccoGridMenuItem,
-  RoccoGridMenuItemUseActivation,
   RoccoGridMenuRenderable,
   RoccoGridMenuState,
   RoccoGridMenuSystem,
@@ -155,8 +155,15 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
     return this.activateItem(x, y);
   }
 
-  getCarriedItem(): RoccoGridMenuItem | undefined {
-    return this.carriedItem ? clone(this.carriedItem.item) : undefined;
+  getCarriedItem(): RoccoGridMenuCarriedItem | undefined {
+    if (!this.carriedItem) {
+      return undefined;
+    }
+
+    return {
+      definitionId: this.carriedItem.definitionId,
+      item: clone(this.carriedItem.item),
+    };
   }
 
   clearCarriedItem(): void {
@@ -164,24 +171,6 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
     if (this.activeState) {
       this.activeState.carriedItem = undefined;
     }
-  }
-
-  useCarriedItemOnTarget(
-    targetInstanceId: string,
-    targetDefinitionId: string,
-  ): RoccoGridMenuItemUseActivation | undefined {
-    if (!this.carriedItem) {
-      return undefined;
-    }
-
-    return {
-      kind: 'grid-menu-item-use',
-      definitionId: this.carriedItem.definitionId,
-      itemId: this.carriedItem.item.id,
-      item: clone(this.carriedItem.item),
-      targetInstanceId,
-      targetDefinitionId,
-    };
   }
 
   getRenderableMenu(): RoccoGridMenuRenderable | undefined {

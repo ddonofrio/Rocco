@@ -17,8 +17,9 @@ The grid menu system is a generic console UI capability for slot-based panels. I
 - The system keeps one active grid menu at a time.
 - Non-reorderable menus return an `activate` interaction when an enabled item is clicked.
 - Reorderable menus support `pick`, `place`, `swap`, and `carry` interactions.
-- Clicking outside a reorderable panel while carrying an item closes the panel and keeps a generic carried item payload for cursor use.
-- The system can create `RoccoGridMenuItemUseActivation` when the carried payload is used on a sprite target.
+- Clicking outside a reorderable panel while carrying an item closes the panel and keeps a generic carried payload with the source menu id and item data for cursor use.
+
+The console owns those generic interactions. A cartridge decides whether a carried payload represents inventory, crafting ingredients, puzzle tokens, or anything else, and it interprets target use through its own `scene-click` handling plus `engine.video.gridMenus.getCarriedItem()`.
 
 ## Cartridge Usage
 
@@ -42,4 +43,4 @@ engine.video.gridMenus.toggleMenu({
 });
 ```
 
-The engine renders the panel, moves items between slots, carries generic item payloads, and routes activations. The cartridge owns the meaning of each item and persists any game state implied by the activation.
+The engine renders the panel, moves items between slots, carries generic item payloads, and routes generic activations. The cartridge owns the meaning of each item and persists any game state implied by the activation or by a later scene click while something is being carried.

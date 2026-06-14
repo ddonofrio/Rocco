@@ -55,13 +55,9 @@ export interface RoccoGridMenuActivation {
   items: RoccoGridMenuItem[];
 }
 
-export interface RoccoGridMenuItemUseActivation {
-  kind: 'grid-menu-item-use';
+export interface RoccoGridMenuCarriedItem {
   definitionId: string;
-  itemId: string;
   item: RoccoGridMenuItem;
-  targetInstanceId: string;
-  targetDefinitionId: string;
 }
 
 export interface RoccoGridMenuSystem {
@@ -72,11 +68,7 @@ export interface RoccoGridMenuSystem {
   setHoverAt(x: number, y: number): boolean;
   getHoveredItem(): RoccoGridMenuItem | undefined;
   activateAt(x: number, y: number): RoccoGridMenuActivation | undefined;
-  getCarriedItem(): RoccoGridMenuItem | undefined;
+  getCarriedItem(): RoccoGridMenuCarriedItem | undefined;
   clearCarriedItem(): void;
-  useCarriedItemOnTarget(
-    targetInstanceId: string,
-    targetDefinitionId: string,
-  ): RoccoGridMenuItemUseActivation | undefined;
   getRenderableMenu(): RoccoGridMenuRenderable | undefined;
 }

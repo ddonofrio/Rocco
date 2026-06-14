@@ -1,6 +1,6 @@
 # Jukebox
 
-The jukebox manages continuous background music and ambient playlists.
+The jukebox manages continuous background music and ambient playlists through `engine.jukebox`.
 
 ## Files
 
@@ -15,7 +15,7 @@ The jukebox manages continuous background music and ambient playlists.
 - Auto-mix mode that detects non-silent segments.
 - Crossfades between segments.
 - Master volume and per-track volume.
-- Shared browser audio context with the sound system.
+- Runtime helpers for `isPlaying()` and `getCurrentTrack()`.
 
 ## Cartridge Usage
 
@@ -40,9 +40,13 @@ engine.jukebox.setVolume(0.5);
 engine.jukebox.stopPlaylist();
 ```
 
+`engine.jukebox.unregisterPlaylist(id)` removes a playlist, `engine.jukebox.isPlaying()` reports current playback state, and `engine.jukebox.getCurrentTrack()` returns the active track id when one is playing.
+
 ## Auto-Mix
 
 Auto-mix analyzes each track, finds non-silent audio segments, skips segments shorter than the configured minimum, and schedules crossfaded playback between usable segments.
+
+`auto-mix` is the only supported mix mode in the current implementation.
 
 ## Configuration
 
@@ -51,3 +55,8 @@ Auto-mix analyzes each track, finds non-silent audio segments, skips segments sh
 - `minSegmentDurationMs` filters short segments.
 - Track `volume` controls individual track loudness.
 - Playlist `globalVolume` controls the whole playlist.
+
+## Runtime Notes
+
+- The jukebox keeps its own browser `AudioContext`.
+- Input routing unlocks the jukebox and the one-shot sound system separately on first pointer interaction.

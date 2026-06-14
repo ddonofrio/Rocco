@@ -1,11 +1,11 @@
-# Video System
+# Video SDK
 
-The video system is the visual rendering layer of the ROCCO console. It keeps cartridge-facing state APIs separate from PixiJS renderer implementations.
+The video SDK is the visual rendering layer of the ROCCO console. It keeps cartridge-facing state modules separate from PixiJS renderer implementations.
 
 ## Key Files
 
 - `video-system.ts` - `RoccoRuntimeVideoSystem`, the top-level visual facade.
-- `types.ts` - Video system interface types.
+- `types.ts` - Video SDK module and system interface types.
 - `render-layers.ts` - Render layer definitions and z-order.
 - `renderer.ts` - Renderer mount, unmount, render, and sync contract.
 - `video-scene.ts` - Lightweight video scene descriptor.
@@ -50,4 +50,12 @@ display.profile      90
 - SDK modules manage state and domain rules.
 - Pixi renderer modules sync SDK state into Pixi containers.
 - Rendering is initiated by `GameRuntime`; subsystems do not self-render.
-- Cartridges should call engine/video APIs and avoid Pixi renderer internals.
+- Cartridges should call `engine.video` SDK modules and avoid Pixi renderer internals.
+
+## Cartridge-Facing Entry Points
+
+- `engine.video.preloadPlaneScene(scene)` and `engine.video.preloadSpriteDefinition(definition)` preload video assets.
+- Use `engine.loadPlaneScene(scene)` through the engine interface when replacing the active scene so runtime bookkeeping stays in sync.
+- `engine.video.planes` handles plane-level inspection and mutation after a scene is active.
+- `engine.video.sprites`, `actionMenus`, `gridMenus`, `messages`, `primitives`, `titles`, and `display` expose cartridge-facing visual capabilities.
+- `engine.video.render(0)` can be used to force an immediate visual sync after scripted changes.

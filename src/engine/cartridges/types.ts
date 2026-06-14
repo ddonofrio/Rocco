@@ -1,11 +1,19 @@
 import type { RoccoEngine } from '../engine-api';
 import type { RoccoActionMenuActivation } from '../video/action-menu';
-import type { RoccoGridMenuActivation, RoccoGridMenuItemUseActivation } from '../video/grid-menu';
+import type { RoccoGridMenuActivation } from '../video/grid-menu';
+
+export interface RoccoSceneClickAction {
+  kind: 'scene-click';
+  sceneX: number;
+  sceneY: number;
+  targetInstanceId?: string;
+  targetDefinitionId?: string;
+}
 
 export type RoccoCartridgeAction =
   | RoccoActionMenuActivation
-  | RoccoGridMenuActivation
-  | RoccoGridMenuItemUseActivation;
+  | RoccoSceneClickAction
+  | RoccoGridMenuActivation;
 
 export interface RoccoCartridgeManifest {
   id: string;

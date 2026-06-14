@@ -39,11 +39,11 @@ Rocco transitions through edge connectors. When his ground point enters an exit 
 - The bait bucket can be examined, grabbed, kicked, and dropped.
 - The Pelikan reacts to Rocco and can enter a feeding sequence after the bait bucket is dropped.
 - The keys are revealed through the Pier Middle sequence and can be collected.
-- The inventory starts with a 20€ bill and later stores collected keys.
+- The inventory starts with a 20 EUR bill and later stores collected keys.
 - Clicking Rocco opens a radial menu with self-talk and inventory options.
 - The inventory option toggles a reorderable 3x3 grid menu populated from Rocco cartridge inventory state.
 - Picking an inventory item can carry it on the console cursor for generic use attempts on sprites.
-- Keys and the 20€ bill have localized failed-use responses for the bait bucket and the Pelikan.
+- Keys and the 20 EUR bill have localized failed-use responses for the bait bucket and the Pelikan.
 - Pier Middle exits require keys in Rocco inventory. The gate is silent.
 
 ## Localization
@@ -76,7 +76,7 @@ assets/
   props/
     bait-bucket/        Normal and dropped bait bucket images
     keys/               Keys image and defeat sound
-    money/              20€ bill image
+    money/              20 EUR bill image
   sounds/               Shared cartridge sounds
 ```
 

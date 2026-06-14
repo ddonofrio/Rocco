@@ -65,7 +65,7 @@ describe('RoccoGridMenuSystemSDK', () => {
       itemId: 'keys',
       carriedItem: { id: 'keys' },
     });
-    expect(system.getCarriedItem()?.id).toBe('keys');
+    expect(system.getCarriedItem()?.item.id).toBe('keys');
     expect(system.getRenderableMenu()?.definition.items.map((item) => item.id)).toEqual(['money']);
 
     expect(system.activateAt(175, 120)).toMatchObject({
@@ -73,7 +73,7 @@ describe('RoccoGridMenuSystemSDK', () => {
       itemId: 'keys',
       carriedItem: { id: 'money' },
     });
-    expect(system.getCarriedItem()?.id).toBe('money');
+    expect(system.getCarriedItem()?.item.id).toBe('money');
 
     expect(system.activateAt(120, 175)).toMatchObject({
       interaction: 'place',
@@ -89,7 +89,7 @@ describe('RoccoGridMenuSystemSDK', () => {
     );
   });
 
-  it('carries a picked item outside the menu and creates target use activations', () => {
+  it('carries a picked item outside the menu as a generic payload', () => {
     const system = new RoccoGridMenuSystemSDK();
     system.openMenu({
       id: 'inventory',
@@ -109,13 +109,9 @@ describe('RoccoGridMenuSystemSDK', () => {
     });
 
     expect(system.isOpen()).toBe(false);
-    expect(system.getCarriedItem()).toMatchObject({ id: 'keys', imageUri: '/keys.png' });
-    expect(system.useCarriedItemOnTarget('bucket-main', 'bucket-definition')).toMatchObject({
-      kind: 'grid-menu-item-use',
+    expect(system.getCarriedItem()).toMatchObject({
       definitionId: 'inventory',
-      itemId: 'keys',
-      targetInstanceId: 'bucket-main',
-      targetDefinitionId: 'bucket-definition',
+      item: { id: 'keys', imageUri: '/keys.png' },
     });
   });
 

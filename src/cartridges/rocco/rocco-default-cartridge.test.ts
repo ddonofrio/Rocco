@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { RoccoCartridgeAction } from '../../engine/cartridges';
 import type { RoccoEngine } from '../../engine/engine-api';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../engine/video/planes';
 import type {
@@ -17,7 +18,10 @@ import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../engine/video/action-menu';
-import type { RoccoGridMenuDefinition, RoccoGridMenuItemUseActivation } from '../../engine/video/grid-menu';
+import type {
+  RoccoGridMenuCarriedItem,
+  RoccoGridMenuDefinition,
+} from '../../engine/video/grid-menu';
 import type { RoccoPrimitive } from '../../engine/video/primitives';
 import type { RoccoTitleMessage } from '../../engine/video/titles';
 import type { RoccoDisplayProfile } from '../../engine/video/display';
@@ -225,20 +229,28 @@ function createInventoryWithKeys(): RoccoInventory {
   return inventory;
 }
 
-function makeInventoryUseActivation(
-  itemId: string,
-  targetInstanceId: string,
-): RoccoGridMenuItemUseActivation {
-  return {
-    kind: 'grid-menu-item-use',
+function setCarriedInventoryItem(state: EngineMockState, itemId: string): void {
+  state.carriedGridMenuItem = {
     definitionId: ROCCO_INVENTORY_MENU_ID,
-    itemId,
     item: {
       id: itemId,
       label: itemId,
     },
+  };
+}
+
+function makeSceneClickActivation(
+  sceneX: number,
+  sceneY: number,
+  targetInstanceId?: string,
+  targetDefinitionId?: string,
+): Extract<RoccoCartridgeAction, { kind: 'scene-click' }> {
+  return {
+    kind: 'scene-click',
+    sceneX,
+    sceneY,
     targetInstanceId,
-    targetDefinitionId: '',
+    targetDefinitionId,
   };
 }
 
@@ -337,6 +349,8 @@ interface EngineMockState {
   openedGridMenuDefinitions: RoccoGridMenuDefinition[];
   toggledGridMenuDefinitions: RoccoGridMenuDefinition[];
   closedGridMenuCount: number;
+  carriedGridMenuItem: RoccoGridMenuCarriedItem | undefined;
+  clearedCarriedGridMenuCount: number;
   addedPrimitives: string[];
   removedPrimitives: string[];
   addedTitles: string[];
@@ -671,13 +685,11 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
           return undefined;
         },
         getCarriedItem() {
-          return undefined;
+          return state.carriedGridMenuItem;
         },
         clearCarriedItem() {
-          // noop
-        },
-        useCarriedItemOnTarget() {
-          return undefined;
+          state.carriedGridMenuItem = undefined;
+          state.clearedCarriedGridMenuCount += 1;
         },
         getRenderableMenu() {
           return undefined;
@@ -934,6 +946,8 @@ function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState 
     openedGridMenuDefinitions: [],
     toggledGridMenuDefinitions: [],
     closedGridMenuCount: 0,
+    carriedGridMenuItem: undefined,
+    clearedCarriedGridMenuCount: 0,
     addedPrimitives: [],
     removedPrimitives: [],
     addedTitles: [],
@@ -1034,7 +1048,7 @@ describe('RoccoDefaultCartridge', () => {
     );
     expect(state.movedSpriteActions).toEqual([DEFAULT_SPRITE_RUN_ACTION_ID]);
     expect(listPlayedSpriteAnimationsFor(state, DEFAULT_SPRITE_INSTANCE_ID)).toEqual([]);
-    expect(state.inputEnabled).toBe(false);
+    expect(state.inputEnabled).toBe(true);
     expect(state.displayProfileCalls).toBe(1);
     expect(state.statusMessages[0]?.includes(cartridge.manifest.title)).toBe(true);
   });
@@ -1327,21 +1341,28 @@ describe('RoccoDefaultCartridge', () => {
     });
 
     await manager.mount(engine);
+    setCarriedInventoryItem(state, ROCCO_INVENTORY_KEYS_ITEM_ID);
     manager.handleAction(
-      makeInventoryUseActivation(
-        ROCCO_INVENTORY_KEYS_ITEM_ID,
+      makeSceneClickActivation(
+        320,
+        240,
         DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
+        DEFAULT_BAIT_BUCKET_SPRITE_DEFINITION_ID,
       ),
     );
+    setCarriedInventoryItem(state, ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID);
     manager.handleAction(
-      makeInventoryUseActivation(
-        ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
+      makeSceneClickActivation(
+        320,
+        240,
         DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
+        DEFAULT_PELIKAN_SPRITE_DEFINITION_ID,
       ),
     );
 
     expect(state.spriteMessages.some((message) => message.includes('not locked'))).toBe(true);
     expect(state.spriteMessages.some((message) => message.includes('paying the Pelikan'))).toBe(true);
+    expect(state.clearedCarriedGridMenuCount).toBe(2);
   });
 
   it('transitions from Pier Middle east to Pier Beginning after Rocco has the keys', async () => {
@@ -1462,7 +1483,7 @@ describe('RoccoDefaultCartridge', () => {
     expect(state.registeredActionMenus).toContain(DEFAULT_FEEDING_LOOK_ACTION_MENU_ID);
   });
 
-  it('plays Rocco intro as a non-cancelable thought and help line', async () => {
+  it('plays the full Rocco intro thought and help line when uninterrupted', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
     const cartridge = new RoccoDefaultCartridge();
@@ -1488,6 +1509,45 @@ describe('RoccoDefaultCartridge', () => {
       `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_PAUSE_X},${DEFAULT_SPRITE_Y_VALUES[0]}`,
     ]);
     expect(listPlayedSpriteAnimationsFor(state, DEFAULT_SPRITE_INSTANCE_ID)).toEqual([]);
+  });
+
+  it('cancels the Rocco intro sequence on scene click before any intro line plays', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const cartridge = new RoccoDefaultCartridge();
+
+    await cartridge.mount({ engine });
+    cartridge.handleAction(makeSceneClickActivation(320, 240));
+    state.isSpriteMovingValue = false;
+    cartridge.update(16);
+    cartridge.update(6400);
+    cartridge.update(5400);
+
+    expect(state.spriteMessages).toEqual([]);
+    expect(state.playedSpriteActionDirections).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:down`,
+    );
+  });
+
+  it('clears the intro thought line and does not continue after a scene click cancellation', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const cartridge = new RoccoDefaultCartridge();
+
+    await cartridge.mount({ engine });
+    state.isSpriteMovingValue = false;
+    cartridge.update(16);
+    cartridge.handleAction(makeSceneClickActivation(320, 240));
+    cartridge.update(6400);
+    cartridge.update(5400);
+
+    expect(state.spriteMessages).toEqual([]);
+    expect(state.playedSpriteActionDirections).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:up`,
+    );
+    expect(state.playedSpriteActionDirections).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:down`,
+    );
   });
 
   it('moves the default cloud with vertical drift', async () => {

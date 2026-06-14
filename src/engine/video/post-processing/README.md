@@ -24,6 +24,8 @@ The Pixi plane renderer:
 
 The final clip lets water shimmer without sliding over static objects such as pier planks or wooden posts.
 
+This module is not a direct cartridge-facing SDK surface. Cartridges opt in by configuring plane metadata; the plane renderer applies the effect.
+
 ## Tuning
 
 - `colors` defines the water color-key palette.

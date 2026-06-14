@@ -1,5 +1,6 @@
 import type { RoccoEngine } from '../../../../engine/engine-api';
-import type { RoccoCartridgeAction } from '../../../../engine/cartridges';
+import type { RoccoCartridgeAction, RoccoSceneClickAction } from '../../../../engine/cartridges';
+import type { RoccoGridMenuCarriedItem } from '../../../../engine/video/grid-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
 import type { RoccoPoint } from '../../../../engine/video/sprites';
 import {
@@ -56,10 +57,6 @@ interface RoccoPierConnection {
 }
 
 type RoccoGridMenuCartridgeAction = Extract<RoccoCartridgeAction, { kind: 'grid-menu' }>;
-type RoccoGridMenuItemUseCartridgeAction = Extract<
-  RoccoCartridgeAction,
-  { kind: 'grid-menu-item-use' }
->;
 
 export interface RoccoPierLevelManagerMountResult {
   level: RoccoPierLevel;
@@ -187,13 +184,19 @@ export class RoccoPierLevelManager {
   }
 
   handleAction(activation: RoccoCartridgeAction): void {
-    if (isGridMenuCartridgeAction(activation)) {
-      this.handleInventoryGridAction(activation);
+    if (isSceneClickCartridgeAction(activation)) {
+      const carriedItem = this.engine?.video.gridMenus.getCarriedItem();
+      if (carriedItem?.definitionId === ROCCO_INVENTORY_MENU_ID) {
+        this.handleInventorySceneClick(activation, carriedItem);
+        return;
+      }
+
+      this.activeLevel?.handleSceneClick?.(activation);
       return;
     }
 
-    if (isGridMenuItemUseCartridgeAction(activation)) {
-      this.handleInventoryItemUse(activation);
+    if (isGridMenuCartridgeAction(activation)) {
+      this.handleInventoryGridAction(activation);
       return;
     }
 
@@ -369,19 +372,28 @@ export class RoccoPierLevelManager {
     }
   }
 
-  private handleInventoryItemUse(activation: RoccoGridMenuItemUseCartridgeAction): void {
-    if (!this.engine || activation.definitionId !== ROCCO_INVENTORY_MENU_ID) {
+  private handleInventorySceneClick(
+    activation: RoccoSceneClickAction,
+    carriedItem: RoccoGridMenuCarriedItem,
+  ): void {
+    if (!this.engine) {
+      return;
+    }
+
+    if (!activation.targetInstanceId) {
+      this.engine.video.gridMenus.clearCarriedItem();
+      this.engine.video.render(0);
       return;
     }
 
     this.engine.video.messages.think(
       DEFAULT_SPRITE_INSTANCE_ID,
-      this.resolveInventoryItemUseLines(activation),
+      this.resolveInventoryItemUseLines(carriedItem.item.id, activation.targetInstanceId),
       {
         lineSelection: {
           mode: 'random',
           count: 1,
-          historyKey: `inventory-use:${activation.itemId}:${activation.targetInstanceId}`,
+          historyKey: `inventory-use:${carriedItem.item.id}:${activation.targetInstanceId}`,
           avoidImmediateRepeat: true,
         },
         ttlMs: 5200,
@@ -391,23 +403,21 @@ export class RoccoPierLevelManager {
     this.engine.video.render(0);
   }
 
-  private resolveInventoryItemUseLines(
-    activation: RoccoGridMenuItemUseCartridgeAction,
-  ): string[] {
-    if (activation.targetInstanceId === DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID) {
-      if (activation.itemId === ROCCO_INVENTORY_KEYS_ITEM_ID) {
+  private resolveInventoryItemUseLines(itemId: string, targetInstanceId: string): string[] {
+    if (targetInstanceId === DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID) {
+      if (itemId === ROCCO_INVENTORY_KEYS_ITEM_ID) {
         return this.localization.text.inventory.keysOnBaitBucketLines;
       }
-      if (activation.itemId === ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID) {
+      if (itemId === ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID) {
         return this.localization.text.inventory.moneyOnBaitBucketLines;
       }
     }
 
-    if (activation.targetInstanceId === DEFAULT_PELIKAN_SPRITE_INSTANCE_ID) {
-      if (activation.itemId === ROCCO_INVENTORY_KEYS_ITEM_ID) {
+    if (targetInstanceId === DEFAULT_PELIKAN_SPRITE_INSTANCE_ID) {
+      if (itemId === ROCCO_INVENTORY_KEYS_ITEM_ID) {
         return this.localization.text.inventory.keysOnPelikanLines;
       }
-      if (activation.itemId === ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID) {
+      if (itemId === ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID) {
         return this.localization.text.inventory.moneyOnPelikanLines;
       }
     }
@@ -431,8 +441,8 @@ function isGridMenuCartridgeAction(
   return 'kind' in activation && activation.kind === 'grid-menu';
 }
 
-function isGridMenuItemUseCartridgeAction(
+function isSceneClickCartridgeAction(
   activation: RoccoCartridgeAction,
-): activation is RoccoGridMenuItemUseCartridgeAction {
-  return 'kind' in activation && activation.kind === 'grid-menu-item-use';
+): activation is RoccoSceneClickAction {
+  return 'kind' in activation && activation.kind === 'scene-click';
 }

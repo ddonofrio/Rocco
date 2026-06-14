@@ -81,7 +81,7 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 - Vitest runs with the configuration in `vitest.config.ts`.
 - Tests that instantiate Pixi asset loading should mock `pixi.js` `Assets.load`.
 - jsdom can print canvas-related limitations after the test summary. Treat the Vitest summary and process exit code as authoritative.
-- Test mocks mirror the engine API. When the engine API gains a required member, nearby mocks usually need the same member.
+- Test mocks mirror the engine interface and exposed subsystem contracts. When a required member changes, nearby mocks usually need the same member.
 
 ## Git Status Notes
 
@@ -108,7 +108,7 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 - `RoccoPierLevelManager` owns level registration, transitions, entry placement, status text, and per-level state retention.
 - Pier Middle east and west exits require keys in the Rocco cartridge inventory. The gate is silent.
 - `rocco-default` supports English and Spanish localization through `src/cartridges/rocco/localization`.
-- Rocco inventory is cartridge state. The engine provides generic reorderable slot-panel UI and generic cursor item payloads through `engine.video.gridMenus` and the cursor host.
+- Rocco inventory is cartridge state. The engine provides generic reorderable slot-panel UI and generic cursor item payloads through `engine.video.gridMenus` and the cursor subsystem.
 
 ## Water Rendering Notes
 
@@ -126,7 +126,7 @@ If water appears over wooden posts or pier edges, inspect the color mask, tolera
 ## Documentation Workflow
 
 - Read `AGENTS.md` before editing.
-- Read `README-AGENT.md` for architecture and engine APIs.
+- Read `README-AGENT.md` for architecture, engine interfaces, and subsystem SDKs.
 - Read the README chain for the target folder.
 - Keep documentation in present tense and focused on current behavior.
 - Do not add dated notes, historical edit logs, or narrative descriptions of edits.

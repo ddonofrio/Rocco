@@ -4,7 +4,7 @@ The engine is the core ROCCO console runtime. It owns rendering, audio, input, e
 
 ## Key Files
 
-- `engine-api.ts` - `RoccoEngine`, the cartridge-facing API.
+- `engine-api.ts` - `RoccoEngine`, the cartridge-facing interface and subsystem entry point.
 - `runtime.ts` - `GameRuntime`, the subsystem owner and game-loop coordinator.
 - `input-handler.ts` - Pointer, cursor, action-menu, hover, and input-blocking logic.
 - `cartridge-manager.ts` - Cartridge discovery, menu selection, locale selection, and lifecycle.
@@ -26,7 +26,7 @@ The engine is the core ROCCO console runtime. It owns rendering, audio, input, e
 - `GameRuntime` creates the Pixi application and engine subsystems.
 - `RoccoCartridgeManager` selects and mounts a cartridge.
 - Cartridges receive `RoccoCartridgeContext` with `engine` and optional `locale`.
-- Cartridge code uses `RoccoEngine`; the engine keeps PixiJS and subsystem internals behind that API.
+- Cartridge code uses `RoccoEngine`; the engine keeps PixiJS and subsystem internals behind that interface and the subsystem SDKs it exposes.
 - The render loop runs effects, video state, cartridge logic, and renderer sync in order.
 
 ## Reading Next

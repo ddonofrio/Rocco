@@ -1,6 +1,6 @@
 # ROCCO Agent Reference
 
-This document is written for AI coding agents. It explains the ROCCO console architecture, the cartridge model, the engine API surface, and the documentation workflow expected in this repository.
+This document is written for AI coding agents. It explains the ROCCO console architecture, the cartridge model, the engine interface, the subsystem SDK surfaces, and the documentation workflow expected in this repository.
 
 ## Operating Rules
 
@@ -8,7 +8,7 @@ This document is written for AI coding agents. It explains the ROCCO console arc
 - Read `AGENTS.md`, this file, `DEVELOPMENT.md`, and the relevant directory READMEs before editing.
 - If the context window is large, read all project-owned README files before touching code.
 - Keep documentation as present-tense reference material. Do not write dated notes, historical edit logs, or edit narratives.
-- Use the `RoccoEngine` API from cartridge code. Do not import PixiJS or internal engine renderers into cartridges.
+- Use the `RoccoEngine` interface and exposed subsystem SDKs from cartridge code. Do not import PixiJS or internal engine renderers into cartridges.
 - Remove dead code. Do not leave unused imports, variables, or functions.
 - Match nearby naming, file layout, and test style before introducing new patterns.
 
@@ -18,7 +18,7 @@ Use documentation in layers:
 
 1. `README.md` gives the human overview.
 2. `AGENTS.md` gives repository rules and reading routes.
-3. `README-AGENT.md` gives architecture and API concepts.
+3. `README-AGENT.md` gives architecture, interface, and SDK concepts.
 4. `DEVELOPMENT.md` gives commands, validation, and Windows workflow notes.
 5. `src/engine/**/README.md` files explain engine systems.
 6. `src/cartridges/**/README.md` files explain cartridge content and game rules.
@@ -35,13 +35,13 @@ After reading, inspect the closest existing implementation and tests. Prefer `rg
 
 ## Project Overview
 
-ROCCO is a browser-based retro game console emulator built with TypeScript, PixiJS, and Vite. It runs cartridges: self-contained game modules that plug into a stable engine API.
+ROCCO is a browser-based retro game console emulator built with TypeScript, PixiJS, and Vite. It runs cartridges: self-contained game modules that plug into a stable engine interface and subsystem SDKs.
 
 The key metaphor is:
 
 - The engine is the console runtime.
 - Cartridges are games.
-- The cartridge API is the slot between them.
+- The `RoccoEngine` interface and subsystem SDKs are the slot between them.
 
 The engine provides capabilities such as rendering, audio, input, effects, persistence, and lifecycle management. Cartridges provide content and game logic.
 
@@ -153,9 +153,18 @@ export interface RoccoCartridgeContext {
 
 Cartridges that do not localize content can ignore `locale`.
 
-## RoccoEngine API Surface
+## RoccoEngine Interface
 
 The full interface lives in `src/engine/engine-api.ts`.
+
+`RoccoEngine` is the cartridge entry point. It exposes:
+
+- Subsystem handles: `video`, `audio`, `jukebox`, `effects`, and `persistence`.
+- Scene management: `loadPlaneScene(scene)` and `serializePlaneScene(sceneId)`.
+- Player selection: `setPlayerSprite(id | null)` and `getPlayerSprite()`.
+- Input control: `setInputEnabled(enabled)` and `isInputEnabled()`.
+- Composition control: `beginComposition()` and `endComposition()`.
+- Status and logging: `setStatus(message)` and `log(channel, message)`.
 
 ### Composition
 
@@ -179,68 +188,91 @@ engine.setInputEnabled(true);
 
 Always re-enable input after a sequence completes or fails.
 
-### Scene Management
+### Scene Management and Persistence
 
-- `loadPlaneScene(scene)` loads a graphic scene.
-- `preloadPlaneScene(scene)` preloads plane assets.
-- `serializePlaneScene(sceneId)` serializes current plane state.
-- `savePlaneScene(scene)` persists a scene.
-- `loadPlaneSceneRecord(sceneId)` loads a persisted scene.
+- `loadPlaneScene(scene)` replaces the active graphic scene and keeps runtime scene bookkeeping in sync.
+- `serializePlaneScene(sceneId)` snapshots the current scene state.
+- `engine.persistence.savePlaneScene(scene)` persists a scene.
+- `engine.persistence.loadPlaneSceneRecord(sceneId)` loads a persisted scene.
 
-### Sprites
+## Audio, Jukebox, and Effects SDKs
 
-- `loadSpriteDefinition(definition)` registers a sprite blueprint.
-- `createSpriteFromDefinition(definitionId, options?)` creates an instance.
-- `setSpritePosition(id, x, y)` teleports an instance.
-- `moveSpriteTo(id, x, y, options?)` moves directly.
-- `goSpriteTo(id, x, y, options?)` moves through the bound walk map.
-- `playSpriteAction(id, actionId, options?)` plays a directional action profile.
-- `playSpriteAnimation(id, animationId, options?)` plays an animation clip.
-- `setPlayerSprite(id | null)` selects the click-to-walk player sprite.
+Cartridges reach these capabilities through subsystem handles on `engine`.
 
-### Audio and Jukebox
-
-- `registerSound(definition)` registers a sound asset.
-- `preloadSound(id)` loads a sound buffer.
-- `playSound(id, options?)` plays a sound.
-- `stopSound(id)` stops active instances of a sound.
-- `jukebox.registerPlaylist(playlist)` registers background music.
-- `jukebox.playPlaylist(id)` starts a playlist.
-- `jukebox.stopPlaylist()` stops the active playlist.
-- `jukebox.setVolume(volume)` sets master jukebox volume.
-
-### Effects
-
-- `addEffect(effect)` registers and starts a per-tick effect.
-- `removeEffect(effectId)` removes an effect.
+- `engine.audio.registerSound(definition)` registers a sound asset.
+- `engine.audio.preloadSound(id)` loads a sound buffer.
+- `engine.audio.playSound(id, options?)` plays a sound.
+- `engine.audio.stopSound(id)` stops active instances of a sound.
+- `engine.jukebox.registerPlaylist(playlist)` registers background music.
+- `engine.jukebox.playPlaylist(id)` starts a playlist.
+- `engine.jukebox.stopPlaylist()` stops the active playlist.
+- `engine.jukebox.setVolume(volume)` sets master jukebox volume.
+- `engine.effects.add(effect)` registers and starts a per-tick effect.
+- `engine.effects.remove(effectId)` removes an effect.
+- `engine.effects.update(effectId, patch)` edits an active effect.
+- `engine.effects.enable(effectId)` and `engine.effects.disable(effectId)` toggle an effect.
 
 The built-in `auto-scroll` effect targets graphic planes.
 
+## Video SDK
+
+The cartridge-facing video SDK lives under `engine.video`. `RoccoRuntimeVideoSystem` exposes subsystem modules plus asset-preload helpers used by cartridges.
+
+### Video Preloading
+
+- `engine.video.preloadPlaneScene(scene)` preloads plane assets before the active scene is switched through `engine.loadPlaneScene(scene)`.
+- `engine.video.preloadSpriteDefinition(definition)` preloads a single sprite definition and its assets.
+- `engine.video.preloadSpriteDefinitions(definitions)` preloads multiple sprite definitions.
+
+### Graphic Planes
+
+- Use `engine.loadPlaneScene(scene)` to replace the active scene.
+- Use `engine.serializePlaneScene(sceneId)` to snapshot a scene through the runtime.
+- Use `engine.video.planes.updatePlane(sceneId, planeId, patch)` for plane-level mutations.
+- Use `engine.video.planes.resolvePlane(sceneId, planeId)` to inspect a live plane definition.
+
+### Sprites
+
+- `engine.video.sprites.loadSpriteDefinition(definition)` registers a sprite blueprint.
+- `engine.video.sprites.createSpriteFromDefinition(definitionId, options?)` creates an instance.
+- `engine.video.sprites.setPosition(id, x, y)` teleports an instance.
+- `engine.video.sprites.moveTo(id, x, y, options?)` moves directly.
+- `engine.video.sprites.goTo(id, x, y, options?)` moves through the bound walk map.
+- `engine.video.sprites.playAction(id, actionId, options?)` plays a directional action profile.
+- `engine.video.sprites.playAnimation(id, animationId, options?)` plays an animation clip.
+- `engine.video.sprites.registerWalkMap(walkMap)` registers a walk map.
+- `engine.video.sprites.bindToWalkMap(id, binding)` binds a walk map to an instance.
+- `setPlayerSprite(id | null)` selects the click-to-walk player sprite through the engine interface.
+
 ### UI and Feedback
 
-- `registerActionMenu(definition)` registers a radial action menu.
-- `unregisterActionMenu(id)` removes a radial action menu.
-- `video.gridMenus.openMenu(definition)` opens a generic slot grid panel.
-- `video.gridMenus.toggleMenu(definition)` toggles a generic slot grid panel.
-- `video.gridMenus.closeMenu()` closes the active generic slot grid panel.
-- `video.gridMenus.getCarriedItem()` returns the generic grid item currently attached to the cursor.
-- `video.gridMenus.clearCarriedItem()` clears the carried grid item payload.
-- `video.gridMenus.useCarriedItemOnTarget(targetInstanceId, targetDefinitionId)` creates a generic item-use activation.
-- `viewportHost.setCursorAttachment(attachment)` renders an image payload as the console cursor.
-- `saySprite(id, text, options?)` shows speech.
-- `thinkSprite(id, text, options?)` shows thought text.
-- `addTitle(message)` shows a title overlay.
-- `removeTitle(id)` removes a title overlay.
-- `addPrimitive(primitive)` draws debug geometry.
-- `removePrimitive(id)` removes debug geometry.
-- `setStatus(message)` writes the status line.
-- `log(channel, message)` writes a debug log entry.
+- `engine.video.actionMenus.registerMenu(definition)` registers a radial action menu.
+- `engine.video.actionMenus.unregisterMenu(id)` removes a radial action menu.
+- `engine.video.actionMenus.closeMenu()` closes the active radial action menu.
+- `engine.video.gridMenus.openMenu(definition)` opens a generic slot grid panel.
+- `engine.video.gridMenus.toggleMenu(definition)` toggles a generic slot grid panel.
+- `engine.video.gridMenus.closeMenu()` closes the active generic slot grid panel.
+- `engine.video.gridMenus.getCarriedItem()` returns the source menu id and generic grid item currently attached to the cursor.
+- `engine.video.gridMenus.clearCarriedItem()` clears the carried grid item payload.
+- `engine.video.messages.showMessage(message)` shows a fully specified sprite-anchored message.
+- `engine.video.messages.say(id, text, options?)` shows speech.
+- `engine.video.messages.think(id, text, options?)` shows thought text.
+- `engine.video.messages.clearMessages()` clears active sprite messages.
+- `engine.video.titles.addTitle(message)` shows a title overlay.
+- `engine.video.titles.removeTitle(id)` removes a title overlay.
+- `engine.video.primitives.addPrimitive(primitive)` draws debug geometry.
+- `engine.video.primitives.removePrimitive(id)` removes debug geometry.
+- `engine.setStatus(message)` writes the status line.
+- `engine.log(channel, message)` writes a debug log entry.
 
-### Display
+### Display and Immediate Sync
 
-- `setDisplayProfile(profile)` applies the display profile such as CRT overlay settings.
+- `engine.video.display.setProfile(profile)` applies the display profile such as CRT overlay settings.
+- `engine.video.render(0)` forces an immediate sync after scripted UI or choreography changes.
 
-## Video System
+The cursor attachment is a console capability owned by input and viewport systems. Cartridge code does not call `viewportHost` directly.
+
+## Video SDK Architecture
 
 Render layers define drawing order:
 
@@ -259,13 +291,13 @@ Render layers define drawing order:
 | `ui`                 | ui         | 80      | none          |
 | `display.profile`    | display    | 90      | none          |
 
-Each video subsystem keeps domain state separate from Pixi rendering. Cartridge code should call engine/video APIs, not renderer internals.
+Each video subsystem keeps domain state separate from Pixi rendering. Cartridge code should call `engine.video` SDK modules, not renderer internals.
 
 ## Grid Menus
 
 Grid menus are generic slot-panel UI owned by the console. They are useful for cartridge-defined panels such as inventories, but the engine does not own inventory state.
 
-`engine.video.gridMenus` opens, closes, toggles, hovers, activates, reorders slots, and carries a generic item payload. The active cartridge receives `RoccoGridMenuActivation` and `RoccoGridMenuItemUseActivation` through `handleAction()`.
+`engine.video.gridMenus` opens, closes, toggles, hovers, activates, reorders slots, and carries a generic item payload. The active cartridge receives `RoccoGridMenuActivation` through `handleAction()`. When the cartridge wants to interpret a carried payload on a scene target, it combines the next `scene-click` with `engine.video.gridMenus.getCarriedItem()`.
 
 The cursor is a console capability. Grid item payloads can become cursor attachments, and cartridge code decides what using that payload on a sprite means.
 
@@ -298,7 +330,7 @@ Sprite definitions are blueprints. Sprite instances are live entities.
 Effects are per-tick operations on engine targets. The built-in `auto-scroll` runtime supports `targetType: 'graphic-plane'` and scrolls a plane with optional wrap-around.
 
 ```typescript
-engine.addEffect({
+engine.effects.add({
   id: 'cloud-scroll',
   kind: 'auto-scroll',
   targetType: 'graphic-plane',
@@ -335,10 +367,10 @@ The main demo cartridge lives in `src/cartridges/rocco`.
 - Shared pier scene artwork with right, centered, and left source-image windows.
 - Level graph with east/west connectors, entry points, and entry facing.
 - Per-level state retained by keeping level instances alive in `RoccoPierLevelManager`.
-- The first Pier Middle mount plays a non-cancelable opening beat through the Rocco sprite controller.
-- Rocco cartridge inventory for the 20€ bill, collected keys, and slot order.
+- The first Pier Middle mount plays an opening beat through the Rocco sprite controller, and scene clicks can cancel it.
+- Rocco cartridge inventory for the 20 EUR bill, collected keys, and slot order.
 - Rocco self action menu with Talk and Inventory options.
-- Generic cursor item use for inventory attempts against Pier objects.
+- Cartridge-owned inventory item use attempts against Pier objects through `scene-click` plus the carried grid payload.
 - Rocco player sprite with click-to-walk and directional actions.
 - Pelikan NPC, bait bucket, feeding sequence, keys reveal, and key collection.
 - English and Spanish localization.
@@ -363,7 +395,7 @@ Do not use Terminal as the template for new cartridges. Use `rocco-default` as t
 5. Add assets under the cartridge folder.
 6. Register the cartridge with `RoccoBuiltinCartridgeProvider`.
 
-Only use the `RoccoEngine` API inside cartridge code.
+Only use the `RoccoEngine` interface and exposed subsystem SDKs inside cartridge code.
 
 ## Constraints
 
@@ -372,7 +404,7 @@ Only use the `RoccoEngine` API inside cartridge code.
 - Walk maps use alpha masks.
 - Plane scenes are persisted per `scene.id`.
 - The cartridge menu is bypassed when only one cartridge is available.
-- Engine feature requests should be clarified if the current API does not support them.
+- Engine feature requests should be clarified if the current interface or SDK surface does not support them.
 
 ## Testing
 

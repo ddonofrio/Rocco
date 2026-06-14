@@ -1,6 +1,6 @@
 # Audio
 
-The audio system provides Web Audio sound registration, preloading, playback, and stopping through the engine API.
+The audio system provides Web Audio sound registration, preloading, playback, and stopping through `engine.audio`.
 
 ## Files
 
@@ -11,10 +11,10 @@ The audio system provides Web Audio sound registration, preloading, playback, an
 ## Cartridge Usage
 
 ```typescript
-engine.registerSound({ id: 'footstep', uri: '/sounds/footstep.mp3', volume: 0.8 });
-await engine.preloadSound('footstep');
-engine.playSound('footstep');
-engine.stopSound('footstep');
+engine.audio.registerSound({ id: 'footstep', uri: '/sounds/footstep.mp3', volume: 0.8 });
+await engine.audio.preloadSound('footstep');
+engine.audio.playSound('footstep');
+engine.audio.stopSound('footstep');
 ```
 
 ## Notes

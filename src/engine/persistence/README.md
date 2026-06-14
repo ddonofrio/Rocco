@@ -22,7 +22,7 @@ Persistence stores plane scenes and plane assets in IndexedDB through Dexie.
 
 ## Notes
 
-- Cartridges use persistence through the `RoccoEngine` API.
+- Cartridges use persistence through `engine.persistence` on the `RoccoEngine` interface.
 - Cartridges do not access Dexie directly.
 - Plane scenes are stored as plain JSON.
 - The engine normalizes restored scenes on boot so missing default planes can be repaired.

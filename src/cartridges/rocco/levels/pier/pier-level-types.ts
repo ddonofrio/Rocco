@@ -1,4 +1,5 @@
 import type { RoccoEngine } from '../../../../engine/engine-api';
+import type { RoccoSceneClickAction } from '../../../../engine/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
 import type { RoccoFacingDirection, RoccoPoint } from '../../../../engine/video/sprites';
@@ -33,6 +34,7 @@ export interface RoccoPierLevel {
   unmount(engine: RoccoEngine): void;
   update(deltaMs: number): void;
   handleAction(activation: RoccoActionMenuActivation): void;
+  handleSceneClick?(action: RoccoSceneClickAction): void;
 }
 
 export function containsPierRectPoint(rect: RoccoPierRect, point: RoccoPoint): boolean {

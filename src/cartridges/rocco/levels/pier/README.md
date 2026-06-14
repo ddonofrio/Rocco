@@ -51,7 +51,7 @@ Pier Middle retains these stable milestones:
 - Bait bucket dropped.
 - Pelikan feeding at the bait bucket.
 - Keys hidden, revealed, or collected.
-- Rocco inventory slots, the 20€ bill, and collected keys.
+- Rocco inventory slots, the 20 EUR bill, and collected keys.
 
 When Pier Middle mounts again, it restores sprite poses, menus, key visibility, and interaction state from those milestones.
 
@@ -72,7 +72,7 @@ When Pier Middle mounts again, it restores sprite poses, menus, key visibility, 
 - Feeding Pelikan: only look is active.
 - Keys: revealed after Pelikan takeoff; look, grab, and kick are available; grab collects them and unlocks Pier exits.
 - Rocco: talk opens a self-talk line; inventory toggles the reorderable 3x3 grid menu.
-- Inventory item use: carried keys and the 20€ bill can be attempted on the bait bucket and Pelikan; current responses are localized failed-use lines.
+- Inventory item use: `RoccoPierLevelManager` reads the generic carried grid payload during `scene-click` handling so carried keys and the 20 EUR bill can be attempted on the bait bucket and Pelikan; current responses are localized failed-use lines.
 
 ## Assets
 

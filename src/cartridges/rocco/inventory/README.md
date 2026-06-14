@@ -2,7 +2,7 @@
 
 This directory contains inventory state for the `rocco-default` cartridge.
 
-The inventory belongs to the cartridge. The engine provides generic slot-panel UI, slot movement, and cursor item payloads through `engine.video.gridMenus` and the cursor host.
+The inventory belongs to the cartridge. The engine provides generic slot-panel UI, slot movement, and cursor item payloads through `engine.video.gridMenus` and the cursor subsystem.
 
 ## Files
 
@@ -24,4 +24,4 @@ The inventory belongs to the cartridge. The engine provides generic slot-panel U
 
 Inventory code does not import PixiJS and does not draw directly. It returns a `RoccoGridMenuDefinition`, and the engine renders that definition through the generic grid menu subsystem.
 
-The console owns the cursor and only carries generic grid item payloads. Rocco inventory code owns item identity, slot persistence, labels, and game-specific use responses.
+The console owns the cursor and only carries generic grid item payloads. Rocco inventory code owns item identity, slot persistence, labels, and game-specific use responses. `RoccoPierLevelManager` interprets carried inventory payloads through cartridge `scene-click` handling.

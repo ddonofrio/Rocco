@@ -22,6 +22,8 @@ const INTRO_HELP_DURATION_MS = 5400;
 
 export interface RoccoDefaultSpriteController {
   update(deltaMs: number): void;
+  isIntroActive(): boolean;
+  cancelIntro(): void;
 }
 
 export interface RoccoDefaultSpriteInstallOptions {
@@ -79,8 +81,22 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
     }
   }
 
+  isIntroActive(): boolean {
+    return this.phase !== 'idle';
+  }
+
+  cancelIntro(): void {
+    if (!this.isIntroActive()) {
+      return;
+    }
+
+    this.engine.video.messages.clearMessages();
+    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    this.elapsedMs = 0;
+    this.startIdle('down');
+  }
+
   private queueNextPass(): void {
-    this.engine.setInputEnabled(false);
     const startY = DEFAULT_SPRITE_Y_VALUES[0] ?? 180;
 
     this.engine.video.sprites.setPosition(
@@ -127,7 +143,6 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
 
   private finishIntro(): void {
     this.startIdle('down');
-    this.engine.setInputEnabled(true);
     this.phase = 'idle';
   }
 

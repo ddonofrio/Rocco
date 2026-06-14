@@ -5,8 +5,6 @@ The cartridge menu is the boot-time selection UI shown when multiple cartridges 
 ## Files
 
 - `cartridge-menu.ts` - `RoccoCartridgeMenu`, the PixiJS menu UI and input handler.
-- `cartridge-menu-assets.ts` - Menu sound asset URIs.
-- `assets/insert-coin.mp3` - Insert coin sound played when the menu opens.
 
 ## Role in Boot
 
@@ -22,6 +20,8 @@ interface CartridgeMenuResult {
 ```
 
 `selectedId` chooses the cartridge. `selectedLocale` is present when the selected cartridge has localized manifest metadata and the user chooses a locale.
+
+The current implementation is self-contained in `cartridge-menu.ts` and does not use a dedicated menu sound asset.
 
 ## Visual Design
 

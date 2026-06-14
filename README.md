@@ -9,13 +9,13 @@ The console is called ROCCO, the main demo cartridge is called ROCCO, and the pl
 Start with these files before editing:
 
 - `AGENTS.md` for repository rules and reading routes.
-- `README-AGENT.md` for architecture, engine APIs, and cartridge conventions.
+- `README-AGENT.md` for architecture, engine interfaces, SDK surfaces, and cartridge conventions.
 - `DEVELOPMENT.md` for local commands and Windows workflow notes.
 - The README files inside the engine or cartridge folders related to the requested change.
 
 ## For Humans
 
-ROCCO is both a small game console runtime and a development platform. The engine provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the actual game content and interact with the engine through a stable TypeScript API.
+ROCCO is both a small game console runtime and a development platform. The engine provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the actual game content and interact with the engine through a stable TypeScript interface plus subsystem SDKs.
 
 ROCCO works well with AI-powered coding tools because the codebase is organized around documented concepts: engine systems, cartridge infrastructure, built-in cartridges, levels, sprites, effects, and localized text catalogs.
 
@@ -96,12 +96,12 @@ npm run dev
 - Shared scene artwork with right, centered, and left horizontal windows.
 - Edge connectors that teleport Rocco between levels and set the entry facing.
 - Per-level state retention for Pier interactions.
-- Non-cancelable opening beat where Rocco arrives at the pier and asks the player for help.
+- Opening beat where Rocco arrives at the pier, asks the player for help, and can be skipped with a scene click.
 - Click-to-walk pathfinding through walk maps.
 - Pelikan NPC, bait bucket interaction, keys reveal, and key collection.
 - Rocco action menu with self-talk and inventory access.
 - Cartridge inventory shown through a generic reorderable 3x3 grid menu.
-- Inventory item cursor use for keys and the 20€ bill against Pier objects.
+- Inventory item cursor use for keys and the 20 EUR bill against Pier objects.
 - English and Spanish localization for menu metadata, level titles, actions, descriptions, and dialogue.
 - Water wave post-processing clipped to the original water mask.
 
@@ -119,7 +119,7 @@ ROCCO uses a console/cartridge architecture:
 
 1. The engine is the console runtime.
 2. Cartridges are self-contained games.
-3. Cartridges mount through `RoccoCartridge` and receive a `RoccoEngine` context.
+3. Cartridges mount through `RoccoCartridge` and receive a `RoccoEngine` context with subsystem SDKs such as `engine.video`, `engine.audio`, and `engine.persistence`.
 4. The engine stays generic; cartridge logic stays inside cartridge folders.
 
 For implementation details, read `README-AGENT.md`.

@@ -2,7 +2,7 @@ import type { RoccoRuntimeVideoSystem } from './video';
 import type { RoccoCursorActionEvent, RoccoCursorMoveEvent } from './video/cursor';
 import type { RoccoViewportHost } from './video/viewport';
 import type { RoccoSpriteMessageRequest } from './video/messages';
-import type { RoccoCartridge } from './cartridges';
+import type { RoccoCartridge, RoccoSceneClickAction } from './cartridges';
 import type { RoccoRuntimeAudioSystem } from './audio';
 import type { RoccoJukeboxSystem } from './audio/jukebox';
 
@@ -68,7 +68,7 @@ export class RoccoInputHandler {
     const x = Math.round(event.sceneX);
     const y = Math.round(event.sceneY);
     
-    // Block input if explicitly disabled (e.g., during non-cancelable animations)
+    // Block input only when a runtime sequence explicitly disables it.
     if (!this.inputEnabled) {
       return;
     }
@@ -111,7 +111,8 @@ export class RoccoInputHandler {
     this.audioSystem.unlock();
     this.jukeboxSystem.unlock();
 
-    if (this.videoSystem.gridMenus.getCarriedItem()) {
+    const carriedItem = this.videoSystem.gridMenus.getCarriedItem();
+    if (carriedItem) {
       const visibleHits = this.videoSystem.sprites.hitTestVisiblePixel(event.sceneX, event.sceneY);
       const hits = visibleHits.length > 0 ? [] : this.videoSystem.sprites.hitTest(event.sceneX, event.sceneY);
       const visibleTarget = visibleHits[0];
@@ -119,18 +120,19 @@ export class RoccoInputHandler {
       const actionTarget = visibleTarget ?? target;
 
       if (actionTarget) {
-        const activation = this.videoSystem.gridMenus.useCarriedItemOnTarget(
-          actionTarget.instanceId,
-          actionTarget.definitionId,
-        );
+        const activation: RoccoSceneClickAction = {
+          kind: 'scene-click',
+          sceneX: event.sceneX,
+          sceneY: event.sceneY,
+          targetInstanceId: actionTarget.instanceId,
+          targetDefinitionId: actionTarget.definitionId,
+        };
         this.setHoverDescription(undefined);
-        if (activation) {
-          void this.getActiveCartridge()?.handleAction?.(activation);
-          this.logFn(
-            'GridMenu',
-            `USE '${activation.itemId}' on sprite '${activation.targetInstanceId}'.`,
-          );
-        }
+        void this.getActiveCartridge()?.handleAction?.(activation);
+        this.logFn(
+          'GridMenu',
+          `USE carried grid item '${carriedItem.item.id}' on sprite '${actionTarget.instanceId}'.`,
+        );
         this.syncCursorAttachment();
         this.videoSystem.render(0);
         return;
@@ -150,6 +152,15 @@ export class RoccoInputHandler {
     const target = hits[0];
     const playerSpriteId = this.getActivePlayerSpriteId();
     const actionTargetId = visibleTarget?.instanceId ?? target?.instanceId;
+    const sceneClickAction: RoccoSceneClickAction = {
+      kind: 'scene-click',
+      sceneX: event.sceneX,
+      sceneY: event.sceneY,
+      targetInstanceId: actionTargetId,
+      targetDefinitionId: visibleTarget?.definitionId ?? target?.definitionId,
+    };
+
+    void this.getActiveCartridge()?.handleAction?.(sceneClickAction);
 
     if (visibleTarget && this.videoSystem.actionMenus.openMenuForTarget(
       visibleTarget.instanceId,
@@ -275,10 +286,10 @@ export class RoccoInputHandler {
   private syncCursorAttachment(): void {
     const carriedItem = this.videoSystem.gridMenus.getCarriedItem();
     this.viewportHost?.setCursorAttachment(
-      carriedItem?.imageUri
+      carriedItem?.item.imageUri
         ? {
-            imageUri: carriedItem.imageUri,
-            label: carriedItem.label,
+            imageUri: carriedItem.item.imageUri,
+            label: carriedItem.item.label,
             size: 46,
           }
         : undefined,

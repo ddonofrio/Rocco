@@ -7,7 +7,7 @@ This file applies to the entire repository.
 - Communicate with the user in their language, but write all code and documentation in English.
 - Read documentation before editing. Do not jump directly into code unless the change is trivial and the relevant README has already been read in the same context window.
 - Keep documentation as present-tense reference material. Do not add historical edit logs, dated notes, or narrative descriptions of edits.
-- Maintain the relevant README when behavior, concepts, public APIs, folder roles, or cartridge structure shift.
+- Maintain the relevant README when behavior, concepts, public interfaces, SDK surfaces, folder roles, or cartridge structure shift.
 - Prefer focused, root-cause fixes. Do not fix unrelated bugs or reformat unrelated files.
 - Do not commit, branch, or stage changes unless the user explicitly asks.
 
@@ -43,7 +43,7 @@ After reading docs, inspect the closest existing implementation and its tests be
 ## Documentation Shape
 
 - `README.md` is the human overview.
-- `README-AGENT.md` is the technical architecture and engine API reference.
+- `README-AGENT.md` is the technical architecture and engine interface or SDK reference.
 - `DEVELOPMENT.md` is the local workflow and command guide.
 - `src/engine/**/README.md` files document engine systems.
 - `src/cartridges/**/README.md` files document cartridge content, rules, and state.

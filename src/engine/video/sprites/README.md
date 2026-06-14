@@ -18,8 +18,8 @@ The sprite system manages animated entities such as player characters, NPCs, and
 
 - A definition is a reusable blueprint with images, frames, animation clips, actions, motion profiles, and hit areas.
 - An instance is a live runtime object with position, visibility, motion state, animation state, and facing.
-- Load a definition with `engine.loadSpriteDefinition()`.
-- Create instances with `engine.createSpriteFromDefinition()`.
+- Load a definition with `engine.video.sprites.loadSpriteDefinition()`.
+- Create instances with `engine.video.sprites.createSpriteFromDefinition()`.
 
 ### Actions
 
@@ -33,7 +33,7 @@ An action profile groups:
 
 Walk maps are alpha-mask images. Opaque pixels are walkable and transparent pixels are blocked.
 
-Use `loadRoccoSpriteWalkMapFromImage()`, register the map with the engine, and bind it to a sprite before using walk-map-constrained movement.
+Use `loadRoccoSpriteWalkMapFromImage()`, register the map with `engine.video.sprites.registerWalkMap()`, and bind it with `engine.video.sprites.bindToWalkMap()` before using walk-map-constrained movement.
 
 ### Depth Modes
 
@@ -50,7 +50,7 @@ Use `loadRoccoSpriteWalkMapFromImage()`, register the map with the engine, and b
 
 ## Facing Directions
 
-The engine supports:
+The sprite SDK supports:
 
 ```text
 right, down-right, down, down-left, left, up-left, up, up-right

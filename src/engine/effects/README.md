@@ -1,6 +1,6 @@
 # Effects
 
-The effects system provides per-tick operations on engine targets. Effects run during the engine render tick and stay independent from cartridge logic.
+The effects system provides per-tick operations on engine targets. Cartridges manage active effects through `engine.effects`. Effects run during the engine render tick and stay independent from cartridge logic.
 
 ## Files
 
@@ -19,7 +19,7 @@ Target type: `graphic-plane`.
 `auto-scroll` scrolls a graphic plane at a configured velocity and supports wrap-around when the target plane has wrapping enabled.
 
 ```typescript
-engine.addEffect({
+engine.effects.add({
   id: 'clouds-scroll',
   kind: 'auto-scroll',
   targetType: 'graphic-plane',

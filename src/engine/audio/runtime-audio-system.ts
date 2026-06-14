@@ -123,7 +123,13 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
       return existing;
     }
 
-    const pending = this.fetchAndDecode(soundId);
+    const pending = this.fetchAndDecode(soundId).then((buffer) => {
+      if (!buffer) {
+        this.buffers.delete(soundId);
+      }
+
+      return buffer;
+    });
     this.buffers.set(soundId, pending);
     return pending;
   }

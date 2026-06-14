@@ -52,6 +52,11 @@ export interface RoccoCartridge {
   dispose?(): Promise<void> | void;
 }
 
+export interface RoccoCartridgeRegistration {
+  manifest: RoccoCartridgeManifest;
+  createCartridge(): RoccoCartridge;
+}
+
 export interface RoccoCartridgeProvider {
   list(): Promise<RoccoCartridgeManifest[]>;
   load(id: string): Promise<RoccoCartridge | undefined>;
@@ -61,5 +66,4 @@ export interface RoccoCartridgeLoader {
   registerProvider(provider: RoccoCartridgeProvider): void;
   loadDefault(): Promise<RoccoCartridge>;
   loadById(id: string): Promise<RoccoCartridge | undefined>;
-  boot(): Promise<RoccoCartridge>;
 }

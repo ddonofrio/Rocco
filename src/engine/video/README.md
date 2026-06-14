@@ -7,8 +7,6 @@ The video SDK is the visual rendering layer of the ROCCO console. It keeps cartr
 - `video-system.ts` - `RoccoRuntimeVideoSystem`, the top-level visual facade.
 - `types.ts` - Video SDK module and system interface types.
 - `render-layers.ts` - Render layer definitions and z-order.
-- `renderer.ts` - Renderer mount, unmount, render, and sync contract.
-- `video-scene.ts` - Lightweight video scene descriptor.
 - `index.ts` - Barrel export.
 
 ## Render Layers

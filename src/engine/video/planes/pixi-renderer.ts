@@ -412,7 +412,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     this.applyViewport(root, node, plane);
 
     if (node.mode === 'tiling' && content.children[0] instanceof TilingSprite) {
-      const tiling = content.children[0] as TilingSprite;
+      const tiling = content.children[0];
       tiling.tilePosition.set(wrappedScrollX, wrappedScrollY);
     }
   }

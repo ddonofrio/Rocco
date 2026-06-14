@@ -32,3 +32,5 @@ Catalogs cover:
 Use `createRoccoLocalization(locale)` to resolve a `RoccoLocalization` object. Unknown locales fall back to English.
 
 Pass the localization object to Pier-level controllers, sprite definitions, action menu definitions, and status rendering so the cartridge uses one consistent catalog for the whole boot.
+
+When the cartridge restarts itself after an in-game defeat, reuse the same selected locale instead of resolving a fresh default locale.

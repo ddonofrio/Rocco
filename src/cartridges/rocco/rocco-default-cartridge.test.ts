@@ -1,11 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { RoccoCartridgeAction } from '../../engine/cartridges';
-import type { RoccoEngine } from '../../engine/engine-api';
+import type { RoccoEngine, RoccoEnginePersistence } from '../../engine/engine-api';
+import type { RoccoAudioSystem } from '../../engine/audio';
+import type { RoccoJukeboxSystem } from '../../engine/audio/jukebox';
+import type { RoccoEffect, RoccoEffectManager } from '../../engine/effects';
+import type { RoccoActionMenuSystem } from '../../engine/video/action-menu';
+import type { RoccoVideoDisplayModule, RoccoVideoPlaneModule, RoccoVideoSystem } from '../../engine/video';
+import type { RoccoGridMenuSystem } from '../../engine/video/grid-menu';
+import type { RoccoSpriteMessageSystem } from '../../engine/video/messages';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../engine/video/planes';
+import type { RoccoPrimitiveSystem } from '../../engine/video/primitives';
+import type { RoccoRenderLayer } from '../../engine/video/render-layers';
 import type {
   RoccoSpriteInstance,
   RoccoSpriteDefinition,
+  RoccoSpriteSystem,
   RoccoSpriteWalkMap,
   RoccoMoveOptions,
   RoccoSpriteGoToOptions,
@@ -13,6 +23,7 @@ import type {
   RoccoSpritePresentationTransform,
   RoccoDepthMode,
 } from '../../engine/video/sprites';
+import type { RoccoTitleSystem } from '../../engine/video/titles';
 import type { RoccoSpriteMessageRequest } from '../../engine/video/messages';
 import type {
   RoccoActionMenuActivation,
@@ -26,7 +37,6 @@ import type { RoccoPrimitive } from '../../engine/video/primitives';
 import type { RoccoTitleMessage } from '../../engine/video/titles';
 import type { RoccoDisplayProfile } from '../../engine/video/display';
 import type { RoccoSoundDefinition } from '../../engine/audio/types';
-import type { RoccoEffect } from '../../engine/effects/types';
 import { defaultDisplayProfile } from '../../engine/video/display';
 import {
   DEFAULT_BACKGROUND_IMAGE_HEIGHT,
@@ -123,7 +133,7 @@ vi.mock('pixi.js', async (importOriginal) => {
     ...actual,
     Assets: {
       ...actual.Assets,
-      load: vi.fn(async (uri: string) => uri),
+      load: vi.fn((uri: string) => Promise.resolve(uri)),
     },
   };
 });
@@ -133,44 +143,46 @@ vi.mock('../../engine/video/sprites', async (importOriginal) => {
   return {
     ...actual,
     loadRoccoSpriteWalkMapFromImage: vi.fn(
-      async (options: {
+      (options: {
         id: string;
         origin?: { x: number; y: number };
         alphaThreshold?: number;
-      }) => ({
-        id: options.id,
-        width: 1672,
-        height: 941,
-        origin: options.origin ?? { x: 0, y: 0 },
-        alphaThreshold: options.alphaThreshold ?? 1,
-        columns: [{ x: 0, spans: [{ yMin: 0, yMax: 0 }] }],
-      }),
+      }) =>
+        Promise.resolve({
+          id: options.id,
+          width: 1672,
+          height: 941,
+          origin: options.origin ?? { x: 0, y: 0 },
+          alphaThreshold: options.alphaThreshold ?? 1,
+          columns: [{ x: 0, spans: [{ yMin: 0, yMax: 0 }] }],
+        }),
     ),
     createRoccoSpriteAutoCroppedFrames: vi.fn(
-      async (options: {
+      (options: {
         sources: Array<{ id: string; uri: string; width?: number; height?: number }>;
         frameIdPrefix: string;
         durationMs: number;
-      }) => ({
-        images: options.sources.map((source) => ({
-          id: source.id,
-          uri: source.uri,
-          width: source.width ?? 64,
-          height: source.height ?? 64,
-        })),
-        frames: options.sources.map((source, index) => ({
-          id: `${options.frameIdPrefix}-${index + 1}`,
-          imageId: source.id,
-          rect: {
-            x: 0,
-            y: 0,
+      }) =>
+        Promise.resolve({
+          images: options.sources.map((source) => ({
+            id: source.id,
+            uri: source.uri,
             width: source.width ?? 64,
             height: source.height ?? 64,
-          },
-          durationMs: options.durationMs,
-        })),
-        frameIds: options.sources.map((_, index) => `${options.frameIdPrefix}-${index + 1}`),
-      }),
+          })),
+          frames: options.sources.map((source, index) => ({
+            id: `${options.frameIdPrefix}-${index + 1}`,
+            imageId: source.id,
+            rect: {
+              x: 0,
+              y: 0,
+              width: source.width ?? 64,
+              height: source.height ?? 64,
+            },
+            durationMs: options.durationMs,
+          })),
+          frameIds: options.sources.map((_, index) => `${options.frameIdPrefix}-${index + 1}`),
+        }),
     ),
   };
 });
@@ -319,6 +331,9 @@ interface EngineMockState {
   preloadedSoundIds: string[];
   playedSoundIds: string[];
   stoppedSoundIds: string[];
+  registeredPlaylistIds: string[];
+  unregisteredPlaylistIds: string[];
+  playedPlaylistIds: string[];
   preloadedSpriteDefinitionIds: string[];
   loadedSpriteDefinitionIds: string[];
   registeredWalkMapIds: string[];
@@ -363,471 +378,546 @@ interface EngineMockState {
 }
 
 function createEngineMock(state: EngineMockState): RoccoEngine {
-  return {
-    // Video subsystem
-    video: {
-      sprites: {
-        async preloadDefinitionAssets(definition: RoccoSpriteDefinition) {
-          state.preloadedSpriteDefinitionIds.push(definition.id);
-        },
-        registerWalkMap(walkMap: RoccoSpriteWalkMap) {
-          state.registeredWalkMapIds.push(walkMap.id);
-        },
-        unregisterWalkMap() {
-          // noop
-        },
-        getWalkMap() {
-          return undefined;
-        },
-        listWalkMaps() {
-          return [];
-        },
-        registerSpriteDefinition() {
-          // noop
-        },
-        unregisterSpriteDefinition() {
-          // noop
-        },
-        getSpriteDefinition() {
-          return undefined;
-        },
-        listSpriteDefinitions() {
-          return [];
-        },
-        loadSpriteDefinition(definition: RoccoSpriteDefinition) {
-          state.loadedSpriteDefinitionIds.push(definition.id);
-        },
-        loadSpriteDefinitions(definitions: RoccoSpriteDefinition[]) {
-          for (const definition of definitions) {
-            state.loadedSpriteDefinitionIds.push(definition.id);
-          }
-        },
-        createSprite() {
-          // noop
-        },
-        createSpriteFromDefinition(definitionId: string, options?: Partial<RoccoSpriteInstance>) {
-          const id = options?.id ?? `sprite:${definitionId}`;
-          state.createdSprites.push(id);
-          const created: RoccoSpriteInstance = {
-            id,
-            definitionId,
-            transform: {
-              x: options?.transform?.x ?? 0,
-              y: options?.transform?.y ?? 0,
-              scaleX: options?.transform?.scaleX ?? 1,
-              scaleY: options?.transform?.scaleY ?? 1,
-              rotation: options?.transform?.rotation ?? 0,
-              flipX: options?.transform?.flipX ?? false,
-              flipY: options?.transform?.flipY ?? false,
-              presentation: options?.transform?.presentation,
-            },
-            motion: {
-              velocityX: 0,
-              velocityY: 0,
-              accelerationX: 0,
-              accelerationY: 0,
-              distanceAccumulator: 0,
-            },
-            animation: {
-              animationId: 'stand-left',
-              frameIndex: 0,
-              elapsedMs: 0,
-              playing: true,
-              playbackRate: 1,
-            },
-            visible: true,
-            enabled: true,
-            interactive: options?.interactive ?? false,
-            collisionEnabled: options?.collisionEnabled ?? true,
-            renderLayer: options?.renderLayer ?? 'world.actors',
-            zIndex: options?.zIndex ?? 0,
-            depthMode: options?.depthMode ?? 'fixed',
-            opacity: options?.opacity ?? 1,
-          };
-          state.createdSpriteSnapshots.push(created);
-          state.spriteSnapshot = created;
-          return created;
-        },
-        removeSprite(instanceId: string) {
-          state.removedSpriteIds.push(instanceId);
-        },
-        getSprite(instanceId: string) {
-          return findLatestSpriteSnapshot(state, instanceId);
-        },
-        listSprites() {
-          return [];
-        },
-        playAnimation(instanceId: string, animationId: string) {
-          state.playedSpriteAnimations.push(`${instanceId}:${animationId}`);
-        },
-        playAction(instanceId: string, actionId: string, options?: { direction?: string }) {
-          state.playedSpriteActions.push(`${instanceId}:${actionId}`);
-          if (options?.direction) {
-            state.playedSpriteActionDirections.push(`${instanceId}:${actionId}:${options.direction}`);
-          }
-        },
-        stopAnimation() {
-          // noop
-        },
-        setAnimationFrame() {
-          // noop
-        },
-        setPlaybackRate() {
-          // noop
-        },
-        bindAnimationToMotion() {
-          // noop
-        },
-        setPosition(instanceId: string, x: number, y: number) {
-          state.spritePositions.push(`${instanceId}:${x},${y}`);
-          const sprite = findLatestSpriteSnapshot(state, instanceId);
-          if (sprite) {
-            sprite.transform.x = x;
-            sprite.transform.y = y;
-          }
-        },
-        setScale(instanceId: string, scaleX: number, scaleY: number) {
-          state.spriteScaleUpdates.push(`${instanceId}:${scaleX},${scaleY}`);
-          const sprite = findLatestSpriteSnapshot(state, instanceId);
-          if (sprite) {
-            sprite.transform.scaleX = scaleX;
-            sprite.transform.scaleY = scaleY;
-          }
-        },
-        setFlip(instanceId: string, flipX: boolean, flipY: boolean) {
-          state.spriteFlipUpdates.push(`${instanceId}:${flipX},${flipY}`);
-          const sprite = findLatestSpriteSnapshot(state, instanceId);
-          if (sprite) {
-            sprite.transform.flipX = flipX;
-            sprite.transform.flipY = flipY;
-          }
-        },
-        setPresentationTransform(
-          instanceId: string,
-          transform: Partial<RoccoSpritePresentationTransform>,
-        ) {
-          state.spritePresentationUpdates.push(`${instanceId}:${JSON.stringify(transform)}`);
-          const sprite = findLatestSpriteSnapshot(state, instanceId);
-          if (sprite) {
-            sprite.transform.presentation = {
-              ...sprite.transform.presentation,
-              ...transform,
-            };
-          }
-        },
-        translate() {
-          // noop
-        },
-        setVelocity(instanceId: string, velocityX: number, velocityY: number) {
-          state.spriteVelocityUpdates.push(`${instanceId}:${velocityX},${velocityY}`);
-        },
-        setAcceleration() {
-          // noop
-        },
-        stopMovement() {
-          // noop
-        },
-        moveTo(instanceId: string, x: number, y: number, options?: RoccoMoveOptions) {
-          state.movedSprites.push(`${instanceId}:${x},${y}`);
-          state.isSpriteMovingValue = true;
-          if (options?.action) {
-            state.movedSpriteActions.push(options.action);
-          }
-        },
-        goTo(instanceId: string, x: number, y: number, options?: RoccoSpriteGoToOptions) {
-          state.goToSprites.push(`${instanceId}:${x},${y}`);
-          if (options?.targetInstanceId) {
-            state.goToSpriteTargets.push(`${instanceId}:${options.targetInstanceId}`);
-          }
-        },
-        moveBy() {
-          // noop
-        },
-        followPath() {
-          // noop
-        },
-        cancelMovement() {
-          // noop
-        },
-        isMoving() {
-          return state.isSpriteMovingValue;
-        },
-        setFacing() {
-          // noop
-        },
-        setRenderLayer(instanceId: string, renderLayer: string) {
-          state.spriteRenderLayerUpdates.push(`${instanceId}:${renderLayer}`);
-          const sprite = findLatestSpriteSnapshot(state, instanceId);
-          if (sprite) {
-            sprite.renderLayer = renderLayer;
-          }
-        },
-        setZIndex(instanceId: string, zIndex: number) {
-          state.spriteZIndexUpdates.push(`${instanceId}:${zIndex}`);
-          const sprite = findLatestSpriteSnapshot(state, instanceId);
-          if (sprite) {
-            sprite.zIndex = zIndex;
-          }
-        },
-        setDepthMode(instanceId: string, depthMode: RoccoDepthMode) {
-          state.spriteDepthModeUpdates.push(`${instanceId}:${depthMode}`);
-          const sprite = findLatestSpriteSnapshot(state, instanceId);
-          if (sprite) {
-            sprite.depthMode = depthMode;
-          }
-        },
-        setInteractive() {
-          // noop
-        },
-        setCollisionEnabled() {
-          // noop
-        },
-        bindToWalkMap(instanceId: string, binding: RoccoSpriteNavigationBinding) {
-          state.walkMapBindings.push(`${instanceId}:${binding.walkMapId}`);
-          const sprite = findLatestSpriteSnapshot(state, instanceId);
-          if (sprite) {
-            sprite.navigation = binding;
-          }
-        },
-        clearWalkMapBinding(instanceId: string) {
-          state.walkMapBindings.push(`${instanceId}:clear`);
-          const sprite = findLatestSpriteSnapshot(state, instanceId);
-          if (sprite) {
-            sprite.navigation = undefined;
-          }
-        },
-        hitTest() {
-          return [];
-        },
-        hitTestVisiblePixel() {
-          return [];
-        },
-        queryCollisions() {
-          return [];
-        },
-        update() {
-          // noop
-        },
-        listRenderableSprites() {
-          return [];
-        },
-      } as any,
-      messages: {
-        showMessage(message: RoccoSpriteMessageRequest) {
-          state.spriteMessages.push(`${message.spriteInstanceId}:${message.mode}:${message.text}`);
-        },
-        say(instanceId: string, text: string) {
-          state.spriteMessages.push(`${instanceId}:say:${text}`);
-        },
-        think(instanceId: string, text: string) {
-          state.spriteMessages.push(`${instanceId}:think:${text}`);
-        },
-        clearMessages() {
-          state.spriteMessages.length = 0;
-        },
-      } as any,
-      actionMenus: {
-        registerMenu(definition: RoccoActionMenuDefinition) {
-          state.registeredActionMenus.push(definition.id);
-          state.registeredActionMenuDefinitions.push(definition);
-        },
-        unregisterMenu(definitionId: string) {
-          state.unregisteredActionMenus.push(definitionId);
-        },
-        listMenus() {
-          return [];
-        },
-        openMenuForTarget() {
-          return false;
-        },
-        closeMenu() {
-          // noop
-        },
-        isOpen() {
-          return false;
-        },
-        setHoverAt() {
-          return false;
-        },
-        getHoveredItem() {
-          return undefined;
-        },
-        activateAt() {
-          return undefined;
-        },
-        getRenderableMenu() {
-          return undefined;
-        },
-        update() {
-          // noop
-        },
-      } as any,
-      gridMenus: {
-        openMenu(definition: RoccoGridMenuDefinition) {
-          state.openedGridMenuDefinitions.push(definition);
-        },
-        toggleMenu(definition: RoccoGridMenuDefinition) {
-          state.toggledGridMenuDefinitions.push(definition);
-        },
-        closeMenu() {
-          state.closedGridMenuCount += 1;
-        },
-        isOpen() {
-          return false;
-        },
-        setHoverAt() {
-          return false;
-        },
-        getHoveredItem() {
-          return undefined;
-        },
-        activateAt() {
-          return undefined;
-        },
-        getCarriedItem() {
-          return state.carriedGridMenuItem;
-        },
-        clearCarriedItem() {
-          state.carriedGridMenuItem = undefined;
-          state.clearedCarriedGridMenuCount += 1;
-        },
-        getRenderableMenu() {
-          return undefined;
-        },
-      } as any,
-      primitives: {
-        addPrimitive(primitive: RoccoPrimitive) {
-          state.addedPrimitives.push(`${primitive.id}:${primitive.alpha}`);
-        },
-        removePrimitive(primitiveId: string) {
-          state.removedPrimitives.push(primitiveId);
-        },
-        listPrimitives() {
-          return [];
-        },
-      } as any,
-      titles: {
-        addTitle(message: RoccoTitleMessage) {
-          state.addedTitles.push(`${message.id}:${message.text}`);
-        },
-        removeTitle(titleId: string) {
-          state.removedTitles.push(titleId);
-        },
-        listTitles() {
-          return [];
-        },
-        update() {
-          // noop
-        },
-      } as any,
-      display: {
-        setProfile(profile: Partial<RoccoDisplayProfile>) {
-          if (profile.crtMask && profile.roundedCorners && profile.edgeVignette) {
-            state.displayProfileCalls += 1;
-          }
-        },
-        getProfile() {
-          return {};
-        },
-      } as any,
-      planes: {
-        loadScene(scene: RoccoPlaneScene) {
-          state.loadedScene = scene;
-        },
-        serializeScene() {
-          if (!state.loadedScene) {
-            throw new Error('No loaded scene in mock state');
-          }
-          return state.loadedScene;
-        },
-        updatePlane() {
-          // noop
-        },
-        resolvePlane() {
-          return undefined;
-        },
-      } as any,
-      async preloadPlaneScene(scene: RoccoPlaneScene) {
-        state.preloadedPlaneSceneIds.push(scene.id);
+  const sprites: RoccoSpriteSystem = {
+    registerWalkMap(walkMap: RoccoSpriteWalkMap) {
+      state.registeredWalkMapIds.push(walkMap.id);
+    },
+    unregisterWalkMap() {
+      // noop
+    },
+    getWalkMap() {
+      return undefined;
+    },
+    listWalkMaps() {
+      return [];
+    },
+    registerSpriteDefinition() {
+      // noop
+    },
+    unregisterSpriteDefinition() {
+      // noop
+    },
+    getSpriteDefinition() {
+      return undefined;
+    },
+    listSpriteDefinitions() {
+      return [];
+    },
+    loadSpriteDefinition(definition: RoccoSpriteDefinition) {
+      state.loadedSpriteDefinitionIds.push(definition.id);
+    },
+    loadSpriteDefinitions(definitions: RoccoSpriteDefinition[]) {
+      for (const definition of definitions) {
+        state.loadedSpriteDefinitionIds.push(definition.id);
+      }
+    },
+    createSprite() {
+      // noop
+    },
+    createSpriteFromDefinition(definitionId: string, options?: Partial<RoccoSpriteInstance>) {
+      const id = options?.id ?? `sprite:${definitionId}`;
+      state.createdSprites.push(id);
+      const created: RoccoSpriteInstance = {
+        id,
+        definitionId,
+        transform: {
+          x: options?.transform?.x ?? 0,
+          y: options?.transform?.y ?? 0,
+          scaleX: options?.transform?.scaleX ?? 1,
+          scaleY: options?.transform?.scaleY ?? 1,
+          rotation: options?.transform?.rotation ?? 0,
+          flipX: options?.transform?.flipX ?? false,
+          flipY: options?.transform?.flipY ?? false,
+          presentation: options?.transform?.presentation,
+        },
+        motion: {
+          velocityX: 0,
+          velocityY: 0,
+          accelerationX: 0,
+          accelerationY: 0,
+          distanceAccumulator: 0,
+        },
+        animation: {
+          animationId: 'stand-left',
+          frameIndex: 0,
+          elapsedMs: 0,
+          playing: true,
+          playbackRate: 1,
+        },
+        visible: true,
+        enabled: true,
+        interactive: options?.interactive ?? false,
+        collisionEnabled: options?.collisionEnabled ?? true,
+        renderLayer: options?.renderLayer ?? 'world.actors',
+        zIndex: options?.zIndex ?? 0,
+        depthMode: options?.depthMode ?? 'fixed',
+        opacity: options?.opacity ?? 1,
+      };
+      state.createdSpriteSnapshots.push(created);
+      state.spriteSnapshot = created;
+      return created;
+    },
+    removeSprite(instanceId: string) {
+      state.removedSpriteIds.push(instanceId);
+    },
+    getSprite(instanceId: string) {
+      return findLatestSpriteSnapshot(state, instanceId);
+    },
+    listSprites() {
+      return [];
+    },
+    playAnimation(instanceId: string, animationId: string) {
+      state.playedSpriteAnimations.push(`${instanceId}:${animationId}`);
+    },
+    playAction(instanceId: string, actionId: string, options) {
+      state.playedSpriteActions.push(`${instanceId}:${actionId}`);
+      if (options?.direction) {
+        state.playedSpriteActionDirections.push(`${instanceId}:${actionId}:${options.direction}`);
+      }
+    },
+    stopAnimation() {
+      // noop
+    },
+    setAnimationFrame() {
+      // noop
+    },
+    setPlaybackRate() {
+      // noop
+    },
+    bindAnimationToMotion() {
+      // noop
+    },
+    setPosition(instanceId: string, x: number, y: number) {
+      state.spritePositions.push(`${instanceId}:${x},${y}`);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.transform.x = x;
+        sprite.transform.y = y;
+      }
+    },
+    setScale(instanceId: string, scaleX: number, scaleY: number) {
+      state.spriteScaleUpdates.push(`${instanceId}:${scaleX},${scaleY}`);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.transform.scaleX = scaleX;
+        sprite.transform.scaleY = scaleY;
+      }
+    },
+    setFlip(instanceId: string, flipX: boolean, flipY: boolean) {
+      state.spriteFlipUpdates.push(`${instanceId}:${flipX},${flipY}`);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.transform.flipX = flipX;
+        sprite.transform.flipY = flipY;
+      }
+    },
+    setPresentationTransform(
+      instanceId: string,
+      transform: Partial<RoccoSpritePresentationTransform>,
+    ) {
+      state.spritePresentationUpdates.push(`${instanceId}:${JSON.stringify(transform)}`);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.transform.presentation = {
+          ...sprite.transform.presentation,
+          ...transform,
+        };
+      }
+    },
+    translate() {
+      // noop
+    },
+    setVelocity(instanceId: string, velocityX: number, velocityY: number) {
+      state.spriteVelocityUpdates.push(`${instanceId}:${velocityX},${velocityY}`);
+    },
+    setAcceleration() {
+      // noop
+    },
+    stopMovement() {
+      // noop
+    },
+    moveTo(instanceId: string, x: number, y: number, options?: RoccoMoveOptions) {
+      state.movedSprites.push(`${instanceId}:${x},${y}`);
+      state.isSpriteMovingValue = true;
+      if (options?.action) {
+        state.movedSpriteActions.push(options.action);
+      }
+    },
+    goTo(instanceId: string, x: number, y: number, options?: RoccoSpriteGoToOptions) {
+      state.goToSprites.push(`${instanceId}:${x},${y}`);
+      if (options?.targetInstanceId) {
+        state.goToSpriteTargets.push(`${instanceId}:${options.targetInstanceId}`);
+      }
+    },
+    moveBy() {
+      // noop
+    },
+    followPath() {
+      // noop
+    },
+    cancelMovement() {
+      // noop
+    },
+    isMoving() {
+      return state.isSpriteMovingValue;
+    },
+    setFacing() {
+      // noop
+    },
+    setRenderLayer(instanceId: string, renderLayer: string) {
+      state.spriteRenderLayerUpdates.push(`${instanceId}:${renderLayer}`);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.renderLayer = renderLayer;
+      }
+    },
+    setZIndex(instanceId: string, zIndex: number) {
+      state.spriteZIndexUpdates.push(`${instanceId}:${zIndex}`);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.zIndex = zIndex;
+      }
+    },
+    setDepthMode(instanceId: string, depthMode: RoccoDepthMode) {
+      state.spriteDepthModeUpdates.push(`${instanceId}:${depthMode}`);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.depthMode = depthMode;
+      }
+    },
+    setInteractive() {
+      // noop
+    },
+    setCollisionEnabled() {
+      // noop
+    },
+    bindToWalkMap(instanceId: string, binding: RoccoSpriteNavigationBinding) {
+      state.walkMapBindings.push(`${instanceId}:${binding.walkMapId}`);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.navigation = binding;
+      }
+    },
+    clearWalkMapBinding(instanceId: string) {
+      state.walkMapBindings.push(`${instanceId}:clear`);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.navigation = undefined;
+      }
+    },
+    hitTest() {
+      return [];
+    },
+    hitTestVisiblePixel() {
+      return [];
+    },
+    queryCollisions() {
+      return [];
+    },
+    update() {
+      // noop
+    },
+  };
+
+  const messages: RoccoSpriteMessageSystem = {
+    showMessage(message: RoccoSpriteMessageRequest) {
+      const text = Array.isArray(message.text) ? message.text.join('|') : message.text;
+      state.spriteMessages.push(`${message.spriteInstanceId}:${message.mode}:${text}`);
+    },
+    say(instanceId: string, text: string) {
+      state.spriteMessages.push(`${instanceId}:say:${text}`);
+    },
+    think(instanceId: string, text: string) {
+      state.spriteMessages.push(`${instanceId}:think:${text}`);
+    },
+    removeMessage() {
+      // noop
+    },
+    clearMessages() {
+      state.spriteMessages.length = 0;
+    },
+    listMessages() {
+      return [];
+    },
+    listRenderableMessages() {
+      return [];
+    },
+    update() {
+      // noop
+    },
+  };
+
+  const actionMenus: RoccoActionMenuSystem = {
+    registerMenu(definition: RoccoActionMenuDefinition) {
+      state.registeredActionMenus.push(definition.id);
+      state.registeredActionMenuDefinitions.push(definition);
+    },
+    unregisterMenu(definitionId: string) {
+      state.unregisteredActionMenus.push(definitionId);
+    },
+    listMenus() {
+      return [];
+    },
+    openMenuForTarget() {
+      return false;
+    },
+    closeMenu() {
+      // noop
+    },
+    isOpen() {
+      return false;
+    },
+    setHoverAt() {
+      return false;
+    },
+    getHoveredItem() {
+      return undefined;
+    },
+    activateAt() {
+      return undefined;
+    },
+    getRenderableMenu() {
+      return undefined;
+    },
+    update() {
+      // noop
+    },
+  };
+
+  const gridMenus: RoccoGridMenuSystem = {
+    openMenu(definition: RoccoGridMenuDefinition) {
+      state.openedGridMenuDefinitions.push(definition);
+    },
+    toggleMenu(definition: RoccoGridMenuDefinition) {
+      state.toggledGridMenuDefinitions.push(definition);
+    },
+    closeMenu() {
+      state.closedGridMenuCount += 1;
+    },
+    isOpen() {
+      return false;
+    },
+    setHoverAt() {
+      return false;
+    },
+    getHoveredItem() {
+      return undefined;
+    },
+    activateAt() {
+      return undefined;
+    },
+    getCarriedItem() {
+      return state.carriedGridMenuItem;
+    },
+    clearCarriedItem() {
+      state.carriedGridMenuItem = undefined;
+      state.clearedCarriedGridMenuCount += 1;
+    },
+    getRenderableMenu() {
+      return undefined;
+    },
+  };
+
+  const primitives: RoccoPrimitiveSystem = {
+    addPrimitive(primitive: RoccoPrimitive) {
+      state.addedPrimitives.push(`${primitive.id}:${primitive.alpha}`);
+    },
+    removePrimitive(primitiveId: string) {
+      state.removedPrimitives.push(primitiveId);
+    },
+    clearPrimitives() {
+      // noop
+    },
+    getPrimitive() {
+      return undefined;
+    },
+    listPrimitives() {
+      return [];
+    },
+  };
+
+  const titles: RoccoTitleSystem = {
+    addTitle(message: RoccoTitleMessage) {
+      state.addedTitles.push(`${message.id}:${message.text}`);
+    },
+    removeTitle(titleId: string) {
+      state.removedTitles.push(titleId);
+    },
+    clearTitles() {
+      // noop
+    },
+    getTitle() {
+      return undefined;
+    },
+    listTitles() {
+      return [];
+    },
+    update() {
+      // noop
+    },
+  };
+
+  const display: RoccoVideoDisplayModule = {
+    setProfile(profile: Partial<RoccoDisplayProfile>) {
+      if (profile.crtMask && profile.roundedCorners && profile.edgeVignette) {
+        state.displayProfileCalls += 1;
+      }
+    },
+    getProfile() {
+      return {};
+    },
+  };
+
+  const planes: RoccoVideoPlaneModule = {
+    loadScene(scene: RoccoPlaneScene) {
+      state.loadedScene = scene;
+    },
+    serializeScene() {
+      if (!state.loadedScene) {
+        throw new Error('No loaded scene in mock state');
+      }
+      return state.loadedScene;
+    },
+    updatePlane() {
+      // noop
+    },
+    resolvePlane() {
+      return undefined;
+    },
+  };
+
+  const video: RoccoVideoSystem = {
+    sprites,
+    messages,
+    actionMenus,
+    gridMenus,
+    primitives,
+    titles,
+    display,
+    viewport: {
+      setHost() {
+        // noop
       },
-      async preloadSpriteDefinition(definition: RoccoSpriteDefinition) {
+      getHost() {
+        return undefined;
+      },
+    },
+    planes,
+    setRenderLayerOrder(_layers: RoccoRenderLayer[]) {
+      void _layers;
+      // noop
+    },
+    getRenderLayerOrder() {
+      return [];
+    },
+    preloadPlaneScene(scene: RoccoPlaneScene) {
+      state.preloadedPlaneSceneIds.push(scene.id);
+      return Promise.resolve();
+    },
+    preloadSpriteDefinition(definition: RoccoSpriteDefinition) {
+      state.preloadedSpriteDefinitionIds.push(definition.id);
+      return Promise.resolve();
+    },
+    preloadSpriteDefinitions(definitions: RoccoSpriteDefinition[]) {
+      for (const definition of definitions) {
         state.preloadedSpriteDefinitionIds.push(definition.id);
-      },
-      async preloadSpriteDefinitions(definitions: RoccoSpriteDefinition[]) {
-        for (const definition of definitions) {
-          state.preloadedSpriteDefinitionIds.push(definition.id);
-        }
-      },
-      render() {
-        // noop
-      },
-      update() {
-        // noop
-      },
-    } as any,
+      }
+      return Promise.resolve();
+    },
+    render() {
+      // noop
+    },
+    update() {
+      // noop
+    },
+  };
 
-    // Audio subsystem
-    audio: {
-      registerSound(definition: RoccoSoundDefinition) {
-        state.registeredSoundIds.push(definition.id);
-      },
-      unregisterSound(soundId: string) {
-        state.unregisteredSoundIds.push(soundId);
-      },
-      async preloadSound(soundId: string) {
-        state.preloadedSoundIds.push(soundId);
-      },
-      playSound(soundId: string) {
-        state.playedSoundIds.push(soundId);
-      },
-      stopSound(soundId: string) {
-        state.stoppedSoundIds.push(soundId);
-      },
-      stopAllSounds() {
-        // noop
-      },
-      unlock() {
-        // noop
-      },
-      destroy() {
-        // noop
-      },
-    } as any,
+  const audio: RoccoAudioSystem = {
+    registerSound(definition: RoccoSoundDefinition) {
+      state.registeredSoundIds.push(definition.id);
+    },
+    unregisterSound(soundId: string) {
+      state.unregisteredSoundIds.push(soundId);
+    },
+    preloadSound(soundId: string) {
+      state.preloadedSoundIds.push(soundId);
+      return Promise.resolve();
+    },
+    playSound(soundId: string) {
+      state.playedSoundIds.push(soundId);
+    },
+    stopSound(soundId: string) {
+      state.stoppedSoundIds.push(soundId);
+    },
+    stopAllSounds() {
+      // noop
+    },
+  };
 
-    // Effects subsystem
-    effects: {
-      add(effect: RoccoEffect) {
-        state.addedEffectIds.push(effect.id);
-      },
-      remove(effectId: string) {
-        state.removedEffectIds.push(effectId);
-      },
-      enable() {
-        // noop
-      },
-      disable() {
-        // noop
-      },
-      update() {
-        // noop
-      },
-      tick() {
-        // noop
-      },
-      list() {
-        return [];
-      },
-    } as any,
+  const effects: RoccoEffectManager = {
+    add(effect: RoccoEffect) {
+      state.addedEffectIds.push(effect.id);
+    },
+    remove(effectId: string) {
+      state.removedEffectIds.push(effectId);
+    },
+    enable() {
+      // noop
+    },
+    disable() {
+      // noop
+    },
+    update() {
+      // noop
+    },
+    tick() {
+      // noop
+    },
+  };
 
-    // Persistence subsystem
-    persistence: {
-      async loadPlaneSceneRecord() {
-        return state.restoredRecord;
-      },
-      async savePlaneScene(scene: RoccoPlaneScene) {
-        state.savedScenes.push(scene);
-      },
-    } as any,
+  const persistence: RoccoEnginePersistence = {
+    loadPlaneSceneRecord() {
+      return Promise.resolve(state.restoredRecord);
+    },
+    savePlaneScene(scene: RoccoPlaneScene) {
+      state.savedScenes.push(scene);
+      return Promise.resolve();
+    },
+  };
+
+  const jukebox: RoccoJukeboxSystem = {
+    registerPlaylist(playlist) {
+      state.registeredPlaylistIds.push(playlist.id);
+    },
+    unregisterPlaylist(playlistId: string) {
+      state.unregisteredPlaylistIds.push(playlistId);
+    },
+    playPlaylist(playlistId: string) {
+      state.playedPlaylistIds.push(playlistId);
+      return Promise.resolve();
+    },
+    stopPlaylist() {
+      // noop
+    },
+    isPlaying() {
+      return false;
+    },
+    setVolume() {
+      // noop
+    },
+    getCurrentTrack() {
+      return undefined;
+    },
+    unlock() {
+      // noop
+    },
+  };
+
+  return {
+    video,
+    audio,
+    effects,
+    persistence,
 
     // Scene management
     loadPlaneScene(scene: RoccoPlaneScene) {
@@ -841,7 +931,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
 
     // Player state
-    setPlayerSprite(instanceId: string) {
+    setPlayerSprite(instanceId: string | null) {
       state.playerSpriteId = instanceId;
     },
     getPlayerSprite() {
@@ -872,34 +962,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     endComposition() {
       // noop
     },
-
-    // Jukebox
-    jukebox: {
-      registerPlaylist() {
-        // noop
-      },
-      unregisterPlaylist() {
-        // noop
-      },
-      async playPlaylist() {
-        // noop
-      },
-      stopPlaylist() {
-        // noop
-      },
-      isPlaying() {
-        return false;
-      },
-      setVolume() {
-        // noop
-      },
-      getCurrentTrack() {
-        return undefined;
-      },
-      unlock() {
-        // noop
-      },
-    } as any,
+    jukebox,
   };
 }
 
@@ -916,6 +979,9 @@ function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState 
     preloadedSoundIds: [],
     playedSoundIds: [],
     stoppedSoundIds: [],
+    registeredPlaylistIds: [],
+    unregisteredPlaylistIds: [],
+    playedPlaylistIds: [],
     preloadedSpriteDefinitionIds: [],
     loadedSpriteDefinitionIds: [],
     registeredWalkMapIds: [],
@@ -1051,6 +1117,8 @@ describe('RoccoDefaultCartridge', () => {
     expect(state.inputEnabled).toBe(true);
     expect(state.displayProfileCalls).toBe(1);
     expect(state.statusMessages[0]?.includes(cartridge.manifest.title)).toBe(true);
+    expect(state.registeredPlaylistIds).toEqual(['rocco-game-music']);
+    expect(state.playedPlaylistIds).toEqual(['rocco-game-music']);
   });
 
   it('mounts Rocco with Spanish localized status and action labels', async () => {
@@ -1074,6 +1142,42 @@ describe('RoccoDefaultCartridge', () => {
       (definition) => definition.id === ROCCO_PLAYER_ACTION_MENU_ID,
     );
     expect(roccoMenu?.items.map((item) => item.label)).toEqual(['Hablar', 'Inventario']);
+  });
+
+  it('preserves the selected locale when the cartridge restarts itself', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const cartridge = new RoccoDefaultCartridge();
+
+    await cartridge.mount({ engine, locale: 'es' });
+
+    state.statusMessages.length = 0;
+    state.registeredActionMenuDefinitions.length = 0;
+
+    (cartridge as unknown as { restartDefaultDemo(): void }).restartDefaultDemo();
+    await flushAsyncTransition();
+
+    expect(state.statusMessages[0]).toContain('Nivel: Medio del muelle');
+    const pelikanMenu = state.registeredActionMenuDefinitions.findLast(
+      (definition) => definition.id === DEFAULT_ACTION_MENU_ID,
+    );
+    expect(pelikanMenu?.items.map((item) => item.label)).toEqual([
+      'Mirar',
+      'Hablar',
+      'Coger',
+      'Patear',
+    ]);
+  });
+
+  it('unregisters the game music playlist on stop', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const cartridge = new RoccoDefaultCartridge();
+
+    await cartridge.mount({ engine });
+    cartridge.stop();
+
+    expect(state.unregisteredPlaylistIds).toEqual(['rocco-game-music']);
   });
 
   it('places Pelikan on the pier mooring post', async () => {

@@ -34,5 +34,4 @@ export interface RoccoEffectManager {
   tick(context: RoccoEffectContext): void;
 }
 
-export type RoccoEffectTargetResolver = (targetType: string, targetId: string) => unknown | undefined;
-
+export type RoccoEffectTargetResolver = (targetType: string, targetId: string) => unknown;

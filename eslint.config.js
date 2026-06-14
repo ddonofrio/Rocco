@@ -5,17 +5,18 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**'],
+    ignores: ['dist/**', 'node_modules/**', '.kilo/**', '.local/**'],
   },
   js.configs.recommended,
   {
-    files: ['**/*.ts'],
+    files: ['src/**/*.ts'],
     ignores: ['dist/**'],
     languageOptions: {
       globals: globals.browser,
       parser: tsParser,
       parserOptions: {
-        project: false,
+        project: './tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
@@ -25,7 +26,8 @@ export default [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
-      '@typescript-eslint/no-explicit-any': 'off',
+      ...tsPlugin.configs['recommended-type-checked'].rules,
+      '@typescript-eslint/no-explicit-any': 'error',
       'no-console': 'off',
     },
   },

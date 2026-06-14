@@ -236,7 +236,7 @@ export class RoccoCartridgeMenu {
       const dataIndex = this.scrollOffset + i;
       if (dataIndex >= this.manifests.length) break;
 
-      const manifest = this.localizeManifest(this.manifests[dataIndex]!);
+      const manifest = this.localizeManifest(this.manifests[dataIndex]);
       const isSelected = dataIndex === this.selectedIndex;
       const y = LIST_TOP + i * ITEM_STRIDE;
 

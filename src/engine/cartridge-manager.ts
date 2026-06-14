@@ -1,16 +1,8 @@
 import type { Application } from 'pixi.js';
-import {
-  RoccoBuiltinCartridgeProvider,
-  RoccoDefaultCartridgeLoader,
-  type RoccoCartridge,
-} from './cartridges';
-import { RoccoDefaultCartridge } from '../cartridges/rocco/rocco-default-cartridge';
-import { RoccoTerminalWorkInProgressCartridge } from '../cartridges/terminal/terminal-work-in-progress-cartridge';
+import { builtinCartridgeConfigs, defaultBuiltinCartridgeId } from '../cartridges';
+import { RoccoBuiltinCartridgeProvider, RoccoDefaultCartridgeLoader, type RoccoCartridge } from './cartridges';
 import { RoccoCartridgeMenu } from './cartridge-menu/cartridge-menu';
 import type { RoccoEngine } from './engine-api';
-
-const ROCCO_DEFAULT_CARTRIDGE_ID = 'rocco-default';
-const ROCCO_LOCALE_STORAGE_KEY = 'rocco.default.locale';
 
 interface CartridgeManagerOptions {
   app: Application;
@@ -24,38 +16,33 @@ export class RoccoCartridgeManager {
   async loadAndMount(options: CartridgeManagerOptions): Promise<RoccoCartridge> {
     const { app, engine, configuredCartridgeId } = options;
 
-    const defaultCartridge = new RoccoDefaultCartridge();
-    const terminalWorkInProgressCartridge = new RoccoTerminalWorkInProgressCartridge();
-    const defaultProvider = new RoccoBuiltinCartridgeProvider([
-      defaultCartridge,
-      terminalWorkInProgressCartridge,
-    ]);
+    const defaultProvider = new RoccoBuiltinCartridgeProvider(builtinCartridgeConfigs);
     const loader = new RoccoDefaultCartridgeLoader({
       defaultProvider,
-      defaultCartridgeId: defaultCartridge.manifest.id,
-      configuredCartridgeId,
+      defaultCartridgeId: defaultBuiltinCartridgeId,
     });
 
     const allManifests = await defaultProvider.list();
+    const configById = new Map(
+      builtinCartridgeConfigs.map((config) => [config.manifest.id, config] as const),
+    );
     let selectedId: string;
     let selectedLocale: string | undefined;
     if (allManifests.length > 1 && !configuredCartridgeId) {
       const menu = new RoccoCartridgeMenu(app);
       const result = await menu.show(allManifests, {
-        initialLocales: {
-          [ROCCO_DEFAULT_CARTRIDGE_ID]: loadStoredRoccoLocale() ?? 'en',
-        },
+        initialLocales: this.loadInitialLocales(configById),
       });
       selectedId = result.selectedId;
       selectedLocale = result.selectedLocale;
     } else {
-      selectedId = configuredCartridgeId ?? defaultCartridge.manifest.id;
-      selectedLocale =
-        selectedId === ROCCO_DEFAULT_CARTRIDGE_ID ? loadStoredRoccoLocale() : undefined;
+      selectedId = configuredCartridgeId ?? defaultBuiltinCartridgeId;
+      selectedLocale = this.loadStoredLocale(configById.get(selectedId));
     }
 
-    if (selectedId === ROCCO_DEFAULT_CARTRIDGE_ID && selectedLocale) {
-      saveStoredRoccoLocale(selectedLocale);
+    const selectedConfig = configById.get(selectedId);
+    if (selectedLocale) {
+      this.saveStoredLocale(selectedConfig, selectedLocale);
     }
 
     const cartridge = (await loader.loadById(selectedId)) ?? (await loader.loadDefault());
@@ -81,20 +68,54 @@ export class RoccoCartridgeManager {
     }
     this.activeCartridge = null;
   }
-}
 
-function loadStoredRoccoLocale(): string | undefined {
-  try {
-    return globalThis.localStorage?.getItem(ROCCO_LOCALE_STORAGE_KEY) ?? undefined;
-  } catch {
-    return undefined;
+  private loadInitialLocales(
+    configById: ReadonlyMap<string, (typeof builtinCartridgeConfigs)[number]>,
+  ): Record<string, string> {
+    const locales: Record<string, string> = {};
+    for (const [cartridgeId, config] of configById) {
+      const locale = this.loadStoredLocale(config);
+      if (locale) {
+        locales[cartridgeId] = locale;
+      }
+    }
+
+    return locales;
   }
-}
 
-function saveStoredRoccoLocale(locale: string): void {
-  try {
-    globalThis.localStorage?.setItem(ROCCO_LOCALE_STORAGE_KEY, locale);
-  } catch {
-    return;
+  private loadStoredLocale(
+    config:
+      | (typeof builtinCartridgeConfigs)[number]
+      | undefined,
+  ): string | undefined {
+    if (!config?.preferredLocaleStorageKey) {
+      return undefined;
+    }
+
+    try {
+      return (
+        globalThis.localStorage?.getItem(config.preferredLocaleStorageKey) ??
+        config.defaultLocale
+      );
+    } catch {
+      return config.defaultLocale;
+    }
+  }
+
+  private saveStoredLocale(
+    config:
+      | (typeof builtinCartridgeConfigs)[number]
+      | undefined,
+    locale: string,
+  ): void {
+    if (!config?.preferredLocaleStorageKey) {
+      return;
+    }
+
+    try {
+      globalThis.localStorage?.setItem(config.preferredLocaleStorageKey, locale);
+    } catch {
+      return;
+    }
   }
 }

@@ -13,10 +13,12 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
   readonly manifest = roccoDefaultCartridgeManifest;
   private pierLevelManager: RoccoPierLevelManager | null = null;
   private engine: RoccoEngine | null = null;
+  private mountContext: RoccoCartridgeContext | null = null;
   private static readonly GAME_MUSIC_PLAYLIST_ID = 'rocco-game-music';
 
   async mount(context: RoccoCartridgeContext): Promise<void> {
     this.engine = context.engine;
+    this.mountContext = { ...context };
     this.pierLevelManager?.unmount();
     this.pierLevelManager = null;
     context.engine.beginComposition();
@@ -69,19 +71,23 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
   }
 
   stop(): void {
+    this.engine?.jukebox.unregisterPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
     this.pierLevelManager?.unmount();
     this.pierLevelManager = null;
+    this.engine = null;
+    this.mountContext = null;
   }
 
   private restartDefaultDemo(): void {
-    if (!this.engine) {
+    if (!this.engine || !this.mountContext) {
       return;
     }
 
     const engine = this.engine;
+    const mountContext = { ...this.mountContext };
     this.pierLevelManager?.unmount();
     this.pierLevelManager = null;
-    void this.mount({ engine }).catch(() => {
+    void this.mount(mountContext).catch(() => {
       engine.log('System', 'Default cartridge restart failed.');
     });
   }

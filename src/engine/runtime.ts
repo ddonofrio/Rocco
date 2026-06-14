@@ -117,6 +117,7 @@ export class GameRuntime implements RoccoEngine {
       this.app.ticker.remove(this.renderTick);
       this.video.destroy();
     }
+    this.jukebox.destroy();
     this.audio.destroy();
     this.inputHandler?.unmount();
     this.inputHandler = null;

@@ -9,11 +9,10 @@ export class RoccoDefaultEffectRegistry implements RoccoEffectRegistry {
 
   register<TTarget, TParams>(runtime: RoccoEffectRuntime<TTarget, TParams>): void {
     const key = runtimeKey(runtime.kind, runtime.targetType);
-    this.runtimes.set(key, runtime as RoccoEffectRuntime);
+    this.runtimes.set(key, runtime);
   }
 
   get(kind: string, targetType: string): RoccoEffectRuntime | undefined {
     return this.runtimes.get(runtimeKey(kind, targetType));
   }
 }
-

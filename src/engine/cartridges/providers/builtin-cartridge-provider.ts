@@ -1,20 +1,34 @@
-import type { RoccoCartridge, RoccoCartridgeManifest, RoccoCartridgeProvider } from '../types';
+import type {
+  RoccoCartridge,
+  RoccoCartridgeManifest,
+  RoccoCartridgeProvider,
+  RoccoCartridgeRegistration,
+} from '../types';
+
+function clone<T>(value: T): T {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+}
 
 export class RoccoBuiltinCartridgeProvider implements RoccoCartridgeProvider {
-  private readonly cartridges = new Map<string, RoccoCartridge>();
+  private readonly registrations = new Map<string, RoccoCartridgeRegistration>();
 
-  constructor(cartridges: RoccoCartridge[]) {
-    for (const cartridge of cartridges) {
-      this.cartridges.set(cartridge.manifest.id, cartridge);
+  constructor(registrations: RoccoCartridgeRegistration[]) {
+    for (const registration of registrations) {
+      this.registrations.set(registration.manifest.id, registration);
     }
   }
 
-  async list(): Promise<RoccoCartridgeManifest[]> {
-    return [...this.cartridges.values()].map((cartridge) => ({ ...cartridge.manifest }));
+  list(): Promise<RoccoCartridgeManifest[]> {
+    return Promise.resolve(
+      [...this.registrations.values()].map((registration) => clone(registration.manifest)),
+    );
   }
 
-  async load(id: string): Promise<RoccoCartridge | undefined> {
-    return this.cartridges.get(id);
+  load(id: string): Promise<RoccoCartridge | undefined> {
+    return Promise.resolve(this.registrations.get(id)?.createCartridge());
   }
 }
-

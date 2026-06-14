@@ -14,7 +14,7 @@ The jukebox manages continuous background music and ambient playlists through `e
 - Continuous playlist playback.
 - Auto-mix mode that detects non-silent segments.
 - Crossfades between segments.
-- Master volume and per-track volume.
+- Master volume, playlist volume, and per-track volume.
 - Runtime helpers for `isPlaying()` and `getCurrentTrack()`.
 
 ## Cartridge Usage
@@ -54,7 +54,8 @@ Auto-mix analyzes each track, finds non-silent audio segments, skips segments sh
 - `silenceThreshold` controls silence detection.
 - `minSegmentDurationMs` filters short segments.
 - Track `volume` controls individual track loudness.
-- Playlist `globalVolume` controls the whole playlist.
+- Playlist `globalVolume` sets the playlist mix level.
+- `engine.jukebox.setVolume()` multiplies that playlist mix level as the master jukebox volume.
 
 ## Runtime Notes
 

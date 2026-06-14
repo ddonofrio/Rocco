@@ -44,6 +44,7 @@ export class RoccoDefaultEffectManager implements RoccoEffectManager {
   }
 
   remove(effectId: string): void {
+    this.requireEffect(effectId);
     this.effects.delete(effectId);
   }
 

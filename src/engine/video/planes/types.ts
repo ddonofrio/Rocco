@@ -96,6 +96,10 @@ export interface RoccoImageSource {
 }
 
 export interface RoccoBitmapSource {
+  /**
+   * Reserved for future renderer support.
+   * The current Pixi runtime does not render bitmap sources directly.
+   */
   kind: 'bitmap';
   bitmapId: string;
   width: number;
@@ -105,6 +109,10 @@ export interface RoccoBitmapSource {
 }
 
 export interface RoccoTilesetSource {
+  /**
+   * Reserved for future renderer support.
+   * The current Pixi runtime does not render tileset sources directly.
+   */
   kind: 'tileset';
   tilesetId: string;
   imageUri: string;
@@ -209,14 +217,6 @@ export interface RoccoPlaneScene {
 export interface RoccoPlaneSceneRecord {
   id: string;
   scene: RoccoPlaneScene;
-  updatedAt: number;
-}
-
-export interface RoccoPlaneAssetRecord {
-  id: string;
-  kind: string;
-  dataRef?: string;
-  payload?: Record<string, unknown>;
   updatedAt: number;
 }
 

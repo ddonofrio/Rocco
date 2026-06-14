@@ -15,13 +15,13 @@ Start with these files before editing:
 
 ## For Humans
 
-ROCCO is both a small game console runtime and a development platform. The engine provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the actual game content and interact with the engine through a stable TypeScript interface plus subsystem SDKs.
+ROCCO is both a small game console runtime and a development platform. The engine provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the actual game content and interact with the engine through stable TypeScript interfaces plus subsystem SDKs.
 
 ROCCO works well with AI-powered coding tools because the codebase is organized around documented concepts: engine systems, cartridge infrastructure, built-in cartridges, levels, sprites, effects, and localized text catalogs.
 
 ## Tech Stack
 
-- TypeScript for strict, typed development.
+- TypeScript for typed development with explicit SDK interfaces.
 - PixiJS for accelerated 2D rendering.
 - Dexie and IndexedDB for local persistence.
 - Vite for the development server and production build.
@@ -55,7 +55,6 @@ src/
   cartridges/              Built-in cartridge implementations
     rocco/                 Main Pier map demo cartridge
     terminal/              Archived reference demo cartridge
-  game/                    Shared game verbs and utilities
 public/                    Static browser assets
 scripts/                   Windows-friendly development scripts
 ```

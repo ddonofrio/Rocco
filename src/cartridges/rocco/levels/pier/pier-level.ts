@@ -1,5 +1,4 @@
 import type { RoccoEngine } from '../../../../engine/engine-api';
-import type { RoccoSceneClickAction } from '../../../../engine/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
 import { Assets } from 'pixi.js';
@@ -307,7 +306,7 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
     showDefaultPelikanTalkReaction(this.engine, this.localization);
   }
 
-  handleSceneClick(_action: RoccoSceneClickAction): void {
+  handleSceneClick(): void {
     this.spriteController?.cancelIntro();
   }
 

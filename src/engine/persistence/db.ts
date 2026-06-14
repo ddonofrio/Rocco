@@ -1,14 +1,9 @@
 import Dexie, { type Table } from 'dexie';
 
-import type {
-  RoccoPlaneAssetRecord,
-  RoccoPlaneScene,
-  RoccoPlaneSceneRecord,
-} from '../video/planes/types';
+import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../video/planes/types';
 
 class RoccoDatabase extends Dexie {
   scenes!: Table<RoccoPlaneSceneRecord, string>;
-  planeAssets!: Table<RoccoPlaneAssetRecord, string>;
 
   constructor() {
     super('rocco_db');
@@ -16,6 +11,11 @@ class RoccoDatabase extends Dexie {
       saves: '++id, sceneId, updatedAt',
       scenes: 'id, updatedAt',
       planeAssets: 'id, kind, updatedAt',
+    });
+    this.version(3).stores({
+      saves: null,
+      scenes: 'id, updatedAt',
+      planeAssets: null,
     });
   }
 }
@@ -35,15 +35,4 @@ export async function savePlaneScene(scene: RoccoPlaneScene): Promise<RoccoPlane
   };
   await db.scenes.put(record);
   return record;
-}
-
-export async function listPlaneScenes(): Promise<RoccoPlaneSceneRecord[]> {
-  return db.scenes.orderBy('updatedAt').reverse().toArray();
-}
-
-export async function savePlaneAsset(asset: Omit<RoccoPlaneAssetRecord, 'updatedAt'>): Promise<void> {
-  await db.planeAssets.put({
-    ...asset,
-    updatedAt: Date.now(),
-  });
 }

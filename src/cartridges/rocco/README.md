@@ -55,6 +55,8 @@ The cartridge supports:
 
 The boot menu shows language radio buttons for this cartridge. The selected locale is passed as `RoccoCartridgeContext.locale` and resolved through `createRoccoLocalization(locale)`.
 
+Internal cartridge restarts such as the keys defeat restart preserve the selected locale and rebuild the cartridge with the same localization context.
+
 Localized catalogs cover:
 
 - Manifest metadata.

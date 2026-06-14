@@ -1,7 +1,7 @@
-import type { RoccoRuntimeVideoSystem } from './video';
-import type { RoccoRuntimeAudioSystem } from './audio';
+import type { RoccoAudioSystem } from './audio';
 import type { RoccoJukeboxSystem } from './audio/jukebox';
-import type { RoccoDefaultEffectManager } from './effects';
+import type { RoccoEffectManager } from './effects';
+import type { RoccoVideoSystem } from './video';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from './video/planes';
 
 export interface RoccoEnginePersistence {
@@ -11,10 +11,10 @@ export interface RoccoEnginePersistence {
 
 export interface RoccoEngine {
   // Direct subsystem access
-  readonly video: RoccoRuntimeVideoSystem;
-  readonly audio: RoccoRuntimeAudioSystem;
+  readonly video: RoccoVideoSystem;
+  readonly audio: RoccoAudioSystem;
   readonly jukebox: RoccoJukeboxSystem;
-  readonly effects: RoccoDefaultEffectManager;
+  readonly effects: RoccoEffectManager;
   readonly persistence: RoccoEnginePersistence;
 
   // Scene management

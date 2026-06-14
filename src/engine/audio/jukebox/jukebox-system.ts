@@ -26,7 +26,9 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
   private currentSource: AudioBufferSourceNode | null = null;
   private currentGain: GainNode | null = null;
   private scheduleTimeoutId: number | null = null;
-  private globalVolume = 1;
+  private readonly cleanupTimeoutIds = new Set<number>();
+  private masterVolume = 1;
+  private playlistVolume = 1;
 
   registerPlaylist(playlist: RoccoJukeboxPlaylist): void {
     this.playlists.set(playlist.id, this.clonePlaylist(playlist));
@@ -61,7 +63,8 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     }
 
     this.currentPlaylistId = playlistId;
-    this.globalVolume = clampVolume(playlist.globalVolume ?? 1);
+    this.playlistVolume = clampVolume(playlist.globalVolume ?? 1);
+    this.applyMasterGainVolume();
 
     // Load and analyze all tracks
     this.trackStates = [];
@@ -104,10 +107,13 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
       clearTimeout(this.scheduleTimeoutId);
       this.scheduleTimeoutId = null;
     }
+    this.clearCleanupTimeouts();
 
     this.stopSource(this.currentSource);
     this.currentSource = null;
     this.currentGain = null;
+    this.playlistVolume = 1;
+    this.applyMasterGainVolume();
   }
 
   isPlaying(): boolean {
@@ -115,10 +121,8 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
   }
 
   setVolume(volume: number): void {
-    this.globalVolume = clampVolume(volume);
-    if (this.masterGain) {
-      this.masterGain.gain.value = this.globalVolume;
-    }
+    this.masterVolume = clampVolume(volume);
+    this.applyMasterGainVolume();
   }
 
   getCurrentTrack(): string | undefined {
@@ -238,9 +242,11 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
       prevGain.gain.linearRampToValueAtTime(0, now + fadeDuration);
       
       // Stop and clean up previous source after fade out
-      setTimeout(() => {
+      const timeoutId = window.setTimeout(() => {
+        this.cleanupTimeoutIds.delete(timeoutId);
         this.stopSource(prevSource);
       }, fadeDuration * 1000);
+      this.cleanupTimeoutIds.add(timeoutId);
     }
   }
 
@@ -281,9 +287,24 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     }
 
     this.masterGain = context.createGain();
-    this.masterGain.gain.value = this.globalVolume;
+    this.applyMasterGainVolume();
     this.masterGain.connect(context.destination);
     return this.masterGain;
+  }
+
+  private applyMasterGainVolume(): void {
+    if (!this.masterGain) {
+      return;
+    }
+
+    this.masterGain.gain.value = clampVolume(this.masterVolume * this.playlistVolume);
+  }
+
+  private clearCleanupTimeouts(): void {
+    for (const timeoutId of this.cleanupTimeoutIds) {
+      clearTimeout(timeoutId);
+    }
+    this.cleanupTimeoutIds.clear();
   }
 
   private stopSource(source: AudioBufferSourceNode | null): void {
@@ -299,6 +320,11 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
   }
 
   private clonePlaylist(playlist: RoccoJukeboxPlaylist): RoccoJukeboxPlaylist {
-    return JSON.parse(JSON.stringify(playlist));
+    return {
+      id: playlist.id,
+      tracks: playlist.tracks.map((track) => ({ ...track })),
+      mixMode: { ...playlist.mixMode },
+      globalVolume: playlist.globalVolume,
+    };
   }
 }

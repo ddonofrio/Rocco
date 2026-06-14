@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { RoccoDefaultCartridgeLoader } from './loader';
 import { RoccoBuiltinCartridgeProvider } from './providers/builtin-cartridge-provider';
-import type { RoccoCartridge } from './types';
+import type { RoccoCartridge, RoccoCartridgeRegistration } from './types';
 
 function makeCartridge(id: string): RoccoCartridge {
   return {
@@ -17,10 +17,20 @@ function makeCartridge(id: string): RoccoCartridge {
   };
 }
 
+function makeRegistration(id: string): RoccoCartridgeRegistration {
+  return {
+    manifest: {
+      id,
+      title: `Cartridge ${id}`,
+      version: '1.0.0',
+    },
+    createCartridge: () => makeCartridge(id),
+  };
+}
+
 describe('RoccoBuiltinCartridgeProvider', () => {
   it('lists and loads cartridges', async () => {
-    const alpha = makeCartridge('alpha');
-    const provider = new RoccoBuiltinCartridgeProvider([alpha]);
+    const provider = new RoccoBuiltinCartridgeProvider([makeRegistration('alpha')]);
 
     const listed = await provider.list();
     expect(listed).toHaveLength(1);
@@ -29,45 +39,48 @@ describe('RoccoBuiltinCartridgeProvider', () => {
     const loaded = await provider.load('alpha');
     expect(loaded?.manifest.id).toBe('alpha');
   });
+
+  it('creates a fresh cartridge instance for each load', async () => {
+    const provider = new RoccoBuiltinCartridgeProvider([makeRegistration('alpha')]);
+
+    const first = await provider.load('alpha');
+    const second = await provider.load('alpha');
+
+    expect(first).not.toBe(second);
+    expect(first?.manifest.id).toBe('alpha');
+    expect(second?.manifest.id).toBe('alpha');
+  });
 });
 
 describe('RoccoDefaultCartridgeLoader', () => {
-  it('loads default cartridge when no external cartridges are registered', async () => {
-    const defaultCartridge = makeCartridge('default');
+  it('loads default cartridge when requested', async () => {
     const loader = new RoccoDefaultCartridgeLoader({
-      defaultProvider: new RoccoBuiltinCartridgeProvider([defaultCartridge]),
+      defaultProvider: new RoccoBuiltinCartridgeProvider([makeRegistration('default')]),
       defaultCartridgeId: 'default',
     });
 
-    const loaded = await loader.boot();
+    const loaded = await loader.loadDefault();
     expect(loaded.manifest.id).toBe('default');
   });
 
-  it('loads external cartridge when exactly one provider cartridge exists', async () => {
-    const defaultCartridge = makeCartridge('default');
-    const externalCartridge = makeCartridge('external');
+  it('loads external cartridge by id when registered in an additional provider', async () => {
     const loader = new RoccoDefaultCartridgeLoader({
-      defaultProvider: new RoccoBuiltinCartridgeProvider([defaultCartridge]),
+      defaultProvider: new RoccoBuiltinCartridgeProvider([makeRegistration('default')]),
       defaultCartridgeId: 'default',
     });
-    loader.registerProvider(new RoccoBuiltinCartridgeProvider([externalCartridge]));
+    loader.registerProvider(new RoccoBuiltinCartridgeProvider([makeRegistration('external')]));
 
-    const loaded = await loader.boot();
-    expect(loaded.manifest.id).toBe('external');
+    const loaded = await loader.loadById('external');
+    expect(loaded?.manifest.id).toBe('external');
   });
 
-  it('loads configured cartridge id when available', async () => {
-    const defaultCartridge = makeCartridge('default');
-    const configured = makeCartridge('configured');
+  it('falls back to the default provider when a cartridge id is not found externally', async () => {
     const loader = new RoccoDefaultCartridgeLoader({
-      defaultProvider: new RoccoBuiltinCartridgeProvider([defaultCartridge]),
+      defaultProvider: new RoccoBuiltinCartridgeProvider([makeRegistration('default')]),
       defaultCartridgeId: 'default',
-      configuredCartridgeId: 'configured',
     });
-    loader.registerProvider(new RoccoBuiltinCartridgeProvider([configured]));
 
-    const loaded = await loader.boot();
-    expect(loaded.manifest.id).toBe('configured');
+    const loaded = await loader.loadById('default');
+    expect(loaded?.manifest.id).toBe('default');
   });
 });
-

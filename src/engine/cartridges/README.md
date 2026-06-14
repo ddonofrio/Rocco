@@ -7,7 +7,7 @@ Actual cartridge implementations live in `src/cartridges`.
 ## Files
 
 - `types.ts` - `RoccoCartridge`, `RoccoCartridgeManifest`, context, provider, and loader types.
-- `loader.ts` - `RoccoDefaultCartridgeLoader`, which resolves configured, provider, and fallback cartridges.
+- `loader.ts` - `RoccoDefaultCartridgeLoader`, which resolves provider and fallback cartridges.
 - `index.ts` - Barrel export.
 
 ## Subdirectories
@@ -19,7 +19,8 @@ Actual cartridge implementations live in `src/cartridges`.
 ## Cartridge Lifecycle
 
 ```text
-CartridgeLoader.boot()
+CartridgeManager selection
+  -> CartridgeLoader.loadById() or loadDefault()
   -> cartridge.mount({ engine, locale })
   -> cartridge.start()
   -> cartridge.update(deltaMs)
@@ -93,6 +94,6 @@ When a localized cartridge is selected, `RoccoCartridgeMenu` returns `selectedLo
 3. Implement `RoccoCartridge`.
 4. Define `RoccoCartridgeManifest`.
 5. Add cartridge assets.
-6. Register the cartridge with `RoccoBuiltinCartridgeProvider`.
+6. Register the cartridge in `src/cartridges/index.ts`.
 
 Cartridge code should not import PixiJS or engine renderer internals.

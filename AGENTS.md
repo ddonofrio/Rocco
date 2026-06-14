@@ -35,7 +35,7 @@ If the available context window is large, prefer reading all project-owned docum
 - For the Rocco Pier map, read `src/cartridges/rocco/README.md` and `src/cartridges/rocco/levels/pier/README.md`.
 - For localization, read `src/engine/cartridges/README.md`, `src/engine/cartridge-menu/README.md`, `src/cartridges/rocco/README.md`, and `src/cartridges/rocco/localization/README.md`.
 - For water, planes, or rendering artifacts, read `src/engine/video/README.md`, `src/engine/video/planes/README.md`, `src/engine/video/post-processing/README.md`, and the relevant cartridge/level README.
-- For sprites, action menus, motion, walk maps, or interaction sequences, read `src/engine/video/sprites/README.md`, `src/game/README.md`, and the relevant cartridge README.
+- For sprites, action menus, motion, walk maps, or interaction sequences, read `src/engine/video/sprites/README.md` and the relevant cartridge README.
 - For commands, tests, Windows quirks, or local workflow, read `DEVELOPMENT.md`.
 
 After reading docs, inspect the closest existing implementation and its tests before writing new code. Good first searches are `rg "<concept>" src` and `rg "<id-or-file-name>" src`.

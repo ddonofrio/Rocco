@@ -96,15 +96,28 @@ function toDiagonalFacingFromFacing(
 ): RoccoFacingDirection {
   const side = toHorizontalSideFacing(direction) ?? sideFallback;
   if (direction.includes('up')) {
-    return side ? `up-${side}` as RoccoFacingDirection : 'up';
+    return side === 'left' ? 'up-left' : side === 'right' ? 'up-right' : 'up';
   }
   if (direction.includes('down')) {
-    return side ? `down-${side}` as RoccoFacingDirection : 'down';
+    return side === 'left' ? 'down-left' : side === 'right' ? 'down-right' : 'down';
   }
   if (side) {
     return side === 'left' ? 'down-left' : 'down-right';
   }
   return direction;
+}
+
+function isGoToOptions(options: RoccoMoveOptions | undefined): options is RoccoSpriteGoToOptions {
+  if (!options) {
+    return false;
+  }
+
+  return (
+    'targetInstanceId' in options ||
+    'keepDistance' in options ||
+    'faceTargetOnComplete' in options ||
+    'foregroundFacingBias' in options
+  );
 }
 
 function pointInPolygon(point: RoccoPoint, points: RoccoPoint[]): boolean {
@@ -1786,7 +1799,7 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     definition: RoccoSpriteDefinition,
     options?: RoccoMoveOptions,
   ): RoccoFacingDirection | undefined {
-    const goToOptions = options as RoccoSpriteGoToOptions | undefined;
+    const goToOptions = isGoToOptions(options) ? options : undefined;
     if (!goToOptions?.targetInstanceId || goToOptions.faceTargetOnComplete === false) {
       return undefined;
     }

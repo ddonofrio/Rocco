@@ -29,7 +29,7 @@ Useful routes:
 - Rocco Pier behavior: `src/cartridges/rocco/README.md`, then `src/cartridges/rocco/levels/pier/README.md`.
 - Localization: `src/engine/cartridges/README.md`, `src/engine/cartridge-menu/README.md`, and `src/cartridges/rocco/localization/README.md`.
 - Rendering and water effects: `src/engine/video/README.md`, `src/engine/video/planes/README.md`, and `src/engine/video/post-processing/README.md`.
-- Sprites, walk maps, or actions: `src/engine/video/sprites/README.md`, `src/game/README.md`, and the relevant cartridge README.
+- Sprites, walk maps, or actions: `src/engine/video/sprites/README.md` and the relevant cartridge README.
 
 After reading, inspect the closest existing implementation and tests. Prefer `rg "<concept>" src` over broad manual browsing.
 
@@ -66,8 +66,6 @@ src/
   cartridges/
     rocco/                        rocco-default cartridge
     terminal/                     Archived reference cartridge
-  game/
-    verbs.ts                      Shared point-and-click verb utilities
 ```
 
 ## Boot Flow
@@ -206,7 +204,7 @@ Cartridges reach these capabilities through subsystem handles on `engine`.
 - `engine.jukebox.registerPlaylist(playlist)` registers background music.
 - `engine.jukebox.playPlaylist(id)` starts a playlist.
 - `engine.jukebox.stopPlaylist()` stops the active playlist.
-- `engine.jukebox.setVolume(volume)` sets master jukebox volume.
+- `engine.jukebox.setVolume(volume)` sets the master jukebox volume multiplier.
 - `engine.effects.add(effect)` registers and starts a per-tick effect.
 - `engine.effects.remove(effectId)` removes an effect.
 - `engine.effects.update(effectId, patch)` edits an active effect.
@@ -303,16 +301,16 @@ The cursor is a console capability. Grid item payloads can become cursor attachm
 
 ## Graphic Planes
 
-Planes are layered image, solid, bitmap, tile, or procedural backgrounds. A `RoccoPlaneScene` contains planes, palettes, color register sets, and attribute maps.
+Planes are layered image, tilemap, solid, or procedural backgrounds in the current Pixi runtime. A `RoccoPlaneScene` contains planes, palettes, color register sets, and attribute maps.
 
 Supported plane source kinds:
 
 - `solid`
 - `image`
-- `bitmap`
-- `tileset`
 - `tilemap`
 - `procedural`
+
+`bitmap` and `tileset` remain scene-data shapes in the plane types, but the current Pixi runtime does not render them directly. Treat them as reserved for future renderer support, not as cartridge-ready runtime features.
 
 Image planes can opt into water animation through `metadata.waterColorEffect`.
 
@@ -393,7 +391,7 @@ Do not use Terminal as the template for new cartridges. Use `rocco-default` as t
 3. Implement `RoccoCartridge` in a `*-cartridge.ts` file.
 4. Define a manifest in a `*-manifest.ts` file.
 5. Add assets under the cartridge folder.
-6. Register the cartridge with `RoccoBuiltinCartridgeProvider`.
+6. Register the cartridge in `src/cartridges/index.ts`.
 
 Only use the `RoccoEngine` interface and exposed subsystem SDKs inside cartridge code.
 
@@ -420,7 +418,7 @@ powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users
 
 ## Code Conventions
 
-- TypeScript strict mode.
+- TypeScript interfaces at the engine and SDK boundaries.
 - Interfaces for data shapes.
 - `structuredClone` for defensive copies when crossing module boundaries.
 - No direct PixiJS usage outside Pixi renderer modules and Pixi-specific UI modules.

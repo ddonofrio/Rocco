@@ -94,7 +94,6 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 
 - `src/engine/` contains the console runtime and generic systems.
 - `src/cartridges/` contains built-in cartridge implementations.
-- `src/game/` contains shared game-level utilities.
 - `scripts/` contains local development scripts.
 - `public/` contains static browser assets.
 - `dist/` contains generated production output.

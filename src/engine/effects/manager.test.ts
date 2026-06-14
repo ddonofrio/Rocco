@@ -163,4 +163,13 @@ describe('Rocco effects manager', () => {
     expect(plane.scroll.x).toBe(25);
     expect(plane.scroll.y).toBe(40);
   });
+
+  it('throws when removing an effect that does not exist', () => {
+    const manager = new RoccoDefaultEffectManager({
+      registry: new RoccoDefaultEffectRegistry(),
+      resolveTarget: () => undefined,
+    });
+
+    expect(() => manager.remove('missing-effect')).toThrow("Effect 'missing-effect' was not found");
+  });
 });

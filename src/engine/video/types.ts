@@ -1,7 +1,7 @@
 import type { RoccoGraphicPlane, RoccoPlaneScene } from './planes';
 import type { RoccoPrimitiveSystem } from './primitives';
 import type { RoccoRenderLayer } from './render-layers';
-import type { RoccoSpriteSystem } from './sprites';
+import type { RoccoSpriteDefinition, RoccoSpriteSystem } from './sprites';
 import type { RoccoActionMenuSystem } from './action-menu';
 import type { RoccoGridMenuSystem } from './grid-menu';
 import type { RoccoSpriteMessageSystem } from './messages';
@@ -40,6 +40,9 @@ export interface RoccoVideoSystem {
   setRenderLayerOrder(layers: RoccoRenderLayer[]): void;
   getRenderLayerOrder(): RoccoRenderLayer[];
 
+  preloadPlaneScene(scene: RoccoPlaneScene): Promise<void>;
+  preloadSpriteDefinition(definition: RoccoSpriteDefinition): Promise<void>;
+  preloadSpriteDefinitions(definitions: RoccoSpriteDefinition[]): Promise<void>;
   update(deltaMs: number): void;
   render(delta: number): void;
 }

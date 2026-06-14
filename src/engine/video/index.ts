@@ -1,6 +1,4 @@
 export type * from './types';
-export type * from './video-scene';
-export type * from './renderer';
 
 export {
   defaultRoccoRenderLayers,

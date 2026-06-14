@@ -1,6 +1,6 @@
 # Persistence
 
-Persistence stores plane scenes and plane assets in IndexedDB through Dexie.
+Persistence stores plane scenes in IndexedDB through Dexie.
 
 ## Files
 
@@ -11,14 +11,11 @@ Persistence stores plane scenes and plane assets in IndexedDB through Dexie.
 | Table         | Key  | Description                         |
 | ------------- | ---- | ----------------------------------- |
 | `scenes`      | `id` | Persisted `RoccoPlaneScene` records |
-| `planeAssets` | `id` | Persisted plane asset records       |
 
 ## Exported Functions
 
 - `loadPlaneSceneRecord(sceneId)` loads a scene record or returns `null`.
 - `savePlaneScene(scene)` upserts a scene.
-- `listPlaneScenes()` lists scene records with newest records first.
-- `savePlaneAsset(asset)` upserts a plane asset record.
 
 ## Notes
 

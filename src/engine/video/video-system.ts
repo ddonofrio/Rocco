@@ -226,20 +226,15 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.actionMenuSystem.update(deltaMs);
     this.messageSystem.update(deltaMs);
     this.titleSystem.update(deltaMs);
-    this.syncSprites();
-    this.syncActionMenu();
-    this.syncGridMenu();
-    this.syncMessages();
-    this.syncPrimitives();
-    this.syncTitles();
   }
 
   render(delta: number): void {
     this.syncActivePlaneScene();
-    this.syncSprites();
+    const spriteRenderables = this.spriteSystem.listRenderableSprites();
+    this.syncSprites(spriteRenderables);
     this.syncActionMenu();
     this.syncGridMenu();
-    this.syncMessages();
+    this.syncMessages(spriteRenderables);
     this.syncPrimitives();
     this.syncTitles();
     this.planeRenderer.render(delta);
@@ -272,8 +267,8 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.planeRenderer.sync(scene);
   }
 
-  private syncSprites(): void {
-    this.spriteRenderer.sync(this.spriteSystem.listRenderableSprites());
+  private syncSprites(renderables = this.spriteSystem.listRenderableSprites()): void {
+    this.spriteRenderer.sync(renderables);
   }
 
   private syncActionMenu(): void {
@@ -284,10 +279,10 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.gridMenuRenderer.sync(this.gridMenuSystem.getRenderableMenu());
   }
 
-  private syncMessages(): void {
+  private syncMessages(renderables = this.spriteSystem.listRenderableSprites()): void {
     this.messageRenderer.sync(
       this.messageSystem.listRenderableMessages(
-        this.spriteSystem.listRenderableSprites(),
+        renderables,
         this.resolveDesignSize(),
       ),
     );

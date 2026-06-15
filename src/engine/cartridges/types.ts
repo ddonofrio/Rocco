@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../engine-api';
+import type { RoccoEngine } from '../engine-sdk';
 import type { RoccoActionMenuActivation } from '../video/action-menu';
 import type { RoccoGridMenuActivation } from '../video/grid-menu';
 

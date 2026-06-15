@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../engine/engine-api';
+import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoSpriteDefinition } from '../../../../engine/video/sprites';
 import { pierCloudAssetUrl } from './pier-assets';
 import {

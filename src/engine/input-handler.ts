@@ -3,6 +3,7 @@ import type { RoccoCursorActionEvent, RoccoCursorMoveEvent } from './video/curso
 import type { RoccoViewportHost } from './video/viewport';
 import type { RoccoSpriteMessageRequest } from './video/messages';
 import type { RoccoCartridge, RoccoSceneClickAction } from './cartridges';
+import type { RoccoSpriteHit, RoccoSpriteVisiblePixelHit } from './video/sprites';
 import type { RoccoRuntimeAudioSystem } from './audio';
 import type { RoccoJukeboxSystem } from './audio/jukebox';
 
@@ -18,6 +19,11 @@ interface InputHandlerOptions {
   getActivePlayerSpriteId: () => string | null;
   showSpriteMessage: (message: RoccoSpriteMessageRequest) => void;
   log: (channel: string, message: string) => void;
+}
+
+interface ResolvedSceneTargets {
+  visibleTarget: RoccoSpriteVisiblePixelHit | undefined;
+  target: RoccoSpriteHit | undefined;
 }
 
 export class RoccoInputHandler {
@@ -67,7 +73,7 @@ export class RoccoInputHandler {
   private readonly handleCursorAction = (event: RoccoCursorActionEvent): void => {
     const x = Math.round(event.sceneX);
     const y = Math.round(event.sceneY);
-    
+
     // Block input only when a runtime sequence explicitly disables it.
     if (!this.inputEnabled) {
       return;
@@ -75,134 +81,22 @@ export class RoccoInputHandler {
 
     this.videoSystem.messages.clearMessages();
 
-    if (this.videoSystem.gridMenus.isOpen()) {
-      const activation = this.videoSystem.gridMenus.activateAt(event.sceneX, event.sceneY);
-      this.setHoverDescription(undefined);
-      if (activation) {
-        void this.getActiveCartridge()?.handleAction?.(activation);
-        this.logFn(
-          'GridMenu',
-          `ACTION '${activation.interaction}'${activation.itemId ? ` for '${activation.itemId}'` : ''} on grid menu '${activation.definitionId}'.`,
-        );
-      }
-      this.syncCursorAttachment();
-      this.videoSystem.render(0);
+    if (this.handleGridMenuCursorAction(event)) {
       return;
     }
 
-    // If action menu is open, handle menu interaction
-    if (this.videoSystem.actionMenus.isOpen()) {
-      const activation = this.videoSystem.actionMenus.activateAt(event.sceneX, event.sceneY);
-      this.setHoverDescription(undefined);
-      this.videoSystem.render(0);
-      if (activation) {
-        if (activation.result?.kind === 'sprite-message') {
-          this.showSpriteMessage(activation.result.message);
-        }
-        void this.getActiveCartridge()?.handleAction?.(activation);
-        this.logFn(
-          'ActionMenu',
-          `ACTION '${activation.actionId}' on sprite '${activation.targetInstanceId}'.`,
-        );
-      }
+    if (this.handleActionMenuCursorAction(event)) {
       return;
     }
 
     this.audioSystem.unlock();
     this.jukeboxSystem.unlock();
 
-    const carriedItem = this.videoSystem.gridMenus.getCarriedItem();
-    if (carriedItem) {
-      const visibleHits = this.videoSystem.sprites.hitTestVisiblePixel(event.sceneX, event.sceneY);
-      const hits = visibleHits.length > 0 ? [] : this.videoSystem.sprites.hitTest(event.sceneX, event.sceneY);
-      const visibleTarget = visibleHits[0];
-      const target = hits[0];
-      const actionTarget = visibleTarget ?? target;
-
-      if (actionTarget) {
-        const activation: RoccoSceneClickAction = {
-          kind: 'scene-click',
-          sceneX: event.sceneX,
-          sceneY: event.sceneY,
-          targetInstanceId: actionTarget.instanceId,
-          targetDefinitionId: actionTarget.definitionId,
-        };
-        this.setHoverDescription(undefined);
-        void this.getActiveCartridge()?.handleAction?.(activation);
-        this.logFn(
-          'GridMenu',
-          `USE carried grid item '${carriedItem.item.id}' on sprite '${actionTarget.instanceId}'.`,
-        );
-        this.syncCursorAttachment();
-        this.videoSystem.render(0);
-        return;
-      }
-
-      this.videoSystem.gridMenus.clearCarriedItem();
-      this.syncCursorAttachment();
-      this.setHoverDescription(undefined);
-      this.videoSystem.render(0);
-      this.logFn('GridMenu', `CLEAR carried grid item at (${x}, ${y}).`);
+    if (this.handleCarriedItemCursorAction(event, x, y)) {
       return;
     }
 
-    const visibleHits = this.videoSystem.sprites.hitTestVisiblePixel(event.sceneX, event.sceneY);
-    const hits = visibleHits.length > 0 ? [] : this.videoSystem.sprites.hitTest(event.sceneX, event.sceneY);
-    const visibleTarget = visibleHits[0];
-    const target = hits[0];
-    const playerSpriteId = this.getActivePlayerSpriteId();
-    const actionTargetId = visibleTarget?.instanceId ?? target?.instanceId;
-    const sceneClickAction: RoccoSceneClickAction = {
-      kind: 'scene-click',
-      sceneX: event.sceneX,
-      sceneY: event.sceneY,
-      targetInstanceId: actionTargetId,
-      targetDefinitionId: visibleTarget?.definitionId ?? target?.definitionId,
-    };
-
-    void this.getActiveCartridge()?.handleAction?.(sceneClickAction);
-
-    if (visibleTarget && this.videoSystem.actionMenus.openMenuForTarget(
-      visibleTarget.instanceId,
-      visibleTarget.definitionId,
-      event.sceneX,
-      event.sceneY,
-    )) {
-      if (playerSpriteId && visibleTarget.instanceId !== playerSpriteId) {
-        this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
-          idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
-          idleSettleFacing: 'diagonal-from-facing',
-          targetInstanceId:
-            visibleTarget.instanceId !== playerSpriteId
-              ? visibleTarget.instanceId
-              : undefined,
-        });
-      }
-      this.setHoverDescription(undefined);
-      this.videoSystem.render(0);
-      this.logFn('ActionMenu', `OPEN for sprite '${visibleTarget.instanceId}' at (${x}, ${y}).`);
-      return;
-    }
-
-    if (playerSpriteId) {
-      this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
-        idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
-        idleSettleFacing: 'diagonal-from-facing',
-        targetInstanceId: actionTargetId && actionTargetId !== playerSpriteId ? actionTargetId : undefined,
-      });
-    }
-
-    if (visibleTarget) {
-      this.logFn('Cursor', `CLICK sprite '${visibleTarget.instanceId}' at (${x}, ${y}).`);
-      return;
-    }
-
-    if (target) {
-      this.logFn('Cursor', `CLICK sprite '${target.instanceId}' at (${x}, ${y}).`);
-      return;
-    }
-
-    this.logFn('Cursor', `CLICK at (${x}, ${y}).`);
+    this.handleSceneCursorAction(event, x, y);
   };
 
   private readonly handleCursorMove = (event: RoccoCursorMoveEvent): void => {
@@ -241,6 +135,160 @@ export class RoccoInputHandler {
     }
     this.setHoverDescription(undefined);
   };
+
+  private handleGridMenuCursorAction(event: RoccoCursorActionEvent): boolean {
+    if (!this.videoSystem.gridMenus.isOpen()) {
+      return false;
+    }
+
+    const activation = this.videoSystem.gridMenus.activateAt(event.sceneX, event.sceneY);
+    this.setHoverDescription(undefined);
+    if (activation) {
+      void this.getActiveCartridge()?.handleAction?.(activation);
+      this.logFn(
+        'GridMenu',
+        `ACTION '${activation.interaction}'${activation.itemId ? ` for '${activation.itemId}'` : ''} on grid menu '${activation.definitionId}'.`,
+      );
+    }
+    this.syncCursorAttachment();
+    this.videoSystem.render(0);
+    return true;
+  }
+
+  private handleActionMenuCursorAction(event: RoccoCursorActionEvent): boolean {
+    if (!this.videoSystem.actionMenus.isOpen()) {
+      return false;
+    }
+
+    const activation = this.videoSystem.actionMenus.activateAt(event.sceneX, event.sceneY);
+    this.setHoverDescription(undefined);
+    this.videoSystem.render(0);
+    if (activation) {
+      if (activation.result?.kind === 'sprite-message') {
+        this.showSpriteMessage(activation.result.message);
+      }
+      void this.getActiveCartridge()?.handleAction?.(activation);
+      this.logFn(
+        'ActionMenu',
+        `ACTION '${activation.actionId}' on sprite '${activation.targetInstanceId}'.`,
+      );
+    }
+
+    return true;
+  }
+
+  private handleCarriedItemCursorAction(
+    event: RoccoCursorActionEvent,
+    roundedX: number,
+    roundedY: number,
+  ): boolean {
+    const carriedItem = this.videoSystem.gridMenus.getCarriedItem();
+    if (!carriedItem) {
+      return false;
+    }
+
+    const targets = this.resolveSceneTargets(event.sceneX, event.sceneY);
+    const actionTarget = targets.visibleTarget ?? targets.target;
+    if (actionTarget) {
+      const activation: RoccoSceneClickAction = {
+        kind: 'scene-click',
+        sceneX: event.sceneX,
+        sceneY: event.sceneY,
+        targetInstanceId: actionTarget.instanceId,
+        targetDefinitionId: actionTarget.definitionId,
+      };
+      this.setHoverDescription(undefined);
+      void this.getActiveCartridge()?.handleAction?.(activation);
+      this.logFn(
+        'GridMenu',
+        `USE carried grid item '${carriedItem.item.id}' on sprite '${actionTarget.instanceId}'.`,
+      );
+      this.syncCursorAttachment();
+      this.videoSystem.render(0);
+      return true;
+    }
+
+    this.videoSystem.gridMenus.clearCarriedItem();
+    this.syncCursorAttachment();
+    this.setHoverDescription(undefined);
+    this.videoSystem.render(0);
+    this.logFn('GridMenu', `CLEAR carried grid item at (${roundedX}, ${roundedY}).`);
+    return true;
+  }
+
+  private handleSceneCursorAction(
+    event: RoccoCursorActionEvent,
+    roundedX: number,
+    roundedY: number,
+  ): void {
+    const targets = this.resolveSceneTargets(event.sceneX, event.sceneY);
+    const { visibleTarget, target } = targets;
+    const playerSpriteId = this.getActivePlayerSpriteId();
+    const actionTargetId = visibleTarget?.instanceId ?? target?.instanceId;
+    const sceneClickAction: RoccoSceneClickAction = {
+      kind: 'scene-click',
+      sceneX: event.sceneX,
+      sceneY: event.sceneY,
+      targetInstanceId: actionTargetId,
+      targetDefinitionId: visibleTarget?.definitionId ?? target?.definitionId,
+    };
+
+    void this.getActiveCartridge()?.handleAction?.(sceneClickAction);
+
+    if (
+      visibleTarget &&
+      this.videoSystem.actionMenus.openMenuForTarget(
+        visibleTarget.instanceId,
+        visibleTarget.definitionId,
+        event.sceneX,
+        event.sceneY,
+      )
+    ) {
+      if (playerSpriteId && visibleTarget.instanceId !== playerSpriteId) {
+        this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
+          idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
+          idleSettleFacing: 'diagonal-from-facing',
+          targetInstanceId:
+            visibleTarget.instanceId !== playerSpriteId
+              ? visibleTarget.instanceId
+              : undefined,
+        });
+      }
+      this.setHoverDescription(undefined);
+      this.videoSystem.render(0);
+      this.logFn('ActionMenu', `OPEN for sprite '${visibleTarget.instanceId}' at (${roundedX}, ${roundedY}).`);
+      return;
+    }
+
+    if (playerSpriteId) {
+      this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
+        idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
+        idleSettleFacing: 'diagonal-from-facing',
+        targetInstanceId: actionTargetId && actionTargetId !== playerSpriteId ? actionTargetId : undefined,
+      });
+    }
+
+    if (visibleTarget) {
+      this.logFn('Cursor', `CLICK sprite '${visibleTarget.instanceId}' at (${roundedX}, ${roundedY}).`);
+      return;
+    }
+
+    if (target) {
+      this.logFn('Cursor', `CLICK sprite '${target.instanceId}' at (${roundedX}, ${roundedY}).`);
+      return;
+    }
+
+    this.logFn('Cursor', `CLICK at (${roundedX}, ${roundedY}).`);
+  }
+
+  private resolveSceneTargets(sceneX: number, sceneY: number): ResolvedSceneTargets {
+    const visibleHits = this.videoSystem.sprites.hitTestVisiblePixel(sceneX, sceneY);
+    const hits = visibleHits.length > 0 ? [] : this.videoSystem.sprites.hitTest(sceneX, sceneY);
+    return {
+      visibleTarget: visibleHits[0],
+      target: hits[0],
+    };
+  }
 
   private setHoverDescription(text: string | undefined): void {
     const normalizedText = text?.trim() || undefined;

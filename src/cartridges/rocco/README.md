@@ -36,6 +36,7 @@ Rocco transitions through edge connectors. When his ground point enters an exit 
 ## Interactions
 
 - Rocco is the player sprite and supports click-to-walk.
+- Pier Beginning includes Stan asleep on a chair between the right mooring post and the bait shop.
 - The bait bucket can be examined, grabbed, kicked, and dropped.
 - The Pelikan reacts to Rocco and can enter a feeding sequence after the bait bucket is dropped.
 - The keys are revealed through the Pier Middle sequence and can be collected.
@@ -75,6 +76,7 @@ assets/
   characters/
     rocco/              Rocco standing and running frames
     pelikan/            Pelikan idle, flight, feeding frames, and sound
+    stan/               Stan seated pose sheet for Pier Beginning
   props/
     bait-bucket/        Normal and dropped bait bucket images
     keys/               Keys image and defeat sound

@@ -1,12 +1,6 @@
-﻿import type { RoccoEngine } from '../../../../engine/engine-api';
-import type {
-  RoccoActionMenuActivation,
-  RoccoActionMenuDefinition,
-} from '../../../../engine/video/action-menu';
-import type { RoccoSpriteDefinition } from '../../../../engine/video/sprites';
+import type { RoccoEngine } from '../../../../engine/engine-sdk';
+import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import {
-  roccoDefaultActionMenuAssetUrls,
-  roccoDefaultKeysAssetUrl,
   roccoDefaultKeysSoundUrl,
   roccoDefaultYouLoseSoundUrl,
 } from '../../rocco-default-assets';
@@ -14,18 +8,13 @@ import { createRoccoLocalization, type RoccoLocalization } from '../../localizat
 import {
   DEFAULT_DESIGN_WIDTH,
   DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_KEYS_ANIMATION_ID,
   DEFAULT_KEYS_X,
   DEFAULT_KEYS_Y,
-  DEFAULT_KEYS_PIVOT_X,
-  DEFAULT_KEYS_PIVOT_Y,
   DEFAULT_KEYS_PRESENTATION_PITCH_DEGREES,
   DEFAULT_KEYS_RENDER_LAYER,
   DEFAULT_KEYS_SPRITE_DEFINITION_ID,
-  DEFAULT_KEYS_SPRITE_HEIGHT,
   DEFAULT_KEYS_SPRITE_INSTANCE_ID,
   DEFAULT_KEYS_SPRITE_SCALE,
-  DEFAULT_KEYS_SPRITE_WIDTH,
   DEFAULT_KEYS_Z_INDEX,
   DEFAULT_ROCCO_GREEN_BLACK,
   DEFAULT_SPRITE_GROUND_ANCHOR_X,
@@ -35,11 +24,13 @@ import {
   DEFAULT_SPRITE_PICK_UP_ACTION_ID,
   DEFAULT_SPRITE_RUN_ACTION_ID,
 } from '../../rocco-default-constants';
+import {
+  createDefaultKeysActionMenu,
+  createDefaultKeysSpriteDefinition,
+  KEYS_ACTION_MENU_ID,
+  KEYS_GRAB_ACTION_ID,
+} from './pier-keys-definition';
 
-const KEYS_FRAME_ID = 'keys-idle-frame';
-const KEYS_ACTION_MENU_ID = 'rocco-keys-action-menu';
-const KEYS_ACTION_MESSAGE_TTL_MS = 5200;
-const KEYS_GRAB_ACTION_ID = 'grab';
 const KEYS_APPROACH_KEEP_DISTANCE = 0;
 const KEYS_SIDE_APPROACH_RATIO = 0.85;
 const KEYS_SHAKE_DURATION_MS = 420;
@@ -57,122 +48,6 @@ const KEYS_DEFEAT_SOUND_VOLUME = 0.25;
 const KEYS_DEFEAT_MESSAGE_TTL_MS = 6400;
 const KEYS_DEFEAT_FADE_DURATION_MS = 1300;
 const KEYS_DEFEAT_TITLE_DURATION_MS = 3600;
-
-function makeRandomMessageResult(mode: 'say' | 'think', text: string[], historyKey: string) {
-  return {
-    kind: 'sprite-message' as const,
-    message: {
-      spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-      mode,
-      text,
-      lineSelection: {
-        mode: 'random' as const,
-        count: 1,
-        historyKey,
-        avoidImmediateRepeat: true,
-      },
-      ttlMs: KEYS_ACTION_MESSAGE_TTL_MS,
-    },
-  };
-}
-
-function createDefaultKeysActionMenu(localization: RoccoLocalization): RoccoActionMenuDefinition {
-  return {
-    id: KEYS_ACTION_MENU_ID,
-    targetInstanceIds: [DEFAULT_KEYS_SPRITE_INSTANCE_ID],
-    renderLayer: 'ui.action-menu',
-    itemSize: 92,
-    orbitRadius: 72,
-    orbitSpeedRadiansPerSecond: 0.04,
-    hoverScale: 1.16,
-    circleFill: '#0f1610',
-    circleStroke: '#d7e6c5',
-    circleStrokeWidth: 2,
-    items: [
-      {
-        id: 'look',
-        actionId: 'look',
-        label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
-        result: makeRandomMessageResult('think', localization.text.keys.lookLines, 'keys-look'),
-      },
-      {
-        id: 'grab',
-        actionId: KEYS_GRAB_ACTION_ID,
-        label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
-      },
-      {
-        id: 'kick',
-        actionId: 'kick',
-        label: localization.text.actions.kick,
-        imageUri: roccoDefaultActionMenuAssetUrls.kick,
-        result: makeRandomMessageResult('think', localization.text.keys.kickLines, 'keys-kick'),
-      },
-    ],
-  };
-}
-
-function createDefaultKeysSpriteDefinition(
-  localization: RoccoLocalization = createRoccoLocalization(),
-): RoccoSpriteDefinition {
-  return {
-    id: DEFAULT_KEYS_SPRITE_DEFINITION_ID,
-    name: 'Rocco Demo Keys',
-    images: [
-      {
-        id: 'rocco-keys',
-        uri: roccoDefaultKeysAssetUrl,
-        width: DEFAULT_KEYS_SPRITE_WIDTH,
-        height: DEFAULT_KEYS_SPRITE_HEIGHT,
-      },
-    ],
-    frames: [
-      {
-        id: KEYS_FRAME_ID,
-        imageId: 'rocco-keys',
-        durationMs: 1000,
-        pivot: {
-          x: DEFAULT_KEYS_PIVOT_X,
-          y: DEFAULT_KEYS_PIVOT_Y,
-        },
-        hitbox: {
-          kind: 'rect',
-          x: 35,
-          y: 21,
-          width: 230,
-          height: 345,
-        },
-      },
-    ],
-    animations: {
-      [DEFAULT_KEYS_ANIMATION_ID]: {
-        id: DEFAULT_KEYS_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: KEYS_FRAME_ID, durationMs: 1000 }],
-      },
-    },
-    defaultAnimation: DEFAULT_KEYS_ANIMATION_ID,
-    pivot: {
-      x: DEFAULT_KEYS_PIVOT_X,
-      y: DEFAULT_KEYS_PIVOT_Y,
-    },
-    render: {
-      renderLayer: DEFAULT_KEYS_RENDER_LAYER,
-      zIndex: DEFAULT_KEYS_Z_INDEX,
-      depthMode: 'fixed',
-      opacity: 1,
-    },
-    visibleDescription: {
-      enabled: true,
-      text: localization.text.descriptions.keys,
-    },
-    metadata: {
-      purpose: 'default-rocco-keys-demo',
-    },
-  };
-}
 
 export interface RoccoDefaultKeysController {
   update(deltaMs: number): void;

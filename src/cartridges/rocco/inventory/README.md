@@ -8,6 +8,7 @@ The inventory belongs to the cartridge. The engine provides generic slot-panel U
 
 - `types.ts` - Rocco inventory item shape.
 - `rocco-inventory.ts` - Inventory storage, item factories, slot updates, and grid-menu definition projection.
+- `rocco-inventory-interactions.ts` - Inventory item use resolution against cartridge sprite targets.
 - `rocco-inventory.test.ts` - Unit tests for inventory behavior.
 - `index.ts` - Barrel export.
 

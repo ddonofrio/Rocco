@@ -1,5 +1,5 @@
 import { defaultDisplayProfile } from '../../engine/video/display';
-import type { RoccoEngine } from '../../engine/engine-api';
+import type { RoccoEngine } from '../../engine/engine-sdk';
 import type {
   RoccoCartridge,
   RoccoCartridgeAction,

@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { createRoccoLocalization } from '../localization';
 import {
+  DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
+  DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
+} from '../rocco-default-constants';
+import {
   createRoccoKeysInventoryItem,
   createRoccoTwentyEurosInventoryItem,
   RoccoInventory,
@@ -9,6 +13,7 @@ import {
   ROCCO_INVENTORY_MENU_ID,
   ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
 } from './rocco-inventory';
+import { resolveRoccoInventoryUseLines } from './rocco-inventory-interactions';
 
 describe('RoccoInventory', () => {
   it('stores cartridge items and exposes them as a 3x3 grid menu', () => {
@@ -50,5 +55,33 @@ describe('RoccoInventory', () => {
         },
       ],
     });
+  });
+
+  it('resolves cartridge-specific use lines for carried inventory items', () => {
+    const localization = createRoccoLocalization('es');
+
+    expect(
+      resolveRoccoInventoryUseLines({
+        itemId: ROCCO_INVENTORY_KEYS_ITEM_ID,
+        targetInstanceId: DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
+        localization,
+      }),
+    ).toEqual(localization.text.inventory.keysOnBaitBucketLines);
+
+    expect(
+      resolveRoccoInventoryUseLines({
+        itemId: ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
+        targetInstanceId: DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
+        localization,
+      }),
+    ).toEqual(localization.text.inventory.moneyOnPelikanLines);
+
+    expect(
+      resolveRoccoInventoryUseLines({
+        itemId: 'unknown-item',
+        targetInstanceId: 'unknown-target',
+        localization,
+      }),
+    ).toEqual(localization.text.inventory.cannotUseItemLines);
   });
 });

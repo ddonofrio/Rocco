@@ -1,6 +1,6 @@
 import { Application, Container, Graphics, type Ticker } from 'pixi.js';
 
-import type { RoccoEngine } from './engine-api';
+import type { RoccoEngine } from './engine-sdk';
 import { RoccoRuntimeAudioSystem } from './audio';
 import { RoccoJukeboxSystemImpl } from './audio/jukebox';
 import {

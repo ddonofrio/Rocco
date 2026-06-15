@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../engine/engine-api';
+import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
 import { Assets } from 'pixi.js';

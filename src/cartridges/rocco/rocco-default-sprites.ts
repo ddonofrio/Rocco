@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../engine/engine-api';
+import type { RoccoEngine } from '../../engine/engine-sdk';
 import type { RoccoFacingDirection, RoccoPoint } from '../../engine/video/sprites';
 import {
   DEFAULT_SPRITE_DEFINITION_ID,

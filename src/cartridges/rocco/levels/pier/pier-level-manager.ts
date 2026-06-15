@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../engine/engine-api';
+import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoCartridgeAction, RoccoSceneClickAction } from '../../../../engine/cartridges';
 import type { RoccoGridMenuCarriedItem } from '../../../../engine/video/grid-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
@@ -6,8 +6,6 @@ import type { RoccoPoint } from '../../../../engine/video/sprites';
 import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
-  DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
-  DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
   DEFAULT_SPRITE_GROUND_ANCHOR_X,
   DEFAULT_SPRITE_GROUND_ANCHOR_Y,
   DEFAULT_SPRITE_INSTANCE_ID,
@@ -32,7 +30,7 @@ import {
   RoccoInventory,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MENU_ID,
-  ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
+  resolveRoccoInventoryUseLines,
 } from '../../inventory';
 import {
   installRoccoPlayerActionMenu,
@@ -45,6 +43,7 @@ import {
   type RoccoPierLevelConnector,
 } from './pier-level-types';
 import { RoccoPierSideLevel } from './pier-side-level';
+import { installDefaultStan } from './pier-stan';
 
 interface RoccoPierConnectionEndpoint {
   levelId: string;
@@ -221,6 +220,7 @@ export class RoccoPierLevelManager {
         sceneId: PIER_START_SCENE_ID,
         backgroundScrollX: PIER_BACKGROUND_SCROLL_RIGHT_X,
         connectors: PIER_START_CONNECTORS,
+        mountAmbient: (engine) => installDefaultStan(engine),
       }),
       new RoccoPierSideLevel({
         id: ROCCO_PIER_END_LEVEL_ID,
@@ -388,7 +388,11 @@ export class RoccoPierLevelManager {
 
     this.engine.video.messages.think(
       DEFAULT_SPRITE_INSTANCE_ID,
-      this.resolveInventoryItemUseLines(carriedItem.item.id, activation.targetInstanceId),
+      resolveRoccoInventoryUseLines({
+        itemId: carriedItem.item.id,
+        targetInstanceId: activation.targetInstanceId,
+        localization: this.localization,
+      }),
       {
         lineSelection: {
           mode: 'random',
@@ -401,28 +405,6 @@ export class RoccoPierLevelManager {
     );
     this.engine.video.gridMenus.clearCarriedItem();
     this.engine.video.render(0);
-  }
-
-  private resolveInventoryItemUseLines(itemId: string, targetInstanceId: string): string[] {
-    if (targetInstanceId === DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID) {
-      if (itemId === ROCCO_INVENTORY_KEYS_ITEM_ID) {
-        return this.localization.text.inventory.keysOnBaitBucketLines;
-      }
-      if (itemId === ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID) {
-        return this.localization.text.inventory.moneyOnBaitBucketLines;
-      }
-    }
-
-    if (targetInstanceId === DEFAULT_PELIKAN_SPRITE_INSTANCE_ID) {
-      if (itemId === ROCCO_INVENTORY_KEYS_ITEM_ID) {
-        return this.localization.text.inventory.keysOnPelikanLines;
-      }
-      if (itemId === ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID) {
-        return this.localization.text.inventory.moneyOnPelikanLines;
-      }
-    }
-
-    return this.localization.text.inventory.cannotUseItemLines;
   }
 
   private requireLevel(levelId: string): RoccoPierLevel {

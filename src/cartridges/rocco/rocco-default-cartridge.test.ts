@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { RoccoCartridgeAction } from '../../engine/cartridges';
-import type { RoccoEngine, RoccoEnginePersistence } from '../../engine/engine-api';
+import type { RoccoEngine, RoccoEnginePersistence } from '../../engine/engine-sdk';
 import type { RoccoAudioSystem } from '../../engine/audio';
 import type { RoccoJukeboxSystem } from '../../engine/audio/jukebox';
 import type { RoccoEffect, RoccoEffectManager } from '../../engine/effects';
@@ -77,6 +77,12 @@ import {
   DEFAULT_PELIKAN_TURN_DURATION_MS,
   DEFAULT_ROCCO_GREEN_BLACK,
   DEFAULT_SCENE_ID,
+  DEFAULT_STAN_RENDER_LAYER,
+  DEFAULT_STAN_SPRITE_DEFINITION_ID,
+  DEFAULT_STAN_SPRITE_INSTANCE_ID,
+  DEFAULT_STAN_SPRITE_SCALE,
+  DEFAULT_STAN_X,
+  DEFAULT_STAN_Y,
   DEFAULT_WATER_EFFECT_COLORS,
   DEFAULT_WATER_EFFECT_TOLERANCE,
   DEFAULT_SPRITE_DEFINITION_ID,
@@ -1488,6 +1494,34 @@ describe('RoccoDefaultCartridge', () => {
       PIER_PLAYER_LEFT_ENTRY_X,
     );
     expect(state.statusMessages.at(-1)).toContain('Pier Beginning');
+  });
+
+  it('installs Stan asleep on Pier Beginning', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = new RoccoPierLevelManager({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+    });
+
+    await manager.mount(engine);
+    setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
+    manager.update(16);
+    await flushAsyncTransition();
+
+    expect(state.preloadedSpriteDefinitionIds).toContain(DEFAULT_STAN_SPRITE_DEFINITION_ID);
+    expect(state.loadedSpriteDefinitionIds).toContain(DEFAULT_STAN_SPRITE_DEFINITION_ID);
+    expect(state.createdSprites).toContain(DEFAULT_STAN_SPRITE_INSTANCE_ID);
+
+    const stan = findLatestSpriteSnapshot(state, DEFAULT_STAN_SPRITE_INSTANCE_ID);
+    expect(stan?.transform).toMatchObject({
+      x: DEFAULT_STAN_X,
+      y: DEFAULT_STAN_Y,
+      scaleX: DEFAULT_STAN_SPRITE_SCALE,
+      scaleY: DEFAULT_STAN_SPRITE_SCALE,
+    });
+    expect(stan?.renderLayer).toBe(DEFAULT_STAN_RENDER_LAYER);
+    expect(stan?.interactive).toBe(false);
   });
 
   it('transitions from Pier Middle west to Pier End after Rocco has the keys', async () => {

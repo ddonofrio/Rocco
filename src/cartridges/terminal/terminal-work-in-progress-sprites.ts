@@ -1,4 +1,4 @@
-﻿import type { RoccoEngine } from '../../engine/engine-api';
+import type { RoccoEngine } from '../../engine/engine-sdk';
 import {
   DEFAULT_SPRITE_DEFINITION_ID,
   DEFAULT_SPRITE_INSTANCE_ID,

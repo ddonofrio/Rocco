@@ -81,7 +81,7 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 - Vitest runs with the configuration in `vitest.config.ts`.
 - Tests that instantiate Pixi asset loading should mock `pixi.js` `Assets.load`.
 - jsdom can print canvas-related limitations after the test summary. Treat the Vitest summary and process exit code as authoritative.
-- Test mocks mirror the engine interface and exposed subsystem contracts. When a required member changes, nearby mocks usually need the same member.
+- Test mocks mirror the engine SDK surface and exposed subsystem contracts. When a required member changes, nearby mocks usually need the same member.
 
 ## Git Status Notes
 
@@ -125,7 +125,7 @@ If water appears over wooden posts or pier edges, inspect the color mask, tolera
 ## Documentation Workflow
 
 - Read `AGENTS.md` before editing.
-- Read `README-AGENT.md` for architecture, engine interfaces, and subsystem SDKs.
+- Read `README-AGENT.md` for architecture, the engine SDK surface, and subsystem SDKs.
 - Read the README chain for the target folder.
 - Keep documentation in present tense and focused on current behavior.
 - Do not add dated notes, historical edit logs, or narrative descriptions of edits.

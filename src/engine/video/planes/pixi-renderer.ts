@@ -11,12 +11,11 @@ import {
 
 import type { RoccoPlaneRenderer } from './renderer';
 import {
-  loadRoccoImageElement,
-  matchesRoccoColorKey,
-  resolveRoccoWaterColorEffect,
-  type RoccoResolvedWaterColorEffect,
-  type RoccoWaterColorRgb,
-} from '../post-processing';
+  prepareWaterColorImageNode,
+  resolvePlaneWaterColorEffect,
+  type WaterColorPlaneAnimation,
+  updateWaterColorPlaneAnimation,
+} from './pixi-water-color-animation';
 import type {
   RoccoColorModel,
   RoccoGraphicPlane,
@@ -64,19 +63,6 @@ interface SourceContainerBuild {
 }
 
 const DEFAULT_PLANE_SIZE = { width: 960, height: 540 };
-const WATER_ROW_SLICE_HEIGHT = 2;
-
-interface WaterColorPlaneAnimation {
-  ready: boolean;
-  elapsedMs: number;
-  effect: RoccoResolvedWaterColorEffect;
-  width: number;
-  height: number;
-  sourceCanvas?: HTMLCanvasElement;
-  frameCanvas?: HTMLCanvasElement;
-  frameContext?: CanvasRenderingContext2D;
-  texture?: Texture;
-}
 
 export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
   private readonly mountedScenes = new Map<string, MountedScene>();
@@ -170,7 +156,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     const deltaMs = Math.max(0, delta) * (1000 / 60);
     for (const mounted of this.mountedScenes.values()) {
       for (const node of mounted.planeNodes.values()) {
-        this.updateWaterAnimation(node.waterAnimation, deltaMs);
+        updateWaterColorPlaneAnimation(node.waterAnimation, deltaMs);
       }
     }
   }
@@ -215,9 +201,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     return JSON.stringify({
       source: plane.source,
       wrap: plane.wrap,
-      waterColorEffect: this.resolveWaterColorEffect(plane)?.enabled
-        ? plane.metadata?.waterColorEffect
-        : null,
+      waterColorEffect: resolvePlaneWaterColorEffect(plane)?.enabled ? plane.metadata?.waterColorEffect : null,
     });
   }
 
@@ -260,7 +244,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
 
   private createImageNode(plane: RoccoGraphicPlane, source: RoccoImageSource): SourceContainerBuild {
     const size = this.resolvePlaneSize(plane);
-    const waterEffect = this.resolveWaterColorEffect(plane);
+    const waterEffect = resolvePlaneWaterColorEffect(plane);
     const container = new Container();
 
     if (waterEffect && !plane.wrap.x && !plane.wrap.y) {
@@ -277,7 +261,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
         height: source.height ?? 0,
       };
 
-      void this.prepareWaterColorImageNode(source, waterEffect).then((prepared) => {
+      void prepareWaterColorImageNode(source, waterEffect).then((prepared) => {
         if (container.destroyed) {
           return;
         }
@@ -286,7 +270,6 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
         waterAnimation.width = prepared.width;
         waterAnimation.height = prepared.height;
         waterAnimation.sourceCanvas = prepared.waterSourceCanvas;
-        waterAnimation.frameCanvas = prepared.waterFrameCanvas;
         waterAnimation.frameContext = prepared.waterFrameContext;
         waterAnimation.texture = prepared.waterTexture;
 
@@ -468,7 +451,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
   }
 
   private expectedContentLabel(plane: RoccoGraphicPlane): string {
-    if (plane.source.kind === 'image' && this.resolveWaterColorEffect(plane) && !plane.wrap.x && !plane.wrap.y) {
+    if (plane.source.kind === 'image' && resolvePlaneWaterColorEffect(plane) && !plane.wrap.x && !plane.wrap.y) {
       return 'image-water-color';
     }
     if (plane.source.kind === 'image' && (plane.wrap.x || plane.wrap.y)) {
@@ -562,151 +545,6 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     if (source.height) {
       sprite.height = source.height;
     }
-  }
-
-  private resolveWaterColorEffect(plane: RoccoGraphicPlane): RoccoResolvedWaterColorEffect | null {
-    const rawEffect = plane.metadata?.waterColorEffect;
-    if (!rawEffect || typeof rawEffect !== 'object') {
-      return null;
-    }
-
-    const resolved = resolveRoccoWaterColorEffect(rawEffect);
-    return resolved.enabled ? resolved : null;
-  }
-
-  private async prepareWaterColorImageNode(
-    source: RoccoImageSource,
-    effect: RoccoResolvedWaterColorEffect,
-  ): Promise<{
-    width: number;
-    height: number;
-    baseSprite: Sprite;
-    waterSprite: Sprite;
-    waterSourceCanvas: HTMLCanvasElement;
-    waterFrameCanvas: HTMLCanvasElement;
-    waterFrameContext: CanvasRenderingContext2D;
-    waterTexture: Texture;
-  }> {
-    const image = await loadRoccoImageElement(source.uri);
-    const width = image.naturalWidth;
-    const height = image.naturalHeight;
-    const baseCanvas = document.createElement('canvas');
-    const waterSourceCanvas = document.createElement('canvas');
-    const waterFrameCanvas = document.createElement('canvas');
-    baseCanvas.width = width;
-    baseCanvas.height = height;
-    waterSourceCanvas.width = width;
-    waterSourceCanvas.height = height;
-    waterFrameCanvas.width = width;
-    waterFrameCanvas.height = height;
-
-    const baseContext = baseCanvas.getContext('2d', { willReadFrequently: true });
-    const waterSourceContext = waterSourceCanvas.getContext('2d', { willReadFrequently: true });
-    const waterFrameContext = waterFrameCanvas.getContext('2d');
-    if (!baseContext || !waterSourceContext || !waterFrameContext) {
-      const fallbackSprite = Sprite.from(source.uri);
-      this.applyImageSourceSize(fallbackSprite, source);
-      return {
-        width,
-        height,
-        baseSprite: fallbackSprite,
-        waterSprite: new Sprite(Texture.EMPTY),
-        waterSourceCanvas,
-        waterFrameCanvas,
-        waterFrameContext: waterFrameContext ?? document.createElement('canvas').getContext('2d')!,
-        waterTexture: Texture.EMPTY,
-      };
-    }
-
-    baseContext.drawImage(image, 0, 0);
-    waterSourceContext.drawImage(image, 0, 0);
-
-    const baseImageData = baseContext.getImageData(0, 0, width, height);
-    const waterImageData = waterSourceContext.getImageData(0, 0, width, height);
-    this.splitWaterColorImageData(baseImageData, waterImageData, effect.colors, effect.tolerance);
-    baseContext.putImageData(baseImageData, 0, 0);
-    waterSourceContext.putImageData(waterImageData, 0, 0);
-    waterFrameContext.clearRect(0, 0, width, height);
-    waterFrameContext.drawImage(waterSourceCanvas, 0, 0);
-
-    const baseTexture = Texture.from(baseCanvas);
-    const waterTexture = Texture.from(waterFrameCanvas);
-    const baseSprite = new Sprite(baseTexture);
-    const waterSprite = new Sprite(waterTexture);
-    this.applyImageSourceSize(baseSprite, source);
-    this.applyImageSourceSize(waterSprite, source);
-    baseSprite.label = 'image-water-color-base';
-    waterSprite.label = 'image-water-color-water';
-
-    return {
-      width,
-      height,
-      baseSprite,
-      waterSprite,
-      waterSourceCanvas,
-      waterFrameCanvas,
-      waterFrameContext,
-      waterTexture,
-    };
-  }
-
-  private splitWaterColorImageData(
-    baseImageData: ImageData,
-    waterImageData: ImageData,
-    colors: RoccoWaterColorRgb[],
-    tolerance: number,
-  ): void {
-    const base = baseImageData.data;
-    const water = waterImageData.data;
-    for (let index = 0; index < base.length; index += 4) {
-      const alpha = base[index + 3] ?? 0;
-      if (alpha <= 0) {
-        continue;
-      }
-
-      const sample: RoccoWaterColorRgb = [
-        (base[index] ?? 0) / 255,
-        (base[index + 1] ?? 0) / 255,
-        (base[index + 2] ?? 0) / 255,
-      ];
-      if (matchesRoccoColorKey(sample, colors, tolerance)) {
-        base[index + 3] = 0;
-      } else {
-        water[index + 3] = 0;
-      }
-    }
-  }
-
-  private updateWaterAnimation(animation: WaterColorPlaneAnimation | undefined, deltaMs: number): void {
-    if (!animation?.ready || !animation.sourceCanvas || !animation.frameContext || !animation.texture) {
-      return;
-    }
-
-    animation.elapsedMs += deltaMs;
-    const elapsedSeconds = animation.elapsedMs / 1000;
-    const { width, height, sourceCanvas, frameContext, effect } = animation;
-    frameContext.clearRect(0, 0, width, height);
-    for (let y = 0; y < height; y += WATER_ROW_SLICE_HEIGHT) {
-      const sliceHeight = Math.min(WATER_ROW_SLICE_HEIGHT, height - y);
-      const wave =
-        Math.sin((y / Math.max(1, effect.wavelength)) * Math.PI * 2 + elapsedSeconds * effect.speed) *
-        effect.amplitude *
-        effect.strength;
-      const offsetX = Math.round(wave);
-      frameContext.drawImage(sourceCanvas, 0, y, width, sliceHeight, offsetX, y, width, sliceHeight);
-      if (offsetX > 0) {
-        frameContext.drawImage(sourceCanvas, 0, y, width, sliceHeight, offsetX - width, y, width, sliceHeight);
-      } else if (offsetX < 0) {
-        frameContext.drawImage(sourceCanvas, 0, y, width, sliceHeight, offsetX + width, y, width, sliceHeight);
-      }
-    }
-
-    const previousCompositeOperation = frameContext.globalCompositeOperation;
-    frameContext.globalCompositeOperation = 'destination-in';
-    frameContext.drawImage(sourceCanvas, 0, 0);
-    frameContext.globalCompositeOperation = previousCompositeOperation;
-
-    animation.texture.source.update();
   }
 }
 

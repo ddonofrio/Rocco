@@ -12,7 +12,9 @@ This directory contains the three-level Pier map for the `rocco-default` cartrid
 - `pier-walkmap.ts` - Walk-map loading and scroll-window alignment.
 - `pier-assets.ts` - Pier-specific asset URIs.
 - `pier-clouds.ts` - Cloud sprite installation.
+- `pier-stan.ts` - Stan ambient sprite for Pier Beginning.
 - `pier-bait-bucket.ts` - Bait bucket sprite, menus, state, and kick sequence.
+- `pier-keys-definition.ts` - Keys sprite definition and radial action menu.
 - `pier-keys.ts` - Keys sprite, menus, reveal state, collection, and defeat sequence.
 - `pier-pelikan.ts` - Pelikan NPC sprite setup.
 - `pier-pelikan-action-menu.ts` - Pelikan action menu and talk reaction logic.
@@ -67,6 +69,7 @@ When Pier Middle mounts again, it restores sprite poses, menus, key visibility, 
 
 ## Interaction Logic
 
+- Pier Beginning: Stan remains asleep near the bait shop as a non-interactive ambient sprite.
 - Bait bucket: normal state offers grab, kick, and look; kicking drops it.
 - Pelikan: normal state offers look, talk, grab, and kick; talking after the bait bucket is dropped starts feeding.
 - Feeding Pelikan: only look is active.

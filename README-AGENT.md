@@ -1,6 +1,6 @@
 # ROCCO Agent Reference
 
-This document is written for AI coding agents. It explains the ROCCO console architecture, the cartridge model, the engine interface, the subsystem SDK surfaces, and the documentation workflow expected in this repository.
+This document is written for AI coding agents. It explains the ROCCO console architecture, the cartridge model, the engine SDK surface, the subsystem SDK surfaces, and the documentation workflow expected in this repository.
 
 ## Operating Rules
 
@@ -8,7 +8,7 @@ This document is written for AI coding agents. It explains the ROCCO console arc
 - Read `AGENTS.md`, this file, `DEVELOPMENT.md`, and the relevant directory READMEs before editing.
 - If the context window is large, read all project-owned README files before touching code.
 - Keep documentation as present-tense reference material. Do not write dated notes, historical edit logs, or edit narratives.
-- Use the `RoccoEngine` interface and exposed subsystem SDKs from cartridge code. Do not import PixiJS or internal engine renderers into cartridges.
+- Use the `RoccoEngine` SDK surface and exposed subsystem SDKs from cartridge code. Do not import PixiJS or internal engine renderers into cartridges.
 - Remove dead code. Do not leave unused imports, variables, or functions.
 - Match nearby naming, file layout, and test style before introducing new patterns.
 
@@ -18,7 +18,7 @@ Use documentation in layers:
 
 1. `README.md` gives the human overview.
 2. `AGENTS.md` gives repository rules and reading routes.
-3. `README-AGENT.md` gives architecture, interface, and SDK concepts.
+3. `README-AGENT.md` gives architecture, engine SDK, and subsystem SDK concepts.
 4. `DEVELOPMENT.md` gives commands, validation, and Windows workflow notes.
 5. `src/engine/**/README.md` files explain engine systems.
 6. `src/cartridges/**/README.md` files explain cartridge content and game rules.
@@ -35,13 +35,13 @@ After reading, inspect the closest existing implementation and tests. Prefer `rg
 
 ## Project Overview
 
-ROCCO is a browser-based retro game console emulator built with TypeScript, PixiJS, and Vite. It runs cartridges: self-contained game modules that plug into a stable engine interface and subsystem SDKs.
+ROCCO is a browser-based retro game console emulator built with TypeScript, PixiJS, and Vite. It runs cartridges: self-contained game modules that plug into a stable engine SDK surface and subsystem SDKs.
 
 The key metaphor is:
 
 - The engine is the console runtime.
 - Cartridges are games.
-- The `RoccoEngine` interface and subsystem SDKs are the slot between them.
+- The `RoccoEngine` SDK surface and subsystem SDKs are the slot between them.
 
 The engine provides capabilities such as rendering, audio, input, effects, persistence, and lifecycle management. Cartridges provide content and game logic.
 
@@ -52,7 +52,7 @@ src/
   main.ts                         Entry point
   style.css                       Global page style
   engine/
-    engine-api.ts                 RoccoEngine interface
+    engine-sdk.ts                 RoccoEngine SDK surface
     runtime.ts                    GameRuntime implementation
     input-handler.ts              Input routing and blocking
     cartridge-manager.ts          Cartridge selection and lifecycle
@@ -151,9 +151,9 @@ export interface RoccoCartridgeContext {
 
 Cartridges that do not localize content can ignore `locale`.
 
-## RoccoEngine Interface
+## RoccoEngine SDK Surface
 
-The full interface lives in `src/engine/engine-api.ts`.
+The full interface lives in `src/engine/engine-sdk.ts`.
 
 `RoccoEngine` is the cartridge entry point. It exposes:
 
@@ -240,7 +240,7 @@ The cartridge-facing video SDK lives under `engine.video`. `RoccoRuntimeVideoSys
 - `engine.video.sprites.playAnimation(id, animationId, options?)` plays an animation clip.
 - `engine.video.sprites.registerWalkMap(walkMap)` registers a walk map.
 - `engine.video.sprites.bindToWalkMap(id, binding)` binds a walk map to an instance.
-- `setPlayerSprite(id | null)` selects the click-to-walk player sprite through the engine interface.
+- `setPlayerSprite(id | null)` selects the click-to-walk player sprite through the engine SDK surface.
 
 ### UI and Feedback
 

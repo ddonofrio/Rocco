@@ -4,7 +4,7 @@ The audio system provides Web Audio sound registration, preloading, playback, an
 
 ## Files
 
-- `types.ts` - Sound definition, playback options, and audio system interface.
+- `types.ts` - Sound definition, playback options, and audio SDK types.
 - `runtime-audio-system.ts` - `RoccoRuntimeAudioSystem`, which owns the audio context, buffer cache, and active sources.
 - `index.ts` - Barrel export.
 

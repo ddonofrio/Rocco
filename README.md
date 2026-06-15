@@ -9,13 +9,13 @@ The console is called ROCCO, the main demo cartridge is called ROCCO, and the pl
 Start with these files before editing:
 
 - `AGENTS.md` for repository rules and reading routes.
-- `README-AGENT.md` for architecture, engine interfaces, SDK surfaces, and cartridge conventions.
+- `README-AGENT.md` for architecture, the engine SDK surface, subsystem SDKs, and cartridge conventions.
 - `DEVELOPMENT.md` for local commands and Windows workflow notes.
 - The README files inside the engine or cartridge folders related to the requested change.
 
 ## For Humans
 
-ROCCO is both a small game console runtime and a development platform. The engine provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the actual game content and interact with the engine through stable TypeScript interfaces plus subsystem SDKs.
+ROCCO is both a small game console runtime and a development platform. The engine provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the actual game content and interact with the engine through a stable TypeScript SDK surface plus subsystem SDKs.
 
 ROCCO works well with AI-powered coding tools because the codebase is organized around documented concepts: engine systems, cartridge infrastructure, built-in cartridges, levels, sprites, effects, and localized text catalogs.
 

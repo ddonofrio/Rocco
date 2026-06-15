@@ -23,6 +23,8 @@ export const roccoDefaultPelikanFeedingAssetUrl = new URL('./assets/characters/p
 
 export const roccoDefaultPelikanFlyingSoundUrl = new URL('./assets/characters/pelikan/flying.mp3', import.meta.url).href;
 
+export const roccoDefaultStanAssetUrl = new URL('./assets/characters/stan/stan-sheet.png', import.meta.url).href;
+
 export const roccoDefaultYouLoseSoundUrl = new URL('./assets/sounds/you-lose.mp3', import.meta.url).href;
 
 export const roccoDefaultBaitBucketAssetUrls = {

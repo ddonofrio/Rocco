@@ -9,7 +9,8 @@ Graphic planes provide layered backgrounds and visual scene composition for the 
 - `scene-factory.ts` - Starter scene factory.
 - `wrap.ts` - Modular scroll wrapping helper.
 - `renderer.ts` - Plane renderer contract.
-- `pixi-renderer.ts` - PixiJS plane renderer, source handling, viewport masking, tiling, and water animation.
+- `pixi-renderer.ts` - PixiJS plane renderer, source handling, viewport masking, tiling, and plane-node sync.
+- `pixi-water-color-animation.ts` - Image-plane water split, animated water frame preparation, and per-frame water updates.
 - `index.ts` - Barrel export.
 
 ## Plane Source Types

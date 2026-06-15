@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../engine/engine-api';
+import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../../../engine/video/planes';
 import {
   DEFAULT_CENTERED_BACKGROUND_SCROLL_X,

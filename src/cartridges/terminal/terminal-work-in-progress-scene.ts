@@ -1,4 +1,4 @@
-﻿import type { RoccoEngine } from '../../engine/engine-api';
+import type { RoccoEngine } from '../../engine/engine-sdk';
 import { createDefaultPlaneScene, type RoccoPlaneScene } from '../../engine/video/planes';
 import { normalizeDefaultScene } from './terminal-work-in-progress-compatibility';
 import { DEFAULT_SCENE_ID } from './terminal-work-in-progress-constants';

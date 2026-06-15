@@ -2,7 +2,7 @@ import type { Application } from 'pixi.js';
 import { builtinCartridgeConfigs, defaultBuiltinCartridgeId } from '../cartridges';
 import { RoccoBuiltinCartridgeProvider, RoccoDefaultCartridgeLoader, type RoccoCartridge } from './cartridges';
 import { RoccoCartridgeMenu } from './cartridge-menu/cartridge-menu';
-import type { RoccoEngine } from './engine-api';
+import type { RoccoEngine } from './engine-sdk';
 
 interface CartridgeManagerOptions {
   app: Application;

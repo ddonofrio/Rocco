@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../engine/engine-api';
+import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoActionMenuDefinition } from '../../../../engine/video/action-menu';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';

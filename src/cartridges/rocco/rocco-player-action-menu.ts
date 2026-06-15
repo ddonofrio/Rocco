@@ -2,7 +2,7 @@ import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../engine/video/action-menu';
-import type { RoccoEngine } from '../../engine/engine-api';
+import type { RoccoEngine } from '../../engine/engine-sdk';
 import { roccoDefaultActionMenuAssetUrls } from './rocco-default-assets';
 import { DEFAULT_SPRITE_INSTANCE_ID } from './rocco-default-constants';
 import { createRoccoLocalization, type RoccoLocalization } from './localization';

@@ -1,5 +1,5 @@
-﻿import { makeGraphicPlaneAutoScrollEffect } from '../../engine/effects';
-import type { RoccoEngine } from '../../engine/engine-api';
+import { makeGraphicPlaneAutoScrollEffect } from '../../engine/effects';
+import type { RoccoEngine } from '../../engine/engine-sdk';
 import {
   DEFAULT_STARS_EFFECT_ID,
   DEFAULT_STARS_PLANE_ID,

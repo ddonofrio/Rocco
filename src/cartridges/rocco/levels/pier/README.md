@@ -15,7 +15,7 @@ This directory contains the Pier exterior levels for the `rocco-default` cartrid
 - `pier-assets.ts` - Pier-specific asset URIs.
 - `pier-beginning-ambient.ts` - Pier Beginning ambient installer that combines Stan and the bait shop door.
 - `pier-clouds.ts` - Cloud sprite installation.
-- `pier-bait-shop-door.ts` - Bait shop door sprite, hover reveal state, and opening sound registration.
+- `pier-bait-shop-door.ts` - Bait shop door sprite state and opening sound registration.
 - `pier-stan.ts` - Stan ambient sprite for Pier Beginning.
 - `pier-stan-action-menu.ts` - Stan action menu definition with cowardly Grab and Kick reactions.
 - `pier-bait-bucket.ts` - Bait bucket sprite, menus, state, and kick sequence.
@@ -47,7 +47,7 @@ Each connector can define:
 
 `RoccoLevelManager` checks Rocco's ground point during `update()`. When it enters an exit area, input is blocked, the active level is unmounted, the connected level is mounted, Rocco is placed at the entry point, and input is restored.
 
-Pier Middle exits require keys in the Rocco cartridge inventory. This gate is intentionally silent.
+Pier Middle exits are not inventory-gated.
 
 The bait shop door transition is scripted rather than a horizontal edge walk. `RoccoLevelManager` enters the separate `../bait-shop` level directly after the Pier Beginning bait shop door finishes its opening hold while Stan is asleep.
 
@@ -58,7 +58,6 @@ The bait shop door transition is scripted rather than a horizontal edge walk. `R
 Pier Beginning retains these stable milestones:
 
 - Whether Stan has revealed his identity.
-- Whether the bait shop door has been discovered through Stan dialogue.
 
 Pier Middle retains these stable milestones:
 
@@ -84,7 +83,7 @@ The bait shop transition reuses the manager-owned cartridge inventory, so the sa
 ## Interaction Logic
 
 - Pier Beginning: Stan starts asleep near the bait shop, wakes through a two-step pose sequence when spoken to or when Rocco lingers behind his chair, keeps awake while Rocco stays there, keeps facing Rocco while awake, opens the first dialogue menu once awake, and can fall asleep again if Rocco leaves the dialogue menu idle.
-- Bait shop door: the overlaid door sprite stays visually present from the start, becomes hoverable only after Rocco says a line to Stan, exposes no radial action menu, calls the police if the keys are used while Stan is awake, and otherwise switches to the open-door sprite, plays the door sound, turns Rocco back toward the pier, and then transitions into the bait shop interior level.
+- Bait shop door: the overlaid door sprite stays visually present and hoverable from the start, exposes no radial action menu, calls the police if the keys are used while Stan is awake, and otherwise switches to the open-door sprite, plays the door sound, turns Rocco back toward the pier, and then transitions into the bait shop interior level.
 - Bait bucket: normal state offers grab, kick, and look; kicking drops it.
 - Pelikan: normal state offers look, talk, grab, and kick; talking after the bait bucket is dropped starts feeding.
 - Feeding Pelikan: only look is active.

@@ -2328,7 +2328,6 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       if (Math.abs(crossingY - currentY) > EPSILON) {
         this.pushWalkMapWaypoint(waypoints, origin, currentNode.x, currentY);
         this.pushWalkMapWaypoint(waypoints, origin, currentNode.x, crossingY);
-        currentX = currentNode.x;
         currentY = crossingY;
       }
 
@@ -2337,7 +2336,6 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
 
     if (Math.abs(currentX - goalX) > EPSILON) {
       this.pushWalkMapWaypoint(waypoints, origin, goalX, currentY);
-      currentX = goalX;
     }
 
     if (Math.abs(currentY - goalY) > EPSILON) {

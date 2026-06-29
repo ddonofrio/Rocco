@@ -1,21 +1,79 @@
 import { describe, expect, it } from 'vitest';
 
+import type { RoccoRenderableSprite } from '../sprites';
+import type { RoccoSpriteMessageRenderable } from './types';
 import { PixiRoccoSpriteMessageRenderer } from './pixi-renderer';
+
+interface SpriteBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface BubbleLayoutResult {
+  side: 'left' | 'right' | 'above';
+}
+
+interface RendererInternals {
+  resolveBubbleLayout(
+    renderable: RoccoSpriteMessageRenderable,
+    spriteBounds: SpriteBounds,
+    width: number,
+    height: number,
+    obstacleBounds: readonly SpriteBounds[],
+  ): BubbleLayoutResult;
+  resolveObstacleBounds(
+    currentSpriteInstanceId: string,
+    spriteBoundsById: ReadonlyMap<string, SpriteBounds>,
+    sprites: readonly RoccoRenderableSprite[],
+  ): SpriteBounds[];
+}
+
+function getInternals(renderer: PixiRoccoSpriteMessageRenderer): RendererInternals {
+  return renderer as unknown as RendererInternals;
+}
+
+function createRenderable(): RoccoSpriteMessageRenderable {
+  return {
+    message: {
+      id: 'message',
+      spriteInstanceId: 'rocco',
+      mode: 'say',
+      text: 'Hello',
+      lines: ['Hello'],
+      lineIndex: 0,
+      background: false,
+      durationMs: 0,
+      ttlMs: 0,
+      side: 'auto',
+      offset: { x: 0, y: 0 },
+      renderLayer: 'overlay.messages',
+      zIndex: 0,
+      maxWidth: 240,
+    },
+    sprite: {} as unknown as RoccoRenderableSprite,
+    designWidth: 960,
+    designHeight: 540,
+  };
+}
+
+function createRenderableSprite(instanceId: string, ignoreMessages: boolean): RoccoRenderableSprite {
+  return {
+    instance: {
+      id: instanceId,
+      ignoreMessages,
+    },
+  } as unknown as RoccoRenderableSprite;
+}
 
 describe('PixiRoccoSpriteMessageRenderer', () => {
   it('chooses the opposite side when another sprite blocks the default side', () => {
     const renderer = new PixiRoccoSpriteMessageRenderer();
+    const internals = getInternals(renderer);
 
-    const layout = (renderer as any).resolveBubbleLayout(
-      {
-        message: {
-          mode: 'say',
-          side: 'auto',
-          offset: { x: 0, y: 0 },
-        },
-        designWidth: 960,
-        designHeight: 540,
-      },
+    const layout = internals.resolveBubbleLayout(
+      createRenderable(),
       { x: 300, y: 250, width: 60, height: 120 },
       200,
       80,
@@ -27,17 +85,10 @@ describe('PixiRoccoSpriteMessageRenderer', () => {
 
   it('falls back above when one side is blocked and the other side is pushed off-screen', () => {
     const renderer = new PixiRoccoSpriteMessageRenderer();
+    const internals = getInternals(renderer);
 
-    const layout = (renderer as any).resolveBubbleLayout(
-      {
-        message: {
-          mode: 'say',
-          side: 'auto',
-          offset: { x: 0, y: 0 },
-        },
-        designWidth: 960,
-        designHeight: 540,
-      },
+    const layout = internals.resolveBubbleLayout(
+      createRenderable(),
       { x: 8, y: 250, width: 60, height: 120 },
       220,
       80,
@@ -49,8 +100,9 @@ describe('PixiRoccoSpriteMessageRenderer', () => {
 
   it('ignores sprites marked to be skipped by message layout', () => {
     const renderer = new PixiRoccoSpriteMessageRenderer();
+    const internals = getInternals(renderer);
 
-    const obstacleBounds = (renderer as any).resolveObstacleBounds(
+    const obstacleBounds = internals.resolveObstacleBounds(
       'rocco',
       new Map([
         ['rocco', { x: 300, y: 250, width: 60, height: 120 }],
@@ -58,9 +110,9 @@ describe('PixiRoccoSpriteMessageRenderer', () => {
         ['stan', { x: 100, y: 200, width: 120, height: 180 }],
       ]),
       [
-        { instance: { id: 'rocco', ignoreMessages: false } },
-        { instance: { id: 'cloud', ignoreMessages: true } },
-        { instance: { id: 'stan', ignoreMessages: false } },
+        createRenderableSprite('rocco', false),
+        createRenderableSprite('cloud', true),
+        createRenderableSprite('stan', false),
       ],
     );
 

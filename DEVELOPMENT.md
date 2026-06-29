@@ -117,7 +117,7 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 - Pier exterior code lives in `src/cartridges/rocco/levels/pier`.
 - The Pier map has three levels: `pier-start`, `pier-middle`, and `pier-end`.
 - `RoccoLevelManager` owns level registration, transitions, entry placement, status text, and per-level state retention across Rocco screens.
-- Pier Middle east and west exits require keys in the Rocco cartridge inventory. The gate is silent.
+- Pier Middle east and west exits are available without an inventory gate.
 - `rocco-default` supports English and Spanish localization through `src/cartridges/rocco/localization`.
 - Rocco inventory is cartridge state. The engine provides generic reorderable slot-panel UI and generic cursor item payloads through `engine.video.gridMenus` and the cursor subsystem.
 

@@ -73,7 +73,7 @@ Avoid direct `.\scripts\run-npm.ps1` calls without `-ExecutionPolicy Bypass`, an
 - The default cartridge is the Pier map.
 - Pier exterior code lives in `src/cartridges/rocco/levels/pier`.
 - `RoccoLevelManager` lives in `src/cartridges/rocco/levels/rocco-level-manager.ts` and owns map transitions, per-level state retention, and inventory-based exit gates across Rocco screens.
-- The key gate remains silent and checks the Rocco cartridge inventory for keys.
+- Pier Middle east and west exits are available without an inventory gate.
 - `rocco-default` is localized in English and Spanish through `src/cartridges/rocco/localization`.
 - `rocco-default` uses `engine.video.gridMenus` as generic console UI for its cartridge inventory.
 - The console owns cursor rendering. Cartridges pass generic grid item payloads; cartridge folders decide what item use means.

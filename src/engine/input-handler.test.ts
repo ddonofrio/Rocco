@@ -1,12 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
+import type { RoccoRuntimeAudioSystem } from './audio';
+import type { RoccoJukeboxSystem } from './audio/jukebox';
 import type { RoccoCartridge } from './cartridges';
+import type { RoccoRuntimeVideoSystem } from './video';
 import type {
   RoccoCursorActionEvent,
   RoccoCursorActionHandler,
   RoccoCursorMoveEvent,
   RoccoCursorMoveHandler,
 } from './video/cursor';
+import type { RoccoViewportHost } from './video/viewport';
 import { RoccoInputHandler } from './input-handler';
 
 interface InputHandlerTestState {
@@ -41,6 +45,22 @@ function makeMoveEvent(sceneX: number, sceneY: number): RoccoCursorMoveEvent {
   };
 }
 
+function asVideoSystem(mock: unknown): RoccoRuntimeVideoSystem {
+  return mock as RoccoRuntimeVideoSystem;
+}
+
+function asAudioSystem(mock: unknown): RoccoRuntimeAudioSystem {
+  return mock as RoccoRuntimeAudioSystem;
+}
+
+function asJukeboxSystem(mock: unknown): RoccoJukeboxSystem {
+  return mock as RoccoJukeboxSystem;
+}
+
+function asViewportHost(mock: unknown): RoccoViewportHost {
+  return mock as RoccoViewportHost;
+}
+
 function createInputHandler(state: InputHandlerTestState): RoccoInputHandler {
   const cartridge: RoccoCartridge = {
     manifest: {
@@ -57,7 +77,7 @@ function createInputHandler(state: InputHandlerTestState): RoccoInputHandler {
   };
 
   return new RoccoInputHandler({
-    videoSystem: {
+    videoSystem: asVideoSystem({
       messages: {
         clearMessages() {
           state.clearMessagesCalls += 1;
@@ -77,18 +97,18 @@ function createInputHandler(state: InputHandlerTestState): RoccoInputHandler {
           return [];
         },
       },
-    } as any,
-    audioSystem: {
+    }),
+    audioSystem: asAudioSystem({
       unlock() {
         state.audioUnlockCalls += 1;
       },
-    } as any,
-    jukeboxSystem: {
+    }),
+    jukeboxSystem: asJukeboxSystem({
       unlock() {
         state.jukeboxUnlockCalls += 1;
       },
-    } as any,
-    viewportHost: {
+    }),
+    viewportHost: asViewportHost({
       setCursorActionHandler(handler: RoccoCursorActionHandler | undefined) {
         state.actionHandler = handler;
       },
@@ -101,10 +121,10 @@ function createInputHandler(state: InputHandlerTestState): RoccoInputHandler {
       setCursorAttachment() {
         // noop
       },
-    } as any,
+    }),
     getActiveCartridge: () => cartridge,
     getActivePlayerSpriteId: () => 'rocco',
-    showSpriteMessage: vi.fn(),
+    showSpriteMessage: () => {},
     log: (channel, message) => {
       state.logs.push(`${channel}:${message}`);
     },
@@ -148,7 +168,7 @@ describe('RoccoInputHandler', () => {
     let renderCalls = 0;
 
     const handler = new RoccoInputHandler({
-      videoSystem: {
+      videoSystem: asVideoSystem({
         render() {
           renderCalls += 1;
         },
@@ -193,10 +213,10 @@ describe('RoccoInputHandler', () => {
             return [];
           },
         },
-      } as any,
-      audioSystem: {} as any,
-      jukeboxSystem: {} as any,
-      viewportHost: {
+      }),
+      audioSystem: asAudioSystem({}),
+      jukeboxSystem: asJukeboxSystem({}),
+      viewportHost: asViewportHost({
         setCursorActionHandler() {
           // noop
         },
@@ -211,14 +231,21 @@ describe('RoccoInputHandler', () => {
         },
         getMetrics() {
           return {
+            viewportWidth: 960,
+            viewportHeight: 540,
             designWidth: 960,
             designHeight: 540,
+            scale: 1,
+            renderWidth: 960,
+            renderHeight: 540,
+            offsetX: 0,
+            offsetY: 0,
           };
         },
-      } as any,
+      }),
       getActiveCartridge: () => null,
       getActivePlayerSpriteId: () => null,
-      showSpriteMessage: vi.fn(),
+      showSpriteMessage: () => {},
       log: () => {},
     });
 

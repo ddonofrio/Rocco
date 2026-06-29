@@ -104,11 +104,13 @@ function getRegisteredSceneTarget<T>(state: TestState, instanceId: string): T | 
 function createEngineMock(state: TestState): RoccoEngine {
   return {
     video: {
-      preloadPlaneScene: async (scene: RoccoPlaneScene) => {
+      preloadPlaneScene: (scene: RoccoPlaneScene) => {
         state.preloadedPlaneSceneIds.push(scene.id);
+        return Promise.resolve();
       },
-      preloadSpriteDefinition: async (definition: RoccoSpriteDefinition) => {
+      preloadSpriteDefinition: (definition: RoccoSpriteDefinition) => {
         state.preloadedSpriteDefinitionIds.push(definition.id);
+        return Promise.resolve();
       },
       render: () => {
         state.renderCalls += 1;
@@ -222,9 +224,10 @@ function createEngineMock(state: TestState): RoccoEngine {
       } as unknown as RoccoEngine['video']['sprites'],
     } as unknown as RoccoEngine['video'],
     persistence: {
-      loadPlaneSceneRecord: async () => state.restoredRecord,
-      savePlaneScene: async (scene: RoccoPlaneScene) => {
+      loadPlaneSceneRecord: () => Promise.resolve(state.restoredRecord),
+      savePlaneScene: (scene: RoccoPlaneScene) => {
         state.savedScenes.push(scene);
+        return Promise.resolve();
       },
     } as unknown as RoccoEngine['persistence'],
     loadPlaneScene: (scene: RoccoPlaneScene) => {
@@ -246,12 +249,14 @@ describe('RoccoBaitShopLevel', () => {
     class TestImage {
       src = '';
 
-      async decode(): Promise<void> {}
+      decode(): Promise<void> {
+        return Promise.resolve();
+      }
     }
 
     const originalCreateElement = document.createElement.bind(document);
     vi.stubGlobal('Image', TestImage);
-    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
       if (tagName !== 'canvas') {
         return originalCreateElement(tagName);
       }
@@ -276,7 +281,7 @@ describe('RoccoBaitShopLevel', () => {
           } as unknown as CanvasRenderingContext2D;
         },
       } as unknown as HTMLCanvasElement;
-    }) as typeof document.createElement);
+    });
   });
 
   afterEach(() => {

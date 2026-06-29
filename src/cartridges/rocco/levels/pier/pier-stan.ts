@@ -1,5 +1,4 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
-import type { RoccoSceneClickAction } from '../../../../engine/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../engine/video/grid-menu';
 import {
@@ -307,7 +306,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     }
   }
 
-  handleSceneClick(_activation: RoccoSceneClickAction): void {
+  handleSceneClick(): void {
     if (this.engine.isInputEnabled()) {
       return;
     }

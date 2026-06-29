@@ -41,7 +41,7 @@ Rocco transitions through edge connectors on connected screens. When his ground 
 - Rocco is the player sprite and supports click-to-walk.
 - Pier Beginning includes Stan asleep on a chair between the right mooring post and the bait shop.
 - Stan supports the same four action verbs as the Pelikan, and Talk wakes him and then opens the first text choice dialogue panel built from the cartridge dialogue library.
-- The bait shop door stays visible but undiscovered until Rocco says a line to Stan; after that it becomes hoverable, and using the keys on it only works while Stan is asleep and transitions into the bait shop interior.
+- The bait shop door stays visible and hoverable from the start, and using the keys on it only works while Stan is asleep and transitions into the bait shop interior.
 - The bait bucket can be examined, grabbed, kicked, and dropped.
 - The Pelikan reacts to Rocco and can enter a feeding sequence after the bait bucket is dropped.
 - The keys are revealed through the Pier Middle sequence and can be collected.
@@ -50,7 +50,7 @@ Rocco transitions through edge connectors on connected screens. When his ground 
 - The inventory option toggles a reorderable 3x3 grid menu populated from Rocco cartridge inventory state.
 - Picking an inventory item can carry it on the console cursor for generic use attempts on sprites.
 - Keys and the 20 EUR bill have localized failed-use responses for the bait bucket and the Pelikan.
-- Pier Middle exits require keys in Rocco inventory. The gate is silent.
+- Pier Middle exits are available without an inventory gate.
 
 ## Localization
 

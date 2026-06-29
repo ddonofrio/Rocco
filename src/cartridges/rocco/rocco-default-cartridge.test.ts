@@ -1481,7 +1481,7 @@ describe('RoccoDefaultCartridge', () => {
     });
   });
 
-  it('blocks Pier Middle exits before Rocco has the keys', async () => {
+  it('transitions from Pier Middle east to Pier Beginning before Rocco has the keys', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
@@ -1492,7 +1492,7 @@ describe('RoccoDefaultCartridge', () => {
     cartridge.update(16);
     await flushAsyncTransition();
 
-    expect(state.loadedScene?.id).toBe(DEFAULT_SCENE_ID);
+    expect(state.loadedScene?.id).toBe(PIER_START_SCENE_ID);
     expect(state.spriteMessages).toEqual([]);
   });
 
@@ -1720,7 +1720,7 @@ describe('RoccoDefaultCartridge', () => {
     expect(state.registeredActionMenus).toContain(DEFAULT_STAN_ACTION_MENU_ID);
   });
 
-  it('installs the bait shop door hidden on Pier Beginning until Stan is engaged', async () => {
+  it('installs the bait shop door visible on Pier Beginning before Stan is engaged', async () => {
     const localization = createRoccoLocalization('es');
     const state = makeEngineState();
     const engine = createEngineMock(state);
@@ -1738,9 +1738,9 @@ describe('RoccoDefaultCartridge', () => {
     expect(state.createdSprites).toContain(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
 
     const door = findLatestSpriteSnapshot(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
-    expect(door?.interactive).toBe(false);
+    expect(door?.interactive).toBe(true);
     expect(door?.visibleDescription).toMatchObject({
-      enabled: false,
+      enabled: true,
       text: localization.text.descriptions.baitShopDoor,
     });
     expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).toContain(
@@ -1903,7 +1903,7 @@ describe('RoccoDefaultCartridge', () => {
     expect(state.inputEnabled).toBe(true);
   });
 
-  it('reveals the bait shop door once Rocco actually says something to Stan', async () => {
+  it('keeps the bait shop door visible after Rocco says something to Stan', async () => {
     const localization = createRoccoLocalization('es');
     const state = makeEngineState();
     const engine = createEngineMock(state);
@@ -1915,12 +1915,20 @@ describe('RoccoDefaultCartridge', () => {
 
     await manager.mount(engine);
     await transitionToPierBeginning(manager, state);
+
+    const initialDoor = findLatestSpriteSnapshot(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
+    expect(initialDoor?.interactive).toBe(true);
+
     wakeStanToRootDialogue(manager);
     chooseStanDialogue(manager, 'introduce-self', 0);
 
     const door = findLatestSpriteSnapshot(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
     expect(door?.interactive).toBe(true);
-    expect(state.spriteVisibleDescriptionUpdates).toContain(
+    expect(door?.visibleDescription).toMatchObject({
+      enabled: true,
+      text: localization.text.descriptions.baitShopDoor,
+    });
+    expect(state.spriteVisibleDescriptionUpdates).not.toContain(
       `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${localization.text.descriptions.baitShopDoor}:true`,
     );
   });
@@ -2100,9 +2108,9 @@ describe('RoccoDefaultCartridge', () => {
       colorRegisterSets: [],
       attributeMaps: [],
     };
-    const mountSpy = vi.spyOn(RoccoBaitShopLevel.prototype, 'mount').mockImplementation(async (mountEngine) => {
+    const mountSpy = vi.spyOn(RoccoBaitShopLevel.prototype, 'mount').mockImplementation((mountEngine) => {
       mountEngine.loadPlaneScene(baitShopScene);
-      return baitShopScene;
+      return Promise.resolve(baitShopScene);
     });
     const unmountSpy = vi.spyOn(RoccoBaitShopLevel.prototype, 'unmount').mockImplementation(() => {});
 

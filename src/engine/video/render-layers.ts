@@ -13,6 +13,7 @@ export const defaultRoccoRenderLayers: RoccoRenderLayer[] = [
   { id: 'background.back', kind: 'background', zIndex: 0, depthSort: 'none' },
   { id: 'background.main', kind: 'background', zIndex: 10, depthSort: 'none' },
   { id: 'world.behind', kind: 'world', zIndex: 20, depthSort: 'y-sort' },
+  { id: 'world.mid', kind: 'world', zIndex: 25, depthSort: 'none' },
   { id: 'world.actors', kind: 'world', zIndex: 30, depthSort: 'baseline-sort' },
   { id: 'world.front', kind: 'world', zIndex: 40, depthSort: 'y-sort' },
   { id: 'foreground', kind: 'foreground', zIndex: 50, depthSort: 'none' },

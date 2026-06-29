@@ -93,7 +93,7 @@ function createNormalBaitBucketActionMenu(
         label: localization.text.actions.look,
         imageUri: roccoDefaultActionMenuAssetUrls.look,
         result: makeRandomMessageResult(
-          'say',
+          'think',
           localization.text.baitBucket.normalLookLines,
           'bait-bucket-normal-look',
         ),
@@ -131,7 +131,7 @@ function createDroppedBaitBucketActionMenu(
         label: localization.text.actions.look,
         imageUri: roccoDefaultActionMenuAssetUrls.look,
         result: makeRandomMessageResult(
-          'say',
+          'think',
           localization.text.baitBucket.droppedLookLines,
           'bait-bucket-dropped-look',
         ),

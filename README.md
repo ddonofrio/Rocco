@@ -33,7 +33,7 @@ ROCCO works well with AI-powered coding tools because the codebase is organized 
 - Graphic planes for layered backgrounds, parallax, procedural generation, and image effects.
 - Sprite definitions and instances with animation, actions, movement, depth sorting, and walk maps.
 - SCUMM-style radial action menus.
-- Generic slot grid menus for cartridge-defined panels, reorderable slots, and carried item payloads.
+- Generic slot grid menus and text choice lists for cartridge-defined panels, reorderable slots, and carried item payloads.
 - Character speech bubbles, thought bubbles, hover titles, and status text.
 - Web Audio sound playback and jukebox playlists.
 - Scriptable effects such as auto-scroll.
@@ -97,7 +97,7 @@ npm run dev
 - Per-level state retention for Pier interactions.
 - Opening beat where Rocco arrives at the pier, asks the player for help, and can be skipped with a scene click.
 - Click-to-walk pathfinding through walk maps.
-- Pelikan NPC, bait bucket interaction, keys reveal, and key collection.
+- Pelikan NPC, Stan branching dialogue, bait bucket interaction, bait shop door gating, bait shop interior transition, keys reveal, and key collection.
 - Rocco action menu with self-talk and inventory access.
 - Cartridge inventory shown through a generic reorderable 3x3 grid menu.
 - Inventory item cursor use for keys and the 20 EUR bill against Pier objects.

@@ -46,11 +46,6 @@ import {
   DEFAULT_PELIKAN_SPRITE_WIDTH,
   DEFAULT_PELIKAN_TURN_DURATION_MS,
   DEFAULT_PELIKAN_Z_INDEX,
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_PAUSE_X,
-  DEFAULT_SPRITE_RUN_ACTION_ID,
-  DEFAULT_SPRITE_Y_VALUES,
 } from '../../rocco-default-constants';
 
 const PELIKAN_FLIGHT_IMAGE_ID = 'rocco-pelikan-flight-sheet';
@@ -402,17 +397,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
     );
     this.engine.video.render(0);
     this.startFeedingCycle();
-    this.engine.video.sprites.moveTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      DEFAULT_SPRITE_PAUSE_X,
-      DEFAULT_SPRITE_Y_VALUES[0] ?? 0,
-      {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        onCompleteAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-        stopDistance: 1,
-      },
-    );
-    this.engine.video.render(0);
   }
 
   private restoreFeeding(): void {

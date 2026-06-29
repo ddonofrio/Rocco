@@ -119,14 +119,16 @@ export class PixiRoccoGridMenuRenderer {
 
   private applyPanel(panelRoot: Container, renderable: RoccoGridMenuRenderable): void {
     const definition = renderable.definition;
+    const layout = definition.layout ?? 'grid';
     const columns = definition.columns ?? DEFAULT_COLUMNS;
     const rows = definition.rows ?? DEFAULT_ROWS;
-    const slotSize = definition.slotSize ?? DEFAULT_SLOT_SIZE;
+    const slotWidth = definition.slotWidth ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
+    const slotHeight = definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
     const gap = definition.gap ?? DEFAULT_GAP;
     const padding = definition.padding ?? DEFAULT_PADDING;
     const titleHeight = definition.title ? 34 : 0;
-    const width = columns * slotSize + (columns - 1) * gap + padding * 2;
-    const height = rows * slotSize + (rows - 1) * gap + padding * 2 + titleHeight;
+    const width = columns * slotWidth + (columns - 1) * gap + padding * 2;
+    const height = rows * slotHeight + (rows - 1) * gap + padding * 2 + titleHeight;
 
     panelRoot.position.set(definition.x ?? 0, definition.y ?? 0);
     panelRoot.zIndex = definition.zIndex ?? 100;
@@ -152,9 +154,9 @@ export class PixiRoccoGridMenuRenderer {
       const item = itemsBySlot.get(slotIndex);
       const column = slotIndex % columns;
       const row = Math.floor(slotIndex / columns);
-      const x = padding + column * (slotSize + gap);
-      const y = padding + titleHeight + row * (slotSize + gap);
-      this.applySlotNode(node, renderable, item, slotIndex, x, y, slotSize);
+      const x = padding + column * (slotWidth + gap);
+      const y = padding + titleHeight + row * (slotHeight + gap);
+      this.applySlotNode(node, renderable, item, slotIndex, x, y, slotWidth, slotHeight, layout);
       staleSlots.delete(slotIndex);
     }
 
@@ -238,16 +240,19 @@ export class PixiRoccoGridMenuRenderer {
     slotIndex: number,
     x: number,
     y: number,
-    slotSize: number,
+    slotWidth: number,
+    slotHeight: number,
+    layout: string,
   ): void {
     const definition = renderable.definition;
     const hovered = renderable.state.hoveredSlotIndex === slotIndex;
     const hasCarriedItem = Boolean(renderable.state.carriedItem);
+    const isTextList = layout === 'text-list';
     node.root.position.set(x, y);
 
     node.frame.clear();
     node.frame
-      .roundRect(0, 0, slotSize, slotSize, 6)
+      .roundRect(0, 0, slotWidth, slotHeight, 6)
       .fill({
         color: definition.slotFill ?? '#182317',
         alpha: item ? 0.95 : hovered && hasCarriedItem ? 0.78 : 0.55,
@@ -258,12 +263,12 @@ export class PixiRoccoGridMenuRenderer {
         alpha: hovered ? 1 : 0.82,
       });
 
-    node.icon.visible = Boolean(item?.imageUri);
-    if (item?.imageUri) {
+    node.icon.visible = Boolean(item?.imageUri) && !isTextList;
+    if (item?.imageUri && !isTextList) {
       node.icon.texture = this.resolveTexture(item.imageUri);
       node.imageUri = item.imageUri;
-      const iconSize = Math.round(slotSize * 0.72);
-      node.icon.position.set(slotSize / 2, slotSize / 2 - 4);
+      const iconSize = Math.round(Math.min(slotWidth, slotHeight) * 0.72);
+      node.icon.position.set(slotWidth / 2, slotHeight / 2 - 4);
       node.icon.width = iconSize;
       node.icon.height = iconSize;
       node.icon.alpha = item.enabled === false ? 0.45 : 1;
@@ -273,9 +278,24 @@ export class PixiRoccoGridMenuRenderer {
 
     node.label.text = item?.label ?? '';
     node.label.visible = Boolean(item?.label);
-    node.label.x = slotSize / 2;
-    node.label.y = slotSize - 17;
     node.label.alpha = item?.enabled === false ? 0.5 : 1;
+    if (isTextList) {
+      node.label.anchor.set(0, 0.5);
+      node.label.x = 16;
+      node.label.y = slotHeight / 2;
+      node.label.style.align = 'left';
+      node.label.style.fontSize = 18;
+      node.label.style.wordWrap = true;
+      node.label.style.wordWrapWidth = Math.max(80, slotWidth - 32);
+    } else {
+      node.label.anchor.set(0.5, 0);
+      node.label.x = slotWidth / 2;
+      node.label.y = slotHeight - 17;
+      node.label.style.align = 'center';
+      node.label.style.fontSize = 10;
+      node.label.style.wordWrap = false;
+      node.label.style.wordWrapWidth = 0;
+    }
   }
 
   private clearPanel(): void {

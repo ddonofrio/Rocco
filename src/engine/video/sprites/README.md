@@ -18,6 +18,7 @@ The sprite system manages animated entities such as player characters, NPCs, and
 
 - A definition is a reusable blueprint with images, frames, animation clips, actions, motion profiles, and hit areas.
 - An instance is a live runtime object with position, visibility, motion state, animation state, and facing.
+- Definitions and instances can set `ignoreMessages` so the speech-bubble layout skips that sprite as an obstacle.
 - Load a definition with `engine.video.sprites.loadSpriteDefinition()`.
 - Create instances with `engine.video.sprites.createSpriteFromDefinition()`.
 
@@ -34,6 +35,14 @@ An action profile groups:
 Walk maps are alpha-mask images. Opaque pixels are walkable and transparent pixels are blocked.
 
 Use `loadRoccoSpriteWalkMapFromImage()`, register the map with `engine.video.sprites.registerWalkMap()`, and bind it with `engine.video.sprites.bindToWalkMap()` before using walk-map-constrained movement.
+
+### Auto Adjust
+
+Sprite definitions can opt into `autoAdjust` when the rendered pose needs runtime compensation without changing the world transform.
+
+- `mode: 'match-visible-height'` normalizes frames that have different visible heights after trimming or auto-cropping.
+- `perspectiveByY` interpolates between `farScale` and `nearScale` from the sprite ground-point Y so cartridges can soften perspective distortion in painted scenes.
+- Both adjustments compose into one `visualAdjustment` that the renderer and hit-testing paths use consistently.
 
 ### Depth Modes
 

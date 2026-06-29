@@ -2,8 +2,7 @@ import type { RoccoRuntimeVideoSystem } from './video';
 import type { RoccoCursorActionEvent, RoccoCursorMoveEvent } from './video/cursor';
 import type { RoccoViewportHost } from './video/viewport';
 import type { RoccoSpriteMessageRequest } from './video/messages';
-import type { RoccoCartridge, RoccoSceneClickAction } from './cartridges';
-import type { RoccoSpriteHit, RoccoSpriteVisiblePixelHit } from './video/sprites';
+import type { RoccoCartridge, RoccoCartridgeActionResult, RoccoSceneClickAction } from './cartridges';
 import type { RoccoRuntimeAudioSystem } from './audio';
 import type { RoccoJukeboxSystem } from './audio/jukebox';
 
@@ -21,9 +20,26 @@ interface InputHandlerOptions {
   log: (channel: string, message: string) => void;
 }
 
+type ResolvedSceneTargetKind = 'sprite' | 'scene-target';
+
+interface ResolvedSceneTarget {
+  kind: ResolvedSceneTargetKind;
+  instanceId: string;
+  definitionId: string;
+}
+
+interface ResolvedSceneVisibleTarget extends ResolvedSceneTarget {
+  text: string;
+  textKey?: string;
+}
+
 interface ResolvedSceneTargets {
-  visibleTarget: RoccoSpriteVisiblePixelHit | undefined;
-  target: RoccoSpriteHit | undefined;
+  visibleTarget: ResolvedSceneVisibleTarget | undefined;
+  target: ResolvedSceneTarget | undefined;
+}
+
+function isPromiseLike<T>(value: Promise<T> | T | void): value is Promise<T> {
+  return typeof value === 'object' && value !== null && 'then' in value;
 }
 
 export class RoccoInputHandler {
@@ -74,12 +90,20 @@ export class RoccoInputHandler {
     const x = Math.round(event.sceneX);
     const y = Math.round(event.sceneY);
 
-    // Block input only when a runtime sequence explicitly disables it.
+    // Runtime sequences can still consume clicks as "advance" inputs while normal interaction is disabled.
     if (!this.inputEnabled) {
+      this.handleDisabledCursorAction(event, x, y);
       return;
     }
 
-    this.videoSystem.messages.clearMessages();
+    if (this.clearForegroundMessages()) {
+      this.setHoverDescription(undefined);
+      this.videoSystem.render(0);
+      this.logFn('Cursor', `DISMISS dialogue at (${x}, ${y}).`);
+      return;
+    }
+
+    this.clearForegroundMessages();
 
     if (this.handleGridMenuCursorAction(event)) {
       return;
@@ -99,13 +123,51 @@ export class RoccoInputHandler {
     this.handleSceneCursorAction(event, x, y);
   };
 
+  private handleDisabledCursorAction(
+    event: RoccoCursorActionEvent,
+    roundedX: number,
+    roundedY: number,
+  ): void {
+    const targets = this.resolveSceneTargets(event.sceneX, event.sceneY);
+    const sceneClickAction: RoccoSceneClickAction = {
+      kind: 'scene-click',
+      sceneX: event.sceneX,
+      sceneY: event.sceneY,
+      targetInstanceId: targets.visibleTarget?.instanceId ?? targets.target?.instanceId,
+      targetDefinitionId: targets.visibleTarget?.definitionId ?? targets.target?.definitionId,
+    };
+
+    void this.getActiveCartridge()?.handleAction?.(sceneClickAction);
+
+    if (targets.visibleTarget) {
+      this.logFn(
+        'Cursor',
+        `ADVANCE click on ${targets.visibleTarget.kind} '${targets.visibleTarget.instanceId}' at (${roundedX}, ${roundedY}) while input is disabled.`,
+      );
+      return;
+    }
+
+    if (targets.target) {
+      this.logFn(
+        'Cursor',
+        `ADVANCE click on ${targets.target.kind} '${targets.target.instanceId}' at (${roundedX}, ${roundedY}) while input is disabled.`,
+      );
+      return;
+    }
+
+    this.logFn('Cursor', `ADVANCE click at (${roundedX}, ${roundedY}) while input is disabled.`);
+  }
+
   private readonly handleCursorMove = (event: RoccoCursorMoveEvent): void => {
     if (this.videoSystem.gridMenus.isOpen()) {
       if (this.videoSystem.gridMenus.setHoverAt(event.sceneX, event.sceneY)) {
         this.videoSystem.render(0);
       }
+      const activeGridMenu = this.videoSystem.gridMenus.getRenderableMenu();
       const hoveredItem = this.videoSystem.gridMenus.getHoveredItem();
-      this.setHoverDescription(hoveredItem?.label);
+      this.setHoverDescription(
+        activeGridMenu?.definition.layout === 'text-list' ? undefined : hoveredItem?.label,
+      );
       return;
     }
 
@@ -118,8 +180,8 @@ export class RoccoInputHandler {
       return;
     }
 
-    const hit = this.videoSystem.sprites.hitTestVisiblePixel(event.sceneX, event.sceneY)[0];
-    this.setHoverDescription(hit?.text);
+    const targets = this.resolveSceneTargets(event.sceneX, event.sceneY);
+    this.setHoverDescription(targets.visibleTarget?.text);
   };
 
   private readonly handleCursorLeave = (): void => {
@@ -170,7 +232,7 @@ export class RoccoInputHandler {
       void this.getActiveCartridge()?.handleAction?.(activation);
       this.logFn(
         'ActionMenu',
-        `ACTION '${activation.actionId}' on sprite '${activation.targetInstanceId}'.`,
+        `ACTION '${activation.actionId}' on target '${activation.targetInstanceId}'.`,
       );
     }
 
@@ -201,7 +263,7 @@ export class RoccoInputHandler {
       void this.getActiveCartridge()?.handleAction?.(activation);
       this.logFn(
         'GridMenu',
-        `USE carried grid item '${carriedItem.item.id}' on sprite '${actionTarget.instanceId}'.`,
+        `USE carried grid item '${carriedItem.item.id}' on ${actionTarget.kind} '${actionTarget.instanceId}'.`,
       );
       this.syncCursorAttachment();
       this.videoSystem.render(0);
@@ -224,16 +286,25 @@ export class RoccoInputHandler {
     const targets = this.resolveSceneTargets(event.sceneX, event.sceneY);
     const { visibleTarget, target } = targets;
     const playerSpriteId = this.getActivePlayerSpriteId();
-    const actionTargetId = visibleTarget?.instanceId ?? target?.instanceId;
+    const actionTarget = visibleTarget ?? target;
+    const actionTargetId = actionTarget?.instanceId;
+    const suppressDefaultPlayerMoveByTarget = this.shouldSuppressDefaultPlayerMove(actionTarget);
     const sceneClickAction: RoccoSceneClickAction = {
       kind: 'scene-click',
       sceneX: event.sceneX,
       sceneY: event.sceneY,
       targetInstanceId: actionTargetId,
-      targetDefinitionId: visibleTarget?.definitionId ?? target?.definitionId,
+      targetDefinitionId: actionTarget?.definitionId,
     };
 
-    void this.getActiveCartridge()?.handleAction?.(sceneClickAction);
+    const cartridgeActionResult = this.getActiveCartridge()?.handleAction?.(sceneClickAction);
+    const suppressDefaultPlayerMoveByCartridge = isPromiseLike<RoccoCartridgeActionResult | void>(
+      cartridgeActionResult,
+    )
+      ? false
+      : cartridgeActionResult?.suppressDefaultPlayerMove === true;
+    const suppressDefaultPlayerMove =
+      suppressDefaultPlayerMoveByTarget || suppressDefaultPlayerMoveByCartridge;
 
     if (
       visibleTarget &&
@@ -244,46 +315,124 @@ export class RoccoInputHandler {
         event.sceneY,
       )
     ) {
-      if (playerSpriteId && visibleTarget.instanceId !== playerSpriteId) {
+      if (
+        playerSpriteId &&
+        visibleTarget.instanceId !== playerSpriteId &&
+        !suppressDefaultPlayerMove
+      ) {
         this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
           idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
           idleSettleFacing: 'diagonal-from-facing',
           targetInstanceId:
-            visibleTarget.instanceId !== playerSpriteId
+            visibleTarget.kind === 'sprite' && visibleTarget.instanceId !== playerSpriteId
               ? visibleTarget.instanceId
               : undefined,
         });
       }
       this.setHoverDescription(undefined);
       this.videoSystem.render(0);
-      this.logFn('ActionMenu', `OPEN for sprite '${visibleTarget.instanceId}' at (${roundedX}, ${roundedY}).`);
+      this.logFn(
+        'ActionMenu',
+        `OPEN for ${visibleTarget.kind} '${visibleTarget.instanceId}' at (${roundedX}, ${roundedY}).`,
+      );
       return;
     }
 
-    if (playerSpriteId) {
+    if (playerSpriteId && !suppressDefaultPlayerMove) {
       this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
         idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
         idleSettleFacing: 'diagonal-from-facing',
-        targetInstanceId: actionTargetId && actionTargetId !== playerSpriteId ? actionTargetId : undefined,
+        targetInstanceId:
+          actionTarget?.kind === 'sprite' && actionTargetId && actionTargetId !== playerSpriteId
+            ? actionTargetId
+            : undefined,
       });
     }
 
     if (visibleTarget) {
-      this.logFn('Cursor', `CLICK sprite '${visibleTarget.instanceId}' at (${roundedX}, ${roundedY}).`);
+      this.logFn(
+        'Cursor',
+        `CLICK ${visibleTarget.kind} '${visibleTarget.instanceId}' at (${roundedX}, ${roundedY}).`,
+      );
       return;
     }
 
     if (target) {
-      this.logFn('Cursor', `CLICK sprite '${target.instanceId}' at (${roundedX}, ${roundedY}).`);
+      this.logFn('Cursor', `CLICK ${target.kind} '${target.instanceId}' at (${roundedX}, ${roundedY}).`);
       return;
     }
 
     this.logFn('Cursor', `CLICK at (${roundedX}, ${roundedY}).`);
   }
 
+  private clearForegroundMessages(): boolean {
+    const foregroundMessages = this.videoSystem.messages
+      .listMessages()
+      .filter((message) => message.background !== true);
+    if (foregroundMessages.length === 0) {
+      return false;
+    }
+
+    for (const message of foregroundMessages) {
+      this.videoSystem.messages.removeMessage(message.id);
+    }
+
+    return true;
+  }
+
+  private shouldSuppressDefaultPlayerMove(
+    target: ResolvedSceneTarget | undefined,
+  ): boolean {
+    if (!target || target.kind !== 'scene-target') {
+      return false;
+    }
+
+    return (
+      this.videoSystem.sceneTargets?.getTarget(target.instanceId)
+        ?.suppressDefaultPlayerMove === true
+    );
+  }
+
   private resolveSceneTargets(sceneX: number, sceneY: number): ResolvedSceneTargets {
-    const visibleHits = this.videoSystem.sprites.hitTestVisiblePixel(sceneX, sceneY);
-    const hits = visibleHits.length > 0 ? [] : this.videoSystem.sprites.hitTest(sceneX, sceneY);
+    const resolvedByVideoSystem = this.videoSystem.resolveSceneTargets?.(sceneX, sceneY);
+    if (resolvedByVideoSystem) {
+      return {
+        visibleTarget: resolvedByVideoSystem.visibleTarget,
+        target: resolvedByVideoSystem.target,
+      };
+    }
+
+    const visibleHits = [
+      ...this.videoSystem.sprites.hitTestVisiblePixel(sceneX, sceneY).map((hit) => ({
+        kind: 'sprite' as const,
+        instanceId: hit.instanceId,
+        definitionId: hit.definitionId,
+        text: hit.text,
+        textKey: hit.textKey,
+      })),
+      ...(this.videoSystem.sceneTargets?.hitTestVisible(sceneX, sceneY).map((hit) => ({
+        kind: 'scene-target' as const,
+        instanceId: hit.instanceId,
+        definitionId: hit.definitionId,
+        text: hit.text,
+        textKey: hit.textKey,
+      })) ?? []),
+    ];
+    const hits =
+      visibleHits.length > 0
+        ? []
+        : [
+            ...this.videoSystem.sprites.hitTest(sceneX, sceneY).map((hit) => ({
+              kind: 'sprite' as const,
+              instanceId: hit.instanceId,
+              definitionId: hit.definitionId,
+            })),
+            ...(this.videoSystem.sceneTargets?.hitTest(sceneX, sceneY).map((hit) => ({
+              kind: 'scene-target' as const,
+              instanceId: hit.instanceId,
+              definitionId: hit.definitionId,
+            })) ?? []),
+          ];
     return {
       visibleTarget: visibleHits[0],
       target: hits[0],

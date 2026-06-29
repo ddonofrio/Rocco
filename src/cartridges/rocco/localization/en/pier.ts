@@ -1,0 +1,71 @@
+import type { RoccoTextCatalog } from '../types';
+
+export const englishBaitBucketText: RoccoTextCatalog['baitBucket'] = {
+  normalLookLines: [
+    'A bucket of bait. Something still wants to be alive in there.',
+    'It smells like the bottom of things.',
+    'The worms keep moving. Small lives are stubborn.',
+    'I wonder if they know they are bait.',
+  ],
+  normalGrabLines: [
+    'No. I do not need another thing in my hands right now.',
+    'I can barely carry myself. The bucket can stay there.',
+    'It is wet, heavy, and honest. More than I can say for me.',
+    'Touching it would make this feel too real.',
+  ],
+  droppedLookLines: [
+    'The bucket is open now. Everything spills eventually.',
+    'The worms found daylight and probably regret it.',
+    'That mess looks like my thoughts when I stop moving.',
+    'Even the bait ended up where gravity wanted it.',
+  ],
+  droppedGrabLines: [
+    'No. Some things cannot be put back neatly.',
+    'I am done pretending a spill can be undone.',
+    'My hands are already full of bad ideas.',
+    'If I pick it up, I will only drop it again.',
+  ],
+};
+
+export const englishFeedingText: RoccoTextCatalog['feeding'] = {
+  turnAwayLine: 'I do not want to watch something disappear.',
+  lookLines: [
+    'The Pelikan eats like the world never ended for it.',
+    'That beak knows exactly what it wants. I envy that.',
+    'I do not want to watch something disappear.',
+    'Nature is not cruel. It is just finished arguing.',
+    'That bird has no doubt in it at all.',
+  ],
+};
+
+export const englishKeysText: RoccoTextCatalog['keys'] = {
+  lookLines: [
+    'Keys.',
+    'I did not expect to find anything here.',
+    'This changes things a little.',
+    'Maybe my luck is changing.',
+    'I do not know what they open, but they feel like a way out.',
+  ],
+  kickLines: [
+    'No. I am not kicking away the first good sign I have seen.',
+    'They are small, but they are not nothing.',
+    'Let us not test gravity twice today.',
+  ],
+  collectedLines: [
+    'I have them.',
+    'For the first time all day, I want to step away from the edge.',
+    'All right. First, find what they open.',
+    'I am not jumping today. Not yet.',
+  ],
+  defeatLines: [
+    'Of course. Even a second chance can slip.',
+    'I watched the last bright thing fall and did nothing right.',
+    'My hands remembered how to fail.',
+    'Gravity still knows my name.',
+  ],
+  defeatTitle: 'You lose',
+};
+
+export const englishMiddleLevelText: RoccoTextCatalog['middleLevel'] = {
+  pelikanFeedingLine: 'Look, food.',
+};

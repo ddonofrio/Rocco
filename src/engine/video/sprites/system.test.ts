@@ -443,6 +443,40 @@ describe('RoccoSpriteSystemSDK', () => {
     ]);
   });
 
+  it('applies perspective auto-adjust scaling from the sprite ground point Y', () => {
+    const system = new RoccoSpriteSystemSDK();
+    const definition: RoccoSpriteDefinition = {
+      ...createTestDefinition(),
+      id: 'perspective-hero',
+      groundAnchor: { x: 16, y: 32 },
+      autoAdjust: {
+        enabled: true,
+        perspectiveByY: {
+          farY: 100,
+          nearY: 300,
+          farScale: 0.8,
+          nearScale: 1,
+        },
+      },
+    };
+    system.loadSpriteDefinition(definition);
+    const sprite = system.createSpriteFromDefinition('perspective-hero', {
+      transform: { x: 0, y: 68, scaleX: 1, scaleY: 1, rotation: 0 },
+    });
+
+    expect(system.listRenderableSprites()[0]?.visualAdjustment?.scaleX).toBeCloseTo(0.8, 5);
+    expect(system.listRenderableSprites()[0]?.visualAdjustment?.scaleY).toBeCloseTo(0.8, 5);
+
+    system.setPosition(sprite.id, 0, 168);
+
+    expect(system.listRenderableSprites()[0]?.visualAdjustment?.scaleX).toBeCloseTo(0.9, 5);
+    expect(system.listRenderableSprites()[0]?.visualAdjustment?.scaleY).toBeCloseTo(0.9, 5);
+
+    system.setPosition(sprite.id, 0, 268);
+
+    expect(system.listRenderableSprites()[0]?.visualAdjustment).toBeUndefined();
+  });
+
   it('uses sprite actions to choose movement speed and directional animation', () => {
     const system = new RoccoSpriteSystemSDK();
     system.loadSpriteDefinition(createDirectionalTestDefinition());

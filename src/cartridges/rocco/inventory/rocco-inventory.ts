@@ -1,10 +1,17 @@
 import type { RoccoGridMenuDefinition } from '../../../engine/video/grid-menu';
-import { roccoDefaultKeysAssetUrl, roccoDefaultTwentyEurosAssetUrl } from '../rocco-default-assets';
+import {
+  roccoDefaultKeysAssetUrl,
+  roccoDefaultMicromaniaInventoryAssetUrl,
+  roccoDefaultMysteriousKeyAssetUrl,
+  roccoDefaultTwentyEurosAssetUrl,
+} from '../rocco-default-assets';
 import type { RoccoLocalization } from '../localization';
 import type { RoccoInventoryItem } from './types';
 
 export const ROCCO_INVENTORY_MENU_ID = 'rocco-inventory-menu';
 export const ROCCO_INVENTORY_KEYS_ITEM_ID = 'rocco-keys';
+export const ROCCO_INVENTORY_MAGAZINE_ITEM_ID = 'rocco-magazine';
+export const ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID = 'rocco-mysterious-key';
 export const ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID = 'rocco-twenty-euros';
 const ROCCO_INVENTORY_SLOT_COUNT = 9;
 
@@ -107,6 +114,16 @@ export function createRoccoKeysInventoryItem(
   };
 }
 
+export function createRoccoMysteriousKeyInventoryItem(
+  localization: RoccoLocalization,
+): RoccoInventoryItem {
+  return {
+    id: ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID,
+    label: localization.text.inventory.mysteriousKeyLabel,
+    imageUri: roccoDefaultMysteriousKeyAssetUrl,
+  };
+}
+
 export function createRoccoTwentyEurosInventoryItem(
   localization: RoccoLocalization,
 ): RoccoInventoryItem {
@@ -114,5 +131,18 @@ export function createRoccoTwentyEurosInventoryItem(
     id: ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
     label: localization.text.inventory.twentyEurosLabel,
     imageUri: roccoDefaultTwentyEurosAssetUrl,
+  };
+}
+
+export function createRoccoMagazineInventoryItem(
+  localization: RoccoLocalization,
+  known: boolean,
+): RoccoInventoryItem {
+  return {
+    id: ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
+    label: known
+      ? localization.text.inventory.micromaniaLabel
+      : localization.text.inventory.magazineLabel,
+    imageUri: roccoDefaultMicromaniaInventoryAssetUrl,
   };
 }

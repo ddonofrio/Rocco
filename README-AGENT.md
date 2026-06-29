@@ -26,7 +26,7 @@ Use documentation in layers:
 Useful routes:
 
 - Cartridge behavior: `src/engine/cartridges/README.md`, then the target cartridge README.
-- Rocco Pier behavior: `src/cartridges/rocco/README.md`, then `src/cartridges/rocco/levels/pier/README.md`.
+- Rocco Pier behavior: `src/cartridges/rocco/README.md`, then `src/cartridges/rocco/levels/pier/README.md`, then `src/cartridges/rocco/levels/bait-shop/README.md` when the interior matters.
 - Localization: `src/engine/cartridges/README.md`, `src/engine/cartridge-menu/README.md`, and `src/cartridges/rocco/localization/README.md`.
 - Rendering and water effects: `src/engine/video/README.md`, `src/engine/video/planes/README.md`, and `src/engine/video/post-processing/README.md`.
 - Sprites, walk maps, or actions: `src/engine/video/sprites/README.md` and the relevant cartridge README.
@@ -240,14 +240,14 @@ The cartridge-facing video SDK lives under `engine.video`. `RoccoRuntimeVideoSys
 - `engine.video.sprites.playAnimation(id, animationId, options?)` plays an animation clip.
 - `engine.video.sprites.registerWalkMap(walkMap)` registers a walk map.
 - `engine.video.sprites.bindToWalkMap(id, binding)` binds a walk map to an instance.
-- `setPlayerSprite(id | null)` selects the click-to-walk player sprite through the engine SDK surface.
+- `setPlayerSprite(id | null)` selects the click-to-walk player sprite through the engine SDK surface and feeds player-aware plane depth modes.
 
 ### UI and Feedback
 
 - `engine.video.actionMenus.registerMenu(definition)` registers a radial action menu.
 - `engine.video.actionMenus.unregisterMenu(id)` removes a radial action menu.
 - `engine.video.actionMenus.closeMenu()` closes the active radial action menu.
-- `engine.video.gridMenus.openMenu(definition)` opens a generic slot grid panel.
+- `engine.video.gridMenus.openMenu(definition)` opens a generic slot grid panel or text choice list.
 - `engine.video.gridMenus.toggleMenu(definition)` toggles a generic slot grid panel.
 - `engine.video.gridMenus.closeMenu()` closes the active generic slot grid panel.
 - `engine.video.gridMenus.getCarriedItem()` returns the source menu id and generic grid item currently attached to the cursor.
@@ -279,6 +279,7 @@ Render layers define drawing order:
 | `background.back`    | background | 0       | none          |
 | `background.main`    | background | 10      | none          |
 | `world.behind`       | world      | 20      | y-sort        |
+| `world.mid`          | world      | 25      | y-sort        |
 | `world.actors`       | world      | 30      | baseline-sort |
 | `world.front`        | world      | 40      | y-sort        |
 | `foreground`         | foreground | 50      | none          |
@@ -293,7 +294,7 @@ Each video subsystem keeps domain state separate from Pixi rendering. Cartridge 
 
 ## Grid Menus
 
-Grid menus are generic slot-panel UI owned by the console. They are useful for cartridge-defined panels such as inventories, but the engine does not own inventory state.
+Grid menus are generic slot-panel UI owned by the console. They are useful for cartridge-defined panels such as inventories and dialogue choice lists, but the engine does not own inventory state or conversation state.
 
 `engine.video.gridMenus` opens, closes, toggles, hovers, activates, reorders slots, and carries a generic item payload. The active cartridge receives `RoccoGridMenuActivation` through `handleAction()`. When the cartridge wants to interpret a carried payload on a scene target, it combines the next `scene-click` with `engine.video.gridMenus.getCarriedItem()`.
 
@@ -313,6 +314,8 @@ Supported plane source kinds:
 `bitmap` and `tileset` remain scene-data shapes in the plane types, but the current Pixi runtime does not render them directly. Treat them as reserved for future renderer support, not as cartridge-ready runtime features.
 
 Image planes can opt into water animation through `metadata.waterColorEffect`.
+
+Planes can also declare `depthMode`. The current runtime supports `fixed` and the player-aware `sprite-y-threshold` mode, which swaps a plane between two render layers at render time using either the active player sprite or a specific sprite instance plus `origin-y` or `ground-y` sampling.
 
 ## Sprite System
 
@@ -362,15 +365,17 @@ The menu:
 The main demo cartridge lives in `src/cartridges/rocco`.
 
 - Three connected Pier levels: Pier Beginning, Pier Middle, and Pier End.
+- Separate bait shop interior level under `src/cartridges/rocco/levels/bait-shop`.
 - Shared pier scene artwork with right, centered, and left source-image windows.
 - Level graph with east/west connectors, entry points, and entry facing.
-- Per-level state retained by keeping level instances alive in `RoccoPierLevelManager`.
+- Per-level state retained by keeping level instances alive in `RoccoLevelManager`.
 - The first Pier Middle mount plays an opening beat through the Rocco sprite controller, and scene clicks can cancel it.
 - Rocco cartridge inventory for the 20 EUR bill, collected keys, and slot order.
 - Rocco self action menu with Talk and Inventory options.
 - Cartridge-owned inventory item use attempts against Pier objects through `scene-click` plus the carried grid payload.
 - Rocco player sprite with click-to-walk and directional actions.
-- Pelikan NPC, bait bucket, feeding sequence, keys reveal, and key collection.
+- Pelikan NPC, bait bucket, feeding sequence, keys reveal, key collection, the bait shop door gate in Pier Beginning, and the bait shop interior transition.
+- Stan wake logic, branching dialogue menus, and the reusable cartridge dialogue runtime.
 - English and Spanish localization.
 - Water wave post-processing clipped to the source water mask.
 

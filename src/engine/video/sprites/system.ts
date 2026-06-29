@@ -27,6 +27,8 @@ import type {
   RoccoSpriteWalkMap,
   RoccoSpriteWalkMapColumn,
   RoccoSpriteNavigationBinding,
+  RoccoSpritePlacementOptions,
+  RoccoSpriteAutoAdjustPerspectiveByY,
   RoccoSpriteVisibleDescription,
   RoccoSpriteVisiblePixelHit,
 } from './types';
@@ -34,6 +36,7 @@ import type {
 const EPSILON = 0.0001;
 const DEFAULT_FOREGROUND_FACING_BIAS = 0.35;
 const MIN_FOREGROUND_FACING_BIAS_PIXELS = 12;
+const DEFAULT_WALK_MAP_WAYPOINT_EDGE_MARGIN = 18;
 const DEFAULT_RENDER_LAYER_ORDER = new Map(
   defaultRoccoRenderLayers.map((layer, index) => [layer.id, index]),
 );
@@ -158,6 +161,13 @@ interface WalkMapConstraintResult {
   x: number;
   y: number;
   blocked: boolean;
+}
+
+interface WalkMapPathNode {
+  x: number;
+  spanIndex: number;
+  yMin: number;
+  yMax: number;
 }
 
 interface SpriteAlphaMask {
@@ -359,9 +369,14 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     instance.animation.motionBinding = clone(binding);
   }
 
-  setPosition(instanceId: string, x: number, y: number): void {
+  setPosition(
+    instanceId: string,
+    x: number,
+    y: number,
+    options?: RoccoSpritePlacementOptions,
+  ): void {
     const instance = this.requireInstance(instanceId);
-    const constrained = this.constrainOriginToWalkMap(instance, x, y);
+    const constrained = this.constrainOriginToWalkMap(instance, x, y, options);
     instance.transform.x = constrained.x;
     instance.transform.y = constrained.y;
   }
@@ -386,12 +401,26 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     };
   }
 
-  translate(instanceId: string, dx: number, dy: number): void {
+  setVisibleDescription(
+    instanceId: string,
+    visibleDescription?: Partial<RoccoSpriteVisibleDescription>,
+  ): void {
+    const instance = this.requireInstance(instanceId);
+    instance.visibleDescription = visibleDescription ? clone(visibleDescription) : undefined;
+  }
+
+  translate(
+    instanceId: string,
+    dx: number,
+    dy: number,
+    options?: RoccoSpritePlacementOptions,
+  ): void {
     const instance = this.requireInstance(instanceId);
     const constrained = this.constrainOriginToWalkMap(
       instance,
       instance.transform.x + dx,
       instance.transform.y + dy,
+      options,
     );
     instance.transform.x = constrained.x;
     instance.transform.y = constrained.y;
@@ -447,13 +476,29 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     }
   }
 
-  goTo(instanceId: string, x: number, y: number, options?: RoccoSpriteGoToOptions): void {
+  goTo(instanceId: string, x: number, y: number, options?: RoccoSpriteGoToOptions): boolean {
     const instance = this.requireInstance(instanceId);
     const definition = this.requireDefinition(instance.definitionId);
     const moveOptions = this.resolveGoToMoveOptions(options);
     const targetGround = this.resolveGoToGroundTarget(instance, definition, { x, y }, moveOptions);
+    const groundPath = this.resolveGoToGroundPath(instance, definition, targetGround, moveOptions);
+    if (groundPath === null) {
+      this.cancelMovement(instanceId);
+      return false;
+    }
+
+    if (groundPath && groundPath.length > 1) {
+      this.followPath(
+        instanceId,
+        groundPath.map((point) => this.toOriginFromGroundPoint(instance, definition, point)),
+        moveOptions,
+      );
+      return true;
+    }
+
     const targetOrigin = this.toOriginFromGroundPoint(instance, definition, targetGround);
     this.moveTo(instanceId, targetOrigin.x, targetOrigin.y, moveOptions);
+    return true;
   }
 
   moveBy(instanceId: string, dx: number, dy: number, options?: RoccoMoveOptions): void {
@@ -584,7 +629,7 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
         continue;
       }
 
-      if (this.isPointInShape(instance, shape, { x, y })) {
+      if (this.isPointInShape(instance, definition, frame, shape, { x, y })) {
         hits.push({
           instanceId: instance.id,
           definitionId: definition.id,
@@ -621,6 +666,17 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     return hits;
   }
 
+  isPointOnVisiblePixel(instanceId: string, x: number, y: number): boolean {
+    const instance = this.instances.get(instanceId);
+    if (!instance || !instance.enabled || !instance.visible || instance.opacity <= 0) {
+      return false;
+    }
+
+    const definition = this.requireDefinition(instance.definitionId);
+    const frame = this.resolveActiveFrame(definition, instance);
+    return this.isPointOnVisibleSpritePixel(instance, definition, frame, { x, y });
+  }
+
   queryCollisions(instanceId: string): RoccoCollisionHit[] {
     const hits: RoccoCollisionHit[] = [];
     const subject = this.requireInstance(instanceId);
@@ -649,7 +705,7 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
 
       for (const shapeA of subjectShapes) {
         for (const shapeB of otherShapes) {
-          if (this.intersects(subject, shapeA, other, shapeB)) {
+          if (this.intersects(subject, subjectDef, subjectFrame, shapeA, other, otherDef, otherFrame, shapeB)) {
             hits.push({
               a: subject.id,
               b: other.id,
@@ -743,6 +799,7 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       instance,
       instance.transform.x + instance.motion.velocityX * deltaSeconds,
       instance.transform.y + instance.motion.velocityY * deltaSeconds,
+      instance.motion.command?.options,
     );
     instance.transform.x = constrained.x;
     instance.transform.y = constrained.y;
@@ -848,7 +905,7 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
 
     const stepDistance = Math.max(0, speed * deltaSeconds);
     if (stepDistance >= Math.max(0, distance - stopDistance)) {
-      const constrained = this.constrainOriginToWalkMap(instance, target.x, target.y);
+      const constrained = this.constrainOriginToWalkMap(instance, target.x, target.y, options);
       instance.transform.x = constrained.x;
       instance.transform.y = constrained.y;
       instance.motion.velocityX = 0;
@@ -860,6 +917,7 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       instance,
       instance.transform.x + nx * stepDistance,
       instance.transform.y + ny * stepDistance,
+      options,
     );
     instance.transform.x = constrained.x;
     instance.transform.y = constrained.y;
@@ -1195,8 +1253,14 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     return [];
   }
 
-  private isPointInShape(instance: RoccoSpriteInstance, shape: RoccoCollisionShape, point: RoccoPoint): boolean {
-    const world = this.toWorldShape(instance, shape);
+  private isPointInShape(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    frame: RoccoSpriteFrame,
+    shape: RoccoCollisionShape,
+    point: RoccoPoint,
+  ): boolean {
+    const world = this.toWorldShape(instance, definition, frame, shape);
     if (world.kind === 'rect') {
       return (
         point.x >= world.rect.x &&
@@ -1216,12 +1280,16 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
 
   private intersects(
     leftInstance: RoccoSpriteInstance,
+    leftDefinition: RoccoSpriteDefinition,
+    leftFrame: RoccoSpriteFrame,
     leftShape: RoccoCollisionShape,
     rightInstance: RoccoSpriteInstance,
+    rightDefinition: RoccoSpriteDefinition,
+    rightFrame: RoccoSpriteFrame,
     rightShape: RoccoCollisionShape,
   ): boolean {
-    const leftWorld = this.toWorldShape(leftInstance, leftShape);
-    const rightWorld = this.toWorldShape(rightInstance, rightShape);
+    const leftWorld = this.toWorldShape(leftInstance, leftDefinition, leftFrame, leftShape);
+    const rightWorld = this.toWorldShape(rightInstance, rightDefinition, rightFrame, rightShape);
 
     if (leftWorld.kind === 'rect' && rightWorld.kind === 'rect') {
       return this.intersectsRectRect(leftWorld.rect, rightWorld.rect);
@@ -1292,31 +1360,64 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     };
   }
 
-  private toWorldShape(instance: RoccoSpriteInstance, shape: RoccoCollisionShape): WorldShape {
-    const presentationScale = resolvePresentationScale(instance.transform.presentation);
-    const scaleX = (instance.transform.scaleX || 1) * presentationScale.x * (instance.transform.flipX ? -1 : 1);
-    const scaleY = (instance.transform.scaleY || 1) * presentationScale.y * (instance.transform.flipY ? -1 : 1);
+  private toWorldShape(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    frame: RoccoSpriteFrame,
+    shape: RoccoCollisionShape,
+  ): WorldShape {
     if (shape.kind === 'rect') {
-      const width = shape.width * scaleX;
-      const height = shape.height * scaleY;
       return {
-        kind: 'rect',
-        rect: {
-          x: instance.transform.x + shape.x * scaleX + Math.min(0, width),
-          y: instance.transform.y + shape.y * scaleY + Math.min(0, height),
-          width: Math.abs(width),
-          height: Math.abs(height),
+        kind: 'polygon',
+        polygon: {
+          points: [
+            this.toWorldPoint(instance, definition, frame, { x: shape.x, y: shape.y }),
+            this.toWorldPoint(instance, definition, frame, {
+              x: shape.x + shape.width,
+              y: shape.y,
+            }),
+            this.toWorldPoint(instance, definition, frame, {
+              x: shape.x + shape.width,
+              y: shape.y + shape.height,
+            }),
+            this.toWorldPoint(instance, definition, frame, {
+              x: shape.x,
+              y: shape.y + shape.height,
+            }),
+          ],
         },
       };
     }
 
     if (shape.kind === 'circle') {
-      const radiusScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
+      const frameSize = this.resolveFrameSize(definition, frame);
+      const visualAdjustment = this.resolveVisualAdjustment(instance, definition, frame);
+      const { scaleX, scaleY } = this.resolveWorldScale(instance);
+      const anchor = definition.anchor ?? { x: 0, y: 0 };
+      const adjustedScaleX = visualAdjustment?.scaleX ?? 1;
+      const adjustedScaleY = visualAdjustment?.scaleY ?? 1;
+      const localCenter = {
+        x:
+          (shape.x - anchor.x * frameSize.width) * adjustedScaleX +
+          (visualAdjustment?.offsetX ?? 0),
+        y:
+          (shape.y - anchor.y * frameSize.height) * adjustedScaleY +
+          (visualAdjustment?.offsetY ?? 0),
+      };
+      const worldCenter = this.transformLocalPointToWorld(
+        instance,
+        this.resolveFramePivot(definition, frame),
+        localCenter,
+        scaleX,
+        scaleY,
+      );
+      const radiusScale =
+        (Math.abs(scaleX * adjustedScaleX) + Math.abs(scaleY * adjustedScaleY)) / 2;
       return {
         kind: 'circle',
         circle: {
-          x: instance.transform.x + shape.x * scaleX,
-          y: instance.transform.y + shape.y * scaleY,
+          x: worldCenter.x,
+          y: worldCenter.y,
           radius: Math.abs(shape.radius * radiusScale),
         },
       };
@@ -1325,11 +1426,94 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     return {
       kind: 'polygon',
       polygon: {
-        points: shape.points.map((point) => ({
-          x: instance.transform.x + point.x * scaleX,
-          y: instance.transform.y + point.y * scaleY,
-        })),
+        points: shape.points.map((point) => this.toWorldPoint(instance, definition, frame, point)),
       },
+    };
+  }
+
+  private toWorldPoint(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    frame: RoccoSpriteFrame,
+    point: RoccoPoint,
+  ): RoccoPoint {
+    const visualAdjustment = this.resolveVisualAdjustment(instance, definition, frame);
+    const { scaleX, scaleY } = this.resolveWorldScale(instance);
+    const anchor = definition.anchor ?? { x: 0, y: 0 };
+    const frameSize = this.resolveFrameSize(definition, frame);
+    const localPoint = {
+      x:
+        (point.x - anchor.x * frameSize.width) * (visualAdjustment?.scaleX ?? 1) +
+        (visualAdjustment?.offsetX ?? 0),
+      y:
+        (point.y - anchor.y * frameSize.height) * (visualAdjustment?.scaleY ?? 1) +
+        (visualAdjustment?.offsetY ?? 0),
+    };
+
+    return this.transformLocalPointToWorld(
+      instance,
+      this.resolveFramePivot(definition, frame),
+      localPoint,
+      scaleX,
+      scaleY,
+    );
+  }
+
+  private transformLocalPointToWorld(
+    instance: RoccoSpriteInstance,
+    pivot: RoccoPoint,
+    localPoint: RoccoPoint,
+    scaleX: number,
+    scaleY: number,
+  ): RoccoPoint {
+    const translatedX = (localPoint.x - pivot.x) * scaleX;
+    const translatedY = (localPoint.y - pivot.y) * scaleY;
+    const rotation = instance.transform.rotation ?? 0;
+    const cos = Math.cos(rotation);
+    const sin = Math.sin(rotation);
+
+    return {
+      x: instance.transform.x + translatedX * cos - translatedY * sin,
+      y: instance.transform.y + translatedX * sin + translatedY * cos,
+    };
+  }
+
+  private resolveWorldScale(instance: RoccoSpriteInstance): { scaleX: number; scaleY: number } {
+    const presentationScale = resolvePresentationScale(instance.transform.presentation);
+    return {
+      scaleX:
+        (instance.transform.scaleX || 1) *
+        presentationScale.x *
+        (instance.transform.flipX ? -1 : 1),
+      scaleY:
+        (instance.transform.scaleY || 1) *
+        presentationScale.y *
+        (instance.transform.flipY ? -1 : 1),
+    };
+  }
+
+  private resolveFramePivot(
+    definition: RoccoSpriteDefinition,
+    frame: RoccoSpriteFrame,
+  ): RoccoPoint {
+    return frame.pivot ?? definition.pivot ?? { x: 0, y: 0 };
+  }
+
+  private resolveFrameSize(
+    definition: RoccoSpriteDefinition,
+    frame: RoccoSpriteFrame,
+  ): { width: number; height: number } {
+    if (frame.rect) {
+      return {
+        width: frame.rect.width,
+        height: frame.rect.height,
+      };
+    }
+
+    const image = definition.images.find((item) => item.id === frame.imageId);
+    return {
+      width: image?.width ?? 0,
+      height: image?.height ?? 0,
     };
   }
 
@@ -1558,29 +1742,79 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       return undefined;
     }
 
+    let scaleX = 1;
+    let scaleY = 1;
+    let changed = false;
+
     const mode = autoAdjust.mode ?? 'match-visible-height';
-    if (mode !== 'match-visible-height') {
-      return undefined;
+    if (mode === 'match-visible-height') {
+      const bounds = this.resolveFrameVisibleBounds(definition, frame);
+      const referenceHeight = this.resolveAutoAdjustReferenceHeight(definition);
+      if (bounds && referenceHeight && bounds.height > 0) {
+        const scale = referenceHeight / bounds.height;
+        if (Number.isFinite(scale) && scale > 0 && Math.abs(scale - 1) >= EPSILON) {
+          scaleX *= scale;
+          scaleY *= scale;
+          changed = true;
+        }
+      }
     }
 
-    const bounds = this.resolveFrameVisibleBounds(definition, frame);
-    const referenceHeight = this.resolveAutoAdjustReferenceHeight(definition);
-    if (!bounds || !referenceHeight || bounds.height <= 0) {
-      return undefined;
+    const perspectiveScale = this.resolvePerspectiveAutoAdjustScale(
+      instance,
+      definition,
+      autoAdjust.perspectiveByY,
+    );
+    if (perspectiveScale !== undefined && Math.abs(perspectiveScale - 1) >= EPSILON) {
+      scaleX *= perspectiveScale;
+      scaleY *= perspectiveScale;
+      changed = true;
     }
 
-    const scale = referenceHeight / bounds.height;
-    if (!Number.isFinite(scale) || scale <= 0 || Math.abs(scale - 1) < EPSILON) {
+    if (!changed) {
       return undefined;
     }
 
     const groundAnchor = this.resolveGroundAnchor(definition, instance.navigation);
     return {
-      scaleX: scale,
-      scaleY: scale,
-      offsetX: groundAnchor.x * (1 - scale),
-      offsetY: groundAnchor.y * (1 - scale),
+      scaleX,
+      scaleY,
+      offsetX: groundAnchor.x * (1 - scaleX),
+      offsetY: groundAnchor.y * (1 - scaleY),
     };
+  }
+
+  private resolvePerspectiveAutoAdjustScale(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    perspectiveByY?: RoccoSpriteAutoAdjustPerspectiveByY,
+  ): number | undefined {
+    if (!perspectiveByY) {
+      return undefined;
+    }
+
+    const nearY = perspectiveByY.nearY;
+    const farY = perspectiveByY.farY;
+    const nearScale = perspectiveByY.nearScale;
+    const farScale = perspectiveByY.farScale;
+    if (
+      !Number.isFinite(nearY) ||
+      !Number.isFinite(farY) ||
+      !Number.isFinite(nearScale) ||
+      !Number.isFinite(farScale) ||
+      nearScale <= 0 ||
+      farScale <= 0
+    ) {
+      return undefined;
+    }
+
+    const groundPoint = this.resolveInstanceGroundPoint(instance, definition);
+    if (Math.abs(nearY - farY) < EPSILON) {
+      return nearScale;
+    }
+
+    const interpolation = clamp((groundPoint.y - farY) / (nearY - farY), 0, 1);
+    return farScale + (nearScale - farScale) * interpolation;
   }
 
   private resolveAutoAdjustReferenceHeight(definition: RoccoSpriteDefinition): number | undefined {
@@ -1780,7 +2014,35 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       approachGround = this.resolveSpriteApproachGroundPoint(instance, definition, requestedGround, options);
     }
 
-    return this.projectGroundPointToWalkMap(instance, approachGround);
+    return this.projectGroundPointToWalkMap(instance, approachGround, options);
+  }
+
+  private resolveGoToGroundPath(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    targetGround: RoccoPoint,
+    options?: RoccoSpriteGoToOptions,
+  ): RoccoPoint[] | null | undefined {
+    const navigation = instance.navigation;
+    if (!this.shouldConstrainOriginToWalkMap(instance, options)) {
+      return undefined;
+    }
+
+    if (!navigation?.walkMapId) {
+      return undefined;
+    }
+
+    const walkMap = this.walkMaps.get(navigation.walkMapId);
+    if (!walkMap) {
+      return undefined;
+    }
+
+    const currentGround = this.projectGroundPointToWalkMap(
+      instance,
+      this.resolveInstanceGroundPoint(instance, definition),
+      options,
+    );
+    return this.buildWalkMapGroundPath(walkMap, currentGround, targetGround);
   }
 
   private resolveGoToMoveOptions(options?: RoccoSpriteGoToOptions): RoccoSpriteGoToOptions | undefined {
@@ -1865,9 +2127,275 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     };
   }
 
-  private projectGroundPointToWalkMap(instance: RoccoSpriteInstance, groundPoint: RoccoPoint): RoccoPoint {
+  private buildWalkMapGroundPath(
+    walkMap: RoccoSpriteWalkMap,
+    startGround: RoccoPoint,
+    goalGround: RoccoPoint,
+  ): RoccoPoint[] | null {
+    const startNode = this.resolveWalkMapPathNode(walkMap, startGround);
+    const goalNode = this.resolveWalkMapPathNode(walkMap, goalGround);
+    if (!startNode || !goalNode) {
+      return null;
+    }
+
+    const nodePath = this.findWalkMapNodePath(walkMap, startNode, goalNode);
+    if (!nodePath) {
+      return null;
+    }
+
+    return this.buildGroundWaypointsFromWalkMapNodePath(
+      walkMap,
+      nodePath,
+      startGround,
+      goalGround,
+    );
+  }
+
+  private resolveWalkMapPathNode(
+    walkMap: RoccoSpriteWalkMap,
+    groundPoint: RoccoPoint,
+  ): WalkMapPathNode | undefined {
+    const localX = Math.round(groundPoint.x - walkMap.origin.x);
+    const localY = groundPoint.y - walkMap.origin.y;
+    const column = this.resolveWalkMapColumn(walkMap, localX);
+    if (!column || column.spans.length === 0) {
+      return undefined;
+    }
+
+    const spanIndex = this.resolveNearestSpanIndex(column, localY);
+    const span = column.spans[spanIndex];
+    if (!span) {
+      return undefined;
+    }
+
+    return {
+      x: column.x,
+      spanIndex,
+      yMin: span.yMin,
+      yMax: span.yMax,
+    };
+  }
+
+  private resolveNearestSpanIndex(
+    column: RoccoSpriteWalkMapColumn,
+    localY: number,
+  ): number {
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    for (let index = 0; index < column.spans.length; index += 1) {
+      const span = column.spans[index];
+      if (!span) {
+        continue;
+      }
+
+      if (localY >= span.yMin && localY <= span.yMax) {
+        return index;
+      }
+
+      const distance = Math.min(Math.abs(localY - span.yMin), Math.abs(localY - span.yMax));
+      if (distance < nearestDistance) {
+        nearestIndex = index;
+        nearestDistance = distance;
+      }
+    }
+
+    return nearestIndex;
+  }
+
+  private findWalkMapNodePath(
+    walkMap: RoccoSpriteWalkMap,
+    startNode: WalkMapPathNode,
+    goalNode: WalkMapPathNode,
+  ): WalkMapPathNode[] | undefined {
+    const columnIndex = this.walkMapColumnIndexes.get(walkMap.id);
+    if (!columnIndex) {
+      return undefined;
+    }
+
+    const startKey = this.createWalkMapPathNodeKey(startNode);
+    const goalKey = this.createWalkMapPathNodeKey(goalNode);
+    const queue: WalkMapPathNode[] = [startNode];
+    const visited = new Set<string>([startKey]);
+    const parentByKey = new Map<string, string | null>([[startKey, null]]);
+    const nodeByKey = new Map<string, WalkMapPathNode>([[startKey, startNode]]);
+
+    for (let index = 0; index < queue.length; index += 1) {
+      const node = queue[index];
+      if (!node) {
+        continue;
+      }
+
+      const nodeKey = this.createWalkMapPathNodeKey(node);
+      if (nodeKey === goalKey) {
+        break;
+      }
+
+      for (const nextNode of this.listAdjacentWalkMapPathNodes(columnIndex, node)) {
+        const nextKey = this.createWalkMapPathNodeKey(nextNode);
+        if (visited.has(nextKey)) {
+          continue;
+        }
+
+        visited.add(nextKey);
+        parentByKey.set(nextKey, nodeKey);
+        nodeByKey.set(nextKey, nextNode);
+        queue.push(nextNode);
+      }
+    }
+
+    if (!visited.has(goalKey)) {
+      return undefined;
+    }
+
+    const path: WalkMapPathNode[] = [];
+    let cursorKey: string | null = goalKey;
+    while (cursorKey) {
+      const node = nodeByKey.get(cursorKey);
+      if (!node) {
+        break;
+      }
+      path.push(node);
+      cursorKey = parentByKey.get(cursorKey) ?? null;
+    }
+
+    path.reverse();
+    return path;
+  }
+
+  private listAdjacentWalkMapPathNodes(
+    columnIndex: Map<number, RoccoSpriteWalkMapColumn>,
+    node: WalkMapPathNode,
+  ): WalkMapPathNode[] {
+    const currentSpan = { yMin: node.yMin, yMax: node.yMax };
+    const adjacent: WalkMapPathNode[] = [];
+
+    for (const direction of [-1, 1] as const) {
+      const neighborColumn = columnIndex.get(node.x + direction);
+      if (!neighborColumn) {
+        continue;
+      }
+
+      for (let spanIndex = 0; spanIndex < neighborColumn.spans.length; spanIndex += 1) {
+        const span = neighborColumn.spans[spanIndex];
+        if (!span || !this.walkMapSpansOverlap(currentSpan, span)) {
+          continue;
+        }
+
+        adjacent.push({
+          x: neighborColumn.x,
+          spanIndex,
+          yMin: span.yMin,
+          yMax: span.yMax,
+        });
+      }
+    }
+
+    return adjacent;
+  }
+
+  private walkMapSpansOverlap(
+    left: { yMin: number; yMax: number },
+    right: { yMin: number; yMax: number },
+  ): boolean {
+    return Math.max(left.yMin, right.yMin) <= Math.min(left.yMax, right.yMax);
+  }
+
+  private buildGroundWaypointsFromWalkMapNodePath(
+    walkMap: RoccoSpriteWalkMap,
+    nodePath: readonly WalkMapPathNode[],
+    startGround: RoccoPoint,
+    goalGround: RoccoPoint,
+  ): RoccoPoint[] {
+    const origin = walkMap.origin;
+    const waypoints: RoccoPoint[] = [];
+    let currentX = startGround.x - origin.x;
+    let currentY = startGround.y - origin.y;
+    const goalX = goalGround.x - origin.x;
+    const goalY = goalGround.y - origin.y;
+
+    for (let index = 0; index < nodePath.length - 1; index += 1) {
+      const currentNode = nodePath[index];
+      const nextNode = nodePath[index + 1];
+      if (!currentNode || !nextNode) {
+        continue;
+      }
+
+      const overlapYMin = Math.max(currentNode.yMin, nextNode.yMin);
+      const overlapYMax = Math.min(currentNode.yMax, nextNode.yMax);
+      const crossingY = this.resolveWalkMapInteriorY(currentY, overlapYMin, overlapYMax);
+
+      if (Math.abs(crossingY - currentY) > EPSILON) {
+        this.pushWalkMapWaypoint(waypoints, origin, currentNode.x, currentY);
+        this.pushWalkMapWaypoint(waypoints, origin, currentNode.x, crossingY);
+        currentX = currentNode.x;
+        currentY = crossingY;
+      }
+
+      currentX = nextNode.x;
+    }
+
+    if (Math.abs(currentX - goalX) > EPSILON) {
+      this.pushWalkMapWaypoint(waypoints, origin, goalX, currentY);
+      currentX = goalX;
+    }
+
+    if (Math.abs(currentY - goalY) > EPSILON) {
+      this.pushWalkMapWaypoint(waypoints, origin, goalX, goalY);
+    }
+
+    if (waypoints.length === 0) {
+      this.pushWalkMapWaypoint(waypoints, origin, goalX, goalY);
+    }
+
+    return waypoints;
+  }
+
+  private resolveWalkMapInteriorY(value: number, yMin: number, yMax: number): number {
+    const spanHeight = Math.max(0, yMax - yMin);
+    const edgeMargin = Math.min(DEFAULT_WALK_MAP_WAYPOINT_EDGE_MARGIN, spanHeight * 0.2);
+    const safeMin = yMin + edgeMargin;
+    const safeMax = yMax - edgeMargin;
+    if (safeMin > safeMax) {
+      return clamp(value, yMin, yMax);
+    }
+
+    return clamp(value, safeMin, safeMax);
+  }
+
+  private pushWalkMapWaypoint(
+    waypoints: RoccoPoint[],
+    origin: RoccoPoint,
+    localX: number,
+    localY: number,
+  ): void {
+    const point = {
+      x: origin.x + localX,
+      y: origin.y + localY,
+    };
+    const previous = waypoints[waypoints.length - 1];
+    if (previous && Math.abs(previous.x - point.x) <= EPSILON && Math.abs(previous.y - point.y) <= EPSILON) {
+      return;
+    }
+
+    waypoints.push(point);
+  }
+
+  private createWalkMapPathNodeKey(node: WalkMapPathNode): string {
+    return `${node.x}:${node.spanIndex}`;
+  }
+
+  private projectGroundPointToWalkMap(
+    instance: RoccoSpriteInstance,
+    groundPoint: RoccoPoint,
+    options?: Pick<RoccoMoveOptions, 'constrainToWalkMap'>,
+  ): RoccoPoint {
     const navigation = instance.navigation;
-    if (!navigation?.walkMapId || navigation.constrainMovement === false) {
+    if (!this.shouldConstrainOriginToWalkMap(instance, options)) {
+      return groundPoint;
+    }
+
+    if (!navigation?.walkMapId) {
       return groundPoint;
     }
 
@@ -1953,9 +2481,14 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     instance: RoccoSpriteInstance,
     nextX: number,
     nextY: number,
+    options?: Pick<RoccoMoveOptions, 'constrainToWalkMap'>,
   ): WalkMapConstraintResult {
     const navigation = instance.navigation;
-    if (!navigation?.walkMapId || navigation.constrainMovement === false) {
+    if (!this.shouldConstrainOriginToWalkMap(instance, options)) {
+      return { x: nextX, y: nextY, blocked: false };
+    }
+
+    if (!navigation?.walkMapId) {
       return { x: nextX, y: nextY, blocked: false };
     }
 
@@ -1994,6 +2527,17 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     navigation?: RoccoSpriteNavigationBinding,
   ): RoccoPoint {
     return navigation?.groundAnchor ?? definition.groundAnchor ?? { x: 0, y: definition.baseline ?? 0 };
+  }
+
+  private shouldConstrainOriginToWalkMap(
+    instance: RoccoSpriteInstance,
+    options?: Pick<RoccoMoveOptions, 'constrainToWalkMap'>,
+  ): boolean {
+    if (options?.constrainToWalkMap === false) {
+      return false;
+    }
+
+    return Boolean(instance.navigation?.walkMapId) && instance.navigation?.constrainMovement !== false;
   }
 
   private resolveWalkMapPoint(

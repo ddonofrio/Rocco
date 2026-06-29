@@ -62,6 +62,7 @@ function createDefaultCloudSpriteDefinition(): RoccoSpriteDefinition {
       width: DEFAULT_CLOUD_SPRITE_WIDTH,
       height: DEFAULT_CLOUD_SPRITE_HEIGHT,
     },
+    ignoreMessages: true,
     metadata: {
       purpose: 'default-rocco-cloud-demo',
     },

@@ -1,3 +1,5 @@
+import type { RoccoDialogueChoiceNode } from '../dialogue';
+
 export const ROCCO_DEFAULT_LOCALE = 'en';
 export const ROCCO_SUPPORTED_LOCALES = ['en', 'es'] as const;
 
@@ -25,8 +27,24 @@ export interface RoccoTextCatalog {
   descriptions: {
     rocco: string;
     baitBucket: string;
+    baitShopDoor: string;
+    backRightDoor: string;
+    bathroom: string;
+    toilet: string;
+    seatedRocco: string;
+    shellCitySign: string;
+    bench: string;
+    postcardRack: string;
+    hiddenKeys: string;
+    cashRegister: string;
+    window: string;
+    barrel: string;
     keys: string;
+    magazine: string;
+    micromania: string;
     pelikan: string;
+    oldMan: string;
+    stan: string;
   };
   levels: {
     beginning: string;
@@ -35,6 +53,8 @@ export interface RoccoTextCatalog {
     statusCartridge: string;
     statusLevel: string;
     statusScene: string;
+    baitShopPlaceholderTitle: string;
+    baitShopToiletTitle: string;
   };
   baitBucket: {
     normalLookLines: string[];
@@ -56,12 +76,34 @@ export interface RoccoTextCatalog {
   inventory: {
     title: string;
     keysLabel: string;
+    magazineLabel: string;
+    micromaniaLabel: string;
+    mysteriousKeyLabel: string;
     twentyEurosLabel: string;
+    magazineOnSelfLine: string;
     cannotUseItemLines: string[];
+    keysOnStanArrestLine: string;
+    moneyOnStanAcceptedLines: string[];
+    moneyOnStanReplyLine: string;
     keysOnBaitBucketLines: string[];
     moneyOnBaitBucketLines: string[];
     keysOnPelikanLines: string[];
     moneyOnPelikanLines: string[];
+  };
+  developer: {
+    actionLabel: string;
+    title: string;
+    jump: string;
+    inventory: string;
+    cycleSprite: string;
+    jumpLevelTitle: string;
+    jumpScreenTitle: string;
+    pierLevelLabel: string;
+    inventoryTitle: string;
+    add: string;
+    remove: string;
+    clickToJumpStatus: string;
+    clickToCycleSpriteStatus: string;
   };
   rocco: {
     introThoughtLine: string;
@@ -74,8 +116,61 @@ export interface RoccoTextCatalog {
     grabLines: string[];
     talkLines: string[];
   };
+  stan: {
+    lookLines: string[];
+    grabLines: string[];
+    kickLines: string[];
+    rootChoices: readonly RoccoDialogueChoiceNode[];
+  };
   middleLevel: {
     pelikanFeedingLine: string;
+  };
+  baitShop: {
+    magazineLookLine: string;
+    toiletLookLines: string[];
+    toiletReadLabel: string;
+    toiletUseLabel: string;
+    toiletNeedMagazineLine: string;
+    toiletMagazineReadingLines: string[];
+    toiletMagazineKnownStanLine: string;
+    toiletMagazineUnknownStanLine: string;
+    toiletDoorOpenLabel: string;
+    toiletDoorCloseLabel: string;
+    toiletDoorWalkLabel: string;
+    toiletDoorNeedsKeyLines: string[];
+    toiletDoorWrongKeyLines: string[];
+    toiletDoorLookLines: string[];
+    toiletDoorKickLine: string;
+    shellCityLookLines: string[];
+    shellCityKnownStanLine: string;
+    shellCityUnknownStanLine: string;
+    benchLookLines: string[];
+    benchKnownStanWaitLine: string;
+    benchUnknownStanWaitLine: string;
+    benchJumpUpLine: string;
+    benchGrabLines: string[];
+    benchKnownStanStealLine: string;
+    benchUnknownStanStealLine: string;
+    postcardRackLookLines: string[];
+    postcardRackRevealLine: string;
+    postcardRackKickLines: string[];
+    postcardRackGrabLines: string[];
+    hiddenKeysCollectedLine: string;
+    cashRegisterLookLines: string[];
+    cashRegisterKnownStanOldLine: string;
+    cashRegisterUnknownStanOldLine: string;
+    cashRegisterGrabLines: string[];
+    cashRegisterKnownStanPocketLine: string;
+    cashRegisterUnknownStanPocketLine: string;
+    cashRegisterKickLines: string[];
+    cashRegisterKnownStanWakeLine: string;
+    cashRegisterUnknownStanWakeLine: string;
+    windowLookLines: string[];
+    windowKnownStanClosedLine: string;
+    windowUnknownStanClosedLine: string;
+    windowKnownStanCleaningLine: string;
+    windowUnknownStanCleaningLine: string;
+    leftBarrelLookLines: string[];
   };
 }
 

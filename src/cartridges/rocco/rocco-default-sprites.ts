@@ -1,4 +1,5 @@
 import type { RoccoEngine } from '../../engine/engine-sdk';
+import type { RoccoSpriteAutoAdjustPerspectiveByY, RoccoSpriteDefinition } from '../../engine/video/sprites';
 import type { RoccoFacingDirection, RoccoPoint } from '../../engine/video/sprites';
 import {
   DEFAULT_SPRITE_DEFINITION_ID,
@@ -29,8 +30,37 @@ export interface RoccoDefaultSpriteController {
 export interface RoccoDefaultSpriteInstallOptions {
   initialFacing?: RoccoFacingDirection;
   initialPosition?: RoccoPoint;
+  scale?: number;
+  tint?: string;
   localization?: RoccoLocalization;
   playIntro?: boolean;
+  perspectiveAutoAdjust?: RoccoSpriteAutoAdjustPerspectiveByY;
+}
+
+function clone<T>(value: T): T {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function createInstalledSpriteDefinition(
+  localization: RoccoLocalization,
+  options: RoccoDefaultSpriteInstallOptions,
+): RoccoSpriteDefinition {
+  const definition = createDefaultSpriteDefinition(localization);
+  if (!options.perspectiveAutoAdjust) {
+    return definition;
+  }
+
+  const customized = clone(definition);
+  customized.autoAdjust = {
+    ...customized.autoAdjust,
+    enabled: customized.autoAdjust?.enabled ?? true,
+    perspectiveByY: clone(options.perspectiveAutoAdjust),
+  };
+  return customized;
 }
 
 class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
@@ -177,12 +207,12 @@ export async function installDefaultSprite(
   engine: RoccoEngine,
   options: RoccoDefaultSpriteInstallOptions = {},
 ): Promise<RoccoDefaultSpriteController> {
-  const definition = createDefaultSpriteDefinition(
-    options.localization ?? createRoccoLocalization(),
-  );
+  const localization = options.localization ?? createRoccoLocalization();
+  const definition = createInstalledSpriteDefinition(localization, options);
   await engine.video.preloadSpriteDefinition(definition);
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
+  const scale = options.scale ?? DEFAULT_SPRITE_SCALE;
   const initialPosition = options.initialPosition ?? {
     x: DEFAULT_SPRITE_START_X,
     y: DEFAULT_SPRITE_Y_VALUES[0] ?? 180,
@@ -193,8 +223,8 @@ export async function installDefaultSprite(
     transform: {
       x: initialPosition.x,
       y: initialPosition.y,
-      scaleX: DEFAULT_SPRITE_SCALE,
-      scaleY: DEFAULT_SPRITE_SCALE,
+      scaleX: scale,
+      scaleY: scale,
       rotation: 0,
     },
     renderLayer: 'world.actors',
@@ -202,6 +232,7 @@ export async function installDefaultSprite(
     depthMode: 'baseline-sort',
     interactive: true,
     collisionEnabled: true,
+    tint: options.tint,
   });
   engine.video.sprites.bindToWalkMap(DEFAULT_SPRITE_INSTANCE_ID, {
     walkMapId: DEFAULT_WALK_MAP_ID,
@@ -217,6 +248,7 @@ export async function installDefaultSprite(
 
   const controller = new RoccoRunningSpriteController(engine, {
     ...options,
+    localization,
     playIntro: options.playIntro ?? !options.initialPosition,
   });
   controller.start();

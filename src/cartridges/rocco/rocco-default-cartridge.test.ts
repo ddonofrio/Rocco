@@ -8,7 +8,7 @@ import type { RoccoEffect, RoccoEffectManager } from '../../engine/effects';
 import type { RoccoActionMenuSystem } from '../../engine/video/action-menu';
 import type { RoccoVideoDisplayModule, RoccoVideoPlaneModule, RoccoVideoSystem } from '../../engine/video';
 import type { RoccoGridMenuSystem } from '../../engine/video/grid-menu';
-import type { RoccoSpriteMessageSystem } from '../../engine/video/messages';
+import type { RoccoSpriteMessageSystem, RoccoSpriteMessageText } from '../../engine/video/messages';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../engine/video/planes';
 import type { RoccoPrimitiveSystem } from '../../engine/video/primitives';
 import type { RoccoRenderLayer } from '../../engine/video/render-layers';
@@ -39,6 +39,10 @@ import type { RoccoDisplayProfile } from '../../engine/video/display';
 import type { RoccoSoundDefinition } from '../../engine/audio/types';
 import { defaultDisplayProfile } from '../../engine/video/display';
 import {
+  DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID,
+  DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
+  DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID,
+  DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
   DEFAULT_BACKGROUND_IMAGE_HEIGHT,
   DEFAULT_BACKGROUND_IMAGE_WIDTH,
   DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID,
@@ -65,6 +69,7 @@ import {
   DEFAULT_KEYS_X,
   DEFAULT_KEYS_Y,
   DEFAULT_PELIKAN_FEEDING_ANIMATION_ID,
+  DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID,
   DEFAULT_PELIKAN_FEEDING_X,
   DEFAULT_PELIKAN_FEEDING_Y,
   DEFAULT_PELIKAN_FLIGHT_DURATION_MS,
@@ -78,6 +83,7 @@ import {
   DEFAULT_ROCCO_GREEN_BLACK,
   DEFAULT_SCENE_ID,
   DEFAULT_STAN_RENDER_LAYER,
+  DEFAULT_STAN_SLEEPING_ANIMATION_ID,
   DEFAULT_STAN_SPRITE_DEFINITION_ID,
   DEFAULT_STAN_SPRITE_INSTANCE_ID,
   DEFAULT_STAN_SPRITE_SCALE,
@@ -113,11 +119,21 @@ import {
 } from './rocco-default-assets';
 import { pierBackgroundAssetUrls } from './levels/pier/pier-assets';
 import { DEFAULT_FEEDING_LOOK_ACTION_MENU_ID } from './levels/pier/pier-feeding-interactions';
+import { DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS } from './levels/pier/pier-level';
 import {
   createDefaultActionMenuDefinition,
   DEFAULT_ACTION_MENU_ID,
 } from './levels/pier/pier-pelikan-action-menu';
-import { RoccoPierLevelManager } from './levels/pier/pier-level-manager';
+import { RoccoLevelManager } from './levels/rocco-level-manager';
+import {
+  BAIT_SHOP_SCENE_ID,
+  RoccoBaitShopLevel,
+  ROCCO_BAIT_SHOP_LEVEL_ID,
+} from './levels/bait-shop/bait-shop-level';
+import { BAIT_SHOP_DOOR_OPENING_SOUND_ID } from './levels/pier/pier-bait-shop-door';
+import { DEFAULT_STAN_ACTION_MENU_ID } from './levels/pier/pier-stan-action-menu';
+import { DEFAULT_STAN_DIALOGUE_MENU_ID } from './levels/pier/pier-stan';
+import type { RoccoDialogueChoiceNode, RoccoDialogueLine } from './dialogue';
 import { createRoccoLocalization } from './localization';
 import { createDefaultSpriteDefinition } from './rocco-default-sprite-definition';
 import { makeDefaultWaterColorEffect } from './levels/pier/pier-video-effects';
@@ -132,6 +148,7 @@ import {
   ROCCO_PLAYER_ACTION_MENU_ID,
   ROCCO_PLAYER_INVENTORY_ACTION_ID,
 } from './rocco-player-action-menu';
+import { ROCCO_DEVELOPER_MODE_ENABLED } from './rocco-developer-mode';
 
 vi.mock('pixi.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('pixi.js')>();
@@ -197,6 +214,29 @@ const DEFAULT_CENTERED_BACKGROUND_SCROLL = {
   x: (DEFAULT_BACKGROUND_IMAGE_WIDTH - DEFAULT_DESIGN_WIDTH) / 2,
   y: (DEFAULT_BACKGROUND_IMAGE_HEIGHT - DEFAULT_DESIGN_HEIGHT) / 2,
 };
+
+function serializeMessageText(text: RoccoSpriteMessageText): string {
+  return Array.isArray(text) ? text.join('|') : text;
+}
+
+function serializeDialogueLine(line: RoccoDialogueLine): string {
+  return typeof line === 'string' ? line : line.join('|');
+}
+
+function expectLatestDialogueMenu(
+  state: EngineMockState,
+  choices: readonly RoccoDialogueChoiceNode[],
+): void {
+  expect(state.openedGridMenuDefinitions.at(-1)).toMatchObject({
+    id: DEFAULT_STAN_DIALOGUE_MENU_ID,
+    layout: 'text-list',
+    items: choices.map((choice, index) => ({
+      id: choice.id,
+      label: serializeDialogueLine(choice.playerLine).replaceAll('|', ' '),
+      slotIndex: index,
+    })),
+  });
+}
 
 function listSpritePositionsFor(state: EngineMockState, instanceId: string): string[] {
   return state.spritePositions.filter((position) => position.startsWith(`${instanceId}:`));
@@ -273,13 +313,17 @@ function makeSceneClickActivation(
 }
 
 function setPlayerGroundPoint(state: EngineMockState, x: number): void {
+  setPlayerSpritePosition(state, x, DEFAULT_SPRITE_Y_VALUES[0] ?? 180);
+}
+
+function setPlayerSpritePosition(state: EngineMockState, groundX: number, spriteY: number): void {
   const rocco = findLatestSpriteSnapshot(state, DEFAULT_SPRITE_INSTANCE_ID);
   if (!rocco) {
     throw new Error('Expected Rocco sprite to exist.');
   }
 
-  rocco.transform.x = x - DEFAULT_SPRITE_GROUND_ANCHOR_X * rocco.transform.scaleX;
-  rocco.transform.y = DEFAULT_SPRITE_Y_VALUES[0] ?? 180;
+  rocco.transform.x = groundX - DEFAULT_SPRITE_GROUND_ANCHOR_X * rocco.transform.scaleX;
+  rocco.transform.y = spriteY;
 }
 
 async function flushAsyncTransition(): Promise<void> {
@@ -287,42 +331,93 @@ async function flushAsyncTransition(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-function dropBaitBucket(manager: RoccoPierLevelManager, state: EngineMockState): void {
+function createDefaultCartridgeForPierTests(): RoccoDefaultCartridge {
+  return new RoccoDefaultCartridge();
+}
+
+function createLevelManagerForTests(
+  options: ConstructorParameters<typeof RoccoLevelManager>[0] = {},
+): RoccoLevelManager {
+  return new RoccoLevelManager(options);
+}
+
+function dropBaitBucket(manager: RoccoLevelManager, state: EngineMockState): void {
   manager.handleAction(makeActionActivation(DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID, 'kick'));
   state.isSpriteMovingValue = false;
   manager.update(16);
   manager.update(520);
 }
 
-function startPelikanFeeding(manager: RoccoPierLevelManager, state: EngineMockState): void {
+function startPelikanFeeding(manager: RoccoLevelManager, state: EngineMockState): void {
   dropBaitBucket(manager, state);
   manager.handleAction(makeActionActivation(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, 'talk'));
+  manager.update(DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS);
   manager.update(DEFAULT_PELIKAN_TURN_DURATION_MS);
   manager.update(DEFAULT_PELIKAN_FLIGHT_DURATION_MS);
 }
 
 async function transitionFromMiddleToEndAndBack(
-  manager: RoccoPierLevelManager,
+  manager: RoccoLevelManager,
   state: EngineMockState,
 ): Promise<void> {
+  manager.handleAction(makeSceneClickActivation(0, DEFAULT_DESIGN_HEIGHT / 2));
   setPlayerGroundPoint(state, 0);
   manager.update(16);
   await flushAsyncTransition();
+  manager.handleAction(makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2));
   setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
   manager.update(500);
   await flushAsyncTransition();
 }
 
-async function transitionFromMiddleToStartAndBack(
-  manager: RoccoPierLevelManager,
+async function transitionToPierBeginning(
+  manager: RoccoLevelManager,
   state: EngineMockState,
 ): Promise<void> {
+  manager.handleAction(makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2));
   setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
   manager.update(16);
   await flushAsyncTransition();
+}
+
+async function transitionFromMiddleToStartAndBack(
+  manager: RoccoLevelManager,
+  state: EngineMockState,
+): Promise<void> {
+  manager.handleAction(makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2));
+  setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
+  manager.update(16);
+  await flushAsyncTransition();
+  manager.handleAction(makeSceneClickActivation(0, DEFAULT_DESIGN_HEIGHT / 2));
   setPlayerGroundPoint(state, 0);
   manager.update(500);
   await flushAsyncTransition();
+}
+
+function wakeStanToRootDialogue(manager: RoccoLevelManager): void {
+  manager.handleAction(
+    makeActionActivation(
+      DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      'talk',
+      DEFAULT_STAN_ACTION_MENU_ID,
+    ),
+  );
+}
+
+function chooseStanDialogue(manager: RoccoLevelManager, itemId: string, slotIndex = 0): void {
+  manager.handleAction({
+    kind: 'grid-menu',
+    definitionId: DEFAULT_STAN_DIALOGUE_MENU_ID,
+    interaction: 'activate',
+    itemId,
+    slotIndex,
+    items: [],
+  });
+}
+
+function advanceStanConversationToFollowUpMenu(manager: RoccoLevelManager): void {
+  manager.update(4800);
+  manager.update(5600);
 }
 
 interface EngineMockState {
@@ -352,6 +447,7 @@ interface EngineMockState {
   spriteScaleUpdates: string[];
   spriteFlipUpdates: string[];
   spritePresentationUpdates: string[];
+  spriteVisibleDescriptionUpdates: string[];
   spriteRenderLayerUpdates: string[];
   spriteZIndexUpdates: string[];
   spriteDepthModeUpdates: string[];
@@ -370,6 +466,7 @@ interface EngineMockState {
   openedGridMenuDefinitions: RoccoGridMenuDefinition[];
   toggledGridMenuDefinitions: RoccoGridMenuDefinition[];
   closedGridMenuCount: number;
+  activeGridMenuDefinitionId: string | undefined;
   carriedGridMenuItem: RoccoGridMenuCarriedItem | undefined;
   clearedCarriedGridMenuCount: number;
   addedPrimitives: string[];
@@ -458,6 +555,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
         zIndex: options?.zIndex ?? 0,
         depthMode: options?.depthMode ?? 'fixed',
         opacity: options?.opacity ?? 1,
+        visibleDescription: options?.visibleDescription,
       };
       state.createdSpriteSnapshots.push(created);
       state.spriteSnapshot = created;
@@ -465,6 +563,12 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
     removeSprite(instanceId: string) {
       state.removedSpriteIds.push(instanceId);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.visible = false;
+        sprite.enabled = false;
+        sprite.interactive = false;
+      }
     },
     getSprite(instanceId: string) {
       return findLatestSpriteSnapshot(state, instanceId);
@@ -474,6 +578,10 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
     playAnimation(instanceId: string, animationId: string) {
       state.playedSpriteAnimations.push(`${instanceId}:${animationId}`);
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.animation.animationId = animationId;
+      }
     },
     playAction(instanceId: string, actionId: string, options) {
       state.playedSpriteActions.push(`${instanceId}:${actionId}`);
@@ -530,6 +638,18 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
         };
       }
     },
+    setVisibleDescription(
+      instanceId: string,
+      visibleDescription?: { enabled?: boolean; text?: string; textKey?: string },
+    ) {
+      state.spriteVisibleDescriptionUpdates.push(
+        `${instanceId}:${visibleDescription?.text ?? ''}:${visibleDescription?.enabled ?? ''}`,
+      );
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.visibleDescription = visibleDescription;
+      }
+    },
     translate() {
       // noop
     },
@@ -551,9 +671,11 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
     goTo(instanceId: string, x: number, y: number, options?: RoccoSpriteGoToOptions) {
       state.goToSprites.push(`${instanceId}:${x},${y}`);
+      state.isSpriteMovingValue = true;
       if (options?.targetInstanceId) {
         state.goToSpriteTargets.push(`${instanceId}:${options.targetInstanceId}`);
       }
+      return true;
     },
     moveBy() {
       // noop
@@ -591,11 +713,17 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
         sprite.depthMode = depthMode;
       }
     },
-    setInteractive() {
-      // noop
+    setInteractive(instanceId: string, interactive: boolean) {
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.interactive = interactive;
+      }
     },
-    setCollisionEnabled() {
-      // noop
+    setCollisionEnabled(instanceId: string, enabled: boolean) {
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.collisionEnabled = enabled;
+      }
     },
     bindToWalkMap(instanceId: string, binding: RoccoSpriteNavigationBinding) {
       state.walkMapBindings.push(`${instanceId}:${binding.walkMapId}`);
@@ -627,14 +755,15 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
 
   const messages: RoccoSpriteMessageSystem = {
     showMessage(message: RoccoSpriteMessageRequest) {
-      const text = Array.isArray(message.text) ? message.text.join('|') : message.text;
-      state.spriteMessages.push(`${message.spriteInstanceId}:${message.mode}:${text}`);
+      state.spriteMessages.push(
+        `${message.spriteInstanceId}:${message.mode}:${serializeMessageText(message.text)}`,
+      );
     },
-    say(instanceId: string, text: string) {
-      state.spriteMessages.push(`${instanceId}:say:${text}`);
+    say(instanceId: string, text: RoccoSpriteMessageText) {
+      state.spriteMessages.push(`${instanceId}:say:${serializeMessageText(text)}`);
     },
-    think(instanceId: string, text: string) {
-      state.spriteMessages.push(`${instanceId}:think:${text}`);
+    think(instanceId: string, text: RoccoSpriteMessageText) {
+      state.spriteMessages.push(`${instanceId}:think:${serializeMessageText(text)}`);
     },
     removeMessage() {
       // noop
@@ -693,15 +822,21 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
   const gridMenus: RoccoGridMenuSystem = {
     openMenu(definition: RoccoGridMenuDefinition) {
       state.openedGridMenuDefinitions.push(definition);
+      state.activeGridMenuDefinitionId = definition.id;
     },
     toggleMenu(definition: RoccoGridMenuDefinition) {
       state.toggledGridMenuDefinitions.push(definition);
+      state.activeGridMenuDefinitionId =
+        state.activeGridMenuDefinitionId === definition.id ? undefined : definition.id;
     },
     closeMenu() {
       state.closedGridMenuCount += 1;
+      state.activeGridMenuDefinitionId = undefined;
     },
-    isOpen() {
-      return false;
+    isOpen(definitionId?: string) {
+      return definitionId
+        ? state.activeGridMenuDefinitionId === definitionId
+        : state.activeGridMenuDefinitionId !== undefined;
     },
     setHoverAt() {
       return false;
@@ -1000,6 +1135,7 @@ function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState 
     spriteScaleUpdates: [],
     spriteFlipUpdates: [],
     spritePresentationUpdates: [],
+    spriteVisibleDescriptionUpdates: [],
     spriteRenderLayerUpdates: [],
     spriteZIndexUpdates: [],
     spriteDepthModeUpdates: [],
@@ -1018,6 +1154,7 @@ function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState 
     openedGridMenuDefinitions: [],
     toggledGridMenuDefinitions: [],
     closedGridMenuCount: 0,
+    activeGridMenuDefinitionId: undefined,
     carriedGridMenuItem: undefined,
     clearedCarriedGridMenuCount: 0,
     addedPrimitives: [],
@@ -1060,6 +1197,7 @@ describe('RoccoDefaultCartridge', () => {
       'rocco-green-black-backplate',
       'rocco-background-back-underlay',
       'rocco-background-back',
+      'rocco-background-back-mid',
       'rocco-background-front',
     ]);
     expect(state.loadedScene?.planes[1]?.source).toEqual({
@@ -1079,12 +1217,12 @@ describe('RoccoDefaultCartridge', () => {
       colors: [...DEFAULT_WATER_EFFECT_COLORS],
       tolerance: DEFAULT_WATER_EFFECT_TOLERANCE,
     });
-    expect(state.loadedScene?.planes[3]?.source).toEqual({
+    expect(state.loadedScene?.planes[4]?.source).toEqual({
       kind: 'image',
       uri: pierBackgroundAssetUrls.front,
     });
     expect(state.loadedScene?.planes[3]?.scroll).toEqual(DEFAULT_CENTERED_BACKGROUND_SCROLL);
-    expect(state.loadedScene?.planes[3]?.renderLayer).toBe('world.front');
+    expect(state.loadedScene?.planes[3]?.renderLayer).toBe('world.mid');
     expect(state.addedEffectIds).toEqual([]);
     expect(state.removedEffectIds).toEqual([]);
     expect(state.registeredWalkMapIds).toContain(DEFAULT_WALK_MAP_ID);
@@ -1121,7 +1259,7 @@ describe('RoccoDefaultCartridge', () => {
     expect(state.movedSpriteActions).toEqual([DEFAULT_SPRITE_RUN_ACTION_ID]);
     expect(listPlayedSpriteAnimationsFor(state, DEFAULT_SPRITE_INSTANCE_ID)).toEqual([]);
     expect(state.inputEnabled).toBe(true);
-    expect(state.displayProfileCalls).toBe(1);
+    expect(state.displayProfileCalls).toBe(0);
     expect(state.statusMessages[0]?.includes(cartridge.manifest.title)).toBe(true);
     expect(state.registeredPlaylistIds).toEqual(['rocco-game-music']);
     expect(state.playedPlaylistIds).toEqual(['rocco-game-music']);
@@ -1130,7 +1268,7 @@ describe('RoccoDefaultCartridge', () => {
   it('mounts Rocco with Spanish localized status and action labels', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine, locale: 'es' });
 
@@ -1147,13 +1285,17 @@ describe('RoccoDefaultCartridge', () => {
     const roccoMenu = state.registeredActionMenuDefinitions.find(
       (definition) => definition.id === ROCCO_PLAYER_ACTION_MENU_ID,
     );
-    expect(roccoMenu?.items.map((item) => item.label)).toEqual(['Hablar', 'Inventario']);
+    expect(roccoMenu?.items.map((item) => item.label)).toEqual(
+      ROCCO_DEVELOPER_MODE_ENABLED
+        ? ['Hablar', 'Inventario', 'Modo desarrollador']
+        : ['Hablar', 'Inventario'],
+    );
   });
 
   it('preserves the selected locale when the cartridge restarts itself', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine, locale: 'es' });
 
@@ -1178,7 +1320,7 @@ describe('RoccoDefaultCartridge', () => {
   it('unregisters the game music playlist on stop', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
     cartridge.stop();
@@ -1189,7 +1331,7 @@ describe('RoccoDefaultCartridge', () => {
   it('places Pelikan on the pier mooring post', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
 
@@ -1214,7 +1356,7 @@ describe('RoccoDefaultCartridge', () => {
   it('places the bait bucket on the back-left pier area', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
 
@@ -1251,7 +1393,7 @@ describe('RoccoDefaultCartridge', () => {
       },
     });
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
 
@@ -1259,6 +1401,7 @@ describe('RoccoDefaultCartridge', () => {
       'rocco-green-black-backplate',
       'rocco-background-back-underlay',
       'rocco-background-back',
+      'rocco-background-back-mid',
       'rocco-background-front',
     ]);
     expect(state.loadedScene?.planes[1]?.source).toEqual({
@@ -1276,7 +1419,7 @@ describe('RoccoDefaultCartridge', () => {
       colors: [...DEFAULT_WATER_EFFECT_COLORS],
       tolerance: DEFAULT_WATER_EFFECT_TOLERANCE,
     });
-    expect(state.loadedScene?.planes[3]?.source).toEqual({
+    expect(state.loadedScene?.planes[4]?.source).toEqual({
       kind: 'image',
       uri: pierBackgroundAssetUrls.front,
     });
@@ -1288,7 +1431,7 @@ describe('RoccoDefaultCartridge', () => {
   it('restores a current saved Pier Middle scene without refreshing it', async () => {
     const firstState = makeEngineState();
     const firstEngine = createEngineMock(firstState);
-    const firstCartridge = new RoccoDefaultCartridge();
+    const firstCartridge = createDefaultCartridgeForPierTests();
     await firstCartridge.mount({ engine: firstEngine });
     const restoredScene = firstState.savedScenes[0];
     if (!restoredScene) {
@@ -1302,7 +1445,7 @@ describe('RoccoDefaultCartridge', () => {
       },
     });
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
 
@@ -1313,7 +1456,7 @@ describe('RoccoDefaultCartridge', () => {
   it('binds Rocco to the walking path and enters toward the middle of the screen', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
 
@@ -1341,9 +1484,10 @@ describe('RoccoDefaultCartridge', () => {
   it('blocks Pier Middle exits before Rocco has the keys', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
+    cartridge.handleAction(makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2));
     setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
     cartridge.update(16);
     await flushAsyncTransition();
@@ -1355,7 +1499,7 @@ describe('RoccoDefaultCartridge', () => {
   it('opens a 3x3 Rocco inventory grid from Rocco action menu', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const manager = new RoccoPierLevelManager({
+    const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
     });
@@ -1395,7 +1539,7 @@ describe('RoccoDefaultCartridge', () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
     const inventory = createInventoryWithKeys();
-    const manager = new RoccoPierLevelManager({
+    const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory,
     });
@@ -1445,7 +1589,7 @@ describe('RoccoDefaultCartridge', () => {
   it('responds when trying inventory items on unsupported Pier targets', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const manager = new RoccoPierLevelManager({
+    const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
     });
@@ -1475,18 +1619,71 @@ describe('RoccoDefaultCartridge', () => {
     expect(state.clearedCarriedGridMenuCount).toBe(2);
   });
 
+  it('hands the keys to Stan and triggers the police defeat sequence', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const onRestartRequested = vi.fn();
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+      onRestartRequested,
+    });
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+
+    setCarriedInventoryItem(state, ROCCO_INVENTORY_KEYS_ITEM_ID);
+    manager.handleAction(
+      makeSceneClickActivation(
+        320,
+        240,
+        DEFAULT_STAN_SPRITE_INSTANCE_ID,
+        DEFAULT_STAN_SPRITE_DEFINITION_ID,
+      ),
+    );
+
+    expect(state.inputEnabled).toBe(false);
+    expect(state.clearedCarriedGridMenuCount).toBe(1);
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${localization.text.inventory.keysOnStanArrestLine}`,
+    );
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-look-right`,
+    );
+    expect(state.playedSoundIds).not.toContain('rocco-stan-police-whistle-sound');
+
+    manager.update(3799);
+
+    expect(state.playedSoundIds).not.toContain('rocco-stan-police-whistle-sound');
+
+    manager.update(1);
+
+    expect(state.playedSoundIds).toContain('rocco-stan-police-whistle-sound');
+    expect(state.addedPrimitives).toContain('rocco-stan-police-defeat-fade:0');
+
+    manager.update(1300);
+
+    expect(state.addedTitles).toContain(
+      `rocco-stan-police-defeat-title:${localization.text.keys.defeatTitle}`,
+    );
+
+    manager.update(3600);
+
+    expect(onRestartRequested).toHaveBeenCalledTimes(1);
+  });
+
   it('transitions from Pier Middle east to Pier Beginning after Rocco has the keys', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const manager = new RoccoPierLevelManager({
+    const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
     });
 
     await manager.mount(engine);
-    setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
-    manager.update(16);
-    await flushAsyncTransition();
+    await transitionToPierBeginning(manager, state);
 
     expect(state.loadedScene?.id).toBe(PIER_START_SCENE_ID);
     expect(state.loadedScene?.planes[1]?.scroll.x).toBe(PIER_BACKGROUND_SCROLL_RIGHT_X);
@@ -1499,15 +1696,13 @@ describe('RoccoDefaultCartridge', () => {
   it('installs Stan asleep on Pier Beginning', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const manager = new RoccoPierLevelManager({
+    const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
     });
 
     await manager.mount(engine);
-    setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
-    manager.update(16);
-    await flushAsyncTransition();
+    await transitionToPierBeginning(manager, state);
 
     expect(state.preloadedSpriteDefinitionIds).toContain(DEFAULT_STAN_SPRITE_DEFINITION_ID);
     expect(state.loadedSpriteDefinitionIds).toContain(DEFAULT_STAN_SPRITE_DEFINITION_ID);
@@ -1521,18 +1716,691 @@ describe('RoccoDefaultCartridge', () => {
       scaleY: DEFAULT_STAN_SPRITE_SCALE,
     });
     expect(stan?.renderLayer).toBe(DEFAULT_STAN_RENDER_LAYER);
-    expect(stan?.interactive).toBe(false);
+    expect(stan?.interactive).toBe(true);
+    expect(state.registeredActionMenus).toContain(DEFAULT_STAN_ACTION_MENU_ID);
+  });
+
+  it('installs the bait shop door hidden on Pier Beginning until Stan is engaged', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+
+    expect(state.preloadedSpriteDefinitionIds).toContain(DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID);
+    expect(state.loadedSpriteDefinitionIds).toContain(DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID);
+    expect(state.createdSprites).toContain(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
+
+    const door = findLatestSpriteSnapshot(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
+    expect(door?.interactive).toBe(false);
+    expect(door?.visibleDescription).toMatchObject({
+      enabled: false,
+      text: localization.text.descriptions.baitShopDoor,
+    });
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID}`,
+    );
+  });
+
+  it('opens localized Stan dialogue choices immediately while Stan stays asleep', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+
+    const stanMenu = state.registeredActionMenuDefinitions.find(
+      (definition) => definition.id === DEFAULT_STAN_ACTION_MENU_ID,
+    );
+    expect(stanMenu?.items.map((item) => item.actionId)).toEqual([
+      'look',
+      'talk',
+      'grab',
+      'kick',
+    ]);
+    expect(stanMenu?.items[2]?.result?.message.mode).toBe('think');
+    expect(stanMenu?.items[2]?.result?.message.text).toEqual(localization.text.stan.grabLines);
+    expect(stanMenu?.items[3]?.result?.message.mode).toBe('think');
+    expect(stanMenu?.items[3]?.result?.message.text).toEqual(localization.text.stan.kickLines);
+
+    manager.handleAction(
+      makeActionActivation(
+        DEFAULT_STAN_SPRITE_INSTANCE_ID,
+        'talk',
+        DEFAULT_STAN_ACTION_MENU_ID,
+      ),
+    );
+
+    expectLatestDialogueMenu(state, localization.text.stan.rootChoices);
+    expect(state.inputEnabled).toBe(true);
+    expect(state.spriteMessages).toEqual([]);
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).not.toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-waking`,
+    );
+  });
+
+  it('starts waking Stan when Rocco says the first line and reveals his short name after the introduction', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    const introduceSelfChoice = localization.text.stan.rootChoices.find(
+      (choice) => choice.id === 'introduce-self',
+    );
+    expect(introduceSelfChoice).toBeDefined();
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+    wakeStanToRootDialogue(manager);
+
+    manager.handleAction({
+      kind: 'grid-menu',
+      definitionId: DEFAULT_STAN_DIALOGUE_MENU_ID,
+      interaction: 'activate',
+      itemId: 'introduce-self',
+      slotIndex: 0,
+      items: [],
+    });
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(introduceSelfChoice?.playerLine ?? '')}`,
+    );
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-waking`,
+    );
+
+    manager.update(1000);
+
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-look-left`,
+    );
+    expect(state.spriteMessages).not.toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(introduceSelfChoice?.npcLine ?? '')}`,
+    );
+
+    manager.update(3799);
+
+    expect(state.spriteMessages).not.toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(introduceSelfChoice?.npcLine ?? '')}`,
+    );
+
+    manager.update(1);
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(introduceSelfChoice?.npcLine ?? '')}`,
+    );
+
+    manager.update(5600);
+
+    expect(state.spriteVisibleDescriptionUpdates).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:${localization.text.descriptions.stan}:true`,
+    );
+  });
+
+  it('advances the Stan conversation with scene clicks while the dialogue is blocking input', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    const introduceSelfChoice = localization.text.stan.rootChoices.find(
+      (choice) => choice.id === 'introduce-self',
+    );
+    expect(introduceSelfChoice?.choices).toBeDefined();
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+    wakeStanToRootDialogue(manager);
+    chooseStanDialogue(manager, 'introduce-self', 0);
+
+    expect(state.inputEnabled).toBe(false);
+
+    manager.handleAction(
+      makeSceneClickActivation(
+        DEFAULT_STAN_X,
+        DEFAULT_STAN_Y,
+        DEFAULT_STAN_SPRITE_INSTANCE_ID,
+        DEFAULT_STAN_SPRITE_DEFINITION_ID,
+      ),
+    );
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(introduceSelfChoice?.npcLine ?? '')}`,
+    );
+    expect(state.inputEnabled).toBe(false);
+
+    manager.handleAction(
+      makeSceneClickActivation(
+        DEFAULT_STAN_X,
+        DEFAULT_STAN_Y,
+        DEFAULT_STAN_SPRITE_INSTANCE_ID,
+        DEFAULT_STAN_SPRITE_DEFINITION_ID,
+      ),
+    );
+
+    expectLatestDialogueMenu(state, introduceSelfChoice?.choices ?? []);
+    expect(state.inputEnabled).toBe(true);
+  });
+
+  it('reveals the bait shop door once Rocco actually says something to Stan', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+    wakeStanToRootDialogue(manager);
+    chooseStanDialogue(manager, 'introduce-self', 0);
+
+    const door = findLatestSpriteSnapshot(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
+    expect(door?.interactive).toBe(true);
+    expect(state.spriteVisibleDescriptionUpdates).toContain(
+      `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${localization.text.descriptions.baitShopDoor}:true`,
+    );
+  });
+
+  it('plays the Stan boo branch and exposes the bathroom clue dialogue path', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    const booChoice = localization.text.stan.rootChoices.find((choice) => choice.id === 'boo');
+    const bathroomChoice = booChoice?.choices?.find((choice) => choice.id === 'boo-bathroom');
+    const clueChoice = bathroomChoice?.choices?.find((choice) => choice.id === 'boo-bathroom-please');
+    expect(booChoice?.choices).toBeDefined();
+    expect(bathroomChoice?.choices).toBeDefined();
+    expect(clueChoice).toBeDefined();
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+    wakeStanToRootDialogue(manager);
+
+    manager.handleAction({
+      kind: 'grid-menu',
+      definitionId: DEFAULT_STAN_DIALOGUE_MENU_ID,
+      interaction: 'activate',
+      itemId: 'boo',
+      slotIndex: 3,
+      items: [],
+    });
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(booChoice?.playerLine ?? '')}`,
+    );
+    expect(state.inputEnabled).toBe(false);
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-waking`,
+    );
+
+    manager.update(1000);
+
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-look-left`,
+    );
+
+    manager.update(1000);
+
+    expect(state.spriteMessages).not.toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(booChoice?.npcLine ?? '')}`,
+    );
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-look-left`,
+    );
+
+    manager.update(1000);
+
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-look-right`,
+    );
+
+    manager.update(1799);
+
+    expect(state.spriteMessages).not.toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(booChoice?.npcLine ?? '')}`,
+    );
+
+    manager.update(1);
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(booChoice?.npcLine ?? '')}`,
+    );
+
+    manager.update(5600);
+
+    expectLatestDialogueMenu(state, booChoice?.choices ?? []);
+
+    manager.handleAction({
+      kind: 'grid-menu',
+      definitionId: DEFAULT_STAN_DIALOGUE_MENU_ID,
+      interaction: 'activate',
+      itemId: 'boo-bathroom',
+      slotIndex: 0,
+      items: [],
+    });
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(bathroomChoice?.playerLine ?? '')}`,
+    );
+
+    manager.update(4800);
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(bathroomChoice?.npcLine ?? '')}`,
+    );
+
+    manager.update(5600);
+
+    expectLatestDialogueMenu(state, bathroomChoice?.choices ?? []);
+
+    manager.handleAction({
+      kind: 'grid-menu',
+      definitionId: DEFAULT_STAN_DIALOGUE_MENU_ID,
+      interaction: 'activate',
+      itemId: 'boo-bathroom-please',
+      slotIndex: 1,
+      items: [],
+    });
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(clueChoice?.playerLine ?? '')}`,
+    );
+
+    manager.update(4800);
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(clueChoice?.npcLine ?? '')}`,
+    );
+
+    manager.update(5600);
+
+    expect(state.inputEnabled).toBe(true);
+  });
+
+  it('starts the pelikan takeoff only after the feeding line closes', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    await manager.mount(engine);
+    dropBaitBucket(manager, state);
+
+    manager.handleAction(makeActionActivation(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, 'talk'));
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:say:${localization.text.middleLevel.pelikanFeedingLine}`,
+    );
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_PELIKAN_SPRITE_INSTANCE_ID)).not.toContain(
+      `${DEFAULT_PELIKAN_SPRITE_INSTANCE_ID}:${DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID}`,
+    );
+
+    manager.update(DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS - 1);
+
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_PELIKAN_SPRITE_INSTANCE_ID)).not.toContain(
+      `${DEFAULT_PELIKAN_SPRITE_INSTANCE_ID}:${DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID}`,
+    );
+
+    manager.update(1);
+    manager.update(DEFAULT_PELIKAN_TURN_DURATION_MS);
+
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_PELIKAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_PELIKAN_SPRITE_INSTANCE_ID}:${DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID}`,
+    );
+  });
+
+  it('opens the bait shop door and transitions into the bait shop with the same inventory when Stan is asleep', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+    const baitShopScene: RoccoPlaneScene = {
+      id: BAIT_SHOP_SCENE_ID,
+      planes: [],
+      clearColor: DEFAULT_ROCCO_GREEN_BLACK,
+      palettes: [],
+      colorRegisterSets: [],
+      attributeMaps: [],
+    };
+    const mountSpy = vi.spyOn(RoccoBaitShopLevel.prototype, 'mount').mockImplementation(async (mountEngine) => {
+      mountEngine.loadPlaneScene(baitShopScene);
+      return baitShopScene;
+    });
+    const unmountSpy = vi.spyOn(RoccoBaitShopLevel.prototype, 'unmount').mockImplementation(() => {});
+
+    try {
+      await manager.mount(engine);
+      await transitionToPierBeginning(manager, state);
+      wakeStanToRootDialogue(manager);
+      chooseStanDialogue(manager, 'introduce-self', 0);
+      advanceStanConversationToFollowUpMenu(manager);
+      manager.update(12000);
+
+      setCarriedInventoryItem(state, ROCCO_INVENTORY_KEYS_ITEM_ID);
+      manager.handleAction(
+        makeSceneClickActivation(
+          918,
+          360,
+          DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
+          DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID,
+        ),
+      );
+
+      expect(state.playedSoundIds).toContain(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
+      expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).toContain(
+        `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID}`,
+      );
+
+      expect(state.playedSpriteActionDirections).toContain(
+        `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:left`,
+      );
+
+      manager.update(999);
+
+      expect(state.loadedScene?.id).not.toBe(BAIT_SHOP_SCENE_ID);
+      expect(state.addedPrimitives).not.toContain('rocco-bait-shop-placeholder-fade:1');
+      expect(state.addedTitles).not.toContain(
+        `rocco-bait-shop-placeholder-title:${localization.text.levels.baitShopPlaceholderTitle}`,
+      );
+
+      manager.update(1);
+      await flushAsyncTransition();
+
+      expect(mountSpy).toHaveBeenCalledOnce();
+      expect(manager.getActiveLevel()?.id).toBe(ROCCO_BAIT_SHOP_LEVEL_ID);
+      expect(state.loadedScene?.id).toBe(BAIT_SHOP_SCENE_ID);
+      expect(state.statusMessages.at(-1)).toContain(localization.text.levels.baitShopPlaceholderTitle);
+
+      manager.handleAction(
+        makeActionActivation(
+          DEFAULT_SPRITE_INSTANCE_ID,
+          ROCCO_PLAYER_INVENTORY_ACTION_ID,
+          ROCCO_PLAYER_ACTION_MENU_ID,
+        ),
+      );
+
+      expect(state.toggledGridMenuDefinitions.at(-1)).toMatchObject({
+        id: ROCCO_INVENTORY_MENU_ID,
+      });
+      expect(state.toggledGridMenuDefinitions.at(-1)?.items.map((item) => item.id)).toEqual(
+        expect.arrayContaining([ROCCO_INVENTORY_KEYS_ITEM_ID, ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID]),
+      );
+    } finally {
+      mountSpy.mockRestore();
+      unmountSpy.mockRestore();
+    }
+  });
+
+  it('calls the police instead of opening the bait shop door when Stan is awake', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+    wakeStanToRootDialogue(manager);
+    chooseStanDialogue(manager, 'introduce-self', 0);
+    advanceStanConversationToFollowUpMenu(manager);
+    engine.video.gridMenus.closeMenu();
+
+    setCarriedInventoryItem(state, ROCCO_INVENTORY_KEYS_ITEM_ID);
+    manager.handleAction(
+      makeSceneClickActivation(
+        918,
+        360,
+        DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
+        DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID,
+      ),
+    );
+
+    expect(state.playedSoundIds).not.toContain(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).not.toContain(
+      `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID}`,
+    );
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${localization.text.inventory.keysOnStanArrestLine}`,
+    );
+  });
+
+  it('puts Stan back to sleep after the dialogue menu idles for a while', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization: createRoccoLocalization('es'),
+    });
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+    wakeStanToRootDialogue(manager);
+
+    expect(state.activeGridMenuDefinitionId).toBe(DEFAULT_STAN_DIALOGUE_MENU_ID);
+
+    manager.update(11999);
+
+    expect(state.closedGridMenuCount).toBe(0);
+
+    manager.update(1);
+
+    expect(state.closedGridMenuCount).toBe(1);
+    expect(
+      countPlayedSpriteAnimation(
+        state,
+        DEFAULT_STAN_SPRITE_INSTANCE_ID,
+        DEFAULT_STAN_SLEEPING_ANIMATION_ID,
+      ),
+    ).toBeGreaterThan(1);
+    expect(state.activeGridMenuDefinitionId).toBeUndefined();
+    expect(state.inputEnabled).toBe(true);
+  });
+
+  it('reopens Stan dialogue choices when the menu was dismissed with an outside click', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+    wakeStanToRootDialogue(manager);
+
+    expect(state.activeGridMenuDefinitionId).toBe(DEFAULT_STAN_DIALOGUE_MENU_ID);
+
+    engine.video.gridMenus.closeMenu();
+
+    expect(state.activeGridMenuDefinitionId).toBeUndefined();
+
+    wakeStanToRootDialogue(manager);
+
+    expect(state.activeGridMenuDefinitionId).toBe(DEFAULT_STAN_DIALOGUE_MENU_ID);
+    expectLatestDialogueMenu(state, localization.text.stan.rootChoices);
+    expect(state.closedGridMenuCount).toBe(1);
+  });
+
+  it('wakes Stan when Rocco walks behind him and keeps him awake while Rocco stays there', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization: createRoccoLocalization('es'),
+    });
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+
+    const sleepingAnimationCount = countPlayedSpriteAnimation(
+      state,
+      DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      DEFAULT_STAN_SLEEPING_ANIMATION_ID,
+    );
+
+    setPlayerSpritePosition(
+      state,
+      DEFAULT_STAN_X,
+      DEFAULT_SPRITE_Y_VALUES[2] ?? DEFAULT_SPRITE_Y_VALUES[0] ?? 180,
+    );
+
+    manager.update(16);
+
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-waking`,
+    );
+
+    manager.update(1000);
+
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-look-right`,
+    );
+
+    manager.update(12000);
+
+    expect(
+      countPlayedSpriteAnimation(
+        state,
+        DEFAULT_STAN_SPRITE_INSTANCE_ID,
+        DEFAULT_STAN_SLEEPING_ANIMATION_ID,
+      ),
+    ).toBe(sleepingAnimationCount);
+  });
+
+  it('makes Stan look to his right when Rocco talks from that side', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+    setPlayerSpritePosition(
+      state,
+      DEFAULT_STAN_X + 120,
+      DEFAULT_SPRITE_Y_VALUES[3] ?? DEFAULT_SPRITE_Y_VALUES[0] ?? 180,
+    );
+    wakeStanToRootDialogue(manager);
+
+    manager.handleAction({
+      kind: 'grid-menu',
+      definitionId: DEFAULT_STAN_DIALOGUE_MENU_ID,
+      interaction: 'activate',
+      itemId: 'introduce-self',
+      slotIndex: 0,
+      items: [],
+    });
+
+    manager.update(1000);
+
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-look-right`,
+    );
+  });
+
+  it('keeps Stan facing Rocco while he is awake', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization: createRoccoLocalization('es'),
+    });
+
+    await manager.mount(engine);
+    await transitionToPierBeginning(manager, state);
+    setPlayerSpritePosition(
+      state,
+      DEFAULT_STAN_X,
+      DEFAULT_SPRITE_Y_VALUES[2] ?? DEFAULT_SPRITE_Y_VALUES[0] ?? 180,
+    );
+
+    manager.update(16);
+    manager.update(1984);
+
+    const stan = findLatestSpriteSnapshot(state, DEFAULT_STAN_SPRITE_INSTANCE_ID);
+    expect(stan?.animation.animationId).toBe('stan-look-right');
+
+    setPlayerSpritePosition(
+      state,
+      DEFAULT_STAN_X - 120,
+      DEFAULT_SPRITE_Y_VALUES[3] ?? DEFAULT_SPRITE_Y_VALUES[0] ?? 180,
+    );
+
+    manager.update(16);
+
+    expect(stan?.animation.animationId).toBe('stan-look-left');
+
+    setPlayerSpritePosition(
+      state,
+      DEFAULT_STAN_X + 120,
+      DEFAULT_SPRITE_Y_VALUES[3] ?? DEFAULT_SPRITE_Y_VALUES[0] ?? 180,
+    );
+
+    manager.update(16);
+
+    expect(stan?.animation.animationId).toBe('stan-look-right');
   });
 
   it('transitions from Pier Middle west to Pier End after Rocco has the keys', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const manager = new RoccoPierLevelManager({
+    const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
     });
 
     await manager.mount(engine);
+    manager.handleAction(makeSceneClickActivation(0, DEFAULT_DESIGN_HEIGHT / 2));
     setPlayerGroundPoint(state, 0);
     manager.update(16);
     await flushAsyncTransition();
@@ -1548,7 +2416,7 @@ describe('RoccoDefaultCartridge', () => {
   it('keeps the Pier Middle bait bucket dropped after visiting Pier End', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const manager = new RoccoPierLevelManager({
+    const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
     });
@@ -1577,7 +2445,7 @@ describe('RoccoDefaultCartridge', () => {
   it('keeps Pier Middle feeding and revealed keys after visiting Pier Beginning', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const manager = new RoccoPierLevelManager({
+    const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
     });
@@ -1624,7 +2492,7 @@ describe('RoccoDefaultCartridge', () => {
   it('plays the full Rocco intro thought and help line when uninterrupted', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
     state.isSpriteMovingValue = false;
@@ -1632,9 +2500,10 @@ describe('RoccoDefaultCartridge', () => {
     cartridge.update(6400);
     cartridge.update(5400);
 
+    const localization = createRoccoLocalization();
     expect(state.spriteMessages).toEqual([
-      `${DEFAULT_SPRITE_INSTANCE_ID}:think:I think nothing is left for me, and it is deep enough here.`,
-      `${DEFAULT_SPRITE_INSTANCE_ID}:say:Maybe you can help me.`,
+      `${DEFAULT_SPRITE_INSTANCE_ID}:think:${serializeDialogueLine(localization.text.rocco.introThoughtLine)}`,
+      `${DEFAULT_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(localization.text.rocco.introHelpLine)}`,
     ]);
     expect(state.playedSpriteActionDirections).toContain(
       `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:up`,
@@ -1652,7 +2521,7 @@ describe('RoccoDefaultCartridge', () => {
   it('cancels the Rocco intro sequence on scene click before any intro line plays', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
     cartridge.handleAction(makeSceneClickActivation(320, 240));
@@ -1670,7 +2539,7 @@ describe('RoccoDefaultCartridge', () => {
   it('clears the intro thought line and does not continue after a scene click cancellation', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
     state.isSpriteMovingValue = false;
@@ -1691,7 +2560,7 @@ describe('RoccoDefaultCartridge', () => {
   it('moves the default cloud with vertical drift', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
     cartridge.update(DEFAULT_CLOUD_VERTICAL_PERIOD_MS / 4);
@@ -1710,7 +2579,7 @@ describe('RoccoDefaultCartridge', () => {
   it('grows the default cloud linearly as it approaches the right side', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const cartridge = new RoccoDefaultCartridge();
+    const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine });
     const halfTravelMs =

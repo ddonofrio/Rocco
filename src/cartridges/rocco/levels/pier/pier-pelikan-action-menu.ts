@@ -38,7 +38,7 @@ export function createDefaultActionMenuDefinition(
           kind: 'sprite-message',
           message: {
             spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-            mode: 'say',
+            mode: 'think',
             text: localization.text.pelikan.lookLines,
             lineSelection: {
               mode: 'random',

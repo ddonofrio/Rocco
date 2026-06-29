@@ -15,6 +15,10 @@ export type RoccoCartridgeAction =
   | RoccoSceneClickAction
   | RoccoGridMenuActivation;
 
+export interface RoccoCartridgeActionResult {
+  suppressDefaultPlayerMove?: boolean;
+}
+
 export interface RoccoCartridgeManifest {
   id: string;
   title: string;
@@ -47,7 +51,9 @@ export interface RoccoCartridge {
   mount(context: RoccoCartridgeContext): Promise<void> | void;
   start?(): Promise<void> | void;
   update?(deltaMs: number): void;
-  handleAction?(activation: RoccoCartridgeAction): Promise<void> | void;
+  handleAction?(
+    activation: RoccoCartridgeAction,
+  ): Promise<void> | RoccoCartridgeActionResult | void;
   stop?(): Promise<void> | void;
   dispose?(): Promise<void> | void;
 }

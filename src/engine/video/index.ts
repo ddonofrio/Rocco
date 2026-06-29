@@ -11,6 +11,7 @@ export { RoccoRuntimeVideoSystem, type RoccoRuntimeVideoSystemOptions } from './
 
 export * as planes from './planes';
 export * as sprites from './sprites';
+export * as sceneTargets from './scene-targets';
 export * as actionMenu from './action-menu';
 export * as gridMenu from './grid-menu';
 export * as messages from './messages';

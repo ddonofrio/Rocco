@@ -11,6 +11,7 @@ import {
   pickDefaultFeedingLookLine,
   uninstallDefaultFeedingLookActionMenu,
 } from './pier-feeding-interactions';
+import type { RoccoNonRepeatingLineSelectionState } from '../../../../game/non-repeating-line-selection';
 import {
   installDefaultActionMenu,
   DEFAULT_ACTION_MENU_ID,
@@ -42,11 +43,11 @@ import {
 import { loadOrCreatePierScene } from './pier-scene';
 import { installDefaultWalkMap, uninstallDefaultWalkMap } from './pier-walkmap';
 import type {
-  RoccoPierLevel,
-  RoccoPierLevelConnector,
-  RoccoPierLevelMountOptions,
-} from './pier-level-types';
-import { findPierConnector } from './pier-level-types';
+  RoccoLevel,
+  RoccoLevelConnector,
+  RoccoLevelMountOptions,
+} from '../rocco-level-types';
+import { findRoccoLevelConnector } from '../rocco-level-types';
 import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
@@ -71,6 +72,7 @@ import {
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 
 const DEFAULT_ENTRY_Y = DEFAULT_SPRITE_Y_VALUES[0] ?? 180;
+export const DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS = 2200;
 
 interface RoccoPierMiddleLevelState {
   baitBucketDropped: boolean;
@@ -90,7 +92,7 @@ function createInitialMiddleLevelState(): RoccoPierMiddleLevelState {
   };
 }
 
-export const ROCCO_PIER_MIDDLE_CONNECTORS: readonly RoccoPierLevelConnector[] = [
+export const ROCCO_PIER_MIDDLE_CONNECTORS: readonly RoccoLevelConnector[] = [
   {
     id: 'west',
     exitArea: {
@@ -104,7 +106,6 @@ export const ROCCO_PIER_MIDDLE_CONNECTORS: readonly RoccoPierLevelConnector[] = 
       y: DEFAULT_ENTRY_Y,
     },
     entryFacing: 'right',
-    requiresKeys: true,
   },
   {
     id: 'east',
@@ -119,11 +120,10 @@ export const ROCCO_PIER_MIDDLE_CONNECTORS: readonly RoccoPierLevelConnector[] = 
       y: DEFAULT_ENTRY_Y,
     },
     entryFacing: 'left',
-    requiresKeys: true,
   },
 ];
 
-export class RoccoPierMiddleLevel implements RoccoPierLevel {
+export class RoccoPierMiddleLevel implements RoccoLevel {
   readonly id = ROCCO_PIER_MIDDLE_LEVEL_ID;
   readonly title: string;
   readonly connectors = ROCCO_PIER_MIDDLE_CONNECTORS;
@@ -136,8 +136,9 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
   private baitBucketController: RoccoDefaultBaitBucketController | null = null;
   private engine: RoccoEngine | null = null;
   private feedingInteractionsInstalled = false;
-  private lastFeedingLookLineIndex: number | null = null;
-  private options: RoccoPierLevelMountOptions = {};
+  private feedingLookSelectionState: RoccoNonRepeatingLineSelectionState | null = null;
+  private pendingPelikanTakeoffMs: number | null = null;
+  private options: RoccoLevelMountOptions = {};
   private readonly levelState = createInitialMiddleLevelState();
 
   constructor(localization: RoccoLocalization = createRoccoLocalization()) {
@@ -147,7 +148,7 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
 
   async mount(
     engine: RoccoEngine,
-    options: RoccoPierLevelMountOptions = {},
+    options: RoccoLevelMountOptions = {},
   ): Promise<RoccoPlaneScene> {
     this.engine = engine;
     this.options = options;
@@ -157,7 +158,8 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
     this.pelikanController = null;
     this.baitBucketController = null;
     this.feedingInteractionsInstalled = false;
-    this.lastFeedingLookLineIndex = null;
+    this.feedingLookSelectionState = null;
+    this.pendingPelikanTakeoffMs = null;
     uninstallDefaultFeedingLookActionMenu(engine);
 
     const scene = await loadOrCreatePierScene(engine, {
@@ -179,7 +181,7 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
       engine.log('Assets', 'Some action menu icons could not be preloaded.');
     });
 
-    const entryConnector = findPierConnector(this.connectors, options.entryConnectorId);
+    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
     const spriteInstallOptions = entryConnector
       ? {
           initialFacing: entryConnector.entryFacing,
@@ -212,9 +214,6 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
         onCollected: () => {
           this.levelState.keysStatus = 'collected';
           this.options.onKeysCollected?.();
-        },
-        onRestartRequested: () => {
-          this.options.onRestartRequested?.();
         },
       }),
       installDefaultPelikan(engine, {
@@ -265,6 +264,7 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
     this.pelikanController = null;
     this.baitBucketController = null;
     this.feedingInteractionsInstalled = false;
+    this.pendingPelikanTakeoffMs = null;
     this.engine = null;
     engine.video.render(0);
   }
@@ -273,7 +273,7 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
     this.cloudController?.update(deltaMs);
     this.baitBucketController?.update(deltaMs);
     this.keysController?.update(deltaMs);
-    this.pelikanController?.update(deltaMs);
+    this.pelikanController?.update(this.resolvePelikanDeltaMs(deltaMs));
     this.syncStateFromControllers();
     this.installFeedingInteractionsIfReady();
     this.spriteController?.update(deltaMs);
@@ -295,11 +295,19 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
     }
 
     if (this.baitBucketController?.isDropped()) {
-      this.engine.video.messages.say(DEFAULT_SPRITE_INSTANCE_ID, this.localization.text.middleLevel.pelikanFeedingLine, {
-        ttlMs: 2200,
-      });
+      if (this.pendingPelikanTakeoffMs !== null) {
+        return;
+      }
+
+      this.engine.video.messages.say(
+        DEFAULT_SPRITE_INSTANCE_ID,
+        this.localization.text.middleLevel.pelikanFeedingLine,
+        {
+          ttlMs: DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS,
+        },
+      );
+      this.pendingPelikanTakeoffMs = DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS;
       this.engine.video.render(0);
-      this.pelikanController?.startBaitFeedingSequence();
       return;
     }
 
@@ -307,6 +315,10 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
   }
 
   handleSceneClick(): void {
+    if (!this.engine?.isInputEnabled()) {
+      return;
+    }
+
     this.spriteController?.cancelIntro();
   }
 
@@ -371,10 +383,10 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
 
     const selection = pickDefaultFeedingLookLine(
       Math.random,
-      this.lastFeedingLookLineIndex,
+      this.feedingLookSelectionState,
       this.localization.text.feeding.lookLines,
     );
-    this.lastFeedingLookLineIndex = selection.index;
+    this.feedingLookSelectionState = selection.state;
     this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, selection.line, {
       ttlMs: DEFAULT_FEEDING_LOOK_MESSAGE_TTL_MS,
     });
@@ -393,5 +405,22 @@ export class RoccoPierMiddleLevel implements RoccoPierLevel {
     }
 
     return true;
+  }
+
+  private resolvePelikanDeltaMs(deltaMs: number): number {
+    if (this.pendingPelikanTakeoffMs === null) {
+      return deltaMs;
+    }
+
+    const safeDeltaMs = Number.isFinite(deltaMs) ? Math.max(0, deltaMs) : 0;
+    this.pendingPelikanTakeoffMs -= safeDeltaMs;
+    if (this.pendingPelikanTakeoffMs > 0) {
+      return 0;
+    }
+
+    const leftoverDeltaMs = Math.max(0, -this.pendingPelikanTakeoffMs);
+    this.pendingPelikanTakeoffMs = null;
+    this.pelikanController?.startBaitFeedingSequence();
+    return leftoverDeltaMs;
   }
 }

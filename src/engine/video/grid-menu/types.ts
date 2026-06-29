@@ -6,15 +6,20 @@ export interface RoccoGridMenuItem {
   enabled?: boolean;
 }
 
+export type RoccoGridMenuLayout = 'grid' | 'text-list';
+
 export interface RoccoGridMenuDefinition {
   id: string;
   title?: string;
   items: RoccoGridMenuItem[];
+  layout?: RoccoGridMenuLayout;
   columns?: number;
   rows?: number;
   x?: number;
   y?: number;
   slotSize?: number;
+  slotWidth?: number;
+  slotHeight?: number;
   gap?: number;
   padding?: number;
   renderLayer?: string;

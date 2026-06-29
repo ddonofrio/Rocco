@@ -32,6 +32,10 @@ export class RoccoCartridgeManager {
       const menu = new RoccoCartridgeMenu(app);
       const result = await menu.show(allManifests, {
         initialLocales: this.loadInitialLocales(configById),
+        initialDisplayProfile: engine.video.display.getProfile(),
+        onDisplayProfileChange: (profile) => {
+          engine.video.display.setProfile(profile);
+        },
       });
       selectedId = result.selectedId;
       selectedLocale = result.selectedLocale;

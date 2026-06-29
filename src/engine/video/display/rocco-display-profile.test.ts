@@ -46,7 +46,7 @@ describe('RoccoDisplayProfileRenderer', () => {
     expect(overlay?.style.pointerEvents).toBe('none');
   });
 
-  it('keeps overlay hidden when crtMask is disabled', () => {
+  it('keeps overlay hidden when crtMask and edgeVignette are disabled', () => {
     const root = document.createElement('div');
     const stage = document.createElement('div');
     root.appendChild(stage);
@@ -54,7 +54,7 @@ describe('RoccoDisplayProfileRenderer', () => {
     const renderer = new RoccoDisplayProfileRenderer({
       rootElement: root,
       stageElement: stage,
-      profile: { crtMask: false },
+      profile: { crtMask: false, edgeVignette: false },
     });
 
     renderer.mount();
@@ -119,7 +119,7 @@ describe('RoccoViewportHost display profile integration', () => {
     expect(overlay?.style.width).toBe('1200px');
     expect(overlay?.style.height).toBe('675px');
 
-    host.setDisplayProfile({ crtMask: false });
+    host.setDisplayProfile({ crtMask: false, edgeVignette: false });
     expect(overlay?.style.display).toBe('none');
 
     host.unmount();

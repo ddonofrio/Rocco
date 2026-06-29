@@ -131,4 +131,32 @@ describe('RoccoGridMenuSystemSDK', () => {
     expect(system.activateAt(1, 1)).toBeUndefined();
     expect(system.isOpen()).toBe(false);
   });
+
+  it('activates text-list items inside rectangular slots', () => {
+    const system = new RoccoGridMenuSystemSDK();
+    system.openMenu({
+      id: 'dialogue',
+      layout: 'text-list',
+      x: 100,
+      y: 200,
+      columns: 1,
+      rows: 2,
+      slotWidth: 320,
+      slotHeight: 40,
+      padding: 12,
+      gap: 8,
+      closeOnActivate: true,
+      items: [{ id: 'hello', label: 'Hello there.', slotIndex: 0 }],
+    });
+
+    expect(system.activateAt(140, 230)).toEqual({
+      kind: 'grid-menu',
+      definitionId: 'dialogue',
+      interaction: 'activate',
+      itemId: 'hello',
+      slotIndex: 0,
+      items: [{ id: 'hello', label: 'Hello there.', slotIndex: 0 }],
+    });
+    expect(system.isOpen()).toBe(false);
+  });
 });

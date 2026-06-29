@@ -13,6 +13,7 @@ The grid menu system is a generic console UI capability for slot-based panels. I
 ## Concepts
 
 - A grid menu definition describes rows, columns, slots, render layer, and visual item data.
+- A grid menu definition can render as a classic slot grid or as a one-column `text-list` for dialogue choices.
 - A grid item contains `id`, optional `imageUri`, optional `label`, optional `slotIndex`, and optional `enabled`.
 - The system keeps one active grid menu at a time.
 - Non-reorderable menus return an `activate` interaction when an enabled item is clicked.
@@ -20,6 +21,8 @@ The grid menu system is a generic console UI capability for slot-based panels. I
 - Clicking outside a reorderable panel while carrying an item closes the panel and keeps a generic carried payload with the source menu id and item data for cursor use.
 
 The console owns those generic interactions. A cartridge decides whether a carried payload represents inventory, crafting ingredients, puzzle tokens, or anything else, and it interprets target use through its own `scene-click` handling plus `engine.video.gridMenus.getCarriedItem()`.
+
+`text-list` layout uses rectangular slots and is suitable for dialogue choice panels while still routing the same generic `RoccoGridMenuActivation` payload back to the cartridge.
 
 ## Cartridge Usage
 

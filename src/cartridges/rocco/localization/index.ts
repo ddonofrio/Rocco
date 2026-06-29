@@ -16,6 +16,8 @@ export {
   type RoccoLocalizedManifestText,
   type RoccoTextCatalog,
 } from './types';
+export { roccoEnglishText } from './en';
+export { roccoSpanishText } from './es';
 
 export const ROCCO_TEXT_BY_LOCALE: Record<RoccoLocale, RoccoTextCatalog> = {
   en: roccoEnglishText,

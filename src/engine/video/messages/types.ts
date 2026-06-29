@@ -32,6 +32,7 @@ export interface RoccoSpriteMessageStyle {
   bubbleFill?: string;
   bubbleStroke?: string;
   bubbleStrokeWidth?: number;
+  showThoughtTrail?: boolean;
 }
 
 export interface RoccoSpriteMessageRequest {
@@ -39,6 +40,7 @@ export interface RoccoSpriteMessageRequest {
   spriteInstanceId: string;
   mode: RoccoSpriteMessageMode;
   text: RoccoSpriteMessageText;
+  background?: boolean;
   lineSelection?: RoccoSpriteMessageLineSelection;
   ttlMs?: number;
   side?: RoccoSpriteMessageSide;
@@ -61,6 +63,7 @@ export interface RoccoSpriteMessageState {
   text: string;
   lines: string[];
   lineIndex: number;
+  background: boolean;
   durationMs: number;
   ttlMs: number;
   side: RoccoSpriteMessageSide;

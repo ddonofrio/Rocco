@@ -8,6 +8,8 @@ This file applies to the entire repository.
 - Read documentation before editing. Do not jump directly into code unless the change is trivial and the relevant README has already been read in the same context window.
 - Keep documentation as present-tense reference material. Do not add historical edit logs, dated notes, or narrative descriptions of edits.
 - Maintain the relevant README when behavior, concepts, public interfaces, SDK surfaces, folder roles, or cartridge structure shift.
+- During active refinement loops, implement the requested code change first, hand it to the user for manual validation, and wait for explicit approval before adding or updating tests and broader feature documentation for that change.
+- If the user pivots to a new development request while earlier validated work still has deferred tests or documentation pending, call out that outstanding follow-up before continuing.
 - Prefer focused, root-cause fixes. Do not fix unrelated bugs or reformat unrelated files.
 - Do not commit, branch, or stage changes unless the user explicitly asks.
 
@@ -69,8 +71,8 @@ Avoid direct `.\scripts\run-npm.ps1` calls without `-ExecutionPolicy Bypass`, an
 ## Rocco Cartridge Notes
 
 - The default cartridge is the Pier map.
-- Pier code lives in `src/cartridges/rocco/levels/pier`.
-- `RoccoPierLevelManager` owns map transitions, per-level state retention, and inventory-based exit gates.
+- Pier exterior code lives in `src/cartridges/rocco/levels/pier`.
+- `RoccoLevelManager` lives in `src/cartridges/rocco/levels/rocco-level-manager.ts` and owns map transitions, per-level state retention, and inventory-based exit gates across Rocco screens.
 - The key gate remains silent and checks the Rocco cartridge inventory for keys.
 - `rocco-default` is localized in English and Spanish through `src/cartridges/rocco/localization`.
 - `rocco-default` uses `engine.video.gridMenus` as generic console UI for its cartridge inventory.

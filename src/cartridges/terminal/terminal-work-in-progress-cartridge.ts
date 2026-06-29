@@ -1,4 +1,3 @@
-﻿import { defaultDisplayProfile } from '../../engine/video/display';
 import type { RoccoCartridge, RoccoCartridgeContext } from '../../engine/cartridges/types';
 import { installDefaultStarsEffect } from './terminal-work-in-progress-effects';
 import { installDefaultSprite } from './terminal-work-in-progress-sprites';
@@ -9,7 +8,6 @@ export class RoccoTerminalWorkInProgressCartridge implements RoccoCartridge {
   readonly manifest = terminalWorkInProgressCartridgeManifest;
 
   async mount(context: RoccoCartridgeContext): Promise<void> {
-    context.engine.video.display.setProfile(defaultDisplayProfile);
     const scene = await loadOrCreateDefaultScene(context.engine);
 
     context.engine.loadPlaneScene(scene);

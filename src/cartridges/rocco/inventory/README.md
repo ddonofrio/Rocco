@@ -20,9 +20,10 @@ The inventory belongs to the cartridge. The engine provides generic slot-panel U
 - Items keep a slot index so grid reorder operations can persist.
 - The inventory projects its current items into a reorderable 3x3 grid menu definition.
 - Pier exits check whether `rocco-keys` exists in this inventory.
+- The same inventory stays available after the bait shop transition because `RoccoLevelManager` owns it above the active level instance.
 
 ## UI Boundary
 
 Inventory code does not import PixiJS and does not draw directly. It returns a `RoccoGridMenuDefinition`, and the engine renders that definition through the generic grid menu subsystem.
 
-The console owns the cursor and only carries generic grid item payloads. Rocco inventory code owns item identity, slot persistence, labels, and game-specific use responses. `RoccoPierLevelManager` interprets carried inventory payloads through cartridge `scene-click` handling.
+The console owns the cursor and only carries generic grid item payloads. Rocco inventory code owns item identity, slot persistence, labels, and game-specific use responses. `RoccoLevelManager` interprets carried inventory payloads through cartridge `scene-click` handling, including scripted outcomes such as handing the keys to Stan, unlocking the bait shop door while Stan sleeps, and keeping those items available inside the bait shop level.

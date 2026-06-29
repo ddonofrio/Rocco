@@ -1,5 +1,5 @@
 import type { RoccoCartridgeManifest } from '../../engine/cartridges/types';
-import { roccoSpanishText } from './localization/es';
+import { roccoSpanishText } from './localization';
 
 export const roccoDefaultCartridgeManifest: RoccoCartridgeManifest = {
   id: 'rocco-default',

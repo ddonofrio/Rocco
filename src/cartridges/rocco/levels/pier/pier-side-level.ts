@@ -1,4 +1,7 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
+import type { RoccoSceneClickAction } from '../../../../engine/cartridges';
+import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
+import type { RoccoGridMenuActivation } from '../../../../engine/video/grid-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
 import {
   installDefaultCloud,
@@ -7,11 +10,11 @@ import {
 } from './pier-clouds';
 import { loadOrCreatePierScene } from './pier-scene';
 import type {
-  RoccoPierLevel,
-  RoccoPierLevelConnector,
-  RoccoPierLevelMountOptions,
-} from './pier-level-types';
-import { findPierConnector } from './pier-level-types';
+  RoccoLevel,
+  RoccoLevelConnector,
+  RoccoLevelMountOptions,
+} from '../rocco-level-types';
+import { findRoccoLevelConnector } from '../rocco-level-types';
 import { installDefaultWalkMap, uninstallDefaultWalkMap } from './pier-walkmap';
 import {
   installDefaultSprite,
@@ -21,6 +24,9 @@ import {
 
 export interface RoccoPierSideAmbientController {
   update(deltaMs: number): void;
+  handleAction?(activation: RoccoActionMenuActivation): void;
+  handleGridMenu?(activation: RoccoGridMenuActivation): void;
+  handleSceneClick?(activation: RoccoSceneClickAction): void;
   unmount(engine: RoccoEngine): void;
 }
 
@@ -29,16 +35,16 @@ export interface RoccoPierSideLevelDefinition {
   title: string;
   sceneId: string;
   backgroundScrollX: number;
-  connectors: readonly RoccoPierLevelConnector[];
+  connectors: readonly RoccoLevelConnector[];
   mountAmbient?: (
     engine: RoccoEngine,
   ) => Promise<RoccoPierSideAmbientController | null> | RoccoPierSideAmbientController | null;
 }
 
-export class RoccoPierSideLevel implements RoccoPierLevel {
+export class RoccoPierSideLevel implements RoccoLevel {
   readonly id: string;
   readonly title: string;
-  readonly connectors: readonly RoccoPierLevelConnector[];
+  readonly connectors: readonly RoccoLevelConnector[];
 
   private readonly sceneId: string;
   private readonly backgroundScrollX: number;
@@ -58,7 +64,7 @@ export class RoccoPierSideLevel implements RoccoPierLevel {
 
   async mount(
     engine: RoccoEngine,
-    options: RoccoPierLevelMountOptions = {},
+    options: RoccoLevelMountOptions = {},
   ): Promise<RoccoPlaneScene> {
     this.spriteController = null;
     this.cloudController = null;
@@ -75,7 +81,7 @@ export class RoccoPierSideLevel implements RoccoPierLevel {
     });
 
     const entryConnector =
-      findPierConnector(this.connectors, options.entryConnectorId) ?? this.connectors[0];
+      findRoccoLevelConnector(this.connectors, options.entryConnectorId) ?? this.connectors[0];
     const [cloudController, spriteController, ambientController] = await Promise.all([
       installDefaultCloud(engine),
       installDefaultSprite(engine, {
@@ -111,5 +117,15 @@ export class RoccoPierSideLevel implements RoccoPierLevel {
     this.ambientController?.update(deltaMs);
   }
 
-  handleAction(): void {}
+  handleAction(activation: RoccoActionMenuActivation): void {
+    this.ambientController?.handleAction?.(activation);
+  }
+
+  handleGridMenu(activation: RoccoGridMenuActivation): void {
+    this.ambientController?.handleGridMenu?.(activation);
+  }
+
+  handleSceneClick(activation: RoccoSceneClickAction): void {
+    this.ambientController?.handleSceneClick?.(activation);
+  }
 }

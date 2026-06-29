@@ -1,13 +1,8 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
-import {
-  roccoDefaultKeysSoundUrl,
-  roccoDefaultYouLoseSoundUrl,
-} from '../../rocco-default-assets';
+import { roccoDefaultKeysSoundUrl } from '../../rocco-default-assets';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_DESIGN_HEIGHT,
   DEFAULT_KEYS_X,
   DEFAULT_KEYS_Y,
   DEFAULT_KEYS_PRESENTATION_PITCH_DEGREES,
@@ -16,7 +11,6 @@ import {
   DEFAULT_KEYS_SPRITE_INSTANCE_ID,
   DEFAULT_KEYS_SPRITE_SCALE,
   DEFAULT_KEYS_Z_INDEX,
-  DEFAULT_ROCCO_GREEN_BLACK,
   DEFAULT_SPRITE_GROUND_ANCHOR_X,
   DEFAULT_SPRITE_GROUND_ANCHOR_Y,
   DEFAULT_SPRITE_IDLE_ACTION_ID,
@@ -32,22 +26,11 @@ import {
 } from './pier-keys-definition';
 
 const KEYS_APPROACH_KEEP_DISTANCE = 0;
-const KEYS_SIDE_APPROACH_RATIO = 0.85;
-const KEYS_SHAKE_DURATION_MS = 420;
-const KEYS_SHAKE_AMPLITUDE = 4;
-const KEYS_FALL_SPEED = 430;
 const KEYS_COLLECT_DURATION_MS = 780;
 const KEYS_COLLECT_ARC_HEIGHT = 76;
 const KEYS_COLLECT_SCALE_BOOST = 0.38;
-const KEYS_DEFEAT_FADE_PRIMITIVE_ID = 'rocco-keys-defeat-fade';
-const KEYS_DEFEAT_TITLE_ID = 'rocco-keys-defeat-title';
 const KEYS_SOUND_ID = 'rocco-keys-sound';
 const KEYS_SOUND_VOLUME = 0.3;
-const KEYS_DEFEAT_SOUND_ID = 'rocco-keys-defeat-sound';
-const KEYS_DEFEAT_SOUND_VOLUME = 0.25;
-const KEYS_DEFEAT_MESSAGE_TTL_MS = 6400;
-const KEYS_DEFEAT_FADE_DURATION_MS = 1300;
-const KEYS_DEFEAT_TITLE_DURATION_MS = 3600;
 
 export interface RoccoDefaultKeysController {
   update(deltaMs: number): void;
@@ -69,20 +52,12 @@ export interface RoccoDefaultKeysControllerOptions {
   localization?: RoccoLocalization;
   initialState?: RoccoDefaultKeysState;
   onCollected?: () => void;
-  onRestartRequested?: () => void;
 }
 
-type KeysGrabMode = 'side-hit' | 'rear-collect';
 type KeysControllerState =
   | 'hidden'
   | 'revealed'
   | 'approaching-grab'
-  | 'side-shake'
-  | 'falling-out'
-  | 'defeat-speaking'
-  | 'defeat-fading'
-  | 'defeat-title'
-  | 'restarting'
   | 'collecting'
   | 'gone'
   | 'collected';
@@ -91,22 +66,18 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   private readonly engine: RoccoEngine;
   private readonly localization: RoccoLocalization;
   private readonly onCollected: (() => void) | undefined;
-  private readonly onRestartRequested: (() => void) | undefined;
   private state: KeysControllerState = 'hidden';
-  private grabMode: KeysGrabMode = 'side-hit';
   private elapsedMs = 0;
   private keysX = 0;
   private keysY = 0;
   private roccoBaseX = 0;
   private roccoBaseY = 0;
   private revealed = false;
-  private lastDefeatLineIndex: number | null = null;
 
   constructor(engine: RoccoEngine, options?: RoccoDefaultKeysControllerOptions) {
     this.engine = engine;
     this.localization = options?.localization ?? createRoccoLocalization();
     this.onCollected = options?.onCollected;
-    this.onRestartRequested = options?.onRestartRequested;
     this.restoreState(options?.initialState ?? { status: 'hidden' });
   }
 
@@ -117,31 +88,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
 
     if (this.state === 'approaching-grab') {
       this.updateApproach();
-      return;
-    }
-
-    if (this.state === 'side-shake') {
-      this.updateSideShake(deltaMs);
-      return;
-    }
-
-    if (this.state === 'falling-out') {
-      this.updateFallingOut(deltaMs);
-      return;
-    }
-
-    if (this.state === 'defeat-speaking') {
-      this.updateDefeatSpeaking(deltaMs);
-      return;
-    }
-
-    if (this.state === 'defeat-fading') {
-      this.updateDefeatFading(deltaMs);
-      return;
-    }
-
-    if (this.state === 'defeat-title') {
-      this.updateDefeatTitle(deltaMs);
       return;
     }
 
@@ -170,10 +116,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
       if (keys) {
         this.keysX = keys.transform.x;
         this.keysY = keys.transform.y;
-        const rocco = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
-        if (rocco) {
-          this.grabMode = this.resolveGrabMode(rocco.transform.x, rocco.transform.y);
-        }
       }
       this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
       this.engine.video.render(0);
@@ -244,10 +186,9 @@ class RoccoKeysController implements RoccoDefaultKeysController {
 
     this.keysX = keys.transform.x;
     this.keysY = keys.transform.y;
-    this.grabMode = this.resolveGrabMode(rocco.transform.x, rocco.transform.y);
     this.state = 'approaching-grab';
     this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
-    this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, this.keysX, this.keysY, {
+    const started = this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, this.keysX, this.keysY, {
       targetInstanceId: DEFAULT_KEYS_SPRITE_INSTANCE_ID,
       keepDistance: KEYS_APPROACH_KEEP_DISTANCE,
       action: DEFAULT_SPRITE_RUN_ACTION_ID,
@@ -257,6 +198,11 @@ class RoccoKeysController implements RoccoDefaultKeysController {
       idleSettleDelayMs: 0,
       idleSettleFacing: 'diagonal-from-facing',
     });
+    if (!started) {
+      this.state = 'revealed';
+      this.engine.setInputEnabled(true);
+      this.engine.video.actionMenus.registerMenu(createDefaultKeysActionMenu(this.localization));
+    }
     this.engine.video.render(0);
   }
 
@@ -277,70 +223,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     this.keysX = keys.transform.x;
     this.keysY = keys.transform.y;
     this.snapRoccoToKeysGround(rocco.transform.scaleX, rocco.transform.scaleY);
-    if (this.grabMode === 'side-hit') {
-      this.startSideShake();
-      return;
-    }
-
     this.startCollecting();
-  }
-
-  private startSideShake(): void {
-    this.elapsedMs = 0;
-    this.state = 'side-shake';
-    this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
-    this.engine.video.sprites.playAction(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      DEFAULT_SPRITE_PICK_UP_ACTION_ID,
-      {
-        direction: 'down',
-        restart: true,
-      },
-    );
-    this.engine.video.render(0);
-  }
-
-  private updateSideShake(deltaMs: number): void {
-    this.elapsedMs = Math.min(KEYS_SHAKE_DURATION_MS, this.elapsedMs + deltaMs);
-    const shake = Math.sin(this.elapsedMs * 0.18) * KEYS_SHAKE_AMPLITUDE;
-    this.engine.video.sprites.setPosition(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      this.roccoBaseX + shake,
-      this.roccoBaseY,
-    );
-    this.engine.video.sprites.setPosition(
-      DEFAULT_KEYS_SPRITE_INSTANCE_ID,
-      this.keysX - shake * 0.8,
-      this.keysY,
-    );
-    this.engine.video.render(0);
-
-    if (this.elapsedMs >= KEYS_SHAKE_DURATION_MS) {
-      this.engine.video.sprites.setPosition(
-        DEFAULT_SPRITE_INSTANCE_ID,
-        this.roccoBaseX,
-        this.roccoBaseY,
-      );
-      this.engine.video.render(0);
-      this.state = 'falling-out';
-      this.elapsedMs = 0;
-      this.playKeysSound();
-      this.engine.setInputEnabled(true);
-    }
-  }
-
-  private updateFallingOut(deltaMs: number): void {
-    this.elapsedMs += deltaMs;
-    this.keysY += KEYS_FALL_SPEED * (deltaMs / 1000);
-    this.engine.video.sprites.setPosition(DEFAULT_KEYS_SPRITE_INSTANCE_ID, this.keysX, this.keysY);
-    this.engine.video.render(0);
-    if (this.keysY > DEFAULT_DESIGN_HEIGHT + 80) {
-      this.engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
-      this.engine.video.render(0);
-      this.revealed = false;
-      this.startDefeatSpeaking();
-      // Input stays disabled during defeat sequence - will be re-enabled in updateDefeatTitle
-    }
   }
 
   private startCollecting(): void {
@@ -421,99 +304,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     this.engine.video.render(0);
   }
 
-  private startDefeatSpeaking(): void {
-    this.elapsedMs = 0;
-    this.state = 'defeat-speaking';
-    this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
-    this.engine.video.messages.say(DEFAULT_SPRITE_INSTANCE_ID, this.pickDefeatLine(), {
-      ttlMs: KEYS_DEFEAT_MESSAGE_TTL_MS,
-    });
-    this.engine.video.render(0);
-  }
-
-  private updateDefeatSpeaking(deltaMs: number): void {
-    this.elapsedMs += deltaMs;
-    if (this.elapsedMs < KEYS_DEFEAT_MESSAGE_TTL_MS) {
-      return;
-    }
-
-    this.elapsedMs = 0;
-    this.state = 'defeat-fading';
-    this.addDefeatFadePrimitive(0);
-    this.engine.audio.playSound(KEYS_DEFEAT_SOUND_ID, {
-      restart: true,
-      volume: KEYS_DEFEAT_SOUND_VOLUME,
-    });
-  }
-
-  private updateDefeatFading(deltaMs: number): void {
-    this.elapsedMs = Math.min(KEYS_DEFEAT_FADE_DURATION_MS, this.elapsedMs + deltaMs);
-    this.addDefeatFadePrimitive(this.elapsedMs / KEYS_DEFEAT_FADE_DURATION_MS);
-
-    if (this.elapsedMs < KEYS_DEFEAT_FADE_DURATION_MS) {
-      return;
-    }
-
-    this.elapsedMs = 0;
-    this.state = 'defeat-title';
-    this.engine.video.titles.addTitle({
-      id: KEYS_DEFEAT_TITLE_ID,
-      text: this.localization.text.keys.defeatTitle,
-      renderLayer: 'overlay.titles',
-      zIndex: 5000,
-      x: DEFAULT_DESIGN_WIDTH / 2,
-      y: DEFAULT_DESIGN_HEIGHT / 2,
-      anchor: { x: 0.5, y: 0.5 },
-      style: {
-        fill: '#cbd6c0',
-        fontFamily: 'Cascadia Mono, Lucida Console, monospace',
-        fontSize: 42,
-        fontWeight: '700',
-        align: 'center',
-        stroke: {
-          color: '#1f2a20',
-          width: 6,
-          alpha: 0.95,
-        },
-      },
-      visible: true,
-    });
-    this.engine.video.render(0);
-  }
-
-  private updateDefeatTitle(deltaMs: number): void {
-    this.elapsedMs += deltaMs;
-    if (this.elapsedMs < KEYS_DEFEAT_TITLE_DURATION_MS) {
-      return;
-    }
-
-    this.state = 'restarting';
-    this.elapsedMs = 0;
-    this.engine.video.titles.removeTitle(KEYS_DEFEAT_TITLE_ID);
-    this.engine.video.primitives.removePrimitive(KEYS_DEFEAT_FADE_PRIMITIVE_ID);
-    this.engine.video.render(0);
-    this.engine.setInputEnabled(true);
-    this.onRestartRequested?.();
-  }
-
-  private addDefeatFadePrimitive(alpha: number): void {
-    this.engine.video.primitives.addPrimitive({
-      id: KEYS_DEFEAT_FADE_PRIMITIVE_ID,
-      kind: 'rect',
-      renderLayer: 'overlay.primitives',
-      zIndex: 5000,
-      color: DEFAULT_ROCCO_GREEN_BLACK,
-      alpha,
-      visible: true,
-      x: 0,
-      y: 0,
-      width: DEFAULT_DESIGN_WIDTH,
-      height: DEFAULT_DESIGN_HEIGHT,
-      fill: true,
-    });
-    this.engine.video.render(0);
-  }
-
   private playKeysSound(): void {
     this.engine.audio.playSound(KEYS_SOUND_ID, {
       restart: true,
@@ -521,32 +311,10 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     });
   }
 
-  private pickDefeatLine(): string {
-    const lines = this.localization.text.keys.defeatLines;
-    if (lines.length === 1) {
-      return lines[0] ?? '';
-    }
-
-    let index = Math.floor(Math.random() * lines.length);
-    if (index === this.lastDefeatLineIndex) {
-      index = (index + 1) % lines.length;
-    }
-    this.lastDefeatLineIndex = index;
-    return lines[index] ?? '';
-  }
-
-  private resolveGrabMode(roccoX: number, roccoY: number): KeysGrabMode {
-    const dx = Math.abs(this.keysX - roccoX);
-    const dy = Math.abs(this.keysY - roccoY);
-    return dx > dy * KEYS_SIDE_APPROACH_RATIO ? 'side-hit' : 'rear-collect';
-  }
-
   cancel(): void {
     // Cancel any non-cancelable sequence and re-enable input
     if (
       this.state === 'approaching-grab' ||
-      this.state === 'side-shake' ||
-      this.state === 'falling-out' ||
       this.state === 'collecting'
     ) {
       this.state = 'revealed';
@@ -568,26 +336,14 @@ export async function installDefaultKeys(
     volume: KEYS_SOUND_VOLUME,
     loop: false,
   });
-  engine.audio.registerSound({
-    id: KEYS_DEFEAT_SOUND_ID,
-    uri: roccoDefaultYouLoseSoundUrl,
-    volume: KEYS_DEFEAT_SOUND_VOLUME,
-    loop: false,
-  });
   await engine.audio.preloadSound(KEYS_SOUND_ID).catch(() => {
     engine.log('Audio', 'Keys sound could not be preloaded.');
-  });
-  await engine.audio.preloadSound(KEYS_DEFEAT_SOUND_ID).catch(() => {
-    engine.log('Audio', 'Defeat sound could not be preloaded.');
   });
   await engine.video.preloadSpriteDefinition(definition);
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
   engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
   engine.audio.stopSound(KEYS_SOUND_ID);
-  engine.audio.stopSound(KEYS_DEFEAT_SOUND_ID);
-  engine.video.titles.removeTitle(KEYS_DEFEAT_TITLE_ID);
-  engine.video.primitives.removePrimitive(KEYS_DEFEAT_FADE_PRIMITIVE_ID);
   engine.video.render(0);
   return new RoccoKeysController(engine, {
     ...options,
@@ -599,8 +355,5 @@ export function uninstallDefaultKeys(engine: RoccoEngine): void {
   engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
   engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
   engine.audio.stopSound(KEYS_SOUND_ID);
-  engine.audio.stopSound(KEYS_DEFEAT_SOUND_ID);
-  engine.video.titles.removeTitle(KEYS_DEFEAT_TITLE_ID);
-  engine.video.primitives.removePrimitive(KEYS_DEFEAT_FADE_PRIMITIVE_ID);
   engine.video.render(0);
 }

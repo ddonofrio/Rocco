@@ -1,6 +1,6 @@
 # Default Cartridge: `rocco-default`
 
-`rocco-default` is the main built-in cartridge for the ROCCO console. It implements a three-level Pier map starring Rocco, a Pelikan, a bait bucket, keys, and Rocco's inventory.
+`rocco-default` is the main built-in cartridge for the ROCCO console. It implements the Pier exterior plus the bait shop interior starring Rocco, a Pelikan, a bait bucket, keys, and Rocco's inventory.
 
 ## Files
 
@@ -17,26 +17,31 @@
 | Directory       | Contents                                                          |
 | --------------- | ----------------------------------------------------------------- |
 | `assets/`       | Shared cartridge assets for characters, props, sounds, and icons  |
+| `dialogue/`     | Reusable cartridge dialogue helpers and branching conversation runtime |
 | `inventory/`    | Rocco cartridge inventory state and grid-menu projection           |
-| `levels/pier/`  | Pier map levels, transitions, assets, effects, and interactions    |
+| `levels/pier/`  | Pier exterior levels, transitions, assets, effects, and interactions |
+| `levels/bait-shop/` | Bait shop interior level, scene assets, walk map, and per-level Rocco setup |
 | `localization/` | English and Spanish text catalogs for the cartridge                |
 
 ## Pier Map
 
-The cartridge starts in Pier Middle. The map uses the same background, foreground, cloud, and walk-map artwork across three horizontal windows.
+The cartridge starts in Pier Middle. The exterior uses the same background, foreground, cloud, and walk-map artwork across three horizontal windows, and Pier Beginning can branch into the bait shop interior.
 
 | Level          | ID            | Scene ID                  | Source Window |
 | -------------- | ------------- | ------------------------- | ------------- |
 | Pier Beginning | `pier-start`  | `rocco-pier-start-scene`  | Right side    |
 | Pier Middle    | `pier-middle` | `rocco-pier-middle-scene` | Center        |
 | Pier End       | `pier-end`    | `rocco-pier-end-scene`    | Left side     |
+| Bait Shop      | `bait-shop`   | `rocco-bait-shop-scene`   | Interior      |
 
-Rocco transitions through edge connectors. When his ground point enters an exit area, `RoccoPierLevelManager` loads the connected level, places Rocco on the matching entry point, and sets his facing direction.
+Rocco transitions through edge connectors on connected screens. When his ground point enters an exit area, `RoccoLevelManager` loads the connected level, places Rocco on the matching entry point, and sets his facing direction. Using the keys on the bait shop door while Stan sleeps opens a separate transition into the bait shop scene.
 
 ## Interactions
 
 - Rocco is the player sprite and supports click-to-walk.
 - Pier Beginning includes Stan asleep on a chair between the right mooring post and the bait shop.
+- Stan supports the same four action verbs as the Pelikan, and Talk wakes him and then opens the first text choice dialogue panel built from the cartridge dialogue library.
+- The bait shop door stays visible but undiscovered until Rocco says a line to Stan; after that it becomes hoverable, and using the keys on it only works while Stan is asleep and transitions into the bait shop interior.
 - The bait bucket can be examined, grabbed, kicked, and dropped.
 - The Pelikan reacts to Rocco and can enter a feeding sequence after the bait bucket is dropped.
 - The keys are revealed through the Pier Middle sequence and can be collected.
@@ -56,16 +61,17 @@ The cartridge supports:
 
 The boot menu shows language radio buttons for this cartridge. The selected locale is passed as `RoccoCartridgeContext.locale` and resolved through `createRoccoLocalization(locale)`.
 
-Internal cartridge restarts such as the keys defeat restart preserve the selected locale and rebuild the cartridge with the same localization context.
+Internal cartridge restarts such as the keys defeat or Stan police defeat restart preserve the selected locale and rebuild the cartridge with the same localization context.
 
 Localized catalogs cover:
 
 - Manifest metadata.
 - Action labels.
 - Speech and thought lines.
+- Stan branching dialogue tree and cowardly Grab and Kick reactions.
 - Inventory title, item labels, and failed-use responses.
-- Object descriptions.
-- Level titles and status labels.
+- Object descriptions, including the bait shop door hover label.
+- Level titles and status labels, including the bait shop title.
 - Keys defeat title.
 
 ## Assets Layout
@@ -90,3 +96,5 @@ assets/
 - Asset URIs use Vite-compatible `import ... as string` patterns.
 - Shared Rocco sprite logic lives in `rocco-default-sprites.ts` and `rocco-default-sprite-definition.ts`.
 - Pier-specific state, transitions, sprites, and controllers live inside `levels/pier`.
+- Bait shop interior scene state, planes, and assets live inside `levels/bait-shop`.
+- Localized dialogue trees stay in `localization/`; the reusable turn sequencing stays in `dialogue/`.

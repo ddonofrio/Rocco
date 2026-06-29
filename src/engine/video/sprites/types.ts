@@ -106,9 +106,17 @@ export interface RoccoSpriteRenderDefaults {
 
 export type RoccoSpriteAutoAdjustMode = 'match-visible-height';
 
+export interface RoccoSpriteAutoAdjustPerspectiveByY {
+  nearY: number;
+  farY: number;
+  nearScale: number;
+  farScale: number;
+}
+
 export interface RoccoSpriteAutoAdjust {
   enabled: boolean;
   mode?: RoccoSpriteAutoAdjustMode;
+  perspectiveByY?: RoccoSpriteAutoAdjustPerspectiveByY;
 }
 
 export interface RoccoSpriteVisualAdjustment {
@@ -179,6 +187,7 @@ export interface RoccoSpriteDefinition {
   autoAdjust?: Partial<RoccoSpriteAutoAdjust>;
   navigation?: Partial<RoccoSpriteNavigationBinding>;
   visibleDescription?: Partial<RoccoSpriteVisibleDescription>;
+  ignoreMessages?: boolean;
   metadata?: Record<string, unknown>;
 }
 
@@ -186,6 +195,7 @@ export interface RoccoMoveOptions {
   speed?: number;
   acceleration?: number;
   deceleration?: number;
+  constrainToWalkMap?: boolean;
   stopDistance?: number;
   action?: string;
   idleAction?: string;
@@ -202,6 +212,10 @@ export interface RoccoSpriteGoToOptions extends RoccoMoveOptions {
   keepDistance?: number;
   faceTargetOnComplete?: boolean;
   foregroundFacingBias?: number;
+}
+
+export interface RoccoSpritePlacementOptions {
+  constrainToWalkMap?: boolean;
 }
 
 export type RoccoFacingDirection =
@@ -321,6 +335,7 @@ export interface RoccoSpriteInstance {
   tint?: string;
   navigation?: RoccoSpriteNavigationBinding;
   visibleDescription?: Partial<RoccoSpriteVisibleDescription>;
+  ignoreMessages?: boolean;
   state?: Record<string, unknown>;
 }
 
@@ -385,17 +400,21 @@ export interface RoccoSpriteSystem {
   setPlaybackRate(instanceId: string, playbackRate: number): void;
   bindAnimationToMotion(instanceId: string, binding: RoccoAnimationMotionBinding): void;
 
-  setPosition(instanceId: string, x: number, y: number): void;
+  setPosition(instanceId: string, x: number, y: number, options?: RoccoSpritePlacementOptions): void;
   setScale(instanceId: string, scaleX: number, scaleY: number): void;
   setFlip(instanceId: string, flipX: boolean, flipY: boolean): void;
   setPresentationTransform(instanceId: string, transform: Partial<RoccoSpritePresentationTransform>): void;
-  translate(instanceId: string, dx: number, dy: number): void;
+  setVisibleDescription(
+    instanceId: string,
+    visibleDescription?: Partial<RoccoSpriteVisibleDescription>,
+  ): void;
+  translate(instanceId: string, dx: number, dy: number, options?: RoccoSpritePlacementOptions): void;
   setVelocity(instanceId: string, velocityX: number, velocityY: number): void;
   setAcceleration(instanceId: string, accelerationX: number, accelerationY: number): void;
   stopMovement(instanceId: string): void;
 
   moveTo(instanceId: string, x: number, y: number, options?: RoccoMoveOptions): void;
-  goTo(instanceId: string, x: number, y: number, options?: RoccoSpriteGoToOptions): void;
+  goTo(instanceId: string, x: number, y: number, options?: RoccoSpriteGoToOptions): boolean;
   moveBy(instanceId: string, dx: number, dy: number, options?: RoccoMoveOptions): void;
   followPath(instanceId: string, path: RoccoPoint[], options?: RoccoMoveOptions): void;
   cancelMovement(instanceId: string): void;

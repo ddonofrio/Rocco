@@ -9,6 +9,7 @@ describe('video barrel', () => {
 
     expect(video.planes).toBeTruthy();
     expect(video.sprites).toBeTruthy();
+    expect(video.sceneTargets).toBeTruthy();
     expect(video.gridMenu).toBeTruthy();
     expect(video.messages).toBeTruthy();
     expect(video.primitives).toBeTruthy();

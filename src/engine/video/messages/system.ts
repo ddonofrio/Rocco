@@ -7,6 +7,10 @@ import type {
   RoccoSpriteMessageText,
 } from './types';
 import type { RoccoRenderableSprite } from '../sprites';
+import {
+  selectNonRepeatingLines,
+  type RoccoNonRepeatingLineSelectionState,
+} from '../../../game/non-repeating-line-selection';
 
 const DEFAULT_MESSAGE_TTL_MS = 2400;
 const DEFAULT_MESSAGE_MAX_WIDTH = 250;
@@ -37,6 +41,7 @@ function normalizeMessage(message: RoccoSpriteMessageRequest, lines: string[]): 
     text: lines[0],
     lines,
     lineIndex: 0,
+    background: message.background === true,
     durationMs,
     ttlMs: durationMs,
     side: message.side ?? 'auto',
@@ -55,10 +60,13 @@ function normalizeLines(text: RoccoSpriteMessageText): string[] {
 
 export class RoccoSpriteMessageSystemSDK implements RoccoSpriteMessageSystem {
   private readonly messages = new Map<string, RoccoSpriteMessageState>();
-  private readonly lastSelectedLineByHistoryKey = new Map<string, string>();
+  private readonly selectionStateByHistoryKey = new Map<
+    string,
+    RoccoNonRepeatingLineSelectionState
+  >();
 
   showMessage(message: RoccoSpriteMessageRequest): void {
-    const lines = this.selectLines(normalizeLines(message.text), message.lineSelection);
+    const lines = this.selectLines(normalizeLines(message.text), message);
     const normalized = normalizeMessage(message, lines);
     this.messages.set(normalized.id, normalized);
   }
@@ -139,34 +147,38 @@ export class RoccoSpriteMessageSystemSDK implements RoccoSpriteMessageSystem {
 
   private selectLines(
     lines: string[],
-    selection: RoccoSpriteMessageRequest['lineSelection'],
+    message: RoccoSpriteMessageRequest,
   ): string[] {
+    const selection = message.lineSelection;
     if (!selection || selection.mode !== 'random' || lines.length <= 1) {
       return lines;
     }
 
-    const count = Math.max(1, Math.min(lines.length, Math.floor(selection.count)));
-    const historyKey = selection.historyKey;
-    const avoidedLine =
-      historyKey && selection.avoidImmediateRepeat
-        ? this.lastSelectedLineByHistoryKey.get(historyKey)
-        : undefined;
-    const pool =
-      avoidedLine && lines.length > count
-        ? lines.filter((line) => line !== avoidedLine)
-        : [...lines];
-    const picked: string[] = [];
+    const historyKey = this.resolveSelectionHistoryKey(message, lines);
+    const selectionResult = selectNonRepeatingLines({
+      lines,
+      count: selection.count,
+      state: historyKey
+        ? this.selectionStateByHistoryKey.get(historyKey)
+        : undefined,
+      avoidImmediateRepeat: selection.avoidImmediateRepeat !== false,
+    });
 
-    while (picked.length < count && pool.length > 0) {
-      const index = Math.floor(Math.random() * pool.length);
-      const [line] = pool.splice(index, 1);
-      picked.push(line);
+    if (historyKey) {
+      this.selectionStateByHistoryKey.set(historyKey, selectionResult.state);
     }
 
-    if (historyKey && picked[0]) {
-      this.lastSelectedLineByHistoryKey.set(historyKey, picked[0]);
+    return selectionResult.lines.length > 0 ? selectionResult.lines : lines;
+  }
+
+  private resolveSelectionHistoryKey(
+    message: RoccoSpriteMessageRequest,
+    lines: readonly string[],
+  ): string {
+    if (message.lineSelection?.historyKey) {
+      return message.lineSelection.historyKey;
     }
 
-    return picked;
+    return `${message.spriteInstanceId}:${message.mode}:${lines.join('\u001e')}`;
   }
 }

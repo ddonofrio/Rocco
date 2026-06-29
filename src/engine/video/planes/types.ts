@@ -181,6 +181,19 @@ export type RoccoColorModel =
   | RoccoColorRegistersModel
   | RoccoTintColorModel;
 
+export interface RoccoPlaneSpriteThresholdDepthMode {
+  kind: 'sprite-y-threshold';
+  subject: 'active-player' | 'sprite';
+  spriteInstanceId?: string;
+  samplePoint?: 'ground-y' | 'origin-y';
+  thresholdY: number;
+  frontLayer: string;
+  backLayer: string;
+  frontWhen: 'less-than-or-equal' | 'greater-than-or-equal';
+}
+
+export type RoccoPlaneDepthMode = 'fixed' | RoccoPlaneSpriteThresholdDepthMode;
+
 export interface RoccoGraphicPlane {
   id: string;
   name?: string;
@@ -198,6 +211,7 @@ export interface RoccoGraphicPlane {
   opacity: number;
   priority: number;
   renderLayer?: string;
+  depthMode?: RoccoPlaneDepthMode;
   visible: boolean;
 
   metadata?: Record<string, unknown>;

@@ -33,18 +33,25 @@ function clone<T>(value: T): T {
 function normalizeDefinition(definition: RoccoGridMenuDefinition): RoccoGridMenuDefinition {
   const columns = Math.max(1, Math.floor(definition.columns ?? DEFAULT_COLUMNS));
   const rows = Math.max(1, Math.floor(definition.rows ?? DEFAULT_ROWS));
-  const slotSize = Math.max(24, definition.slotSize ?? DEFAULT_SLOT_SIZE);
+  const slotWidth = Math.max(24, definition.slotWidth ?? definition.slotSize ?? DEFAULT_SLOT_SIZE);
+  const slotHeight = Math.max(
+    24,
+    definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE,
+  );
   const gap = Math.max(0, definition.gap ?? DEFAULT_GAP);
   const padding = Math.max(0, definition.padding ?? DEFAULT_PADDING);
-  const width = columns * slotSize + (columns - 1) * gap + padding * 2;
+  const width = columns * slotWidth + (columns - 1) * gap + padding * 2;
   const titleHeight = definition.title ? 34 : 0;
-  const height = rows * slotSize + (rows - 1) * gap + padding * 2 + titleHeight;
+  const height = rows * slotHeight + (rows - 1) * gap + padding * 2 + titleHeight;
 
   return {
     ...clone(definition),
+    layout: definition.layout ?? 'grid',
     columns,
     rows,
-    slotSize,
+    slotSize: definition.slotSize ?? DEFAULT_SLOT_SIZE,
+    slotWidth,
+    slotHeight,
     gap,
     padding,
     x: definition.x ?? Math.round((DESIGN_WIDTH - width) / 2),
@@ -413,7 +420,7 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
     const slotCount = this.resolveSlotCount();
     for (let slotIndex = 0; slotIndex < slotCount; slotIndex += 1) {
       const slot = this.resolveSlotBounds(this.activeDefinition, slotIndex);
-      if (x >= slot.x && x <= slot.x + slot.size && y >= slot.y && y <= slot.y + slot.size) {
+      if (x >= slot.x && x <= slot.x + slot.width && y >= slot.y && y <= slot.y + slot.height) {
         return slotIndex;
       }
     }
@@ -442,7 +449,8 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
   } {
     const columns = definition.columns ?? DEFAULT_COLUMNS;
     const rows = definition.rows ?? DEFAULT_ROWS;
-    const slotSize = definition.slotSize ?? DEFAULT_SLOT_SIZE;
+    const slotWidth = definition.slotWidth ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
+    const slotHeight = definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
     const gap = definition.gap ?? DEFAULT_GAP;
     const padding = definition.padding ?? DEFAULT_PADDING;
     const titleHeight = definition.title ? 34 : 0;
@@ -450,17 +458,18 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
     return {
       x: definition.x ?? 0,
       y: definition.y ?? 0,
-      width: columns * slotSize + (columns - 1) * gap + padding * 2,
-      height: rows * slotSize + (rows - 1) * gap + padding * 2 + titleHeight,
+      width: columns * slotWidth + (columns - 1) * gap + padding * 2,
+      height: rows * slotHeight + (rows - 1) * gap + padding * 2 + titleHeight,
     };
   }
 
   private resolveSlotBounds(
     definition: RoccoGridMenuDefinition,
     slotIndex: number,
-  ): { x: number; y: number; size: number } {
+  ): { x: number; y: number; width: number; height: number } {
     const columns = definition.columns ?? DEFAULT_COLUMNS;
-    const slotSize = definition.slotSize ?? DEFAULT_SLOT_SIZE;
+    const slotWidth = definition.slotWidth ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
+    const slotHeight = definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
     const gap = definition.gap ?? DEFAULT_GAP;
     const padding = definition.padding ?? DEFAULT_PADDING;
     const titleHeight = definition.title ? 34 : 0;
@@ -468,9 +477,10 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
     const row = Math.floor(slotIndex / columns);
 
     return {
-      x: (definition.x ?? 0) + padding + column * (slotSize + gap),
-      y: (definition.y ?? 0) + padding + titleHeight + row * (slotSize + gap),
-      size: slotSize,
+      x: (definition.x ?? 0) + padding + column * (slotWidth + gap),
+      y: (definition.y ?? 0) + padding + titleHeight + row * (slotHeight + gap),
+      width: slotWidth,
+      height: slotHeight,
     };
   }
 }

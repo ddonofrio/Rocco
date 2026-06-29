@@ -138,6 +138,7 @@ export class GameRuntime implements RoccoEngine {
 
   setPlayerSprite(instanceId: string | null): void {
     this.activePlayerSpriteId = instanceId;
+    this.video.setActivePlayerSprite(instanceId);
     if (instanceId && this.activePlayerSpriteId === instanceId) {
       const sprite = this.video.sprites.getSprite(instanceId);
       if (sprite) {

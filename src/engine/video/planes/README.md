@@ -56,6 +56,21 @@ The current Pixi runtime renders these source kinds directly:
 - `parallax` scales scroll movement independently per axis.
 - `viewport` crops rendering to a sub-rectangle inside the design space.
 - `renderLayer`, `priority`, and `opacity` control visual ordering and visibility inside the video SDK.
+- `depthMode` can keep a plane fixed on one layer or switch it between layers from live sprite state.
+
+## Dynamic Depth Modes
+
+The current runtime supports:
+
+- `fixed`, which leaves the plane on its declared `renderLayer`.
+- `sprite-y-threshold`, which compares a sprite sample point against a threshold and chooses between `frontLayer` and `backLayer`.
+
+`sprite-y-threshold` can watch either:
+
+- `subject: 'active-player'`, which follows the player selected through `engine.setPlayerSprite(...)`.
+- `subject: 'sprite'`, which targets a specific `spriteInstanceId`.
+
+The comparison can sample either `origin-y` or `ground-y`, then apply `frontWhen`, `thresholdY`, `frontLayer`, and `backLayer` to decide where the plane should render for that frame.
 
 ## Water Color Effect
 

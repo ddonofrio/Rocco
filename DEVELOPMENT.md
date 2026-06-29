@@ -76,6 +76,18 @@ Start with the narrowest useful validation:
 
 Do not run `npm run format` for a narrow task unless the user asks for whole-repository formatting.
 
+## Refinement Workflow
+
+- During an active refinement session, make the requested gameplay or UI change first and ask the user to validate it manually before adding tests or broader feature-documentation updates for that specific change.
+- After the user explicitly confirms the behavior is correct, add the deferred automated coverage and documentation updates that belong to the validated change.
+- If a new development request arrives while earlier validated work still has deferred tests or docs pending, flag that outstanding follow-up before starting the new scope.
+
+## Text Encoding
+
+- Keep source files and localization catalogs in UTF-8.
+- If a terminal, patch path, or editor risks mangling non-ASCII text, prefer ASCII-only text or TypeScript Unicode escapes such as `\u00f1` instead of pasting raw accented characters.
+- Before handing off localization edits, search the touched files for mojibake fragments such as `Ã`, `â‚¬`, or replacement glyphs and fix them immediately.
+
 ## Test Environment Notes
 
 - Vitest runs with the configuration in `vitest.config.ts`.
@@ -102,9 +114,9 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 ## Rocco Pier Notes
 
 - The active Rocco cartridge is `rocco-default`.
-- Pier code lives in `src/cartridges/rocco/levels/pier`.
+- Pier exterior code lives in `src/cartridges/rocco/levels/pier`.
 - The Pier map has three levels: `pier-start`, `pier-middle`, and `pier-end`.
-- `RoccoPierLevelManager` owns level registration, transitions, entry placement, status text, and per-level state retention.
+- `RoccoLevelManager` owns level registration, transitions, entry placement, status text, and per-level state retention across Rocco screens.
 - Pier Middle east and west exits require keys in the Rocco cartridge inventory. The gate is silent.
 - `rocco-default` supports English and Spanish localization through `src/cartridges/rocco/localization`.
 - Rocco inventory is cartridge state. The engine provides generic reorderable slot-panel UI and generic cursor item payloads through `engine.video.gridMenus` and the cursor subsystem.

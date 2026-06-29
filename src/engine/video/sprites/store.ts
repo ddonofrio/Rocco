@@ -115,6 +115,7 @@ export class RoccoSpriteStore {
       opacity: definition.render?.opacity ?? 1,
       tint: undefined,
       visibleDescription: definition.visibleDescription ? clone(definition.visibleDescription) : undefined,
+      ignoreMessages: definition.ignoreMessages ?? false,
       state: {},
     };
 

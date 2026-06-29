@@ -15,6 +15,7 @@ const DEFAULT_PLANE_IDS = new Set([
   'rocco-green-black-backplate',
   'rocco-background-back-underlay',
   'rocco-background-back',
+  'rocco-background-back-mid',
   'rocco-background-front',
 ]);
 
@@ -94,6 +95,18 @@ function createDefaultRoccoPlanes(options: RoccoPierSceneOptions): RoccoGraphicP
       metadata: {
         waterColorEffect: makeDefaultWaterColorEffect(),
       },
+    },
+    {
+      ...base,
+      id: 'rocco-background-back-mid',
+      name: 'Rocco Background Back Mid Layer',
+      source: {
+        kind: 'image',
+        uri: pierBackgroundAssetUrls.backMid,
+      },
+      scroll: backgroundScroll,
+      priority: 0,
+      renderLayer: 'world.mid',
     },
     {
       ...base,

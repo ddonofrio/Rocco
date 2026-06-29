@@ -1,12 +1,23 @@
-import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
-import type { RoccoCartridgeManifest } from '../cartridges/types';
+import { Application, Container, Graphics, Rectangle, Text, TextStyle } from 'pixi.js';
 
-// ─── Layout constants (design space: 960×540) ────────────────────────────────
+import type { RoccoCartridgeManifest } from '../cartridges/types';
+import {
+  ROCCO_DISPLAY_BRIGHTNESS_MAX,
+  ROCCO_DISPLAY_BRIGHTNESS_MIN,
+  ROCCO_DISPLAY_CONTRAST_MAX,
+  ROCCO_DISPLAY_CONTRAST_MIN,
+  resolveRoccoDisplayProfile,
+  type RoccoDisplayProfile,
+} from '../video/display';
+import { defaultRoccoRenderLayers } from '../video/render-layers';
+
 const DESIGN_W = 960;
 const DESIGN_H = 540;
 
 const HEADER_H = 90;
 const FOOTER_H = 52;
+const FOOTER_Y = DESIGN_H - FOOTER_H;
+
 const LIST_TOP = HEADER_H + 16;
 const LIST_BOTTOM = DESIGN_H - FOOTER_H - 8;
 const LIST_H = LIST_BOTTOM - LIST_TOP;
@@ -14,15 +25,24 @@ const LIST_H = LIST_BOTTOM - LIST_TOP;
 const ITEM_H = 64;
 const ITEM_MARGIN = 6;
 const ITEM_STRIDE = ITEM_H + ITEM_MARGIN;
-const ITEMS_VISIBLE = Math.floor(LIST_H / ITEM_STRIDE); // ~6
+const ITEMS_VISIBLE = Math.floor(LIST_H / ITEM_STRIDE);
 
 const LIST_X = 60;
 const LIST_W = DESIGN_W - LIST_X * 2;
-
 const DETAIL_X = LIST_X + LIST_W * 0.55;
 const DETAIL_W = LIST_W - (DETAIL_X - LIST_X) - 8;
 
-// ─── Colour palette ──────────────────────────────────────────────────────────
+const PANEL_X = 60;
+const PANEL_W = DESIGN_W - PANEL_X * 2;
+const PANEL_INSET = 18;
+const SOFT_BUTTON_W = 132;
+const SOFT_BUTTON_H = 30;
+const BACK_BUTTON_W = 124;
+const BACK_BUTTON_H = 30;
+const DISPLAY_STEP = 0.1;
+const TOGGLE_W = 94;
+const TOGGLE_H = 24;
+
 const C = {
   bg: 0x0d110c,
   bgLine: 0x1a2318,
@@ -36,18 +56,61 @@ const C = {
   itemTitle: 0xd4ecc8,
   itemTitleSelected: 0xaee89a,
   itemSub: 0x4e6b48,
+  itemDisabled: 0x334132,
   scrollBar: 0x2a3f28,
   scrollThumb: 0x4a7040,
   detailLabel: 0x4a6b42,
   detailValue: 0xb0c8a8,
-  footer: 0x3a5038,
   footerHint: 0x5a7055,
   scanline: 0x000000,
+  panelBg: 0x0f150e,
+  panelBorder: 0x223120,
+  buttonFill: 0x375334,
+  buttonBorder: 0x7dbb64,
+  buttonText: 0x0d110c,
+  controlDim: 0x1a2618,
+  controlBorder: 0x415a3e,
+  controlFill: 0x5cb84a,
+  controlText: 0xd7efd0,
 } as const;
 
 const FONT = 'Cascadia Mono, Lucida Console, monospace';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+const SETTINGS_OPTIONS = [
+  {
+    id: 'video',
+    label: 'VIDEO',
+    enabled: true,
+    description: 'Console-wide display profile, filters, brightness, and contrast.',
+  },
+  {
+    id: 'sound',
+    label: 'SOUND',
+    enabled: false,
+    description: 'Audio output controls are disabled in this build.',
+  },
+  {
+    id: 'developer',
+    label: 'DEVELOPER',
+    enabled: false,
+    description: 'Developer tools stay disabled in this build.',
+  },
+  {
+    id: 'back',
+    label: 'BACK',
+    enabled: true,
+    description: 'Return to cartridge selection.',
+  },
+] as const;
+
+const VIDEO_ROW_IDS = ['filters', 'brightness', 'contrast', 'back'] as const;
+const FILTER_ROW_IDS = ['roundedCorners', 'crtMask', 'edgeVignette', 'back'] as const;
+const RENDER_LAYER_COUNT = defaultRoccoRenderLayers.length;
+
+type MenuPage = 'cartridges' | 'settings' | 'video' | 'filters';
+type SettingsOptionId = (typeof SETTINGS_OPTIONS)[number]['id'];
+type VideoRowId = (typeof VIDEO_ROW_IDS)[number];
+type FilterRowId = (typeof FILTER_ROW_IDS)[number];
 
 export interface CartridgeMenuResult {
   selectedId: string;
@@ -56,9 +119,9 @@ export interface CartridgeMenuResult {
 
 export interface CartridgeMenuOptions {
   initialLocales?: Record<string, string>;
+  initialDisplayProfile?: Partial<RoccoDisplayProfile>;
+  onDisplayProfileChange?: (profile: Partial<RoccoDisplayProfile>) => void;
 }
-
-// ─── Main class ──────────────────────────────────────────────────────────────
 
 export class RoccoCartridgeMenu {
   private readonly stage: Container;
@@ -67,9 +130,16 @@ export class RoccoCartridgeMenu {
 
   private scrollOffset = 0;
   private selectedIndex = 0;
+  private page: MenuPage = 'cartridges';
+  private settingsSelectionId: SettingsOptionId = 'video';
+  private videoSelectionId: VideoRowId = 'filters';
+  private filterSelectionId: FilterRowId = 'roundedCorners';
+  private displayProfile = resolveRoccoDisplayProfile();
+  private onDisplayProfileChange:
+    | ((profile: Partial<RoccoDisplayProfile>) => void)
+    | undefined;
 
   private root: Container | null = null;
-
   private resolveSelection: ((result: CartridgeMenuResult) => void) | null = null;
   private readonly boundKeyDown: (e: KeyboardEvent) => void;
 
@@ -86,6 +156,12 @@ export class RoccoCartridgeMenu {
     this.selectedLocales = new Map(Object.entries(options.initialLocales ?? {}));
     this.selectedIndex = 0;
     this.scrollOffset = 0;
+    this.page = 'cartridges';
+    this.settingsSelectionId = 'video';
+    this.videoSelectionId = 'filters';
+    this.filterSelectionId = 'roundedCorners';
+    this.displayProfile = resolveRoccoDisplayProfile(options.initialDisplayProfile);
+    this.onDisplayProfileChange = options.onDisplayProfileChange;
 
     this.mount();
     this.render();
@@ -101,9 +177,8 @@ export class RoccoCartridgeMenu {
     window.removeEventListener('keydown', this.boundKeyDown);
     this.unmount();
     this.resolveSelection = null;
+    this.onDisplayProfileChange = undefined;
   }
-
-  // ─── Mounting ──────────────────────────────────────────────────────────────
 
   private mount(): void {
     this.unmount();
@@ -117,271 +192,265 @@ export class RoccoCartridgeMenu {
   }
 
   private unmount(): void {
-    if (this.root) {
-      this.stage.removeChild(this.root);
-      this.root.destroy({ children: true });
-      this.root = null;
+    if (!this.root) {
+      return;
+    }
+
+    this.stage.removeChild(this.root);
+    this.root.destroy({ children: true });
+    this.root = null;
+  }
+
+  private render(): void {
+    if (!this.root) {
+      return;
+    }
+
+    this.root.removeChildren().forEach((child) => child.destroy({ children: true }));
+
+    switch (this.page) {
+      case 'cartridges':
+        this.drawBackground(true);
+        this.drawHeader(
+          'SELECT CARTRIDGE',
+          `${this.manifests.length} CARTRIDGE${this.manifests.length !== 1 ? 'S' : ''} AVAILABLE`,
+        );
+        this.drawCartridgeList();
+        this.drawCartridgeDetail();
+        this.drawScrollBar();
+        this.drawFooter([
+          ['UP DOWN', 'NAVIGATE'],
+          ['ENTER', 'LOAD'],
+          ['S', 'SETTINGS'],
+        ]);
+        this.drawSoftButton(
+          DESIGN_W - LIST_X - SOFT_BUTTON_W,
+          FOOTER_Y + 11,
+          SOFT_BUTTON_W,
+          SOFT_BUTTON_H,
+          'SETTINGS',
+          () => {
+            this.page = 'settings';
+            this.render();
+          },
+        );
+        break;
+      case 'settings':
+        this.drawBackground(true);
+        this.drawHeader('SYSTEM SETTINGS', 'CONSOLE CONFIGURATION');
+        this.drawSettingsHome();
+        this.drawFooter([
+          ['UP DOWN', 'SELECT'],
+          ['ENTER', 'OPEN'],
+          ['ESC', 'BACK'],
+        ]);
+        break;
+      case 'video':
+        this.drawBackground(false);
+        this.drawHeader('SYSTEM SETTINGS', 'VIDEO OUTPUT');
+        this.drawVideoSettings();
+        this.drawFooter([
+          ['UP DOWN', 'SELECT'],
+          ['LEFT RIGHT', 'ADJUST'],
+          ['ESC', 'BACK'],
+        ]);
+        break;
+      case 'filters':
+        this.drawBackground(false);
+        this.drawHeader('SYSTEM SETTINGS', 'VIDEO FILTERS');
+        this.drawFilterSettings();
+        this.drawFooter([
+          ['UP DOWN', 'SELECT'],
+          ['LEFT RIGHT', 'TOGGLE'],
+          ['ESC', 'BACK'],
+        ]);
+        break;
     }
   }
 
-  // ─── Rendering ─────────────────────────────────────────────────────────────
-
-  private render(): void {
-    if (!this.root) return;
-
-    // Clear and rebuild
-    this.root.removeChildren().forEach((c) => c.destroy({ children: true }));
-
-    this.drawBackground();
-    this.drawHeader();
-    this.drawList();
-    this.drawDetail();
-    this.drawScrollBar();
-    this.drawFooter();
-  }
-
-  private drawBackground(): void {
+  private drawBackground(withDivider: boolean): void {
     const root = this.root!;
 
-    // Solid fill
-    const bg = new Graphics()
-      .rect(0, 0, DESIGN_W, DESIGN_H)
-      .fill(C.bg);
-    root.addChild(bg);
+    root.addChild(new Graphics().rect(0, 0, DESIGN_W, DESIGN_H).fill(C.bg));
 
-    // Horizontal scan lines (every 4px, very subtle)
     const scanlines = new Graphics();
     for (let y = 0; y < DESIGN_H; y += 4) {
       scanlines.rect(0, y, DESIGN_W, 1).fill({ color: C.scanline, alpha: 0.18 });
     }
     root.addChild(scanlines);
 
-    // Vertical divider between list and detail
-    const divider = new Graphics()
-      .rect(DETAIL_X - 16, LIST_TOP, 1, LIST_H)
-      .fill({ color: C.bgLine, alpha: 0.9 });
-    root.addChild(divider);
+    if (withDivider) {
+      root.addChild(
+        new Graphics()
+          .rect(DETAIL_X - 16, LIST_TOP, 1, LIST_H)
+          .fill({ color: C.bgLine, alpha: 0.9 }),
+      );
+    }
   }
 
-  private drawHeader(): void {
+  private drawHeader(subtitle: string, rightText: string): void {
     const root = this.root!;
 
-    // Header background strip
-    const headerBg = new Graphics()
-      .rect(0, 0, DESIGN_W, HEADER_H)
-      .fill({ color: 0x0a0f09, alpha: 1 });
-    root.addChild(headerBg);
+    root.addChild(new Graphics().rect(0, 0, DESIGN_W, HEADER_H).fill({ color: 0x0a0f09, alpha: 1 }));
+    root.addChild(
+      new Graphics().rect(0, HEADER_H - 1, DESIGN_W, 1).fill({ color: C.titleBrand, alpha: 0.25 }),
+    );
 
-    const headerLine = new Graphics()
-      .rect(0, HEADER_H - 1, DESIGN_W, 1)
-      .fill({ color: C.titleBrand, alpha: 0.25 });
-    root.addChild(headerLine);
-
-    // Brand title
-    const brand = new Text({
-      text: 'ROCCO',
-      style: new TextStyle({
-        fontFamily: FONT,
-        fontSize: 42,
-        fontWeight: '700',
-        fill: C.titleBrand,
-        letterSpacing: 8,
-      }),
+    const brand = this.makeText('ROCCO', {
+      fontSize: 42,
+      fontWeight: '700',
+      fill: C.titleBrand,
+      letterSpacing: 8,
     });
     brand.x = LIST_X;
     brand.y = 18;
     root.addChild(brand);
 
-    // Sub title
-    const sub = new Text({
-      text: 'SELECT CARTRIDGE',
-      style: new TextStyle({
-        fontFamily: FONT,
-        fontSize: 13,
-        fontWeight: '400',
-        fill: C.titleSub,
-        letterSpacing: 4,
-      }),
+    const sub = this.makeText(subtitle, {
+      fontSize: 13,
+      fill: C.titleSub,
+      letterSpacing: 4,
     });
     sub.x = LIST_X + 4;
     sub.y = 66;
     root.addChild(sub);
 
-    // Count
-    const count = new Text({
-      text: `${this.manifests.length} CARTRIDGE${this.manifests.length !== 1 ? 'S' : ''} AVAILABLE`,
-      style: new TextStyle({
-        fontFamily: FONT,
-        fontSize: 11,
-        fill: C.titleSub,
-        letterSpacing: 2,
-      }),
+    const right = this.makeText(rightText, {
+      fontSize: 11,
+      fill: C.titleSub,
+      letterSpacing: 2,
     });
-    count.x = DESIGN_W - LIST_X - count.width;
-    count.y = 70;
-    root.addChild(count);
+    right.x = DESIGN_W - LIST_X - right.width;
+    right.y = 70;
+    root.addChild(right);
   }
 
-  private drawList(): void {
+  private drawCartridgeList(): void {
     const root = this.root!;
     const listW = DETAIL_X - LIST_X - 24;
-
     const container = new Container();
-    container.label = 'list';
     root.addChild(container);
 
     const visibleCount = Math.min(ITEMS_VISIBLE, this.manifests.length);
-
-    for (let i = 0; i < visibleCount; i++) {
+    for (let i = 0; i < visibleCount; i += 1) {
       const dataIndex = this.scrollOffset + i;
-      if (dataIndex >= this.manifests.length) break;
+      const manifest = this.manifests[dataIndex];
+      if (!manifest) {
+        break;
+      }
 
-      const manifest = this.localizeManifest(this.manifests[dataIndex]);
-      const isSelected = dataIndex === this.selectedIndex;
-      const y = LIST_TOP + i * ITEM_STRIDE;
-
-      this.drawListItem(container, manifest, y, listW, isSelected, dataIndex);
+      this.drawCartridgeListItem(
+        container,
+        this.localizeManifest(manifest),
+        LIST_TOP + i * ITEM_STRIDE,
+        listW,
+        dataIndex === this.selectedIndex,
+        dataIndex,
+      );
     }
   }
 
-  private drawListItem(
+  private drawCartridgeListItem(
     container: Container,
     manifest: RoccoCartridgeManifest,
     y: number,
-    w: number,
+    width: number,
     selected: boolean,
     dataIndex: number,
   ): void {
-    const x = LIST_X;
-
-    // Interactive container for the entire item
-    const itemContainer = new Container();
-    itemContainer.eventMode = 'static';
-    itemContainer.hitArea = {
-      contains: (px: number, py: number) => px >= x && px <= x + w && py >= y && py <= y + ITEM_H
-    };
-    
-    // Click to select
-    itemContainer.on('pointerdown', () => {
+    const item = this.createInteractiveContainer(LIST_X, y, width, ITEM_H, () => {
       this.selectedIndex = dataIndex;
       this.render();
     });
 
-    // Background
-    const bgColor = selected ? C.itemBgSelected : C.itemBg;
-    const borderColor = selected ? C.itemBorderSelected : C.itemBorder;
+    item.addChild(
+      new Graphics()
+        .rect(0, 0, width, ITEM_H)
+        .fill(selected ? C.itemBgSelected : C.itemBg)
+        .rect(0, 0, width, ITEM_H)
+        .stroke({ color: selected ? C.itemBorderSelected : C.itemBorder, width: selected ? 1.5 : 1 }),
+    );
 
-    const bg = new Graphics()
-      .rect(x, y, w, ITEM_H)
-      .fill(bgColor)
-      .rect(x, y, w, ITEM_H)
-      .stroke({ color: borderColor, width: selected ? 1.5 : 1 });
-    itemContainer.addChild(bg);
-
-    // Selection indicator bar on left
     if (selected) {
-      const bar = new Graphics()
-        .rect(x, y + 4, 3, ITEM_H - 8)
-        .fill(C.itemBorderSelected);
-      itemContainer.addChild(bar);
+      item.addChild(new Graphics().rect(0, 4, 3, ITEM_H - 8).fill(C.itemBorderSelected));
     }
 
-    // Cartridge title
-    const titleText = new Text({
-      text: manifest.title.toUpperCase(),
-      style: new TextStyle({
-        fontFamily: FONT,
-        fontSize: 18,
-        fontWeight: selected ? '700' : '400',
-        fill: selected ? C.itemTitleSelected : C.itemTitle,
-        letterSpacing: 2,
-      }),
+    const title = this.makeText(manifest.title.toUpperCase(), {
+      fontSize: 18,
+      fontWeight: selected ? '700' : '400',
+      fill: selected ? C.itemTitleSelected : C.itemTitle,
+      letterSpacing: 2,
     });
-    titleText.x = x + 16;
-    titleText.y = y + 10;
-    itemContainer.addChild(titleText);
+    title.x = 16;
+    title.y = 10;
+    item.addChild(title);
 
-    // Author / genre sub line
-    const parts: string[] = [];
-    if (manifest.author) parts.push(manifest.author);
-    if (manifest.genre) parts.push(manifest.genre);
-    if (manifest.releaseYear) parts.push(String(manifest.releaseYear));
-    const subLine = parts.join('  ·  ');
-
+    const subParts: string[] = [];
+    if (manifest.author) {
+      subParts.push(manifest.author);
+    }
+    if (manifest.genre) {
+      subParts.push(manifest.genre);
+    }
+    if (manifest.releaseYear) {
+      subParts.push(String(manifest.releaseYear));
+    }
+    const subLine = subParts.join(' | ');
     if (subLine) {
-      const sub = new Text({
-        text: subLine,
-        style: new TextStyle({
-          fontFamily: FONT,
-          fontSize: 11,
-          fill: C.itemSub,
-          letterSpacing: 1,
-        }),
+      const sub = this.makeText(subLine, {
+        fontSize: 11,
+        fill: C.itemSub,
+        letterSpacing: 1,
       });
-      sub.x = x + 16;
-      sub.y = y + 36;
-      itemContainer.addChild(sub);
+      sub.x = 16;
+      sub.y = 36;
+      item.addChild(sub);
     }
 
-    // Version
-    const ver = new Text({
-      text: `v${manifest.version}`,
-      style: new TextStyle({
-        fontFamily: FONT,
-        fontSize: 10,
-        fill: C.itemSub,
-      }),
+    const version = this.makeText(`v${manifest.version}`, {
+      fontSize: 10,
+      fill: C.itemSub,
     });
-    ver.x = x + w - ver.width - 12;
-    ver.y = y + ITEM_H - ver.height - 8;
-    itemContainer.addChild(ver);
+    version.x = width - version.width - 12;
+    version.y = ITEM_H - version.height - 8;
+    item.addChild(version);
 
-    container.addChild(itemContainer);
+    container.addChild(item);
   }
 
-  private drawDetail(): void {
-    const root = this.root!;
+  private drawCartridgeDetail(): void {
     const manifest = this.manifests[this.selectedIndex];
-    if (!manifest) return;
-    const localizedManifest = this.localizeManifest(manifest);
+    if (!manifest) {
+      return;
+    }
 
+    const localizedManifest = this.localizeManifest(manifest);
     const container = new Container();
-    container.label = 'detail';
-    root.addChild(container);
+    this.root!.addChild(container);
 
     let cy = LIST_TOP + 8;
     const lx = DETAIL_X;
 
-    // Title
-    const title = new Text({
-      text: localizedManifest.title.toUpperCase(),
-      style: new TextStyle({
-        fontFamily: FONT,
-        fontSize: 22,
-        fontWeight: '700',
-        fill: C.titleBrand,
-        letterSpacing: 3,
-        wordWrap: true,
-        wordWrapWidth: DETAIL_W,
-      }),
+    const title = this.makeText(localizedManifest.title.toUpperCase(), {
+      fontSize: 22,
+      fontWeight: '700',
+      fill: C.titleBrand,
+      letterSpacing: 3,
+      wordWrap: true,
+      wordWrapWidth: DETAIL_W,
     });
     title.x = lx;
     title.y = cy;
     container.addChild(title);
     cy += title.height + 12;
 
-    // Description
     if (localizedManifest.description) {
-      const desc = new Text({
-        text: localizedManifest.description,
-        style: new TextStyle({
-          fontFamily: FONT,
-          fontSize: 12,
-          fill: C.detailValue,
-          wordWrap: true,
-          wordWrapWidth: DETAIL_W,
-          leading: 6,
-        }),
+      const desc = this.makeText(localizedManifest.description, {
+        fontSize: 12,
+        fill: C.detailValue,
+        wordWrap: true,
+        wordWrapWidth: DETAIL_W,
+        leading: 6,
       });
       desc.x = lx;
       desc.y = cy;
@@ -389,22 +458,14 @@ export class RoccoCartridgeMenu {
       cy += desc.height + 20;
     }
 
-    // Separator
-    const sep = new Graphics()
-      .rect(lx, cy, DETAIL_W, 1)
-      .fill({ color: C.bgLine, alpha: 1 });
-    container.addChild(sep);
+    container.addChild(
+      new Graphics().rect(lx, cy, DETAIL_W, 1).fill({ color: C.bgLine, alpha: 1 }),
+    );
     cy += 14;
 
-    // Field rows
     const fields: Array<[string, string | undefined]> = [
       ['PUBLISHER', localizedManifest.publisher ?? localizedManifest.author],
-      [
-        'YEAR',
-        localizedManifest.releaseYear !== undefined
-          ? String(localizedManifest.releaseYear)
-          : undefined,
-      ],
+      ['YEAR', localizedManifest.releaseYear ? String(localizedManifest.releaseYear) : undefined],
       ['GENRE', localizedManifest.genre],
       ['PLAYERS', localizedManifest.players],
       ['VERSION', localizedManifest.version],
@@ -412,29 +473,23 @@ export class RoccoCartridgeMenu {
     ];
 
     for (const [label, value] of fields) {
-      if (!value) continue;
+      if (!value) {
+        continue;
+      }
 
-      const labelText = new Text({
-        text: label,
-        style: new TextStyle({
-          fontFamily: FONT,
-          fontSize: 10,
-          fill: C.detailLabel,
-          letterSpacing: 2,
-        }),
+      const labelText = this.makeText(label, {
+        fontSize: 10,
+        fill: C.detailLabel,
+        letterSpacing: 2,
       });
       labelText.x = lx;
       labelText.y = cy;
       container.addChild(labelText);
 
-      const valueText = new Text({
-        text: value,
-        style: new TextStyle({
-          fontFamily: FONT,
-          fontSize: 12,
-          fill: C.detailValue,
-          letterSpacing: 1,
-        }),
+      const valueText = this.makeText(value, {
+        fontSize: 12,
+        fill: C.detailValue,
+        letterSpacing: 1,
       });
       valueText.x = lx + 100;
       valueText.y = cy;
@@ -443,34 +498,26 @@ export class RoccoCartridgeMenu {
       cy += 22;
     }
 
-    // Tags
     cy = this.drawLocaleOptions(container, manifest, lx, cy);
 
     if (localizedManifest.tags && localizedManifest.tags.length > 0) {
       cy += 8;
-      const tagsLabel = new Text({
-        text: 'TAGS',
-        style: new TextStyle({
-          fontFamily: FONT,
-          fontSize: 10,
-          fill: C.detailLabel,
-          letterSpacing: 2,
-        }),
+
+      const tagsLabel = this.makeText('TAGS', {
+        fontSize: 10,
+        fill: C.detailLabel,
+        letterSpacing: 2,
       });
       tagsLabel.x = lx;
       tagsLabel.y = cy;
       container.addChild(tagsLabel);
 
-      const tagsValue = new Text({
-        text: localizedManifest.tags.join('  '),
-        style: new TextStyle({
-          fontFamily: FONT,
-          fontSize: 10,
-          fill: C.itemSub,
-          letterSpacing: 1,
-          wordWrap: true,
-          wordWrapWidth: DETAIL_W,
-        }),
+      const tagsValue = this.makeText(localizedManifest.tags.join('  '), {
+        fontSize: 10,
+        fill: C.itemSub,
+        letterSpacing: 1,
+        wordWrap: true,
+        wordWrapWidth: DETAIL_W,
       });
       tagsValue.x = lx;
       tagsValue.y = cy + 16;
@@ -480,117 +527,59 @@ export class RoccoCartridgeMenu {
       cy += 16;
     }
 
-    // LOAD Button (at the end)
-    const buttonW = 100;
-    const buttonH = 30;
-    const buttonContainer = new Container();
-    buttonContainer.eventMode = 'static';
-    buttonContainer.hitArea = {
-      contains: (px: number, py: number) => px >= lx && px <= lx + buttonW && py >= cy && py <= cy + buttonH
-    };
-    buttonContainer.on('pointerdown', () => this.confirm());
-
-    const buttonBg = new Graphics()
-      .roundRect(lx, cy, buttonW, buttonH, 4)
-      .fill(C.itemBorderSelected)
-      .roundRect(lx, cy, buttonW, buttonH, 4)
-      .stroke({ color: C.titleBrand, width: 2 });
-    buttonContainer.addChild(buttonBg);
-
-    const buttonText = new Text({
-      text: 'LOAD',
-      style: new TextStyle({
-        fontFamily: FONT,
-        fontSize: 14,
-        fontWeight: '700',
-        fill: 0x0d110c,
-        letterSpacing: 3,
-      }),
-    });
-    buttonText.x = lx + (buttonW - buttonText.width) / 2;
-    buttonText.y = cy + (buttonH - buttonText.height) / 2;
-    buttonContainer.addChild(buttonText);
-
-    container.addChild(buttonContainer);
+    this.drawSoftButton(lx, cy, 100, 30, 'LOAD', () => this.confirm(), true);
   }
 
   private drawScrollBar(): void {
-    if (this.manifests.length <= ITEMS_VISIBLE) return;
+    if (this.manifests.length <= ITEMS_VISIBLE) {
+      return;
+    }
 
-    const root = this.root!;
     const scrollContainer = new Container();
-    root.addChild(scrollContainer);
+    this.root!.addChild(scrollContainer);
+
     const barX = LIST_X - 12;
-    const barH = LIST_H;
     const barY = LIST_TOP;
-
-    // Track
-    const track = new Graphics()
-      .rect(barX, barY, 4, barH)
-      .fill(C.scrollBar);
-    scrollContainer.addChild(track);
-
-    // Thumb
-    const thumbH = Math.max(20, (ITEMS_VISIBLE / this.manifests.length) * barH);
+    const barH = LIST_H;
     const maxScroll = this.manifests.length - ITEMS_VISIBLE;
+
+    scrollContainer.addChild(new Graphics().rect(barX, barY, 4, barH).fill(C.scrollBar));
+
+    const thumbH = Math.max(20, (ITEMS_VISIBLE / this.manifests.length) * barH);
     const thumbY = barY + (this.scrollOffset / maxScroll) * (barH - thumbH);
+    scrollContainer.addChild(new Graphics().rect(barX, thumbY, 4, thumbH).fill(C.scrollThumb));
 
-    const thumb = new Graphics()
-      .rect(barX, thumbY, 4, thumbH)
-      .fill(C.scrollThumb);
-    scrollContainer.addChild(thumb);
-
-    // Arrow Up (clickable)
-    const arrowUpContainer = new Container();
-    arrowUpContainer.eventMode = 'static';
-    
-    const arrowUpBg = new Graphics()
-      .rect(barX - 4, barY - 18, 16, 16)
-      .fill({ color: 0x000000, alpha: 0.01 });
-    arrowUpContainer.addChild(arrowUpBg);
-
-    const arrowUp = new Text({
-      text: '▲',
-      style: new TextStyle({ fontFamily: FONT, fontSize: 10, fill: this.scrollOffset > 0 ? C.titleBrand : C.scrollBar }),
-    });
-    arrowUp.x = barX - 1;
-    arrowUp.y = barY - 14;
-    arrowUpContainer.addChild(arrowUp);
-
-    arrowUpContainer.on('pointerdown', () => {
+    const upButton = this.createInteractiveContainer(barX - 4, barY - 18, 16, 16, () => {
       if (this.scrollOffset > 0) {
-        this.scrollOffset--;
+        this.scrollOffset -= 1;
         this.render();
       }
     });
-
-    scrollContainer.addChild(arrowUpContainer);
-
-    // Arrow Down (clickable)
-    const arrowDownContainer = new Container();
-    arrowDownContainer.eventMode = 'static';
-    
-    const arrowDownBg = new Graphics()
-      .rect(barX - 4, barY + barH + 2, 16, 16)
-      .fill({ color: 0x000000, alpha: 0.01 });
-    arrowDownContainer.addChild(arrowDownBg);
-
-    const arrowDown = new Text({
-      text: '▼',
-      style: new TextStyle({ fontFamily: FONT, fontSize: 10, fill: this.scrollOffset < maxScroll ? C.titleBrand : C.scrollBar }),
+    upButton.addChild(new Graphics().rect(0, 0, 16, 16).fill({ color: 0x000000, alpha: 0.01 }));
+    const upText = this.makeText('^', {
+      fontSize: 10,
+      fill: this.scrollOffset > 0 ? C.titleBrand : C.scrollBar,
     });
-    arrowDown.x = barX - 1;
-    arrowDown.y = barY + barH + 2;
-    arrowDownContainer.addChild(arrowDown);
+    upText.x = 5;
+    upText.y = 2;
+    upButton.addChild(upText);
+    scrollContainer.addChild(upButton);
 
-    arrowDownContainer.on('pointerdown', () => {
+    const downButton = this.createInteractiveContainer(barX - 4, barY + barH + 2, 16, 16, () => {
       if (this.scrollOffset < maxScroll) {
-        this.scrollOffset++;
+        this.scrollOffset += 1;
         this.render();
       }
     });
-
-    scrollContainer.addChild(arrowDownContainer);
+    downButton.addChild(new Graphics().rect(0, 0, 16, 16).fill({ color: 0x000000, alpha: 0.01 }));
+    const downText = this.makeText('v', {
+      fontSize: 10,
+      fill: this.scrollOffset < maxScroll ? C.titleBrand : C.scrollBar,
+    });
+    downText.x = 5;
+    downText.y = 2;
+    downButton.addChild(downText);
+    scrollContainer.addChild(downButton);
   }
 
   private drawLocaleOptions(
@@ -605,14 +594,10 @@ export class RoccoCartridgeMenu {
     }
 
     const selectedLocale = this.getSelectedLocale(manifest);
-    const label = new Text({
-      text: 'LANGUAGE',
-      style: new TextStyle({
-        fontFamily: FONT,
-        fontSize: 10,
-        fill: C.detailLabel,
-        letterSpacing: 2,
-      }),
+    const label = this.makeText('LANGUAGE', {
+      fontSize: 10,
+      fill: C.detailLabel,
+      letterSpacing: 2,
     });
     label.x = x;
     label.y = y;
@@ -621,95 +606,601 @@ export class RoccoCartridgeMenu {
     let optionX = x + 100;
     for (const locale of locales) {
       const isSelected = locale === selectedLocale;
-      const optionContainer = new Container();
-      optionContainer.x = optionX;
-      optionContainer.y = y - 2;
-      optionContainer.eventMode = 'static';
-      optionContainer.hitArea = {
-        contains: (px: number, py: number) => px >= 0 && px <= 54 && py >= 0 && py <= 22,
-      };
-      optionContainer.on('pointerdown', () => {
+      const option = this.createInteractiveContainer(optionX, y - 2, 54, 22, () => {
         this.selectedLocales.set(manifest.id, locale);
         this.render();
       });
 
-      optionContainer.addChild(
-        new Graphics().rect(0, 0, 54, 22).fill({ color: 0x000000, alpha: 0.01 }),
+      option.addChild(new Graphics().rect(0, 0, 54, 22).fill({ color: 0x000000, alpha: 0.01 }));
+      option.addChild(
+        new Graphics().circle(7, 9, 6).stroke({
+          color: isSelected ? C.titleBrand : C.detailLabel,
+          width: 1.5,
+        }),
       );
-      const radio = new Graphics()
-        .circle(7, 9, 6)
-        .stroke({ color: isSelected ? C.titleBrand : C.detailLabel, width: 1.5 });
-      optionContainer.addChild(radio);
-
       if (isSelected) {
-        optionContainer.addChild(new Graphics().circle(7, 9, 3).fill(C.titleBrand));
+        option.addChild(new Graphics().circle(7, 9, 3).fill(C.titleBrand));
       }
 
-      const optionLabel = new Text({
-        text: locale.toUpperCase(),
-        style: new TextStyle({
-          fontFamily: FONT,
-          fontSize: 12,
-          fill: isSelected ? C.titleBrand : C.detailValue,
-          letterSpacing: 1,
-        }),
+      const optionLabel = this.makeText(locale.toUpperCase(), {
+        fontSize: 12,
+        fill: isSelected ? C.titleBrand : C.detailValue,
+        letterSpacing: 1,
       });
       optionLabel.x = 18;
       optionLabel.y = 2;
-      optionContainer.addChild(optionLabel);
-      container.addChild(optionContainer);
+      option.addChild(optionLabel);
 
+      container.addChild(option);
       optionX += 58;
     }
 
     return y + 28;
   }
 
-  private drawFooter(): void {
-    const root = this.root!;
+  private drawSettingsHome(): void {
+    const selectedOption = SETTINGS_OPTIONS.find((option) => option.id === this.settingsSelectionId)
+      ?? SETTINGS_OPTIONS[0];
+    const leftW = 320;
+    const rightX = PANEL_X + leftW + 24;
+    const rightW = PANEL_W - leftW - 24;
 
-    const footerY = DESIGN_H - FOOTER_H;
+    this.drawPanel(PANEL_X, LIST_TOP, leftW, 286, 'MODULES');
+    this.drawPanel(rightX, LIST_TOP, rightW, 286, 'DETAIL');
 
-    const footerBg = new Graphics()
-      .rect(0, footerY, DESIGN_W, FOOTER_H)
-      .fill({ color: 0x0a0f09, alpha: 1 });
-    root.addChild(footerBg);
-
-    const footerLine = new Graphics()
-      .rect(0, footerY, DESIGN_W, 1)
-      .fill({ color: C.titleBrand, alpha: 0.2 });
-    root.addChild(footerLine);
-
-    const hints: Array<[string, string]> = [
-      ['↑ ↓', 'NAVIGATE'],
-      ['ENTER', 'LOAD'],
-    ];
-
-    let hx = LIST_X;
-    for (const [key, label] of hints) {
-      const keyText = new Text({
-        text: key,
-        style: new TextStyle({ fontFamily: FONT, fontSize: 13, fontWeight: '700', fill: C.titleBrand, letterSpacing: 1 }),
+    let rowY = LIST_TOP + 42;
+    for (const option of SETTINGS_OPTIONS) {
+      const selected = option.id === this.settingsSelectionId;
+      const row = this.createInteractiveContainer(PANEL_X + 14, rowY, leftW - 28, 50, () => {
+        this.settingsSelectionId = option.id;
+        if (option.enabled && option.id === 'video') {
+          this.page = 'video';
+        } else if (option.enabled && option.id === 'back') {
+          this.page = 'cartridges';
+        }
+        this.render();
       });
-      keyText.x = hx;
-      keyText.y = footerY + 16;
-      root.addChild(keyText);
 
-      const labelText = new Text({
-        text: `  ${label}`,
-        style: new TextStyle({ fontFamily: FONT, fontSize: 13, fill: C.footerHint, letterSpacing: 2 }),
+      row.addChild(
+        new Graphics()
+          .rect(0, 0, leftW - 28, 50)
+          .fill(selected ? C.itemBgSelected : C.itemBg)
+          .rect(0, 0, leftW - 28, 50)
+          .stroke({ color: selected ? C.itemBorderSelected : C.itemBorder, width: 1 }),
+      );
+
+      const label = this.makeText(option.label, {
+        fontSize: 18,
+        fontWeight: selected ? '700' : '400',
+        fill: option.enabled
+          ? selected
+            ? C.itemTitleSelected
+            : C.itemTitle
+          : C.itemDisabled,
+        letterSpacing: 2,
       });
-      labelText.x = hx + keyText.width;
-      labelText.y = footerY + 16;
-      root.addChild(labelText);
+      label.x = 14;
+      label.y = 12;
+      row.addChild(label);
 
-      hx += keyText.width + labelText.width + 32;
+      const status = this.makeText(option.enabled ? 'READY' : 'DISABLED', {
+        fontSize: 10,
+        fill: option.enabled ? C.detailValue : C.itemDisabled,
+        letterSpacing: 1,
+      });
+      status.x = leftW - 28 - status.width - 12;
+      status.y = 18;
+      row.addChild(status);
+
+      this.root!.addChild(row);
+      rowY += 58;
+    }
+
+    const title = this.makeText(selectedOption.label, {
+      fontSize: 24,
+      fontWeight: '700',
+      fill: selectedOption.enabled ? C.titleBrand : C.itemDisabled,
+      letterSpacing: 3,
+    });
+    title.x = rightX + PANEL_INSET;
+    title.y = LIST_TOP + 46;
+    this.root!.addChild(title);
+
+    const desc = this.makeText(selectedOption.description, {
+      fontSize: 13,
+      fill: C.detailValue,
+      wordWrap: true,
+      wordWrapWidth: rightW - PANEL_INSET * 2,
+      leading: 6,
+    });
+    desc.x = rightX + PANEL_INSET;
+    desc.y = LIST_TOP + 88;
+    this.root!.addChild(desc);
+
+    if (selectedOption.id === 'video') {
+      this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 170, 'FILTERS', `${this.countEnabledFilters()} / 3 ON`);
+      this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 198, 'BRIGHTNESS', this.formatPercent(this.displayProfile.brightness));
+      this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 226, 'CONTRAST', this.formatPercent(this.displayProfile.contrast));
+    } else {
+      this.drawDetailField(
+        rightX + PANEL_INSET,
+        LIST_TOP + 170,
+        'STATUS',
+        selectedOption.enabled ? 'AVAILABLE' : 'DISABLED',
+      );
     }
   }
 
-  // ─── Input ─────────────────────────────────────────────────────────────────
+  private drawVideoSettings(): void {
+    this.drawPanel(PANEL_X, LIST_TOP, PANEL_W, 148, 'VIDEO STATUS');
+    this.drawVideoInfoGrid();
+
+    this.drawPanel(PANEL_X, LIST_TOP + 170, PANEL_W, 214, 'OPTIONS');
+
+    let rowY = LIST_TOP + 212;
+    rowY = this.drawVideoOptionRow('filters', 'FILTERS', rowY);
+    rowY = this.drawVideoOptionRow('brightness', 'BRIGHTNESS', rowY);
+    this.drawVideoOptionRow('contrast', 'CONTRAST', rowY);
+    this.drawBackButton(
+      PANEL_X + PANEL_W - BACK_BUTTON_W - 18,
+      FOOTER_Y - BACK_BUTTON_H - 12,
+      this.videoSelectionId === 'back',
+      () => {
+        this.page = 'settings';
+        this.settingsSelectionId = 'video';
+        this.videoSelectionId = 'filters';
+        this.render();
+      },
+    );
+  }
+
+  private drawVideoInfoGrid(): void {
+    const fields: Array<[string, string]> = [
+      ['DEFINITION', '960 x 540'],
+      ['COLORS', '16.7M (24-BIT RGB)'],
+      ['COLOR MODEL', 'NATIVE RGB'],
+      ['RENDER LAYERS', String(RENDER_LAYER_COUNT)],
+    ];
+
+    const startX = PANEL_X + PANEL_INSET;
+    const startY = LIST_TOP + 48;
+    const columnGap = 390;
+    const rowGap = 34;
+
+    fields.forEach(([label, value], index) => {
+      const column = index % 2;
+      const row = Math.floor(index / 2);
+      this.drawDetailField(startX + column * columnGap, startY + row * rowGap, label, value);
+    });
+  }
+
+  private drawVideoOptionRow(id: Exclude<VideoRowId, 'back'>, label: string, y: number): number {
+    const selected = this.videoSelectionId === id;
+    const row = this.createInteractiveContainer(PANEL_X + 14, y, PANEL_W - 28, 46, () => {
+      this.videoSelectionId = id;
+      if (id === 'filters') {
+        this.page = 'filters';
+        this.render();
+        return;
+      }
+      this.render();
+    });
+
+    row.addChild(
+      new Graphics()
+        .rect(0, 0, PANEL_W - 28, 46)
+        .fill(selected ? C.itemBgSelected : C.itemBg)
+        .rect(0, 0, PANEL_W - 28, 46)
+        .stroke({ color: selected ? C.itemBorderSelected : C.itemBorder, width: 1 }),
+    );
+
+    const text = this.makeText(label, {
+      fontSize: 16,
+      fontWeight: selected ? '700' : '400',
+      fill: selected ? C.itemTitleSelected : C.itemTitle,
+      letterSpacing: 2,
+    });
+    text.x = 14;
+    text.y = 13;
+    row.addChild(text);
+
+    if (id === 'filters') {
+      const summary = this.makeText(`${this.countEnabledFilters()} / 3 ON`, {
+        fontSize: 11,
+        fill: C.detailValue,
+        letterSpacing: 1,
+      });
+      summary.x = PANEL_W - 28 - summary.width - 42;
+      summary.y = 16;
+      row.addChild(summary);
+
+      const chevron = this.makeText('>', {
+        fontSize: 16,
+        fill: selected ? C.titleBrand : C.detailValue,
+      });
+      chevron.x = PANEL_W - 28 - 18;
+      chevron.y = 12;
+      row.addChild(chevron);
+    } else {
+      const profileKey = id === 'brightness' ? 'brightness' : 'contrast';
+      const value = this.displayProfile[profileKey];
+      this.drawAdjustControl(
+        row,
+        PANEL_W - 28 - 214,
+        9,
+        200,
+        value,
+        () => {
+          this.videoSelectionId = id;
+          this.adjustVideoValue(id, -DISPLAY_STEP);
+        },
+        () => {
+          this.videoSelectionId = id;
+          this.adjustVideoValue(id, DISPLAY_STEP);
+        },
+      );
+    }
+
+    this.root!.addChild(row);
+    return y + 54;
+  }
+
+  private drawFilterSettings(): void {
+    this.drawPanel(PANEL_X, LIST_TOP, PANEL_W, 118, 'ACTIVE FILTERS');
+
+    const desc = this.makeText(
+      'Toggle the built-in console display effects. Changes apply immediately and reset on the next boot.',
+      {
+        fontSize: 13,
+        fill: C.detailValue,
+        wordWrap: true,
+        wordWrapWidth: PANEL_W - PANEL_INSET * 2,
+        leading: 6,
+      },
+    );
+    desc.x = PANEL_X + PANEL_INSET;
+    desc.y = LIST_TOP + 50;
+    this.root!.addChild(desc);
+
+    this.drawPanel(PANEL_X, LIST_TOP + 140, PANEL_W, 244, 'FILTERS');
+
+    let rowY = LIST_TOP + 182;
+    rowY = this.drawFilterOptionRow('roundedCorners', 'ROUNDED CORNERS', rowY);
+    rowY = this.drawFilterOptionRow('crtMask', 'CRT SHADOW MASK', rowY);
+    this.drawFilterOptionRow('edgeVignette', 'EDGE VIGNETTE', rowY);
+
+    this.drawBackButton(
+      PANEL_X + PANEL_W - BACK_BUTTON_W - 18,
+      FOOTER_Y - BACK_BUTTON_H - 12,
+      this.filterSelectionId === 'back',
+      () => {
+        this.page = 'video';
+        this.videoSelectionId = 'filters';
+        this.filterSelectionId = 'roundedCorners';
+        this.render();
+      },
+    );
+  }
+
+  private drawFilterOptionRow(id: Exclude<FilterRowId, 'back'>, label: string, y: number): number {
+    const selected = this.filterSelectionId === id;
+    const enabled = this.displayProfile[id];
+    const row = this.createInteractiveContainer(PANEL_X + 14, y, PANEL_W - 28, 46, () => {
+      this.filterSelectionId = id;
+      this.toggleFilter(id);
+    });
+
+    row.addChild(
+      new Graphics()
+        .rect(0, 0, PANEL_W - 28, 46)
+        .fill(selected ? C.itemBgSelected : C.itemBg)
+        .rect(0, 0, PANEL_W - 28, 46)
+        .stroke({ color: selected ? C.itemBorderSelected : C.itemBorder, width: 1 }),
+    );
+
+    const text = this.makeText(label, {
+      fontSize: 16,
+      fontWeight: selected ? '700' : '400',
+      fill: selected ? C.itemTitleSelected : C.itemTitle,
+      letterSpacing: 2,
+    });
+    text.x = 14;
+    text.y = 13;
+    row.addChild(text);
+
+    this.drawToggleControl(row, PANEL_W - 28 - TOGGLE_W - 14, 11, enabled);
+
+    this.root!.addChild(row);
+    return y + 54;
+  }
+
+  private drawPanel(x: number, y: number, width: number, height: number, title: string): void {
+    const panel = new Graphics()
+      .rect(x, y, width, height)
+      .fill({ color: C.panelBg, alpha: 0.95 })
+      .rect(x, y, width, height)
+      .stroke({ color: C.panelBorder, width: 1.2 });
+    this.root!.addChild(panel);
+
+    const headerLineY = y + 30;
+    this.root!.addChild(
+      new Graphics().rect(x, headerLineY, width, 1).fill({ color: C.bgLine, alpha: 1 }),
+    );
+
+    const titleText = this.makeText(title, {
+      fontSize: 11,
+      fill: C.titleBrand,
+      letterSpacing: 3,
+    });
+    titleText.x = x + PANEL_INSET;
+    titleText.y = y + 9;
+    this.root!.addChild(titleText);
+  }
+
+  private drawFooter(hints: ReadonlyArray<readonly [string, string]>): void {
+    const root = this.root!;
+
+    root.addChild(new Graphics().rect(0, FOOTER_Y, DESIGN_W, FOOTER_H).fill({ color: 0x0a0f09, alpha: 1 }));
+    root.addChild(
+      new Graphics().rect(0, FOOTER_Y, DESIGN_W, 1).fill({ color: C.titleBrand, alpha: 0.2 }),
+    );
+
+    let x = LIST_X;
+    for (const [key, label] of hints) {
+      const keyText = this.makeText(key, {
+        fontSize: 13,
+        fontWeight: '700',
+        fill: C.titleBrand,
+        letterSpacing: 1,
+      });
+      keyText.x = x;
+      keyText.y = FOOTER_Y + 16;
+      root.addChild(keyText);
+
+      const labelText = this.makeText(`  ${label}`, {
+        fontSize: 13,
+        fill: C.footerHint,
+        letterSpacing: 2,
+      });
+      labelText.x = x + keyText.width;
+      labelText.y = FOOTER_Y + 16;
+      root.addChild(labelText);
+
+      x += keyText.width + labelText.width + 24;
+    }
+  }
+
+  private drawSoftButton(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    label: string,
+    onPress: () => void,
+    primary = false,
+  ): void {
+    const button = this.createInteractiveContainer(x, y, width, height, onPress);
+    button.addChild(
+      new Graphics()
+        .roundRect(0, 0, width, height, 4)
+        .fill(primary ? C.itemBorderSelected : C.buttonFill)
+        .roundRect(0, 0, width, height, 4)
+        .stroke({ color: primary ? C.titleBrand : C.buttonBorder, width: 2 }),
+    );
+
+    const text = this.makeText(label, {
+      fontSize: 14,
+      fontWeight: '700',
+      fill: C.buttonText,
+      letterSpacing: 3,
+    });
+    text.x = (width - text.width) / 2;
+    text.y = (height - text.height) / 2;
+    button.addChild(text);
+    this.root!.addChild(button);
+  }
+
+  private drawBackButton(x: number, y: number, selected: boolean, onPress: () => void): void {
+    const button = this.createInteractiveContainer(x, y, BACK_BUTTON_W, BACK_BUTTON_H, onPress);
+    button.addChild(
+      new Graphics()
+        .roundRect(0, 0, BACK_BUTTON_W, BACK_BUTTON_H, 4)
+        .fill(selected ? C.itemBorderSelected : C.buttonFill)
+        .roundRect(0, 0, BACK_BUTTON_W, BACK_BUTTON_H, 4)
+        .stroke({ color: selected ? C.titleBrand : C.buttonBorder, width: 2 }),
+    );
+
+    const text = this.makeText('BACK', {
+      fontSize: 14,
+      fontWeight: '700',
+      fill: selected ? C.buttonText : C.detailValue,
+      letterSpacing: 3,
+    });
+    text.x = (BACK_BUTTON_W - text.width) / 2;
+    text.y = (BACK_BUTTON_H - text.height) / 2;
+    button.addChild(text);
+    this.root!.addChild(button);
+  }
+
+  private drawDetailField(x: number, y: number, label: string, value: string): void {
+    const labelText = this.makeText(label, {
+      fontSize: 10,
+      fill: C.detailLabel,
+      letterSpacing: 2,
+    });
+    labelText.x = x;
+    labelText.y = y;
+    this.root!.addChild(labelText);
+
+    const valueText = this.makeText(value, {
+      fontSize: 12,
+      fill: C.detailValue,
+      letterSpacing: 1,
+    });
+    valueText.x = x + 120;
+    valueText.y = y;
+    this.root!.addChild(valueText);
+  }
+
+  private drawAdjustControl(
+    parent: Container,
+    x: number,
+    y: number,
+    width: number,
+    value: number,
+    onDecrease: () => void,
+    onIncrease: () => void,
+  ): void {
+    parent.addChild(
+      new Graphics()
+        .roundRect(x, y, width, 28, 4)
+        .fill(C.controlDim)
+        .roundRect(x, y, width, 28, 4)
+        .stroke({ color: C.controlBorder, width: 1 }),
+    );
+
+    const minus = this.createInteractiveContainer(x + 4, y + 4, 20, 20, onDecrease);
+    minus.addChild(
+      new Graphics()
+        .rect(0, 0, 20, 20)
+        .fill(C.itemBgHover)
+        .rect(0, 0, 20, 20)
+        .stroke({ color: C.controlBorder, width: 1 }),
+    );
+    const minusText = this.makeText('-', {
+      fontSize: 16,
+      fontWeight: '700',
+      fill: C.controlText,
+    });
+    minusText.x = 6;
+    minusText.y = 0;
+    minus.addChild(minusText);
+    parent.addChild(minus);
+
+    const valueText = this.makeText(this.formatPercent(value), {
+      fontSize: 12,
+      fill: C.controlText,
+      letterSpacing: 1,
+    });
+    valueText.x = x + (width - valueText.width) / 2;
+    valueText.y = y + 6;
+    parent.addChild(valueText);
+
+    const plus = this.createInteractiveContainer(x + width - 24, y + 4, 20, 20, onIncrease);
+    plus.addChild(
+      new Graphics()
+        .rect(0, 0, 20, 20)
+        .fill(C.itemBgHover)
+        .rect(0, 0, 20, 20)
+        .stroke({ color: C.controlBorder, width: 1 }),
+    );
+    const plusText = this.makeText('+', {
+      fontSize: 14,
+      fontWeight: '700',
+      fill: C.controlText,
+    });
+    plusText.x = 5;
+    plusText.y = 1;
+    plus.addChild(plusText);
+    parent.addChild(plus);
+  }
+
+  private drawToggleControl(
+    parent: Container,
+    x: number,
+    y: number,
+    enabled: boolean,
+  ): void {
+    const toggle = new Container();
+    toggle.x = x;
+    toggle.y = y;
+    toggle.addChild(
+      new Graphics()
+        .roundRect(0, 0, TOGGLE_W, TOGGLE_H, 4)
+        .fill(C.controlDim)
+        .roundRect(0, 0, TOGGLE_W, TOGGLE_H, 4)
+        .stroke({ color: C.controlBorder, width: 1 }),
+    );
+
+    const activeX = enabled ? 2 : TOGGLE_W / 2;
+    toggle.addChild(
+      new Graphics()
+        .roundRect(activeX, 2, TOGGLE_W / 2 - 4, TOGGLE_H - 4, 3)
+        .fill(C.controlFill),
+    );
+
+    const onText = this.makeText('ON', {
+      fontSize: 11,
+      fontWeight: '700',
+      fill: enabled ? C.buttonText : C.detailValue,
+      letterSpacing: 1,
+    });
+    onText.x = 14;
+    onText.y = 5;
+    toggle.addChild(onText);
+
+    const offText = this.makeText('OFF', {
+      fontSize: 11,
+      fontWeight: '700',
+      fill: enabled ? C.detailValue : C.buttonText,
+      letterSpacing: 1,
+    });
+    offText.x = 54;
+    offText.y = 5;
+    toggle.addChild(offText);
+
+    parent.addChild(toggle);
+  }
+
+  private createInteractiveContainer(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    onPointerDown: () => void,
+  ): Container {
+    const container = new Container();
+    container.x = x;
+    container.y = y;
+    container.eventMode = 'static';
+    container.hitArea = new Rectangle(0, 0, width, height);
+    container.on('pointerdown', onPointerDown);
+    return container;
+  }
+
+  private makeText(
+    text: string,
+    style: Partial<ConstructorParameters<typeof TextStyle>[0]>,
+  ): Text {
+    return new Text({
+      text,
+      style: new TextStyle({
+        fontFamily: FONT,
+        fontSize: 12,
+        fill: C.detailValue,
+        ...style,
+      }),
+    });
+  }
 
   private onKeyDown(e: KeyboardEvent): void {
+    switch (this.page) {
+      case 'cartridges':
+        this.onCartridgeKeyDown(e);
+        break;
+      case 'settings':
+        this.onSettingsKeyDown(e);
+        break;
+      case 'video':
+        this.onVideoKeyDown(e);
+        break;
+      case 'filters':
+        this.onFilterKeyDown(e);
+        break;
+    }
+  }
+
+  private onCartridgeKeyDown(e: KeyboardEvent): void {
     switch (e.key) {
       case 'ArrowUp':
       case 'Up':
@@ -726,15 +1217,142 @@ export class RoccoCartridgeMenu {
         e.preventDefault();
         this.confirm();
         break;
+      case 's':
+      case 'S':
+        e.preventDefault();
+        this.page = 'settings';
+        this.render();
+        break;
+    }
+  }
+
+  private onSettingsKeyDown(e: KeyboardEvent): void {
+    switch (e.key) {
+      case 'ArrowUp':
+      case 'Up':
+        e.preventDefault();
+        this.settingsSelectionId = this.moveInCycle(
+          SETTINGS_OPTIONS.map((option) => option.id),
+          this.settingsSelectionId,
+          -1,
+        );
+        this.render();
+        break;
+      case 'ArrowDown':
+      case 'Down':
+        e.preventDefault();
+        this.settingsSelectionId = this.moveInCycle(
+          SETTINGS_OPTIONS.map((option) => option.id),
+          this.settingsSelectionId,
+          1,
+        );
+        this.render();
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        this.activateSettingsSelection();
+        break;
+      case 'Escape':
+      case 'Backspace':
+        e.preventDefault();
+        this.page = 'cartridges';
+        this.render();
+        break;
+    }
+  }
+
+  private onVideoKeyDown(e: KeyboardEvent): void {
+    switch (e.key) {
+      case 'ArrowUp':
+      case 'Up':
+        e.preventDefault();
+        this.videoSelectionId = this.moveInCycle(VIDEO_ROW_IDS, this.videoSelectionId, -1);
+        this.render();
+        break;
+      case 'ArrowDown':
+      case 'Down':
+        e.preventDefault();
+        this.videoSelectionId = this.moveInCycle(VIDEO_ROW_IDS, this.videoSelectionId, 1);
+        this.render();
+        break;
+      case 'ArrowLeft':
+      case 'Left':
+        e.preventDefault();
+        this.adjustSelectedVideoValue(-DISPLAY_STEP);
+        break;
+      case 'ArrowRight':
+      case 'Right':
+        e.preventDefault();
+        this.adjustSelectedVideoValue(DISPLAY_STEP);
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        this.activateVideoSelection();
+        break;
+      case 'Escape':
+      case 'Backspace':
+        e.preventDefault();
+        this.page = 'settings';
+        this.settingsSelectionId = 'video';
+        this.render();
+        break;
+    }
+  }
+
+  private onFilterKeyDown(e: KeyboardEvent): void {
+    switch (e.key) {
+      case 'ArrowUp':
+      case 'Up':
+        e.preventDefault();
+        this.filterSelectionId = this.moveInCycle(FILTER_ROW_IDS, this.filterSelectionId, -1);
+        this.render();
+        break;
+      case 'ArrowDown':
+      case 'Down':
+        e.preventDefault();
+        this.filterSelectionId = this.moveInCycle(FILTER_ROW_IDS, this.filterSelectionId, 1);
+        this.render();
+        break;
+      case 'ArrowLeft':
+      case 'Left':
+        e.preventDefault();
+        this.applySelectedFilterValue(false);
+        break;
+      case 'ArrowRight':
+      case 'Right':
+        e.preventDefault();
+        this.applySelectedFilterValue(true);
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (this.filterSelectionId === 'back') {
+          this.page = 'video';
+          this.videoSelectionId = 'filters';
+          this.render();
+        } else {
+          this.toggleFilter(this.filterSelectionId);
+        }
+        break;
+      case 'Escape':
+      case 'Backspace':
+        e.preventDefault();
+        this.page = 'video';
+        this.videoSelectionId = 'filters';
+        this.render();
+        break;
     }
   }
 
   private moveSelection(delta: number): void {
     const next = Math.max(0, Math.min(this.manifests.length - 1, this.selectedIndex + delta));
-    if (next === this.selectedIndex) return;
-    this.selectedIndex = next;
+    if (next === this.selectedIndex) {
+      return;
+    }
 
-    // Scroll to keep selection visible
+    this.selectedIndex = next;
     if (this.selectedIndex < this.scrollOffset) {
       this.scrollOffset = this.selectedIndex;
     } else if (this.selectedIndex >= this.scrollOffset + ITEMS_VISIBLE) {
@@ -744,9 +1362,87 @@ export class RoccoCartridgeMenu {
     this.render();
   }
 
+  private moveInCycle<T extends string>(
+    values: readonly T[],
+    current: T,
+    delta: -1 | 1,
+  ): T {
+    const currentIndex = Math.max(0, values.indexOf(current));
+    const nextIndex = (currentIndex + delta + values.length) % values.length;
+    return values[nextIndex] ?? current;
+  }
+
+  private activateSettingsSelection(): void {
+    switch (this.settingsSelectionId) {
+      case 'video':
+        this.page = 'video';
+        break;
+      case 'back':
+        this.page = 'cartridges';
+        break;
+      case 'sound':
+      case 'developer':
+        break;
+    }
+    this.render();
+  }
+
+  private activateVideoSelection(): void {
+    switch (this.videoSelectionId) {
+      case 'filters':
+        this.page = 'filters';
+        break;
+      case 'brightness':
+      case 'contrast':
+        this.adjustVideoValue(this.videoSelectionId, DISPLAY_STEP);
+        return;
+      case 'back':
+        this.page = 'settings';
+        this.settingsSelectionId = 'video';
+        break;
+    }
+    this.render();
+  }
+
+  private adjustSelectedVideoValue(delta: number): void {
+    if (this.videoSelectionId === 'brightness' || this.videoSelectionId === 'contrast') {
+      this.adjustVideoValue(this.videoSelectionId, delta);
+    }
+  }
+
+  private adjustVideoValue(id: 'brightness' | 'contrast', delta: number): void {
+    const nextValue = id === 'brightness'
+      ? this.clamp(this.displayProfile.brightness + delta, ROCCO_DISPLAY_BRIGHTNESS_MIN, ROCCO_DISPLAY_BRIGHTNESS_MAX)
+      : this.clamp(this.displayProfile.contrast + delta, ROCCO_DISPLAY_CONTRAST_MIN, ROCCO_DISPLAY_CONTRAST_MAX);
+    this.updateDisplayProfile({ [id]: nextValue });
+  }
+
+  private applySelectedFilterValue(enabled: boolean): void {
+    if (this.filterSelectionId === 'back') {
+      return;
+    }
+
+    this.updateDisplayProfile({ [this.filterSelectionId]: enabled });
+  }
+
+  private toggleFilter(id: Exclude<FilterRowId, 'back'>): void {
+    this.updateDisplayProfile({ [id]: !this.displayProfile[id] });
+  }
+
+  private updateDisplayProfile(profile: Partial<RoccoDisplayProfile>): void {
+    this.displayProfile = resolveRoccoDisplayProfile({
+      ...this.displayProfile,
+      ...profile,
+    });
+    this.onDisplayProfileChange?.(this.displayProfile);
+    this.render();
+  }
+
   private confirm(): void {
     const manifest = this.manifests[this.selectedIndex];
-    if (!manifest || !this.resolveSelection) return;
+    if (!manifest || !this.resolveSelection) {
+      return;
+    }
 
     const resolve = this.resolveSelection;
     const selectedLocale = this.getSelectedLocale(manifest);
@@ -772,5 +1468,19 @@ export class RoccoCartridgeMenu {
       ...localized,
       localizations: manifest.localizations,
     };
+  }
+
+  private countEnabledFilters(): number {
+    return Number(this.displayProfile.roundedCorners)
+      + Number(this.displayProfile.crtMask)
+      + Number(this.displayProfile.edgeVignette);
+  }
+
+  private formatPercent(value: number): string {
+    return `${Math.round(value * 100)}%`;
+  }
+
+  private clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
   }
 }

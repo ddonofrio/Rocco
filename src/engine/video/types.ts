@@ -7,6 +7,7 @@ import type { RoccoGridMenuSystem } from './grid-menu';
 import type { RoccoSpriteMessageSystem } from './messages';
 import type { RoccoTitleSystem } from './titles';
 import type { RoccoDisplayProfile } from './display';
+import type { RoccoSceneTargetSystem } from './scene-targets';
 import type { RoccoViewportHost } from './viewport';
 
 export interface RoccoVideoPlaneModule {
@@ -29,6 +30,7 @@ export interface RoccoVideoViewportModule {
 export interface RoccoVideoSystem {
   planes: RoccoVideoPlaneModule;
   sprites: RoccoSpriteSystem;
+  sceneTargets?: RoccoSceneTargetSystem;
   actionMenus: RoccoActionMenuSystem;
   gridMenus: RoccoGridMenuSystem;
   messages: RoccoSpriteMessageSystem;

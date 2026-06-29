@@ -1,5 +1,9 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoActionMenuDefinition } from '../../../../engine/video/action-menu';
+import {
+  selectNonRepeatingLines,
+  type RoccoNonRepeatingLineSelectionState,
+} from '../../../../game/non-repeating-line-selection';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
@@ -13,7 +17,7 @@ export const DEFAULT_FEEDING_LOOK_MESSAGE_TTL_MS = 3150;
 
 export interface RoccoDefaultFeedingLookSelection {
   line: string;
-  index: number;
+  state: RoccoNonRepeatingLineSelectionState;
 }
 
 export function createDefaultFeedingLookActionMenu(
@@ -64,23 +68,18 @@ export function isDefaultFeedingLookTarget(instanceId: string): boolean {
 
 export function pickDefaultFeedingLookLine(
   random: () => number,
-  previousIndex: number | null,
+  state: RoccoNonRepeatingLineSelectionState | null,
   lines: readonly string[],
 ): RoccoDefaultFeedingLookSelection {
-  if (lines.length === 1) {
-    return {
-      line: lines[0] ?? '',
-      index: 0,
-    };
-  }
-
-  let index = previousIndex ?? -1;
-  while (index === previousIndex) {
-    index = Math.floor(random() * lines.length);
-  }
+  const selection = selectNonRepeatingLines({
+    lines,
+    count: 1,
+    random,
+    state: state ?? undefined,
+  });
 
   return {
-    line: lines[index] ?? lines[0] ?? '',
-    index,
+    line: selection.lines[0] ?? lines[0] ?? '',
+    state: selection.state,
   };
 }

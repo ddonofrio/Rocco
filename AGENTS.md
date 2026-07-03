@@ -5,6 +5,7 @@ This file applies to the entire repository.
 ## Core Rules
 
 - Communicate with the user in their language, but write all code and documentation in English.
+- Do not inspect local images or other visual assets unless the user explicitly asks for it or gives permission. Use the user's coordinates, descriptions, and file context first. If visual confirmation would help, ask the user to do the check or grant permission.
 - Read documentation before editing. Do not jump directly into code unless the change is trivial and the relevant README has already been read in the same context window.
 - Keep documentation as present-tense reference material. Do not add historical edit logs, dated notes, or narrative descriptions of edits.
 - Maintain the relevant README when behavior, concepts, public interfaces, SDK surfaces, folder roles, or cartridge structure shift.

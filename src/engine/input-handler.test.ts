@@ -8,6 +8,7 @@ import type {
   RoccoCursorActionEvent,
   RoccoCursorActionHandler,
   RoccoCursorMoveEvent,
+  RoccoCursorLeaveHandler,
   RoccoCursorMoveHandler,
 } from './video/cursor';
 import type { RoccoViewportHost } from './video/viewport';
@@ -254,6 +255,103 @@ describe('RoccoInputHandler', () => {
     moveHandler?.(makeMoveEvent(320, 180));
 
     expect(addedTitles).toEqual(['Shell City']);
+    expect(renderCalls).toBe(1);
+  });
+
+  it('dispatches a grid-menu close activation on cursor leave before clearing the carried item', () => {
+    let leaveHandler: RoccoCursorLeaveHandler | undefined;
+    let clearCarriedItemCalls = 0;
+    let renderCalls = 0;
+    const handledActions: unknown[] = [];
+    const activationCalls: Array<[number, number]> = [];
+
+    const cartridge: RoccoCartridge = {
+      manifest: {
+        id: 'test-cartridge',
+        title: 'Test Cartridge',
+        version: '1.0.0',
+      },
+      mount() {
+        // noop
+      },
+      handleAction(action) {
+        handledActions.push(action);
+      },
+    };
+
+    const handler = new RoccoInputHandler({
+      videoSystem: asVideoSystem({
+        render() {
+          renderCalls += 1;
+        },
+        gridMenus: {
+          isOpen() {
+            return true;
+          },
+          activateAt(x: number, y: number) {
+            activationCalls.push([x, y]);
+            return {
+              kind: 'grid-menu',
+              definitionId: 'rocco-storage-transfer-menu:test',
+              interaction: 'close',
+              items: [],
+            };
+          },
+          clearCarriedItem() {
+            clearCarriedItemCalls += 1;
+          },
+          getCarriedItem() {
+            return {
+              definitionId: 'rocco-storage-transfer-menu:test',
+              item: {
+                id: 'souvenir-sea-dollar',
+                label: 'Sea Dollar',
+                imageUri: '/test/sea-dollar.png',
+              },
+            };
+          },
+        },
+        actionMenus: {
+          isOpen() {
+            return false;
+          },
+        },
+      }),
+      audioSystem: asAudioSystem({}),
+      jukeboxSystem: asJukeboxSystem({}),
+      viewportHost: asViewportHost({
+        setCursorActionHandler() {
+          // noop
+        },
+        setCursorMoveHandler() {
+          // noop
+        },
+        setCursorLeaveHandler(handler: RoccoCursorLeaveHandler | undefined) {
+          leaveHandler = handler;
+        },
+        setCursorAttachment() {
+          // noop
+        },
+      }),
+      getActiveCartridge: () => cartridge,
+      getActivePlayerSpriteId: () => null,
+      showSpriteMessage: () => {},
+      log: () => {},
+    });
+
+    handler.mount();
+    leaveHandler?.();
+
+    expect(activationCalls).toEqual([[-1, -1]]);
+    expect(handledActions).toEqual([
+      {
+        kind: 'grid-menu',
+        definitionId: 'rocco-storage-transfer-menu:test',
+        interaction: 'close',
+        items: [],
+      },
+    ]);
+    expect(clearCarriedItemCalls).toBe(1);
     expect(renderCalls).toBe(1);
   });
 });

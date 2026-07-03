@@ -51,6 +51,7 @@ export interface RoccoDefaultKeysState {
 export interface RoccoDefaultKeysControllerOptions {
   localization?: RoccoLocalization;
   initialState?: RoccoDefaultKeysState;
+  onCollectRequested?: () => boolean;
   onCollected?: () => void;
 }
 
@@ -65,6 +66,7 @@ type KeysControllerState =
 class RoccoKeysController implements RoccoDefaultKeysController {
   private readonly engine: RoccoEngine;
   private readonly localization: RoccoLocalization;
+  private readonly onCollectRequested: (() => boolean) | undefined;
   private readonly onCollected: (() => void) | undefined;
   private state: KeysControllerState = 'hidden';
   private elapsedMs = 0;
@@ -77,6 +79,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   constructor(engine: RoccoEngine, options?: RoccoDefaultKeysControllerOptions) {
     this.engine = engine;
     this.localization = options?.localization ?? createRoccoLocalization();
+    this.onCollectRequested = options?.onCollectRequested;
     this.onCollected = options?.onCollected;
     this.restoreState(options?.initialState ?? { status: 'hidden' });
   }
@@ -102,6 +105,10 @@ class RoccoKeysController implements RoccoDefaultKeysController {
       activation.actionId !== KEYS_GRAB_ACTION_ID ||
       this.state !== 'revealed'
     ) {
+      return;
+    }
+
+    if (this.onCollectRequested?.() === false) {
       return;
     }
 

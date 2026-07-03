@@ -1,6 +1,7 @@
 export const baitShopInteriorAssetUrls = {
   background: new URL('./assets/bait-shop-background.png', import.meta.url).href,
   foreground: new URL('./assets/bait-shop-foreground.png', import.meta.url).href,
+  souvenirCloseup: new URL('./assets/bait-shop-souvenir-closeup.png', import.meta.url).href,
   walkMap: new URL('./assets/bait-shop-walkmap.png', import.meta.url).href,
 } as const;
 

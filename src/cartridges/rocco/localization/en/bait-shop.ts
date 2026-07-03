@@ -5,6 +5,11 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
   toiletLookLines: ['A toilet.'],
   toiletReadLabel: 'Read',
   toiletUseLabel: 'Use',
+  toiletStaySeatedLines: [
+    'No. I need to finish this first.',
+    'Not yet. First I need to finish this.',
+    'I am not getting up until I am done here.',
+  ],
   toiletNeedMagazineLine: 'I definitely feel like it, but I would like to have something to read.',
   toiletMagazineReadingLines: [
     'BUT WHAT THE HELL?',
@@ -25,6 +30,7 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
   ],
   toiletMagazineKnownStanLine: 'AND STAN OUTSIDE!',
   toiletMagazineUnknownStanLine: 'AND THE OLD MAN OUTSIDE!',
+  toiletPoliceAlertLine: 'Police! The thief is in my bathroom!',
   toiletDoorOpenLabel: 'Open',
   toiletDoorCloseLabel: 'Close',
   toiletDoorWalkLabel: 'Walk',
@@ -32,6 +38,10 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'That is one of those doors that only open with a key.',
     'It looks like the kind of door that only opens with a key.',
     'Yes, this is definitely one of those key-only doors.',
+  ],
+  toiletDoorOpenWithKeyLines: [
+    'I think that strange key in my pocket could open this.',
+    'I should try it from my inventory.',
   ],
   toiletDoorWrongKeyLines: [
     'None of these opens it.',
@@ -43,6 +53,11 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'A wooden door at the back.',
     'Yes, that looks like a wooden door.',
     'I would say that is a wooden door.',
+  ],
+  toiletDoorLookWithKeyLines: [
+    'There is a lock where that strange key might fit.',
+    'I think I could open it.',
+    'I could use the key from my inventory.',
   ],
   toiletDoorKickLine: 'I am not planning to make noise.',
   shellCityLookLines: [
@@ -84,6 +99,20 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'That is not for kicking.',
   ],
   postcardRackGrabLines: ['What for? I do not have anywhere to take them.'],
+  souvenirTableLookLines: [
+    'A table full of shells, starfish, and other beach souvenirs.',
+    'Bits and pieces from the shore, arranged like little treasures.',
+    'Sea things with glued-on eyes and a price tag.',
+  ],
+  souvenirTableKnownStanLine:
+    'Stan finds these on the beach, puts eyes on them, and sells them here.',
+  souvenirTableUnknownStanLine:
+    'The old man finds these on the beach, puts eyes on them, and sells them here.',
+  souvenirTableKickLines: [
+    'No. That would send shells flying everywhere.',
+    'Too fragile for a kick.',
+    'I am not kicking a table full of breakable souvenirs.',
+  ],
   hiddenKeysCollectedLine: 'More keys. I will keep them.',
   cashRegisterLookLines: [
     'A mechanical cash register? What a relic.',

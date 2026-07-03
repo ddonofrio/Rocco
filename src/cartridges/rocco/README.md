@@ -18,7 +18,7 @@
 | --------------- | ----------------------------------------------------------------- |
 | `assets/`       | Shared cartridge assets for characters, props, sounds, and icons  |
 | `dialogue/`     | Reusable cartridge dialogue helpers and branching conversation runtime |
-| `inventory/`    | Rocco cartridge inventory state and grid-menu projection           |
+| `inventory/`    | Rocco cartridge inventory state, prop storages, and grid-menu projection |
 | `levels/pier/`  | Pier exterior levels, transitions, assets, effects, and interactions |
 | `levels/bait-shop/` | Bait shop interior level, scene assets, walk map, and per-level Rocco setup |
 | `localization/` | English and Spanish text catalogs for the cartridge                |
@@ -48,6 +48,8 @@ Rocco transitions through edge connectors on connected screens. When his ground 
 - The inventory starts with a 20 EUR bill and later stores collected keys.
 - Clicking Rocco opens a radial menu with self-talk and inventory options.
 - The inventory option toggles a reorderable 3x3 grid menu populated from Rocco cartridge inventory state.
+- The bait shop souvenir table reuses the same cartridge inventory layer as a left-right transfer view, with a 5x4 table layout and table-only placement rules.
+- Full player inventory blocks new pickups instead of reusing an occupied slot.
 - Picking an inventory item can carry it on the console cursor for generic use attempts on sprites.
 - Keys and the 20 EUR bill have localized failed-use responses for the bait bucket and the Pelikan.
 - Pier Middle exits are available without an inventory gate.

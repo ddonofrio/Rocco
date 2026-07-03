@@ -31,6 +31,7 @@ import {
   type RoccoDefaultSpriteController,
 } from '../../rocco-default-sprites';
 import { RoccoScriptedSceneInteractionController } from '../../scripted-scene-interaction-controller';
+import { resolveKeyLockedDoorLines } from '../key-locked-door-lines';
 import {
   findRoccoLevelConnector,
   type RoccoLevel,
@@ -55,7 +56,8 @@ export const BAIT_SHOP_SECOND_SCENE_ID = 'rocco-bait-shop-second-scene';
 
 export interface RoccoBaitShopSecondLevelOptions {
   hasMagazine?: () => boolean;
-  onMagazineCollected?: (known: boolean) => void;
+  hasMysteriousKey?: () => boolean;
+  onMagazineCollected?: (known: boolean) => boolean;
 }
 
 const BAIT_SHOP_RETURN_CONNECTOR_ID = 'south';
@@ -68,8 +70,8 @@ const BAIT_SHOP_SECOND_ENTRY_POSITION = {
 const BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID = 'rocco-bait-shop-second-toilet-door-target';
 const BAIT_SHOP_TOILET_DOOR_ACTION_MENU_ID = 'rocco-bait-shop-second-toilet-door-action-menu';
 const BAIT_SHOP_TOILET_DOOR_OPEN_PLANE_ID = 'rocco-bait-shop-second-toilet-door-open';
-const BAIT_SHOP_TOILET_DOOR_HISTORY_KEY = 'bait-shop-second-toilet-door-look';
-const BAIT_SHOP_TOILET_DOOR_NEEDS_KEY_HISTORY_KEY = 'bait-shop-second-toilet-door-needs-key';
+const BAIT_SHOP_TOILET_DOOR_LOOK_HISTORY_KEY = 'bait-shop-second-toilet-door-look';
+const BAIT_SHOP_TOILET_DOOR_OPEN_HISTORY_KEY = 'bait-shop-second-toilet-door-open';
 const BAIT_SHOP_TOILET_DOOR_WRONG_KEY_HISTORY_KEY = 'bait-shop-second-toilet-door-wrong-key';
 const BAIT_SHOP_MAGAZINE_SPRITE_DEFINITION_ID = 'rocco-bait-shop-second-magazine';
 const BAIT_SHOP_MAGAZINE_SPRITE_INSTANCE_ID = 'rocco-bait-shop-second-magazine-instance';
@@ -435,8 +437,12 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       return;
     }
 
+    const collected = this.options.onMagazineCollected?.(this.magazineKnown) ?? true;
+    if (!collected) {
+      return;
+    }
+
     this.magazineCollected = true;
-    this.options.onMagazineCollected?.(this.magazineKnown);
     this.syncMagazinePresentation();
   }
 
@@ -469,8 +475,12 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     this.syncToiletDoorPresentation();
     this.faceToiletDoorFromCurrentPosition();
     this.showThoughtLines(
-      this.localization.text.baitShop.toiletDoorNeedsKeyLines,
-      BAIT_SHOP_TOILET_DOOR_NEEDS_KEY_HISTORY_KEY,
+      resolveKeyLockedDoorLines({
+        hasMatchingKey: this.hasToiletDoorKey(),
+        withKeyLines: this.localization.text.baitShop.toiletDoorOpenWithKeyLines,
+        withoutKeyLines: this.localization.text.baitShop.toiletDoorNeedsKeyLines,
+      }),
+      `${BAIT_SHOP_TOILET_DOOR_OPEN_HISTORY_KEY}:${this.hasToiletDoorKey() ? 'has-key' : 'no-key'}`,
     );
   }
 
@@ -694,8 +704,12 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
 
   private showToiletDoorLookLines(): void {
     this.showThoughtLines(
-      this.localization.text.baitShop.toiletDoorLookLines,
-      BAIT_SHOP_TOILET_DOOR_HISTORY_KEY,
+      resolveKeyLockedDoorLines({
+        hasMatchingKey: this.hasToiletDoorKey(),
+        withKeyLines: this.localization.text.baitShop.toiletDoorLookWithKeyLines,
+        withoutKeyLines: this.localization.text.baitShop.toiletDoorNeedsKeyLines,
+      }),
+      `${BAIT_SHOP_TOILET_DOOR_LOOK_HISTORY_KEY}:${this.hasToiletDoorKey() ? 'has-key' : 'no-key'}`,
     );
   }
 
@@ -725,6 +739,10 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
     });
     this.engine.video.render(0);
+  }
+
+  private hasToiletDoorKey(): boolean {
+    return this.options.hasMysteriousKey?.() ?? false;
   }
 
   private faceToiletDoorFromCurrentPosition(): void {

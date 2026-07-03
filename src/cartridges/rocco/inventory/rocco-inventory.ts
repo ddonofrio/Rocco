@@ -1,106 +1,114 @@
 import type { RoccoGridMenuDefinition } from '../../../engine/video/grid-menu';
+import { DEFAULT_SPRITE_SCALE } from '../rocco-default-constants';
 import {
   roccoDefaultKeysAssetUrl,
+  roccoDefaultMicromaniaClosedAssetUrl,
   roccoDefaultMicromaniaInventoryAssetUrl,
   roccoDefaultMysteriousKeyAssetUrl,
   roccoDefaultTwentyEurosAssetUrl,
 } from '../rocco-default-assets';
 import type { RoccoLocalization } from '../localization';
-import type { RoccoInventoryItem } from './types';
+import { RoccoInventoryStorage } from './inventory-storage';
+import type { RoccoInventoryGroundSpriteDefinition, RoccoInventoryItem } from './types';
 
 export const ROCCO_INVENTORY_MENU_ID = 'rocco-inventory-menu';
+export const ROCCO_INVENTORY_DROP_BUTTON_ID = 'drop-item';
 export const ROCCO_INVENTORY_KEYS_ITEM_ID = 'rocco-keys';
 export const ROCCO_INVENTORY_MAGAZINE_ITEM_ID = 'rocco-magazine';
 export const ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID = 'rocco-mysterious-key';
+export const ROCCO_PLAYER_INVENTORY_STORAGE_ID = 'rocco-player-inventory';
 export const ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID = 'rocco-twenty-euros';
-const ROCCO_INVENTORY_SLOT_COUNT = 9;
+const INVENTORY_BACKDROP_ALPHA = 0.32;
+const INVENTORY_BUTTON_HEIGHT = 40;
+const INVENTORY_BUTTON_GAP = 14;
+const INVENTORY_SLOT_SIZE = 106;
+const INVENTORY_SLOT_GAP = 8;
 
-function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+function createGroundSpriteDefinition(
+  imageUri: string,
+  width: number,
+  height: number,
+  referenceHeightAtDefaultRoccoScale: number,
+): RoccoInventoryGroundSpriteDefinition {
+  const spriteScaleAtDefaultRoccoScale =
+    referenceHeightAtDefaultRoccoScale / Math.max(1, height);
+  return {
+    imageUri,
+    width,
+    height,
+    scaleRelativeToRoccoBase: spriteScaleAtDefaultRoccoScale / DEFAULT_SPRITE_SCALE,
+    renderLayer: 'world.behind',
+    zIndex: 12,
+    clickTargetPadding: {
+      x: 26,
+      y: 20,
+    },
+    pickable: true,
+  };
 }
 
-export class RoccoInventory {
-  private readonly items = new Map<string, RoccoInventoryItem>();
+const DEFAULT_KEYS_GROUND_SPRITE = createGroundSpriteDefinition(
+  roccoDefaultKeysAssetUrl,
+  300,
+  400,
+  34,
+);
+const DEFAULT_MYSTERIOUS_KEY_GROUND_SPRITE = createGroundSpriteDefinition(
+  roccoDefaultMysteriousKeyAssetUrl,
+  1254,
+  1254,
+  26,
+);
+const DEFAULT_TWENTY_EUROS_GROUND_SPRITE = createGroundSpriteDefinition(
+  roccoDefaultTwentyEurosAssetUrl,
+  1254,
+  1254,
+  28,
+);
+const DEFAULT_MAGAZINE_GROUND_SPRITE = createGroundSpriteDefinition(
+  roccoDefaultMicromaniaClosedAssetUrl,
+  324,
+  192,
+  24,
+);
 
-  addItem(item: RoccoInventoryItem): void {
-    const existingItem = this.items.get(item.id);
-    const slotIndex = item.slotIndex ?? existingItem?.slotIndex ?? this.findFirstOpenSlot(item.id);
-    this.items.set(item.id, {
-      ...clone(item),
-      slotIndex,
+export class RoccoInventory extends RoccoInventoryStorage {
+  constructor() {
+    super({
+      id: ROCCO_PLAYER_INVENTORY_STORAGE_ID,
+      columns: 3,
+      rows: 3,
     });
-  }
-
-  removeItem(itemId: string): void {
-    this.items.delete(itemId);
-  }
-
-  hasItem(itemId: string): boolean {
-    return this.items.has(itemId);
-  }
-
-  listItems(): RoccoInventoryItem[] {
-    return [...this.items.values()]
-      .sort((left, right) => (left.slotIndex ?? 0) - (right.slotIndex ?? 0))
-      .map((item) => clone(item));
-  }
-
-  applyGridMenuItems(items: readonly { id: string; slotIndex?: number }[]): void {
-    for (const gridItem of items) {
-      const item = this.items.get(gridItem.id);
-      if (!item || gridItem.slotIndex === undefined) {
-        continue;
-      }
-
-      item.slotIndex = this.normalizeSlotIndex(gridItem.slotIndex);
-    }
   }
 
   createGridMenuDefinition(localization: RoccoLocalization): RoccoGridMenuDefinition {
     return {
       id: ROCCO_INVENTORY_MENU_ID,
       title: localization.text.inventory.title,
-      columns: 3,
-      rows: 3,
-      slotSize: 74,
-      gap: 10,
+      showTitle: false,
+      columns: this.columns,
+      rows: this.rows,
+      slotSize: INVENTORY_SLOT_SIZE,
+      gap: INVENTORY_SLOT_GAP,
       padding: 18,
+      buttons: [
+        {
+          id: ROCCO_INVENTORY_DROP_BUTTON_ID,
+          label: localization.text.inventory.dropButtonLabel,
+          requiresCarriedItem: true,
+        },
+      ],
+      buttonHeight: INVENTORY_BUTTON_HEIGHT,
+      buttonGap: INVENTORY_BUTTON_GAP,
       renderLayer: 'ui',
       zIndex: 120,
       reorderable: true,
-      items: this.listItems().map((item, index) => ({
-        id: item.id,
-        imageUri: item.imageUri,
-        label: item.label,
-        slotIndex: item.slotIndex ?? index,
-      })),
+      panelFillAlpha: 0,
+      panelStrokeAlpha: 0,
+      backdropFill: '#000000',
+      backdropAlpha: INVENTORY_BACKDROP_ALPHA,
+      items: this.createGridMenuItems(),
     };
-  }
-
-  private findFirstOpenSlot(excludingItemId?: string): number {
-    const occupiedSlots = new Set<number>();
-    for (const item of this.items.values()) {
-      if (item.id === excludingItemId || item.slotIndex === undefined) {
-        continue;
-      }
-      occupiedSlots.add(this.normalizeSlotIndex(item.slotIndex));
-    }
-
-    for (let slotIndex = 0; slotIndex < ROCCO_INVENTORY_SLOT_COUNT; slotIndex += 1) {
-      if (!occupiedSlots.has(slotIndex)) {
-        return slotIndex;
-      }
-    }
-
-    return Math.max(0, this.items.size);
-  }
-
-  private normalizeSlotIndex(slotIndex: number): number {
-    return Number.isFinite(slotIndex) ? Math.max(0, Math.floor(slotIndex)) : 0;
   }
 }
 
@@ -111,6 +119,8 @@ export function createRoccoKeysInventoryItem(
     id: ROCCO_INVENTORY_KEYS_ITEM_ID,
     label: localization.text.inventory.keysLabel,
     imageUri: roccoDefaultKeysAssetUrl,
+    allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
+    groundSprite: DEFAULT_KEYS_GROUND_SPRITE,
   };
 }
 
@@ -121,6 +131,8 @@ export function createRoccoMysteriousKeyInventoryItem(
     id: ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID,
     label: localization.text.inventory.mysteriousKeyLabel,
     imageUri: roccoDefaultMysteriousKeyAssetUrl,
+    allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
+    groundSprite: DEFAULT_MYSTERIOUS_KEY_GROUND_SPRITE,
   };
 }
 
@@ -131,6 +143,8 @@ export function createRoccoTwentyEurosInventoryItem(
     id: ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
     label: localization.text.inventory.twentyEurosLabel,
     imageUri: roccoDefaultTwentyEurosAssetUrl,
+    allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
+    groundSprite: DEFAULT_TWENTY_EUROS_GROUND_SPRITE,
   };
 }
 
@@ -144,5 +158,7 @@ export function createRoccoMagazineInventoryItem(
       ? localization.text.inventory.micromaniaLabel
       : localization.text.inventory.magazineLabel,
     imageUri: roccoDefaultMicromaniaInventoryAssetUrl,
+    allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
+    groundSprite: DEFAULT_MAGAZINE_GROUND_SPRITE,
   };
 }

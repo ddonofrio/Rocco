@@ -7,6 +7,8 @@ import {
 } from '../rocco-default-constants';
 import {
   createRoccoKeysInventoryItem,
+  createRoccoMagazineInventoryItem,
+  createRoccoMysteriousKeyInventoryItem,
   createRoccoTwentyEurosInventoryItem,
   RoccoInventory,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
@@ -14,6 +16,7 @@ import {
   ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
 } from './rocco-inventory';
 import { resolveRoccoInventoryUseLines } from './rocco-inventory-interactions';
+import { createBaitShopSouvenirTableItems } from './souvenir-table-items';
 
 describe('RoccoInventory', () => {
   it('stores cartridge items and exposes them as a 3x3 grid menu', () => {
@@ -38,19 +41,19 @@ describe('RoccoInventory', () => {
     expect(inventory.listItems()).toHaveLength(2);
     expect(inventory.createGridMenuDefinition(localization)).toMatchObject({
       id: ROCCO_INVENTORY_MENU_ID,
-      title: 'Inventario',
+      title: localization.text.inventory.title,
       columns: 3,
       rows: 3,
       reorderable: true,
       items: [
         {
           id: ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
-          label: '20€',
+          label: localization.text.inventory.twentyEurosLabel,
           slotIndex: 0,
         },
         {
           id: ROCCO_INVENTORY_KEYS_ITEM_ID,
-          label: 'Llaves',
+          label: localization.text.inventory.keysLabel,
           slotIndex: 4,
         },
       ],
@@ -83,5 +86,27 @@ describe('RoccoInventory', () => {
         localization,
       }),
     ).toEqual(localization.text.inventory.cannotUseItemLines);
+  });
+
+  it('rejects adding a tenth item once the 3x3 inventory is full', () => {
+    const localization = createRoccoLocalization('en');
+    const inventory = new RoccoInventory();
+    const souvenirs = createBaitShopSouvenirTableItems(localization);
+
+    inventory.addItem(createRoccoTwentyEurosInventoryItem(localization));
+    inventory.addItem(createRoccoKeysInventoryItem(localization));
+    inventory.addItem(createRoccoMysteriousKeyInventoryItem(localization));
+    inventory.addItem(createRoccoMagazineInventoryItem(localization, true));
+    for (const souvenir of souvenirs.slice(0, 5)) {
+      inventory.addItem(souvenir);
+    }
+
+    expect(inventory.listItems()).toHaveLength(9);
+    expect(inventory.hasOpenSlot()).toBe(false);
+    expect(inventory.listItems().map((item) => item.slotIndex)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(() => inventory.addItem(souvenirs[5]!)).toThrow(
+      "Storage 'rocco-player-inventory' is full.",
+    );
+    expect(inventory.listItems()).toHaveLength(9);
   });
 });

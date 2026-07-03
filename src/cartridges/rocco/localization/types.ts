@@ -35,6 +35,7 @@ export interface RoccoTextCatalog {
     shellCitySign: string;
     bench: string;
     postcardRack: string;
+    souvenirTable: string;
     hiddenKeys: string;
     cashRegister: string;
     window: string;
@@ -75,6 +76,9 @@ export interface RoccoTextCatalog {
   };
   inventory: {
     title: string;
+    dropButtonLabel: string;
+    pickupLine: string;
+    fullLines: string[];
     keysLabel: string;
     magazineLabel: string;
     micromaniaLabel: string;
@@ -125,21 +129,34 @@ export interface RoccoTextCatalog {
   middleLevel: {
     pelikanFeedingLine: string;
   };
+  pierDoor: {
+    lookWithKeyLines: string[];
+    lookWithoutKeyLines: string[];
+    openWithKeyLines: string[];
+    openWithoutKeyLines: string[];
+    kickSleepingKnownStanLines: string[];
+    kickSleepingUnknownStanLines: string[];
+    kickAwakeLines: string[];
+  };
   baitShop: {
     magazineLookLine: string;
     toiletLookLines: string[];
     toiletReadLabel: string;
     toiletUseLabel: string;
+    toiletStaySeatedLines: string[];
     toiletNeedMagazineLine: string;
     toiletMagazineReadingLines: string[];
     toiletMagazineKnownStanLine: string;
     toiletMagazineUnknownStanLine: string;
+    toiletPoliceAlertLine: string;
     toiletDoorOpenLabel: string;
     toiletDoorCloseLabel: string;
     toiletDoorWalkLabel: string;
     toiletDoorNeedsKeyLines: string[];
+    toiletDoorOpenWithKeyLines: string[];
     toiletDoorWrongKeyLines: string[];
     toiletDoorLookLines: string[];
+    toiletDoorLookWithKeyLines: string[];
     toiletDoorKickLine: string;
     shellCityLookLines: string[];
     shellCityKnownStanLine: string;
@@ -155,6 +172,10 @@ export interface RoccoTextCatalog {
     postcardRackRevealLine: string;
     postcardRackKickLines: string[];
     postcardRackGrabLines: string[];
+    souvenirTableLookLines: string[];
+    souvenirTableKnownStanLine: string;
+    souvenirTableUnknownStanLine: string;
+    souvenirTableKickLines: string[];
     hiddenKeysCollectedLine: string;
     cashRegisterLookLines: string[];
     cashRegisterKnownStanOldLine: string;

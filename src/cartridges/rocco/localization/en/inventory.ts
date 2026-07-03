@@ -2,12 +2,19 @@ import type { RoccoTextCatalog } from '../types';
 
 export const englishInventoryText: RoccoTextCatalog['inventory'] = {
   title: 'Inventory',
+  dropButtonLabel: 'Drop',
+  pickupLine: "I'll keep it.",
+  fullLines: [
+    "I can't carry any more stuff.",
+    'My pockets are already full.',
+    'If I keep stuffing things in there, something will explode.',
+  ],
   keysLabel: 'Keys',
   magazineLabel: 'Magazine',
   micromaniaLabel: 'Micromania',
   mysteriousKeyLabel: 'Key',
   magazineOnSelfLine: 'I would like to read it, but sitting down.',
-  twentyEurosLabel: '€20',
+  twentyEurosLabel: '\u20ac20',
   cannotUseItemLines: [
     'I cannot use that there.',
     'That does not fit. Not even in the sad way.',

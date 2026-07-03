@@ -4,6 +4,7 @@ import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../../../engine/video/action-menu';
+import type { RoccoGridMenuCarriedItem } from '../../../../engine/video/grid-menu';
 import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../../../engine/video/planes';
 import {
   createRoccoSpriteWalkMapFromImageData,
@@ -11,6 +12,7 @@ import {
   type RoccoFacingDirection,
   type RoccoPoint,
 } from '../../../../engine/video/sprites';
+import { BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID } from '../../inventory';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import {
@@ -45,6 +47,7 @@ export const BAIT_SHOP_SCENE_ID = 'rocco-bait-shop-scene';
 
 const BAIT_SHOP_BACKGROUND_IMAGE_URL = baitShopInteriorAssetUrls.background;
 const BAIT_SHOP_FOREGROUND_IMAGE_URL = baitShopInteriorAssetUrls.foreground;
+const BAIT_SHOP_SOUVENIR_CLOSEUP_IMAGE_URL = baitShopInteriorAssetUrls.souvenirCloseup;
 const BAIT_SHOP_WALK_MAP_IMAGE_URL = baitShopInteriorAssetUrls.walkMap;
 
 interface BaitShopSceneTargetSpec {
@@ -60,7 +63,13 @@ interface BaitShopSceneTargetSpec {
 export interface RoccoBaitShopLevelOptions {
   isStanIdentified?: () => boolean;
   hasMysteriousKey?: () => boolean;
-  onMysteriousKeyCollected?: () => void;
+  onMysteriousKeyCollected?: () => boolean;
+  onOpenInventoryRequested?: () => void;
+  onOpenStorageInventoryRequested?: (
+    storageId: string,
+    onInventoryClosed: () => void,
+  ) => void;
+  onCloseStorageInventoryRequested?: (storageId: string) => void;
 }
 
 const BAIT_SHOP_ENTRY_POSITION = {
@@ -70,16 +79,22 @@ const BAIT_SHOP_ENTRY_POSITION = {
 const BAIT_SHOP_SHELL_CITY_TARGET_INSTANCE_ID = 'rocco-bait-shop-shell-city-sign-target';
 const BAIT_SHOP_BENCH_TARGET_INSTANCE_ID = 'rocco-bait-shop-bench-target';
 const BAIT_SHOP_POSTCARD_RACK_TARGET_INSTANCE_ID = 'rocco-bait-shop-postcard-rack-target';
+const BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID = 'rocco-bait-shop-souvenir-table-target';
 const BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID = 'rocco-bait-shop-hidden-keys-target';
 const BAIT_SHOP_CASH_REGISTER_TARGET_INSTANCE_ID = 'rocco-bait-shop-cash-register-target';
 const BAIT_SHOP_WINDOW_TARGET_INSTANCE_ID = 'rocco-bait-shop-window-target';
 const BAIT_SHOP_LEFT_BARREL_TARGET_INSTANCE_ID = 'rocco-bait-shop-left-barrel-target';
 const BAIT_SHOP_BENCH_ACTION_MENU_ID = 'rocco-bait-shop-bench-action-menu';
 const BAIT_SHOP_POSTCARD_RACK_ACTION_MENU_ID = 'rocco-bait-shop-postcard-rack-action-menu';
+const BAIT_SHOP_SOUVENIR_TABLE_ACTION_MENU_ID = 'rocco-bait-shop-souvenir-table-action-menu';
 const BAIT_SHOP_CASH_REGISTER_ACTION_MENU_ID = 'rocco-bait-shop-cash-register-action-menu';
 const BAIT_SHOP_BENCH_INTERACTION_POINT = {
   x: 267,
   y: 410,
+} as const;
+const BAIT_SHOP_SOUVENIR_TABLE_INTERACTION_POINT = {
+  x: 228,
+  y: 365,
 } as const;
 const BAIT_SHOP_BENCH_KICK_START_POINT = {
   x: 336,
@@ -95,6 +110,7 @@ const BAIT_SHOP_CASH_REGISTER_INTERACTION_POINT = {
 } as const;
 const BAIT_SHOP_BENCH_FOCUS_X = 307;
 const BAIT_SHOP_POSTCARD_RACK_FOCUS_X = 242;
+const BAIT_SHOP_SOUVENIR_TABLE_FOCUS_X = 149;
 const BAIT_SHOP_CASH_REGISTER_FOCUS_X = 395;
 const BAIT_SHOP_LEFT_WALL_INTERACTION_POINT = {
   x: 300,
@@ -107,6 +123,8 @@ const BAIT_SHOP_BENCH_GRAB_HISTORY_KEY = 'bait-shop-bench-grab';
 const BAIT_SHOP_POSTCARD_RACK_LOOK_HISTORY_KEY = 'bait-shop-postcard-rack-look';
 const BAIT_SHOP_POSTCARD_RACK_KICK_HISTORY_KEY = 'bait-shop-postcard-rack-kick';
 const BAIT_SHOP_POSTCARD_RACK_GRAB_HISTORY_KEY = 'bait-shop-postcard-rack-grab';
+const BAIT_SHOP_SOUVENIR_TABLE_LOOK_HISTORY_KEY = 'bait-shop-souvenir-table-look';
+const BAIT_SHOP_SOUVENIR_TABLE_KICK_HISTORY_KEY = 'bait-shop-souvenir-table-kick';
 const BAIT_SHOP_CASH_REGISTER_LOOK_HISTORY_KEY = 'bait-shop-cash-register-look';
 const BAIT_SHOP_CASH_REGISTER_GRAB_HISTORY_KEY = 'bait-shop-cash-register-grab';
 const BAIT_SHOP_CASH_REGISTER_KICK_HISTORY_KEY = 'bait-shop-cash-register-kick';
@@ -127,6 +145,8 @@ const BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST = {
   farScale: 0.8,
   nearScale: 1,
 } as const;
+const BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE_ID = 'rocco-bait-shop-souvenir-closeup';
+const BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID = 'rocco-bait-shop-souvenir-closeup-target';
 const BAIT_SHOP_SECOND_SCREEN_ENTRY_Y = 220;
 const BAIT_SHOP_SECOND_SCREEN_EXIT_TRIGGER_HEIGHT = 30;
 
@@ -178,6 +198,32 @@ const BAIT_SHOP_CONNECTORS: readonly RoccoLevelConnector[] = [
   },
 ];
 
+const BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE: RoccoGraphicPlane = {
+  id: BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE_ID,
+  name: 'Bait Shop Souvenir Closeup',
+  enabled: true,
+  source: {
+    kind: 'image',
+    uri: BAIT_SHOP_SOUVENIR_CLOSEUP_IMAGE_URL,
+    width: DEFAULT_DESIGN_WIDTH,
+    height: DEFAULT_DESIGN_HEIGHT,
+  },
+  colorModel: { kind: 'native' },
+  transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+  scroll: { x: 0, y: 0 },
+  wrap: { x: false, y: false },
+  viewport: {
+    x: 0,
+    y: 0,
+    width: DEFAULT_DESIGN_WIDTH,
+    height: DEFAULT_DESIGN_HEIGHT,
+  },
+  opacity: 1,
+  priority: 120,
+  renderLayer: 'foreground',
+  visible: false,
+};
+
 const BAIT_SHOP_SCENE_DEFINITION: RoccoBaitShopSceneDefinition = {
   sceneId: BAIT_SHOP_SCENE_ID,
   planeIds: {
@@ -198,6 +244,7 @@ const BAIT_SHOP_SCENE_DEFINITION: RoccoBaitShopSceneDefinition = {
     backLayer: 'background.main',
     frontWhen: 'less-than-or-equal',
   },
+  extraPlanes: [BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE],
 };
 
 function rect(x: number, y: number, width: number, height: number): RoccoCollisionShape {
@@ -269,6 +316,14 @@ const BAIT_SHOP_SCENE_TARGETS: readonly BaitShopSceneTargetSpec[] = [
     descriptionKey: 'postcardRack',
     shape: rect(215, 116, 54, 136),
     priority: 22,
+    suppressDefaultPlayerMove: true,
+  },
+  {
+    instanceId: BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID,
+    definitionId: 'rocco-bait-shop-souvenir-table',
+    descriptionKey: 'souvenirTable',
+    shape: rect(87, 223, 124, 124),
+    priority: 21,
     suppressDefaultPlayerMove: true,
   },
   {
@@ -511,6 +566,7 @@ function uninstallBaitShopSceneTargets(engine: RoccoEngine): void {
     engine.video.sceneTargets?.unregisterTarget(target.instanceId);
   }
   engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID);
+  engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID);
 }
 
 function makeBaitShopActionMenuBase(
@@ -557,6 +613,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
   private scriptedInteractionController: RoccoScriptedSceneInteractionController | null = null;
   private benchJumpSequence: BaitShopBenchJumpSequence | null = null;
   private roccoOnBench = false;
+  private souvenirCloseupVisible = false;
   private hiddenKeysRevealed = false;
   private hiddenKeysCollected = false;
 
@@ -578,6 +635,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     this.scriptedInteractionController = null;
     this.benchJumpSequence = null;
     this.roccoOnBench = false;
+    this.souvenirCloseupVisible = false;
     if (this.options.hasMysteriousKey?.()) {
       this.hiddenKeysCollected = true;
       this.hiddenKeysRevealed = false;
@@ -596,6 +654,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     engine.loadPlaneScene(scene);
     await installBaitShopWalkMap(engine, BAIT_SHOP_WALK_MAP_IMAGE_URL);
     installBaitShopSceneTargets(engine, this.localization);
+    this.syncSouvenirCloseupPresentation();
     this.syncHiddenKeysTarget();
     this.installActionMenus(engine);
     this.spriteController = await installDefaultSprite(engine, {
@@ -678,6 +737,8 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     engine.video.messages.clearMessages();
     this.scriptedInteractionController?.cancel();
     this.uninstallActionMenus(engine);
+    this.souvenirCloseupVisible = false;
+    this.syncSouvenirCloseupPresentation();
     uninstallBaitShopSceneTargets(engine);
     uninstallDefaultSprite(engine);
     uninstallBaitShopWalkMap(engine);
@@ -686,6 +747,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     this.scriptedInteractionController = null;
     this.benchJumpSequence = null;
     this.roccoOnBench = false;
+    this.souvenirCloseupVisible = false;
     engine.video.render(0);
   }
 
@@ -703,6 +765,11 @@ export class RoccoBaitShopLevel implements RoccoLevel {
 
     if (activation.targetInstanceId === BAIT_SHOP_POSTCARD_RACK_TARGET_INSTANCE_ID) {
       this.handlePostcardRackAction(activation);
+      return;
+    }
+
+    if (activation.targetInstanceId === BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID) {
+      this.handleSouvenirTableAction(activation);
       return;
     }
 
@@ -812,8 +879,45 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     );
   }
 
+  private handleSouvenirTableAction(activation: RoccoActionMenuActivation): void {
+    this.faceBaitShopTargetFromCurrentPosition(BAIT_SHOP_SOUVENIR_TABLE_FOCUS_X);
+
+    if (activation.actionId === 'look') {
+      this.showBaitShopLines(
+        this.resolveSouvenirTableLookLines(),
+        BAIT_SHOP_SOUVENIR_TABLE_LOOK_HISTORY_KEY,
+      );
+      return;
+    }
+
+    if (activation.actionId === 'kick') {
+      this.showBaitShopLines(
+        this.localization.text.baitShop.souvenirTableKickLines,
+        BAIT_SHOP_SOUVENIR_TABLE_KICK_HISTORY_KEY,
+      );
+      return;
+    }
+
+    if (activation.actionId === 'grab') {
+      this.scriptedInteractionController?.run({
+        targetInstanceId: BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID,
+        moveTo: { ...BAIT_SHOP_SOUVENIR_TABLE_INTERACTION_POINT },
+        facing: 'up-left',
+        onReached: () => {
+          this.openSouvenirCloseup();
+        },
+      });
+      return;
+    }
+  }
+
   handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
     if (this.benchJumpSequence) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (this.souvenirCloseupVisible) {
+      this.closeSouvenirCloseup();
       return { suppressDefaultPlayerMove: true };
     }
 
@@ -828,6 +932,18 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     }
 
     this.scriptedInteractionController?.handleSceneClick(activation);
+  }
+
+  handleInventorySceneClick(
+    _activation: RoccoSceneClickAction,
+    _carriedItem: RoccoGridMenuCarriedItem,
+  ): boolean {
+    if (!this.souvenirCloseupVisible) {
+      return false;
+    }
+
+    this.closeSouvenirCloseup();
+    return true;
   }
 
   private startBenchJumpUpSequence(): void {
@@ -1045,9 +1161,11 @@ export class RoccoBaitShopLevel implements RoccoLevel {
   private installActionMenus(engine: RoccoEngine): void {
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_BENCH_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_POSTCARD_RACK_ACTION_MENU_ID);
+    engine.video.actionMenus.unregisterMenu(BAIT_SHOP_SOUVENIR_TABLE_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_CASH_REGISTER_ACTION_MENU_ID);
     engine.video.actionMenus.registerMenu(this.createBenchActionMenuDefinition());
     engine.video.actionMenus.registerMenu(this.createPostcardRackActionMenuDefinition());
+    engine.video.actionMenus.registerMenu(this.createSouvenirTableActionMenuDefinition());
     engine.video.actionMenus.registerMenu(this.createCashRegisterActionMenuDefinition());
     engine.video.render(0);
   }
@@ -1055,6 +1173,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
   private uninstallActionMenus(engine: RoccoEngine): void {
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_BENCH_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_POSTCARD_RACK_ACTION_MENU_ID);
+    engine.video.actionMenus.unregisterMenu(BAIT_SHOP_SOUVENIR_TABLE_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_CASH_REGISTER_ACTION_MENU_ID);
     engine.video.render(0);
   }
@@ -1112,6 +1231,35 @@ export class RoccoBaitShopLevel implements RoccoLevel {
           actionId: 'look',
           label: this.localization.text.actions.look,
           imageUri: roccoDefaultActionMenuAssetUrls.look,
+        },
+      ],
+    };
+  }
+
+  private createSouvenirTableActionMenuDefinition(): RoccoActionMenuDefinition {
+    return {
+      ...makeBaitShopActionMenuBase(
+        BAIT_SHOP_SOUVENIR_TABLE_ACTION_MENU_ID,
+        BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID,
+      ),
+      items: [
+        {
+          id: 'look',
+          actionId: 'look',
+          label: this.localization.text.actions.look,
+          imageUri: roccoDefaultActionMenuAssetUrls.look,
+        },
+        {
+          id: 'grab',
+          actionId: 'grab',
+          label: this.localization.text.actions.grab,
+          imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        },
+        {
+          id: 'kick',
+          actionId: 'kick',
+          label: this.localization.text.actions.kick,
+          imageUri: roccoDefaultActionMenuAssetUrls.kick,
         },
       ],
     };
@@ -1191,6 +1339,73 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     this.engine.video.render(0);
   }
 
+  private openSouvenirCloseup(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.souvenirCloseupVisible = true;
+    this.syncSouvenirCloseupPresentation();
+    if (this.options.onOpenStorageInventoryRequested) {
+      this.options.onOpenStorageInventoryRequested(
+        BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID,
+        () => {
+          this.hideSouvenirCloseup();
+        },
+      );
+      return;
+    }
+
+    this.options.onOpenInventoryRequested?.();
+  }
+
+  private closeSouvenirCloseup(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.hideSouvenirCloseup();
+    this.options.onCloseStorageInventoryRequested?.(BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID);
+  }
+
+  private hideSouvenirCloseup(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.souvenirCloseupVisible = false;
+    this.syncSouvenirCloseupPresentation();
+  }
+
+  private syncSouvenirCloseupPresentation(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const overlayPlane = this.engine.video.planes?.resolvePlane?.(
+      BAIT_SHOP_SCENE_ID,
+      BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE_ID,
+    );
+    if (overlayPlane) {
+      this.engine.video.planes.updatePlane(BAIT_SHOP_SCENE_ID, BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE_ID, {
+        visible: this.souvenirCloseupVisible,
+      });
+    }
+
+    this.engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID);
+    if (this.souvenirCloseupVisible) {
+      this.engine.video.sceneTargets?.registerTarget({
+        instanceId: BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID,
+        definitionId: 'rocco-bait-shop-souvenir-closeup',
+        shape: rect(0, 0, DEFAULT_DESIGN_WIDTH, DEFAULT_DESIGN_HEIGHT),
+        priority: 999,
+        suppressDefaultPlayerMove: true,
+      });
+    }
+
+    this.engine.video.render(0);
+  }
+
   private faceBaitShopTargetFromCurrentPosition(focusX: number): void {
     if (!this.engine) {
       return;
@@ -1235,6 +1450,15 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     ];
   }
 
+  private resolveSouvenirTableLookLines(): string[] {
+    return [
+      ...this.localization.text.baitShop.souvenirTableLookLines,
+      this.options.isStanIdentified?.()
+        ? this.localization.text.baitShop.souvenirTableKnownStanLine
+        : this.localization.text.baitShop.souvenirTableUnknownStanLine,
+    ];
+  }
+
   private resolveCashRegisterLookLines(): string[] {
     return [
       ...this.localization.text.baitShop.cashRegisterLookLines,
@@ -1276,10 +1500,14 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       return;
     }
 
+    const collected = this.options.onMysteriousKeyCollected?.() ?? true;
+    if (!collected) {
+      return;
+    }
+
     this.hiddenKeysCollected = true;
     this.hiddenKeysRevealed = false;
     this.syncHiddenKeysTarget();
-    this.options.onMysteriousKeyCollected?.();
     this.showSingleBaitShopLine(this.localization.text.baitShop.hiddenKeysCollectedLine);
   }
 

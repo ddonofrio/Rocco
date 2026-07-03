@@ -8,6 +8,7 @@ import type {
   RoccoSpriteNavigationBinding,
   RoccoSpriteWalkMap,
 } from '../../../../engine/video/sprites';
+import { BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID } from '../../inventory';
 import { createRoccoLocalization } from '../../localization';
 import {
   DEFAULT_SPRITE_DEFINITION_ID,
@@ -23,6 +24,8 @@ import { BAIT_SHOP_SCENE_ID, RoccoBaitShopLevel } from './bait-shop-level';
 const BAIT_SHOP_BENCH_TARGET_INSTANCE_ID = 'rocco-bait-shop-bench-target';
 const BAIT_SHOP_POSTCARD_RACK_TARGET_INSTANCE_ID = 'rocco-bait-shop-postcard-rack-target';
 const BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID = 'rocco-bait-shop-hidden-keys-target';
+const BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID = 'rocco-bait-shop-souvenir-closeup-target';
+const BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID = 'rocco-bait-shop-souvenir-table-target';
 
 vi.mock('../../../../engine/video/sprites', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../engine/video/sprites')>();
@@ -303,6 +306,7 @@ describe('RoccoBaitShopLevel', () => {
       'rocco-bait-shop-backplate',
       'rocco-bait-shop-background',
       'rocco-bait-shop-foreground',
+      'rocco-bait-shop-souvenir-closeup',
     ]);
     expect(state.loadedScene?.planes[2]).toMatchObject({
       id: 'rocco-bait-shop-foreground',
@@ -366,6 +370,7 @@ describe('RoccoBaitShopLevel', () => {
       'rocco-bait-shop-backplate',
       'rocco-bait-shop-background',
       'rocco-bait-shop-foreground',
+      'rocco-bait-shop-souvenir-closeup',
     ]);
     expect(state.loadedScene?.planes[2]?.depthMode).toMatchObject({
       kind: 'sprite-y-threshold',
@@ -500,5 +505,49 @@ describe('RoccoBaitShopLevel', () => {
     });
 
     expect(onMysteriousKeyCollected).not.toHaveBeenCalled();
+  });
+
+  it('hides the souvenir closeup as soon as the storage inventory reports that it closed', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = createState();
+    const engine = createEngineMock(state);
+    const callbacks: {
+      closeInventory?: () => void;
+    } = {};
+    const onOpenStorageInventoryRequested = vi.fn(
+      (storageId: string, onInventoryClosed: () => void) => {
+        expect(storageId).toBe(BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID);
+        callbacks.closeInventory = onInventoryClosed;
+      },
+    );
+    const level = new RoccoBaitShopLevel(localization, {
+      onOpenStorageInventoryRequested,
+    });
+
+    await level.mount(engine);
+
+    level.handleAction({
+      definitionId: 'test-souvenir-table',
+      targetInstanceId: BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID,
+      targetDefinitionId: 'rocco-bait-shop-souvenir-table',
+      itemId: 'grab',
+      actionId: 'grab',
+    });
+    state.isSpriteMovingValue = false;
+    level.update(16);
+
+    expect(onOpenStorageInventoryRequested).toHaveBeenCalledOnce();
+    expect(callbacks.closeInventory).toBeTypeOf('function');
+    expect(getRegisteredSceneTarget(state, BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID)).toBeTruthy();
+
+    const closeInventoryCallback = callbacks.closeInventory;
+    if (!closeInventoryCallback) {
+      throw new Error('Expected the storage close callback to be captured.');
+    }
+
+    closeInventoryCallback();
+
+    expect(getRegisteredSceneTarget(state, BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID)).toBeUndefined();
+    expect(state.unregisteredSceneTargetIds).toContain(BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID);
   });
 });

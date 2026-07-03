@@ -76,3 +76,39 @@ export const spanishKeysText: RoccoTextCatalog['keys'] = {
 export const spanishMiddleLevelText: RoccoTextCatalog['middleLevel'] = {
   pelikanFeedingLine: 'Mira, comida.',
 };
+
+export const spanishPierDoorText: RoccoTextCatalog['pierDoor'] = {
+  lookWithKeyLines: [
+    'Tiene una cerradura donde parece encajar una de estas llaves.',
+    'Creo que podr\u00eda abrirla.',
+    'Podr\u00eda usar las llaves de mi inventario.',
+  ],
+  lookWithoutKeyLines: [
+    'Es una puerta cerrada.',
+    'Parece la entrada de la tienda.',
+    'Me pregunto qu\u00e9 vender\u00e1n.',
+  ],
+  openWithKeyLines: [
+    'Creo que en el bolsillo tengo las llaves.',
+    'Podr\u00eda probarlas desde el inventario.',
+  ],
+  openWithoutKeyLines: [
+    'No va a abrirse sola.',
+    'Primero necesito una llave.',
+  ],
+  kickSleepingKnownStanLines: [
+    'No voy a despertar a Stan.',
+    'Mejor no despertar a Stan por esto.',
+    'No. Que Stan siga dormido.',
+  ],
+  kickSleepingUnknownStanLines: [
+    'No voy a despertar al viejo.',
+    'Mejor no despertar al viejo por esto.',
+    'No. Que el viejo siga dormido.',
+  ],
+  kickAwakeLines: [
+    'Hay un polic\u00eda en la esquina, no quiero ir preso.',
+    'Con un polic\u00eda en la esquina, patear esa puerta es mala idea.',
+    'No gracias. Hoy prefiero no acabar detenido.',
+  ],
+};

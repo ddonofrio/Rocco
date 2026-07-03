@@ -1,6 +1,8 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
+import type { RoccoActionMenuDefinition } from '../../../../engine/video/action-menu';
 import type { RoccoSpriteDefinition } from '../../../../engine/video/sprites';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
+import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import {
   DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID,
   DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
@@ -22,8 +24,12 @@ const OPEN_FRAME_ID = 'bait-shop-door-open-frame';
 const DOOR_IMAGE_CLOSED_ID = 'rocco-bait-shop-door-closed';
 const DOOR_IMAGE_OPEN_ID = 'rocco-bait-shop-door-open';
 const BAIT_SHOP_DOOR_SOUND_VOLUME = 0.42;
+const BAIT_SHOP_DOOR_ACTION_MENU_ITEM_SIZE = 92;
+const BAIT_SHOP_DOOR_ACTION_MENU_ORBIT_RADIUS = 88;
+const BAIT_SHOP_DOOR_ACTION_MENU_ORBIT_SPEED = 0.08;
 
 export const BAIT_SHOP_DOOR_OPENING_SOUND_ID = 'rocco-bait-shop-door-opening-sound';
+export const BAIT_SHOP_DOOR_ACTION_MENU_ID = 'rocco-bait-shop-door-action-menu';
 
 export interface RoccoBaitShopDoorState {
   revealed: boolean;
@@ -126,6 +132,43 @@ function createDefaultBaitShopDoorSpriteDefinition(
   };
 }
 
+function createBaitShopDoorActionMenuDefinition(
+  localization: RoccoLocalization,
+): RoccoActionMenuDefinition {
+  return {
+    id: BAIT_SHOP_DOOR_ACTION_MENU_ID,
+    targetInstanceIds: [DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID],
+    renderLayer: 'ui.action-menu',
+    itemSize: BAIT_SHOP_DOOR_ACTION_MENU_ITEM_SIZE,
+    orbitRadius: BAIT_SHOP_DOOR_ACTION_MENU_ORBIT_RADIUS,
+    orbitSpeedRadiansPerSecond: BAIT_SHOP_DOOR_ACTION_MENU_ORBIT_SPEED,
+    hoverScale: 1.16,
+    circleFill: '#0f1610',
+    circleStroke: '#d7e6c5',
+    circleStrokeWidth: 2,
+    items: [
+      {
+        id: 'look',
+        actionId: 'look',
+        label: localization.text.actions.look,
+        imageUri: roccoDefaultActionMenuAssetUrls.look,
+      },
+      {
+        id: 'open',
+        actionId: 'open',
+        label: localization.text.baitShop.toiletDoorOpenLabel,
+        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+      },
+      {
+        id: 'kick',
+        actionId: 'kick',
+        label: localization.text.actions.kick,
+        imageUri: roccoDefaultActionMenuAssetUrls.kick,
+      },
+    ],
+  };
+}
+
 class RoccoBaitShopDoorControllerImpl implements RoccoBaitShopDoorController {
   private readonly engine: RoccoEngine;
   private readonly localization: RoccoLocalization;
@@ -164,6 +207,7 @@ class RoccoBaitShopDoorControllerImpl implements RoccoBaitShopDoorController {
   unmount(engine: RoccoEngine): void {
     engine.audio.stopSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
     engine.audio.unregisterSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
+    engine.video.actionMenus.unregisterMenu(BAIT_SHOP_DOOR_ACTION_MENU_ID);
     engine.video.sprites.removeSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
     engine.video.render(0);
   }
@@ -189,6 +233,8 @@ export async function installDefaultBaitShopDoor(
   await engine.video.preloadSpriteDefinition(definition);
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
+  engine.video.actionMenus.unregisterMenu(BAIT_SHOP_DOOR_ACTION_MENU_ID);
+  engine.video.actionMenus.registerMenu(createBaitShopDoorActionMenuDefinition(localization));
 
   engine.video.sprites.createSpriteFromDefinition(DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID, {
     id: DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,

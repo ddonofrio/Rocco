@@ -29,6 +29,7 @@ export const englishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   shellCitySign: 'Shell City sign',
   bench: 'Stool',
   postcardRack: 'Postcards',
+  souvenirTable: 'Souvenir table',
   hiddenKeys: 'Hidden keys',
   cashRegister: 'Cash register',
   window: 'Window',

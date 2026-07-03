@@ -2,38 +2,45 @@ import type { RoccoTextCatalog } from '../types';
 
 export const spanishInventoryText: RoccoTextCatalog['inventory'] = {
   title: 'Inventario',
+  dropButtonLabel: 'Tirar',
+  pickupLine: 'Me lo guardo.',
+  fullLines: [
+    'No puedo cargar con más cosas.',
+    'Ya llevo los bolsillos llenos.',
+    'Si sigo metiendo cosas, algo va a reventar.',
+  ],
   keysLabel: 'Llaves',
   magazineLabel: 'Revista',
   micromaniaLabel: 'Microman\u00eda',
   mysteriousKeyLabel: 'Llave',
   magazineOnSelfLine: 'Me gustar\u00eda leerla, pero sentado.',
-  twentyEurosLabel: '20€',
+  twentyEurosLabel: '20\u20ac',
   cannotUseItemLines: [
-    'No puedo usar eso ahí.',
+    'No puedo usar eso ah\u00ed.',
     'Eso no encaja. Ni siquiera de la forma triste.',
-    'No se puede usar aquí.',
+    'No se puede usar aqu\u00ed.',
   ],
-  keysOnStanArrestLine: 'Policía, encontré al ladrón.',
+  keysOnStanArrestLine: 'Polic\u00eda, encontr\u00e9 al ladr\u00f3n.',
   moneyOnStanAcceptedLines: [
     'Gracias. Me viene genial.',
-    'Qué pena que no tenga memoria para acordarme mañana de esto.',
+    'Qu\u00e9 pena que no tenga memoria para acordarme ma\u00f1ana de esto.',
     'Caja de empleados.',
   ],
   moneyOnStanReplyLine: 'Creo que soy tonto.',
   keysOnBaitBucketLines: [
-    'La cubeta no está cerrada. Solo está arruinada.',
-    'Las llaves no van a cerrar lo que se derramó de ahí.',
+    'La cubeta no est\u00e1 cerrada. Solo est\u00e1 arruinada.',
+    'Las llaves no van a cerrar lo que se derram\u00f3 de ah\u00ed.',
   ],
   moneyOnBaitBucketLines: [
-    'Tirar dinero al agua de cebo sería demasiado simbólico, incluso para mí.',
-    'No. Ese billete es la última prueba de que hoy estuve en otro sitio.',
+    'Tirar dinero al agua de cebo ser\u00eda demasiado simb\u00f3lico, incluso para m\u00ed.',
+    'No. Ese billete es la \u00faltima prueba de que hoy estuve en otro sitio.',
   ],
   keysOnPelikanLines: [
-    'No voy a entregarle una razón para vivir a un pájaro.',
-    'El pelícano se tragaría las llaves y pondría cara de inocente.',
+    'No voy a entregarle una raz\u00f3n para vivir a un p\u00e1jaro.',
+    'El pel\u00edcano se tragar\u00eda las llaves y pondr\u00eda cara de inocente.',
   ],
   moneyOnPelikanLines: [
-    'No voy a pagarle al pelícano para que me deje en paz.',
-    'Sobornar a un pájaro es un plan, pero no uno bueno.',
+    'No voy a pagarle al pel\u00edcano para que me deje en paz.',
+    'Sobornar a un p\u00e1jaro es un plan, pero no uno bueno.',
   ],
 };

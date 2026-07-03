@@ -5,6 +5,11 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
   toiletLookLines: ['Un v\u00e1ter.'],
   toiletReadLabel: 'Leer',
   toiletUseLabel: 'Usar',
+  toiletStaySeatedLines: [
+    'No, primero tengo que terminar esto.',
+    'Ni hablar. Primero tengo que acabar aqu\u00ed.',
+    'Antes de ir a ninguna parte, tengo que terminar esto.',
+  ],
   toiletNeedMagazineLine: 'Ganas no me faltan, pero me gustar\u00eda tener algo que leer.',
   toiletMagazineReadingLines: [
     'PERO \u00bfQU\u00c9 DIABLOS?',
@@ -25,6 +30,7 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
   ],
   toiletMagazineKnownStanLine: '\u00a1Y STAN DE AFUERA!',
   toiletMagazineUnknownStanLine: '\u00a1Y EL VIEJO DE AFUERA!',
+  toiletPoliceAlertLine: '\u00a1Polic\u00eda! El ladr\u00f3n est\u00e1 en mi ba\u00f1o',
   toiletDoorOpenLabel: 'Abrir',
   toiletDoorCloseLabel: 'Cerrar',
   toiletDoorWalkLabel: 'Caminar',
@@ -32,6 +38,10 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'Es de esas puertas que solo se abren con una llave.',
     'Tiene pinta de ser de las que solo se abren con llave.',
     'S\u00ed, de las que no se abren sin llave.',
+  ],
+  toiletDoorOpenWithKeyLines: [
+    'Creo que esa llave rara que llevo en el bolsillo podr\u00eda abrirla.',
+    'Deber\u00eda probarla desde el inventario.',
   ],
   toiletDoorWrongKeyLines: [
     'Ninguna la abre.',
@@ -43,6 +53,11 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'Una puerta de madera al fondo.',
     'Sí, eso parece una puerta de madera.',
     'Diría que es una puerta de madera.',
+  ],
+  toiletDoorLookWithKeyLines: [
+    'Tiene una cerradura donde podr\u00eda encajar esa llave rara.',
+    'Creo que podr\u00eda abrirla.',
+    'Podr\u00eda usar la llave de mi inventario.',
   ],
   toiletDoorKickLine: 'No pienso hacer ruido.',
   shellCityLookLines: [
@@ -81,6 +96,20 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
     '¡No es para patear!',
   ],
   postcardRackGrabLines: ['¿Para qué? No tengo a dónde llevarlas.'],
+  souvenirTableLookLines: [
+    'Una mesa llena de conchas, estrellas de mar y otros recuerdos.',
+    'Cosas de playa colocadas como si fueran tesoros.',
+    'Recuerdos mar\u00edtimos con ojos pegados y etiqueta de venta.',
+  ],
+  souvenirTableKnownStanLine:
+    'Stan encuentra estas cosas en la playa, les pone ojos y las vende aqu\u00ed.',
+  souvenirTableUnknownStanLine:
+    'El viejo encuentra estas cosas en la playa, les pone ojos y las vende aqu\u00ed.',
+  souvenirTableKickLines: [
+    'No. Saldr\u00edan conchas volando por todas partes.',
+    'Demasiado fr\u00e1gil para una patada.',
+    'No voy a patear una mesa llena de recuerdos rompibles.',
+  ],
   hiddenKeysCollectedLine: 'Otra llave. Me la guardo.',
   cashRegisterLookLines: [
     '¿Una caja mecánica? ¡Qué reliquia!',

@@ -40,6 +40,7 @@ import {
   uninstallDefaultSprite,
   type RoccoDefaultSpriteController,
 } from '../../rocco-default-sprites';
+import { DEFAULT_STAN_DIALOGUE_TEXT_COLOR } from '../pier/pier-stan';
 import {
   findRoccoLevelConnector,
   type RoccoLevel,
@@ -77,7 +78,12 @@ interface BaitShopToiletSequence {
   elapsedMs: number;
 }
 
-type BaitShopToiletReadingPhase = 'lines' | 'fading' | 'title' | 'restarting';
+type BaitShopToiletReadingPhase =
+  | 'lines'
+  | 'stan-alert'
+  | 'fading'
+  | 'title'
+  | 'restarting';
 
 interface BaitShopToiletReadingSequence {
   phase: BaitShopToiletReadingPhase;
@@ -93,6 +99,7 @@ const BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID = 'rocco-bait-shop-toilet-main';
 const BAIT_SHOP_TOILET_ACTION_MENU_ID = 'rocco-bait-shop-toilet-action-menu';
 const BAIT_SHOP_TOILET_LOOK_HISTORY_KEY = 'bait-shop-toilet-look';
 const BAIT_SHOP_TOILET_SELF_TALK_HISTORY_KEY = 'bait-shop-toilet-self-talk';
+const BAIT_SHOP_TOILET_STAY_SEATED_HISTORY_KEY = 'bait-shop-toilet-stay-seated';
 const BAIT_SHOP_TOILET_READ_ACTION_ID = 'read';
 const BAIT_SHOP_TOILET_SHEET_IMAGE_ID = 'rocco-bait-shop-toilet-sheet';
 const BAIT_SHOP_TOILET_IDLE_ANIMATION_ID = 'bait-shop-toilet-idle';
@@ -146,6 +153,9 @@ const BAIT_SHOP_TOILET_READING_IMAGE_HEIGHT = DEFAULT_DESIGN_HEIGHT;
 const BAIT_SHOP_TOILET_READING_IMAGE_WIDTH = DEFAULT_DESIGN_WIDTH;
 const BAIT_SHOP_TOILET_READING_IMAGE_X = 0;
 const BAIT_SHOP_TOILET_READING_MESSAGE_ID = 'rocco-bait-shop-toilet-reading-message';
+const BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID = 'rocco-bait-shop-toilet-stan-alert-message';
+const BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID =
+  'rocco-bait-shop-toilet-stan-alert-anchor';
 const BAIT_SHOP_TOILET_READING_MESSAGE_TTL_MS = 10 * 60 * 1000;
 const BAIT_SHOP_TOILET_READING_LINE_DURATION_MS = 12800;
 const BAIT_SHOP_TOILET_READING_MESSAGE_SCALE = 0.8;
@@ -160,12 +170,20 @@ const BAIT_SHOP_TOILET_READING_MESSAGE_FONT_SIZE =
 const BAIT_SHOP_TOILET_READING_MESSAGE_OFFSET_Y = -30;
 const BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID = 'rocco-bait-shop-toilet-reading-defeat-sound';
 const BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_VOLUME = 0.25;
+const BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS = 4800;
+const BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_TTL_MS = BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS + 600;
+const BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_MAX_WIDTH = 260;
+const BAIT_SHOP_TOILET_STAN_ALERT_SCALE = 0.08;
+const BAIT_SHOP_TOILET_STAN_ALERT_START_X = DEFAULT_DESIGN_WIDTH + 146;
+const BAIT_SHOP_TOILET_STAN_ALERT_END_X = DEFAULT_DESIGN_WIDTH + 58;
+const BAIT_SHOP_TOILET_STAN_ALERT_BASE_Y = 124;
 const BAIT_SHOP_TOILET_READING_DEFEAT_FADE_PRIMITIVE_ID =
   'rocco-bait-shop-toilet-reading-defeat-fade';
 const BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_ID =
   'rocco-bait-shop-toilet-reading-defeat-title';
 const BAIT_SHOP_TOILET_READING_DEFEAT_FADE_DURATION_MS = 1300;
 const BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_DURATION_MS = 3600;
+const BAIT_SHOP_TOILET_ALLOW_STAND_WALK_CANCEL = false;
 const BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST = {
   farY: 280,
   nearY: 530,
@@ -584,14 +602,18 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       return { suppressDefaultPlayerMove: true };
     }
 
-    if (activation.targetInstanceId) {
-      return;
+    if (BAIT_SHOP_TOILET_ALLOW_STAND_WALK_CANCEL && !activation.targetInstanceId) {
+      this.startStandSequence({
+        x: activation.sceneX,
+        y: activation.sceneY,
+      });
+      return { suppressDefaultPlayerMove: true };
     }
 
-    this.startStandSequence({
-      x: activation.sceneX,
-      y: activation.sceneY,
-    });
+    this.showToiletThoughtLines(
+      this.localization.text.baitShop.toiletStaySeatedLines,
+      BAIT_SHOP_TOILET_STAY_SEATED_HISTORY_KEY,
+    );
     return { suppressDefaultPlayerMove: true };
   }
 
@@ -663,7 +685,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       return;
     }
 
-    this.beginReadingDefeatFade();
+    this.beginStanPoliceAlert();
   }
 
   private updateReadingSequence(deltaMs: number): void {
@@ -688,6 +710,25 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       }
 
       this.advanceReadingSequence();
+      return;
+    }
+
+    if (this.readingSequence.phase === 'stan-alert') {
+      const nextElapsedMs = this.readingSequence.elapsedMs + deltaMs;
+      const clampedElapsedMs = Math.min(BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS, nextElapsedMs);
+      this.readingSequence = {
+        ...this.readingSequence,
+        elapsedMs: clampedElapsedMs,
+      };
+      this.updateStanPoliceAlertAnchor(clampedElapsedMs);
+
+      if (nextElapsedMs < BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS) {
+        return;
+      }
+
+      const overflowMs = nextElapsedMs - BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS;
+      this.beginReadingDefeatFade();
+      this.updateReadingSequence(overflowMs);
       return;
     }
 
@@ -793,6 +834,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       elapsedMs: 0,
     };
     this.engine.video.messages.clearMessages();
+    this.removeStanPoliceAlertAnchorSprite();
     this.engine.video.actionMenus.closeMenu();
     this.engine.video.gridMenus.closeMenu();
     this.engine.video.gridMenus.clearCarriedItem();
@@ -801,6 +843,26 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       volume: BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_VOLUME,
     });
     this.addReadingDefeatFadePrimitive(0);
+    this.engine.video.render(0);
+  }
+
+  private beginStanPoliceAlert(): void {
+    if (!this.engine || !this.readingSequence) {
+      return;
+    }
+
+    this.readingSequence = {
+      ...this.readingSequence,
+      phase: 'stan-alert',
+      elapsedMs: 0,
+    };
+    this.engine.video.messages.clearMessages();
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.gridMenus.clearCarriedItem();
+    this.setReadingOverlayVisible(false);
+    this.ensureStanPoliceAlertAnchorSprite();
+    this.showStanPoliceAlertMessage();
     this.engine.video.render(0);
   }
 
@@ -886,8 +948,10 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     this.readingSequence = null;
     this.engine.audio.stopSound(BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID);
     this.engine.video.messages.removeMessage(BAIT_SHOP_TOILET_READING_MESSAGE_ID);
+    this.engine.video.messages.removeMessage(BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID);
     this.engine.video.titles.removeTitle(BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_ID);
     this.engine.video.primitives.removePrimitive(BAIT_SHOP_TOILET_READING_DEFEAT_FADE_PRIMITIVE_ID);
+    this.removeStanPoliceAlertAnchorSprite();
     this.setReadingOverlayVisible(false);
     this.engine.video.render(0);
   }
@@ -1312,6 +1376,96 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
     });
     this.engine.video.render(0);
+  }
+
+  private ensureStanPoliceAlertAnchorSprite(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const position = this.resolveStanPoliceAlertAnchorPosition(0);
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.createSpriteFromDefinition(BAIT_SHOP_TOILET_SPRITE_DEFINITION_ID, {
+      id: BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID,
+      transform: {
+        x: position.x,
+        y: position.y,
+        scaleX: BAIT_SHOP_TOILET_STAN_ALERT_SCALE,
+        scaleY: BAIT_SHOP_TOILET_STAN_ALERT_SCALE,
+        rotation: 0,
+      },
+      renderLayer: 'world.behind',
+      zIndex: 0,
+      interactive: false,
+      collisionEnabled: false,
+      opacity: 0.01,
+      ignoreMessages: true,
+    });
+  }
+
+  private showStanPoliceAlertMessage(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.messages.say(
+      BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID,
+      this.localization.text.baitShop.toiletPoliceAlertLine,
+      {
+        id: BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID,
+        ttlMs: BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_TTL_MS,
+        side: 'left',
+        maxWidth: BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_MAX_WIDTH,
+        zIndex: 5000,
+        style: {
+          fill: DEFAULT_STAN_DIALOGUE_TEXT_COLOR,
+          bubbleFill: '#f1e7fa',
+          bubbleStroke: DEFAULT_STAN_DIALOGUE_TEXT_COLOR,
+          bubbleStrokeWidth: 2,
+        },
+      },
+    );
+  }
+
+  private updateStanPoliceAlertAnchor(elapsedMs: number): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const position = this.resolveStanPoliceAlertAnchorPosition(elapsedMs);
+    this.engine.video.sprites.setPosition(
+      BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID,
+      position.x,
+      position.y,
+    );
+    this.engine.video.render(0);
+  }
+
+  private resolveStanPoliceAlertAnchorPosition(elapsedMs: number): RoccoPoint {
+    const progress = Math.max(
+      0,
+      Math.min(1, elapsedMs / BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS),
+    );
+    const easedProgress = 1 - (1 - progress) * (1 - progress);
+    const baseX =
+      BAIT_SHOP_TOILET_STAN_ALERT_START_X +
+      (BAIT_SHOP_TOILET_STAN_ALERT_END_X - BAIT_SHOP_TOILET_STAN_ALERT_START_X) *
+        easedProgress;
+    const jitterX = Math.sin(elapsedMs / 190) * 14 + Math.sin(elapsedMs / 86) * 6;
+    const jitterY = Math.sin(elapsedMs / 176) * 11 + Math.sin(elapsedMs / 62) * 4;
+
+    return {
+      x: baseX + jitterX,
+      y: BAIT_SHOP_TOILET_STAN_ALERT_BASE_Y + jitterY,
+    };
+  }
+
+  private removeStanPoliceAlertAnchorSprite(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID);
   }
 
   private setToiletVisibleDescription(text: string): void {

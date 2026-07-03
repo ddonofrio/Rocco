@@ -29,6 +29,7 @@ export const spanishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   shellCitySign: 'Cartel de Shell City',
   bench: 'Taburete',
   postcardRack: 'Postales',
+  souvenirTable: 'Mesa de souvenirs',
   hiddenKeys: 'Llave escondida',
   cashRegister: 'Caja registradora',
   window: 'Ventana',

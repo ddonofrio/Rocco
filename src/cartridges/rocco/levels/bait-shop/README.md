@@ -18,4 +18,5 @@ This directory contains the bait shop interior levels for the `rocco-default` ca
 - All bait shop levels implement the shared `RoccoLevel` contract and are registered by `RoccoLevelManager`.
 - Rocco uses a bait-shop-specific spawn position, facing, and scale override without changing his shared cartridge definition.
 - The counter foreground uses plane `depthMode: { kind: 'sprite-y-threshold', subject: 'active-player' }` so it can render in front of or behind Rocco depending on his Y position.
+- Grabbing the first-screen souvenir table opens a close-up plus a shared transfer inventory with the table on the left, Rocco on the right, and the table storage projected as a 5x4 grid.
 - All bait shop assets live under this cartridge directory. The runtime does not depend on `.local` content.

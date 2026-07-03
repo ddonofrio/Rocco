@@ -128,7 +128,12 @@ describe('RoccoGridMenuSystemSDK', () => {
 
     expect(system.setHoverAt(120, 120)).toBe(true);
     expect(system.getHoveredItem()?.id).toBe('keys');
-    expect(system.activateAt(1, 1)).toBeUndefined();
+    expect(system.activateAt(1, 1)).toEqual({
+      kind: 'grid-menu',
+      definitionId: 'inventory',
+      interaction: 'close',
+      items: [{ id: 'keys', label: 'Keys' }],
+    });
     expect(system.isOpen()).toBe(false);
   });
 

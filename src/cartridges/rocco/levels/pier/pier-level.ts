@@ -211,6 +211,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
       installDefaultKeys(engine, {
         localization: this.localization,
         initialState: initialKeysState,
+        onCollectRequested: () => this.options.onKeysCollectRequested?.() ?? true,
         onCollected: () => {
           this.levelState.keysStatus = 'collected';
           this.options.onKeysCollected?.();

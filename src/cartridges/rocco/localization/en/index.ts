@@ -7,6 +7,7 @@ import {
   englishFeedingText,
   englishKeysText,
   englishMiddleLevelText,
+  englishPierDoorText,
 } from './pier';
 import {
   englishActionsText,
@@ -30,5 +31,6 @@ export const roccoEnglishText: RoccoTextCatalog = {
   pelikan: englishPelikanText,
   stan: englishStanText,
   middleLevel: englishMiddleLevelText,
+  pierDoor: englishPierDoorText,
   baitShop: englishBaitShopText,
 };

@@ -186,7 +186,10 @@ export class RoccoInputHandler {
 
   private readonly handleCursorLeave = (): void => {
     if (this.videoSystem.gridMenus.isOpen()) {
-      this.videoSystem.gridMenus.closeMenu();
+      const activation = this.videoSystem.gridMenus.activateAt(-1, -1);
+      if (activation) {
+        void this.getActiveCartridge()?.handleAction?.(activation);
+      }
       this.videoSystem.gridMenus.clearCarriedItem();
       this.syncCursorAttachment();
       this.videoSystem.render(0);

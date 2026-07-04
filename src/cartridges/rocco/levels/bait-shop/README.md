@@ -6,9 +6,9 @@ This directory contains the bait shop interior levels for the `rocco-default` ca
 
 - `bait-shop-level.ts` - `RoccoBaitShopLevel`, the first interior screen with the bench, register, hidden keys, and south connector.
 - `bait-shop-second-level.ts` - `RoccoBaitShopSecondLevel`, the second interior screen with the magazine, toilet door interaction, and south connector.
-- `bait-shop-toilet-level.ts` - `RoccoBaitShopToiletLevel`, the toilet room screen behind the second-screen toilet door.
+- `bait-shop-toilet-level.ts` - `RoccoBaitShopToiletLevel`, the toilet room screen behind the second-screen toilet door, including the seated magazine sequence, the coral-relic survival branch, the post-toilet police exchange, and the portal trigger.
 - `bait-shop-assets.ts` - Local asset URIs for the bait shop background, foreground, and walk map.
-- `assets/` - The bait shop background, foreground, toilet, door, sprite sheet, and walk-map images used by the levels.
+- `assets/` - The bait shop background, foreground, toilet, door, sprite sheet, smoke, portal, sound, and walk-map assets used by the levels.
 
 ## Runtime Notes
 
@@ -19,4 +19,6 @@ This directory contains the bait shop interior levels for the `rocco-default` ca
 - Rocco uses a bait-shop-specific spawn position, facing, and scale override without changing his shared cartridge definition.
 - The counter foreground uses plane `depthMode: { kind: 'sprite-y-threshold', subject: 'active-player' }` so it can render in front of or behind Rocco depending on his Y position.
 - Grabbing the first-screen souvenir table opens a close-up plus a shared transfer inventory with the table on the left, Rocco on the right, and the table storage projected as a 5x4 grid.
+- The toilet-room survival branch starts only when Rocco reads the magazine while holding the Coral Relic, then keeps local urgency state so he cannot sit back down, can step on the dropped relic, and can open the wish menu.
+- The toilet-room portal is a scripted connector transition. The level keeps the portal pending until Rocco no longer overlaps the portal zone, then moves to the temporary Nether placeholder level on contact.
 - All bait shop assets live under this cartridge directory. The runtime does not depend on `.local` content.

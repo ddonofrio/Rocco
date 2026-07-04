@@ -21,6 +21,7 @@ The inventory belongs to the cartridge. The engine provides generic slot-panel U
 - Items are stored in memory for the active cartridge run.
 - The default Pier inventory starts with `rocco-twenty-euros`.
 - Collected keys are added as `rocco-keys`.
+- Story pickups can also add the magazine, the mysterious key, and the crafted bait-shop ritual items such as `rocco-floating-amulet`, `rocco-spiral-razor`, `rocco-abyssal-talisman`, and `rocco-coral-relic`.
 - Items keep a slot index so grid reorder operations can persist.
 - The inventory projects its current items into a reorderable 3x3 grid menu definition.
 - The cartridge can also project two storages into one transfer menu, with the prop storage on the left and Rocco on the right.
@@ -29,6 +30,7 @@ The inventory belongs to the cartridge. The engine provides generic slot-panel U
 - Pier exits check whether `rocco-keys` exists in this inventory.
 - The same inventory stays available after the bait shop transition because `RoccoLevelManager` owns it above the active level instance.
 - The first prop storage is the bait shop souvenir table, a 5x4 layout that starts with 19 reusable souvenir items.
+- Developer mode can seed selected inventory items directly, including the Coral Relic, through the cartridge-specific developer inventory menu.
 
 ## UI Boundary
 

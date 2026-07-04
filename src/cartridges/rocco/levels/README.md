@@ -24,7 +24,7 @@ A level provides:
 - `id` for manager registration and graph connections.
 - `title` for the status line.
 - `connectors` for level-to-level travel.
-- `mount()` to load the scene, walk map, player, and level-specific content.
+- `mount()` to load the scene, walk map, player, level-specific content, and optional scripted transition callbacks.
 - `unmount()` to remove runtime content cleanly.
 - `update()` for per-frame behavior.
 - `handleAction()` for radial action menus.
@@ -36,6 +36,7 @@ A level provides:
 - Level registration.
 - The active level.
 - Screen-to-screen transitions.
+- Scripted connector transitions requested by the active level.
 - Shared cartridge inventory.
 - Level lifetime and per-level state retention.
 - Status text updates.
@@ -74,11 +75,26 @@ levels/
   README.md               This guide
   rocco-level-manager.ts  Shared active-level orchestration for Rocco screens
   rocco-level-types.ts    Shared level, connector, rectangle, and mount option types
+  nether-placeholder-level.ts  Temporary black-screen destination for the toilet portal
   pier/                   Exterior level graph, shared panorama scene, shared walk map
   bait-shop/              Interior levels, dedicated room scenes, dedicated walk maps
 ```
 
 Use one folder per location family when several screens share assets, state, or behavior.
+
+## Scripted Connector Transitions
+
+Levels are not limited to static exit rectangles.
+
+`RoccoLevelMountOptions.onConnectorTransitionRequested` lets a level request one of its own registered connectors at the exact frame a local sequence decides the transition should happen.
+
+Use this for cases where:
+
+- A portal opens after a dialogue or animation.
+- A door transition waits for a custom cutscene instead of a raw edge trigger.
+- A level needs overlap or state checks that are more specific than one persistent exit area.
+
+The current toilet room uses this pattern to delay the Nether portal until the opening sequence finishes and Rocco is physically clear of the portal zone.
 
 ## Level IDs, Scene IDs, And Naming
 

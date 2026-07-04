@@ -4,7 +4,6 @@ import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../../../engine/video/action-menu';
-import type { RoccoGridMenuCarriedItem } from '../../../../engine/video/grid-menu';
 import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../../../engine/video/planes';
 import {
   createRoccoSpriteWalkMapFromImageData,
@@ -934,10 +933,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     this.scriptedInteractionController?.handleSceneClick(activation);
   }
 
-  handleInventorySceneClick(
-    _activation: RoccoSceneClickAction,
-    _carriedItem: RoccoGridMenuCarriedItem,
-  ): boolean {
+  handleInventorySceneClick(): boolean {
     if (!this.souvenirCloseupVisible) {
       return false;
     }

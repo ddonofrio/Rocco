@@ -2,12 +2,14 @@ import type { RoccoGridMenuDefinition } from '../../engine/video/grid-menu';
 import { createRoccoDialogueChoiceMenu } from './dialogue';
 import type { RoccoLocalization } from './localization';
 import {
+  createRoccoCoralRelicInventoryItem,
   createRoccoKeysInventoryItem,
   createRoccoMagazineInventoryItem,
   createRoccoMysteriousKeyInventoryItem,
   createRoccoTwentyEurosInventoryItem,
   type RoccoInventory,
   type RoccoInventoryItem,
+  ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
   ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID,
@@ -116,6 +118,8 @@ export function createRoccoDeveloperInventoryItem(
   itemId: string,
 ): RoccoInventoryItem | undefined {
   switch (itemId) {
+    case ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID:
+      return createRoccoCoralRelicInventoryItem(localization);
     case ROCCO_INVENTORY_KEYS_ITEM_ID:
       return createRoccoKeysInventoryItem(localization);
     case ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID:
@@ -139,6 +143,11 @@ function createRoccoDeveloperInventoryOptions(
     inventory.listItems().find((item) => item.id === ROCCO_INVENTORY_MAGAZINE_ITEM_ID)?.label ?? null;
 
   return [
+    {
+      itemId: ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
+      itemLabel: createRoccoCoralRelicInventoryItem(localization).label,
+      present: inventory.hasItem(ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID),
+    },
     {
       itemId: ROCCO_INVENTORY_KEYS_ITEM_ID,
       itemLabel: localization.text.inventory.keysLabel,

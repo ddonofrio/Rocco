@@ -14,6 +14,12 @@ interface RoccoLocalizedSouvenirTableItemDefinition {
   };
 }
 
+export const BAIT_SHOP_SOUVENIR_BEACH_NECKLACE_ITEM_ID = 'souvenir-beach-necklace';
+export const BAIT_SHOP_SOUVENIR_AMBER_TURRITELLA_ITEM_ID = 'souvenir-amber-turritella';
+export const BAIT_SHOP_SOUVENIR_JAPANESE_FLOAT_ITEM_ID = 'souvenir-japanese-float';
+export const BAIT_SHOP_SOUVENIR_RAZOR_SHELL_ITEM_ID = 'souvenir-razor-shell';
+export const BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID = 'souvenir-red-coral';
+
 const souvenirTableAssetUrls = {
   amberSpiral: new URL('./assets/souvenirs/amber-spiral.png', import.meta.url).href,
   amberStar: new URL('./assets/souvenirs/amber-star.png', import.meta.url).href,
@@ -96,7 +102,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       },
     },
     {
-      id: 'souvenir-beach-necklace',
+      id: BAIT_SHOP_SOUVENIR_BEACH_NECKLACE_ITEM_ID,
       imageUri: souvenirTableAssetUrls.beachNecklace,
       slotIndex: 3,
       width: 300,
@@ -151,7 +157,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       },
     },
     {
-      id: 'souvenir-razor-shell',
+      id: BAIT_SHOP_SOUVENIR_RAZOR_SHELL_ITEM_ID,
       imageUri: souvenirTableAssetUrls.razorShell,
       slotIndex: 8,
       width: 300,
@@ -162,7 +168,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       },
     },
     {
-      id: 'souvenir-red-coral',
+      id: BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID,
       imageUri: souvenirTableAssetUrls.redCoral,
       slotIndex: 9,
       width: 300,
@@ -195,7 +201,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       },
     },
     {
-      id: 'souvenir-japanese-float',
+      id: BAIT_SHOP_SOUVENIR_JAPANESE_FLOAT_ITEM_ID,
       imageUri: souvenirTableAssetUrls.japaneseFloat,
       slotIndex: 12,
       width: 300,
@@ -217,7 +223,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       },
     },
     {
-      id: 'souvenir-amber-turritella',
+      id: BAIT_SHOP_SOUVENIR_AMBER_TURRITELLA_ITEM_ID,
       imageUri: souvenirTableAssetUrls.amberTurritella,
       slotIndex: 14,
       width: 300,

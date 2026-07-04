@@ -1032,6 +1032,10 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       return { suppressDefaultPlayerMove: true };
     }
 
+    if (this.handlePortalSceneClick(activation)) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
     if (!this.roccoSeated || this.sequence) {
       return;
     }
@@ -1053,6 +1057,41 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       BAIT_SHOP_TOILET_STAY_SEATED_HISTORY_KEY,
     );
     return { suppressDefaultPlayerMove: true };
+  }
+
+  private handlePortalSceneClick(activation: RoccoSceneClickAction): boolean {
+    if (
+      !this.engine ||
+      !this.portalActive ||
+      activation.targetInstanceId !== BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID
+    ) {
+      return false;
+    }
+
+    if (this.isPlayerOverPortalZone()) {
+      this.updatePortalTransition();
+      return true;
+    }
+
+    const portalBasePoint = this.resolvePortalBasePoint();
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      portalBasePoint.x,
+      portalBasePoint.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+
+    if (started) {
+      this.engine.video.render(0);
+    }
+
+    return started;
   }
 
   private hasMagazine(): boolean {

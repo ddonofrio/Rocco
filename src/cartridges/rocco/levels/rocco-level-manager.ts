@@ -19,11 +19,18 @@ import type {
   RoccoSpriteInstance,
 } from '../../../engine/video/sprites';
 import {
+  DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
   DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
+  DEFAULT_BAIT_SHOP_DOOR_PIVOT_X,
+  DEFAULT_BAIT_SHOP_DOOR_PIVOT_Y,
   DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
+  DEFAULT_BAIT_SHOP_DOOR_WIDTH,
+  DEFAULT_BAIT_SHOP_DOOR_X,
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
   DEFAULT_ROCCO_GREEN_BLACK,
+  DEFAULT_SPRITE_FRAME_HEIGHT,
+  DEFAULT_SPRITE_FRAME_WIDTH,
   DEFAULT_SPRITE_GROUND_ANCHOR_X,
   DEFAULT_SPRITE_GROUND_ANCHOR_Y,
   DEFAULT_SPRITE_IDLE_ACTION_ID,
@@ -145,7 +152,7 @@ interface RoccoLevelInventorySceneClickHandler {
 
 type RoccoGridMenuCartridgeAction = Extract<RoccoCartridgeAction, { kind: 'grid-menu' }>;
 type StanPoliceDefeatPhase = 'speaking' | 'fading' | 'title';
-type BaitShopDoorEntryPhase = 'open-door-hold' | 'transitioning';
+type BaitShopDoorEntryPhase = 'walking-vertical' | 'transitioning';
 type StanMoneyExchangePhase = 'stan-speaking' | 'rocco-replying';
 
 interface RoccoDeveloperCursorAttachment {
@@ -191,7 +198,13 @@ const STAN_POLICE_DEFEAT_FADE_PRIMITIVE_ID = 'rocco-stan-police-defeat-fade';
 const STAN_POLICE_DEFEAT_TITLE_ID = 'rocco-stan-police-defeat-title';
 const STAN_MONEY_ACCEPTED_TTL_MS = 3600;
 const ROCCO_MONEY_REPLY_TTL_MS = 3000;
-const BAIT_SHOP_ENTRY_DOOR_OPEN_HOLD_MS = 1000;
+const BAIT_SHOP_DOOR_PLAYER_RIGHT_EDGE_OFFSET = Math.round(
+  (DEFAULT_SPRITE_FRAME_WIDTH - DEFAULT_SPRITE_GROUND_ANCHOR_X) * DEFAULT_SPRITE_SCALE,
+);
+const BAIT_SHOP_DOOR_END_GROUND_X =
+  DEFAULT_BAIT_SHOP_DOOR_X +
+  DEFAULT_BAIT_SHOP_DOOR_WIDTH -
+  BAIT_SHOP_DOOR_PLAYER_RIGHT_EDGE_OFFSET;
 const PIER_DOOR_VARIANT_MESSAGE_TTL_MS = 5200;
 const DEFAULT_START_LEVEL_ID = ROCCO_PIER_MIDDLE_LEVEL_ID;
 const DEVELOPER_SPRITE_CYCLE_ANIMATION_ID = '__rocco-developer-sprite-cycle__';
@@ -239,6 +252,10 @@ interface RoccoDroppedInventoryItemState {
 interface RoccoPendingDroppedInventoryPickup {
   levelId: string;
   itemId: string;
+}
+
+interface RoccoPendingBaitShopDoorUse {
+  levelId: string;
 }
 
 const PIER_START_CONNECTORS: readonly RoccoLevelConnector[] = [
@@ -344,6 +361,7 @@ export class RoccoLevelManager {
   private developerSpriteCyclePreviousCursorAttachment: RoccoDeveloperCursorAttachment | null = null;
   private pendingExitIntent: RoccoPendingExitIntent | null = null;
   private pendingDroppedInventoryPickup: RoccoPendingDroppedInventoryPickup | null = null;
+  private pendingBaitShopDoorUse: RoccoPendingBaitShopDoorUse | null = null;
 
   constructor(options: RoccoLevelManagerOptions = {}) {
     this.options = {
@@ -385,6 +403,7 @@ export class RoccoLevelManager {
     this.developerSpriteCyclePreviousCursorAttachment = null;
     this.pendingExitIntent = null;
     this.pendingDroppedInventoryPickup = null;
+    this.pendingBaitShopDoorUse = null;
     this.activeInventoryTransferSession = null;
     this.activeInventoryTransferCloseHandler = null;
     this.activeDroppedInventoryRuntimeIds.clear();
@@ -417,6 +436,7 @@ export class RoccoLevelManager {
     this.developerSpriteCyclePreviousCursorAttachment = null;
     this.pendingExitIntent = null;
     this.pendingDroppedInventoryPickup = null;
+    this.pendingBaitShopDoorUse = null;
     this.activeInventoryTransferSession = null;
     this.activeInventoryTransferCloseHandler = null;
     this.clearActiveLevelDroppedInventoryPresentation();
@@ -447,6 +467,11 @@ export class RoccoLevelManager {
     this.activeLevel?.update(deltaMs);
     if (this.pendingDroppedInventoryPickup) {
       this.updateDroppedInventoryPickup();
+      return;
+    }
+
+    if (this.pendingBaitShopDoorUse) {
+      this.updatePendingBaitShopDoorUse();
       return;
     }
 
@@ -489,6 +514,10 @@ export class RoccoLevelManager {
       return;
     }
 
+    if (this.pendingBaitShopDoorUse) {
+      this.cancelPendingBaitShopDoorUse();
+    }
+
     if (isSceneClickCartridgeAction(activation)) {
       if (this.handleDeveloperSpriteCycleSceneClick(activation)) {
         return { suppressDefaultPlayerMove: true };
@@ -509,8 +538,7 @@ export class RoccoLevelManager {
         if (this.handleLevelInventorySceneClick(activation, carriedItem)) {
           return;
         }
-        this.handleInventorySceneClick(activation, carriedItem);
-        return;
+        return this.handleInventorySceneClick(activation, carriedItem);
       }
 
       return this.activeLevel?.handleSceneClick?.(activation);
@@ -1824,7 +1852,7 @@ export class RoccoLevelManager {
   private handleInventorySceneClick(
     activation: RoccoSceneClickAction,
     carriedItem: RoccoGridMenuCarriedItem,
-  ): void {
+  ): RoccoCartridgeActionResult | void {
     if (!this.engine) {
       return;
     }
@@ -1837,7 +1865,7 @@ export class RoccoLevelManager {
 
     if (this.shouldTriggerBaitShopDoorUse(activation, carriedItem)) {
       this.startBaitShopDoorUse();
-      return;
+      return { suppressDefaultPlayerMove: true };
     }
 
     if (this.shouldTriggerStanPoliceDefeat(activation, carriedItem)) {
@@ -2382,27 +2410,101 @@ export class RoccoLevelManager {
   }
 
   private startBaitShopDoorUse(): void {
-    if (!this.engine) {
+    if (!this.engine || this.activeLevel?.id !== ROCCO_PIER_START_LEVEL_ID) {
       return;
     }
 
     this.engine.video.gridMenus.clearCarriedItem();
     this.engine.video.gridMenus.closeMenu();
     this.engine.video.actionMenus.closeMenu();
+    this.engine.video.messages.clearMessages();
     this.pendingExitIntent = null;
-    if (this.isStanAwake()) {
-      this.startStanPoliceDefeat();
+
+    const currentGroundPoint = this.resolvePlayerGroundPoint();
+    if (!currentGroundPoint) {
       return;
     }
 
-    this.baitShopDoorEntry = {
-      phase: 'open-door-hold',
-      elapsedMs: 0,
+    if (this.doesPlayerOverlapBaitShopDoor()) {
+      this.finishBaitShopDoorHorizontalApproach(currentGroundPoint);
+      return;
+    }
+
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      BAIT_SHOP_DOOR_END_GROUND_X,
+      currentGroundPoint.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!started) {
+      this.engine.video.render(0);
+      return;
+    }
+
+    this.pendingBaitShopDoorUse = {
+      levelId: this.activeLevel.id,
     };
+    this.engine.video.render(0);
+  }
+
+  private updatePendingBaitShopDoorUse(): void {
+    if (!this.engine || !this.pendingBaitShopDoorUse) {
+      return;
+    }
+
+    if (this.activeLevel?.id !== this.pendingBaitShopDoorUse.levelId) {
+      this.pendingBaitShopDoorUse = null;
+      return;
+    }
+
+    if (!this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
+      this.pendingBaitShopDoorUse = null;
+      return;
+    }
+
+    if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+      return;
+    }
+
+    this.finishBaitShopDoorHorizontalApproach();
+  }
+
+  private finishBaitShopDoorHorizontalApproach(groundPoint = this.resolvePlayerGroundPoint()): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.pendingBaitShopDoorUse = null;
+    if (!groundPoint || !this.doesPlayerOverlapBaitShopDoor()) {
+      return;
+    }
+
+    this.beginBaitShopDoorEntry(groundPoint);
+  }
+
+  private beginBaitShopDoorEntry(groundPoint = this.resolvePlayerGroundPoint()): void {
+    if (!this.engine) {
+      return;
+    }
+
+    if (!groundPoint) {
+      this.baitShopDoorEntry = {
+        phase: 'transitioning',
+        elapsedMs: 0,
+      };
+      void this.enterBaitShop();
+      return;
+    }
+
     this.engine.setInputEnabled(false);
-    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
     this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-      direction: 'left',
+      direction: 'up',
       restart: true,
     });
     this.engine.video.sprites.playAnimation(
@@ -2415,7 +2517,36 @@ export class RoccoLevelManager {
     this.engine.audio.playSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID, {
       restart: true,
     });
+    if (this.isStanAwake()) {
+      this.startStanPoliceDefeat();
+      return;
+    }
+
+    this.baitShopDoorEntry = {
+      phase: 'walking-vertical',
+      elapsedMs: 0,
+    };
+    const started = this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, groundPoint.x, 0, {
+      action: DEFAULT_SPRITE_RUN_ACTION_ID,
+      idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+      stopDistance: 1,
+      idleSettleDelayMs: 0,
+      idleSettleFacing: 'diagonal-from-facing',
+    });
+    if (!started) {
+      this.baitShopDoorEntry = {
+        phase: 'transitioning',
+        elapsedMs: 0,
+      };
+      void this.enterBaitShop();
+      return;
+    }
     this.engine.video.render(0);
+  }
+
+  private cancelPendingBaitShopDoorUse(): void {
+    this.engine?.video.sprites.cancelMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    this.pendingBaitShopDoorUse = null;
   }
 
   private updateStanPoliceDefeat(deltaMs: number): void {
@@ -2466,10 +2597,8 @@ export class RoccoLevelManager {
       return;
     }
 
-    if (this.baitShopDoorEntry.phase === 'open-door-hold') {
-      const nextElapsedMs = this.baitShopDoorEntry.elapsedMs + deltaMs;
-      if (nextElapsedMs < BAIT_SHOP_ENTRY_DOOR_OPEN_HOLD_MS) {
-        this.baitShopDoorEntry.elapsedMs = nextElapsedMs;
+    if (this.baitShopDoorEntry.phase === 'walking-vertical') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
         return;
       }
 
@@ -2670,6 +2799,37 @@ export class RoccoLevelManager {
 
     const stan = this.engine.video.sprites.getSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
     return Boolean(stan && stan.animation.animationId !== DEFAULT_STAN_SLEEPING_ANIMATION_ID);
+  }
+
+  private doesPlayerOverlapBaitShopDoor(): boolean {
+    if (!this.engine) {
+      return false;
+    }
+
+    const player = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const door = this.engine.video.sprites.getSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
+    if (!player || !door) {
+      return false;
+    }
+
+    const playerScaleX = player.transform.scaleX || 1;
+    const playerScaleY = player.transform.scaleY || 1;
+    const doorScaleX = door.transform.scaleX || 1;
+    const doorScaleY = door.transform.scaleY || 1;
+
+    const playerLeft = player.transform.x;
+    const playerTop = player.transform.y;
+    const playerRight = playerLeft + DEFAULT_SPRITE_FRAME_WIDTH * playerScaleX;
+    const playerBottom = playerTop + DEFAULT_SPRITE_FRAME_HEIGHT * playerScaleY;
+
+    const doorLeft = door.transform.x - DEFAULT_BAIT_SHOP_DOOR_PIVOT_X * doorScaleX;
+    const doorTop = door.transform.y - DEFAULT_BAIT_SHOP_DOOR_PIVOT_Y * doorScaleY;
+    const doorRight = doorLeft + DEFAULT_BAIT_SHOP_DOOR_WIDTH * doorScaleX;
+    const doorBottom = doorTop + DEFAULT_BAIT_SHOP_DOOR_HEIGHT * doorScaleY;
+
+    const overlapWidth = Math.min(playerRight, doorRight) - Math.max(playerLeft, doorLeft);
+    const overlapHeight = Math.min(playerBottom, doorBottom) - Math.max(playerTop, doorTop);
+    return overlapWidth >= 1 && overlapHeight >= 1;
   }
 
   private async enterBaitShop(): Promise<void> {

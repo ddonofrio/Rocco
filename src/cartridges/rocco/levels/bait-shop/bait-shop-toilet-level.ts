@@ -69,7 +69,8 @@ export interface RoccoBaitShopToiletLevelOptions {
 }
 
 type BaitShopToiletSequencePhase =
-  | 'walking-to-approach'
+  | 'walking-to-approach-vertical'
+  | 'walking-to-approach-horizontal'
   | 'waiting-before-frame-one'
   | 'waiting-before-seat-walk'
   | 'walking-to-seat'
@@ -914,15 +915,9 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
         return;
       }
 
-      const selected = this.resolveWishChoiceLine(activation.itemId);
-      if (!selected || !this.engine) {
+      if (!this.resolveWishChoiceLine(activation.itemId) || !this.engine) {
         return;
       }
-
-      this.engine.video.messages.say(DEFAULT_SPRITE_INSTANCE_ID, selected, {
-        ttlMs: BAIT_SHOP_TOILET_WISH_LINE_TTL_MS,
-      });
-      this.engine.video.render(0);
 
       if (activation.itemId === BAIT_SHOP_TOILET_WISH_NEVER_EXISTED_CHOICE_ID) {
         this.startWishSequence('rocco-disappears');
@@ -1643,15 +1638,44 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       return;
     }
 
+    const currentGroundPoint = this.resolvePlayerGroundPoint();
+    if (!currentGroundPoint) {
+      return;
+    }
+
     this.engine.video.actionMenus.closeMenu();
     this.engine.video.messages.clearMessages();
     this.engine.setInputEnabled(false);
     this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
 
+    const needsVerticalApproach =
+      Math.abs(currentGroundPoint.y - BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y) > 1;
+    const needsHorizontalApproach =
+      Math.abs(currentGroundPoint.x - BAIT_SHOP_TOILET_SIT_APPROACH_POINT.x) > 1;
+
+    if (!needsVerticalApproach && !needsHorizontalApproach) {
+      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
+        direction: 'up-left',
+        restart: true,
+      });
+      this.sequence = {
+        phase: 'waiting-before-frame-one',
+        elapsedMs: 0,
+      };
+      this.engine.video.render(0);
+      return;
+    }
+
+    const firstTarget = needsVerticalApproach
+      ? {
+          x: currentGroundPoint.x,
+          y: BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y,
+        }
+      : BAIT_SHOP_TOILET_SIT_APPROACH_POINT;
     const started = this.engine.video.sprites.goTo(
       DEFAULT_SPRITE_INSTANCE_ID,
-      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.x,
-      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y,
+      firstTarget.x,
+      firstTarget.y,
       {
         action: DEFAULT_SPRITE_RUN_ACTION_ID,
         idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
@@ -1666,7 +1690,9 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     }
 
     this.sequence = {
-      phase: 'walking-to-approach',
+      phase: needsVerticalApproach
+        ? 'walking-to-approach-vertical'
+        : 'walking-to-approach-horizontal',
       elapsedMs: 0,
     };
     this.engine.video.render(0);
@@ -1695,7 +1721,16 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       return;
     }
 
-    if (this.sequence.phase === 'walking-to-approach') {
+    if (this.sequence.phase === 'walking-to-approach-vertical') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+        return;
+      }
+
+      this.startSitApproachHorizontalWalk();
+      return;
+    }
+
+    if (this.sequence.phase === 'walking-to-approach-horizontal') {
       if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
         return;
       }
@@ -1774,6 +1809,36 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     if (this.sequence.phase === 'standing-before-frame-zero') {
       this.finishStandSequence();
     }
+  }
+
+  private startSitApproachHorizontalWalk(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.x,
+      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!started) {
+      this.sequence = null;
+      this.engine.setInputEnabled(true);
+      return;
+    }
+
+    this.sequence = {
+      phase: 'walking-to-approach-horizontal',
+      elapsedMs: 0,
+    };
+    this.engine.video.render(0);
   }
 
   private startSeatWalk(): void {
@@ -2607,6 +2672,10 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       x: player.transform.x + DEFAULT_SPRITE_GROUND_ANCHOR_X * (player.transform.scaleX || 1),
       y: player.transform.y + DEFAULT_SPRITE_GROUND_ANCHOR_Y * (player.transform.scaleY || 1),
     };
+  }
+
+  private resolvePlayerGroundPoint(): RoccoPoint | undefined {
+    return this.resolvePlayerGroundPointForWish();
   }
 
   private requestPortalActivation(): void {

@@ -387,7 +387,7 @@ export class PixiRoccoGridMenuRenderer {
     root.label = `rocco-grid-menu-slot:${slotIndex}`;
     root.eventMode = 'none';
     const frame = new Graphics();
-    const icon = new Sprite(Texture.WHITE);
+    const icon = new Sprite(Texture.EMPTY);
     icon.anchor.set(0.5);
     const label = new Text({
       text: '',
@@ -620,14 +620,26 @@ export class PixiRoccoGridMenuRenderer {
       return cached;
     }
 
+    const assetTexture = Assets.get<Texture>(imageUri);
+    if (assetTexture) {
+      this.textures.set(imageUri, assetTexture);
+      return assetTexture;
+    }
+
     void this.queueTextureLoad(imageUri);
-    return Texture.WHITE;
+    return Texture.EMPTY;
   }
 
   private queueTextureLoad(imageUri: string): Promise<Texture> {
     const cached = this.textures.get(imageUri);
     if (cached) {
       return Promise.resolve(cached);
+    }
+
+    const assetTexture = Assets.get<Texture>(imageUri);
+    if (assetTexture) {
+      this.textures.set(imageUri, assetTexture);
+      return Promise.resolve(assetTexture);
     }
 
     const pending = this.pendingTextureLoads.get(imageUri);
@@ -640,7 +652,7 @@ export class PixiRoccoGridMenuRenderer {
         this.textures.set(imageUri, texture);
         return texture;
       })
-      .catch(() => Texture.WHITE)
+      .catch(() => Texture.EMPTY)
       .finally(() => {
         this.pendingTextureLoads.delete(imageUri);
       });

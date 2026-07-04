@@ -1,3 +1,5 @@
+import { Assets } from 'pixi.js';
+
 import type { RoccoEngine } from '../../../engine/engine-sdk';
 import type {
   RoccoCartridgeAction,
@@ -198,6 +200,16 @@ const DEVELOPER_SPRITE_CYCLE_FRAME_DURATION_MS = 1000;
 const DEVELOPER_SPRITE_CYCLE_TOP_TITLE_ID = 'rocco-developer-sprite-cycle-top-title';
 const DEVELOPER_SPRITE_CYCLE_SPRITE_TITLE_ID = 'rocco-developer-sprite-cycle-sprite-title';
 const DEVELOPER_SPRITE_CYCLE_CURSOR_SIZE = 34;
+const ROCCO_SHARED_UI_ASSET_URLS = [
+  roccoDefaultActionMenuAssetUrls.developerMode,
+  roccoDefaultActionMenuAssetUrls.grab,
+  roccoDefaultActionMenuAssetUrls.inventory,
+  roccoDefaultActionMenuAssetUrls.kick,
+  roccoDefaultActionMenuAssetUrls.look,
+  roccoDefaultActionMenuAssetUrls.talk,
+  roccoDefaultActionMenuAssetUrls.useWc,
+  roccoDefaultDeveloperSpriteCycleCursorAssetUrl,
+] as const;
 
 interface StanPoliceDefeatSequence {
   phase: StanPoliceDefeatPhase;
@@ -351,6 +363,9 @@ export class RoccoLevelManager {
 
   async mount(engine: RoccoEngine): Promise<RoccoLevelManagerMountResult> {
     this.engine = engine;
+    await Promise.all(ROCCO_SHARED_UI_ASSET_URLS.map((uri) => Assets.load(uri))).catch(() => {
+      this.engine?.log('Assets', 'Some shared Rocco UI assets could not be preloaded.');
+    });
     this.engine.audio.registerSound({
       id: STAN_POLICE_DEFEAT_SOUND_ID,
       uri: roccoDefaultPoliceWhistleSoundUrl,

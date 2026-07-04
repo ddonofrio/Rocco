@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   server: {
+    // Temporary: expose the dev server on the local network for playtests.
+    host: '0.0.0.0',
     port: 5174,
   },
   plugins: [

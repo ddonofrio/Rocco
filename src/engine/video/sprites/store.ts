@@ -114,6 +114,7 @@ export class RoccoSpriteStore {
       depthMode: definition.render?.depthMode ?? 'fixed',
       opacity: definition.render?.opacity ?? 1,
       tint: undefined,
+      contrast: undefined,
       visibleDescription: definition.visibleDescription ? clone(definition.visibleDescription) : undefined,
       ignoreMessages: definition.ignoreMessages ?? false,
       state: {},

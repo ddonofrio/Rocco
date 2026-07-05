@@ -19,6 +19,7 @@ The sprite system manages animated entities such as player characters, NPCs, and
 - A definition is a reusable blueprint with images, frames, animation clips, actions, motion profiles, and hit areas.
 - An instance is a live runtime object with position, visibility, motion state, animation state, and facing.
 - Definitions and instances can set `ignoreMessages` so the speech-bubble layout skips that sprite as an obstacle.
+- Instances can also set `tint` and `contrast` for per-sprite color grading without changing the shared sprite definition.
 - Load a definition with `engine.video.sprites.loadSpriteDefinition()`.
 - Create instances with `engine.video.sprites.createSpriteFromDefinition()`.
 

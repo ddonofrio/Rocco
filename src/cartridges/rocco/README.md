@@ -1,6 +1,6 @@
 # Default Cartridge: `rocco-default`
 
-`rocco-default` is the main built-in cartridge for the ROCCO console. It implements the Pier exterior plus the bait shop interior starring Rocco, a Pelikan, a bait bucket, keys, and Rocco's inventory.
+`rocco-default` is the main built-in cartridge for the ROCCO console. It implements the Pier exterior, the bait shop interior, and the first connected Nether screens starring Rocco, a Pelikan, a bait bucket, keys, and Rocco's inventory.
 
 ## Files
 
@@ -21,6 +21,7 @@
 | `inventory/`    | Rocco cartridge inventory state, prop storages, and grid-menu projection |
 | `levels/pier/`  | Pier exterior levels, transitions, assets, effects, and interactions |
 | `levels/bait-shop/` | Bait shop interior level, scene assets, walk map, and per-level Rocco setup |
+| `levels/nether/` | Nether levels, arrival effects, walk maps, and per-level Rocco setup |
 | `localization/` | English and Spanish text catalogs for the cartridge                |
 
 ## Pier Map
@@ -34,7 +35,7 @@ The cartridge starts in Pier Middle. The exterior uses the same background, fore
 | Pier End       | `pier-end`    | `rocco-pier-end-scene`    | Left side     |
 | Bait Shop      | `bait-shop`   | `rocco-bait-shop-scene`   | Interior      |
 
-Rocco transitions through edge connectors on connected screens. When his ground point enters an exit area, `RoccoLevelManager` loads the connected level, places Rocco on the matching entry point, and sets his facing direction. Using the keys on the bait shop door while Stan sleeps opens a separate transition into the bait shop scene.
+Rocco transitions through edge connectors on connected screens. When his ground point enters an exit area, `RoccoLevelManager` loads the connected level, places Rocco on the matching entry point, and sets his facing direction. Using the keys on the bait shop door while Stan sleeps opens a separate transition into the bait shop scene. The toilet-room portal then leads into `nether-console-hardware-spawn`, which connects onward to `nether-end-of-hallway-door`.
 
 ## Interactions
 
@@ -53,6 +54,7 @@ Rocco transitions through edge connectors on connected screens. When his ground 
 - Picking an inventory item can carry it on the console cursor for generic use attempts on sprites.
 - Keys and the 20 EUR bill have localized failed-use responses for the bait bucket and the Pelikan.
 - Pier Middle exits are available without an inventory gate.
+- The toilet-room portal opens a first-time arrival sequence in Nether and then hands off to a connected second Nether screen.
 
 ## Localization
 
@@ -99,4 +101,5 @@ assets/
 - Shared Rocco sprite logic lives in `rocco-default-sprites.ts` and `rocco-default-sprite-definition.ts`.
 - Pier-specific state, transitions, sprites, and controllers live inside `levels/pier`.
 - Bait shop interior scene state, planes, and assets live inside `levels/bait-shop`.
+- Nether scene state, perspective helpers, arrival effects, and assets live inside `levels/nether`.
 - Localized dialogue trees stay in `localization/`; the reusable turn sequencing stays in `dialogue/`.

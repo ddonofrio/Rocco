@@ -32,6 +32,7 @@ export interface RoccoDefaultSpriteInstallOptions {
   initialPosition?: RoccoPoint;
   scale?: number;
   tint?: string;
+  contrast?: number;
   localization?: RoccoLocalization;
   playIntro?: boolean;
   perspectiveAutoAdjust?: RoccoSpriteAutoAdjustPerspectiveByY;
@@ -233,6 +234,7 @@ export async function installDefaultSprite(
     interactive: true,
     collisionEnabled: true,
     tint: options.tint,
+    contrast: options.contrast,
   });
   engine.video.sprites.bindToWalkMap(DEFAULT_SPRITE_INSTANCE_ID, {
     walkMapId: DEFAULT_WALK_MAP_ID,

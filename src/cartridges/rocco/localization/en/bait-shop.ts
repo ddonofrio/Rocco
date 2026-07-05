@@ -20,7 +20,7 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'IT WAS A VIDEO GAME',
     'Okay, Rocco, calm down....',
     'It says here the key was hidden in the card display.',
-    'Great timing. Just perfect!',
+    'I should have read the magazine earlier!',
   ],
   toiletMagazineReadingMissingRelicLines: [
     'And if I did not bring the Coral Relic, I am dead.',
@@ -34,7 +34,7 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
   ],
   toiletMagazineReadingCoralRelicLines: [
     'It says here I need to stand up....',
-    '....grab the Abyssal Necklace quickly...',
+    '....grab the Coral Relic quickly...',
     '....make a wish and break it: One talisman one wish',
   ],
   toiletMagazineKnownStanLine: 'AND STAN OUTSIDE!',

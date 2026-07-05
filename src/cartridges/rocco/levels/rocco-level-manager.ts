@@ -129,9 +129,13 @@ import {
   ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
 } from './bait-shop/bait-shop-toilet-level';
 import {
-  RoccoNetherPlaceholderLevel,
-  ROCCO_NETHER_PLACEHOLDER_LEVEL_ID,
-} from './nether-placeholder-level';
+  RoccoNetherConsoleHardwareSpawnLevel,
+  ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+} from './nether/nether-console-hardware-spawn-level';
+import {
+  RoccoNetherEndOfHallwayDoorLevel,
+  ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
+} from './nether/nether-end-of-hallway-door-level';
 
 interface RoccoLevelConnectionEndpoint {
   levelId: string;
@@ -311,7 +315,11 @@ const ROCCO_LEVEL_CONNECTIONS: readonly RoccoLevelConnection[] = [
   },
   {
     a: { levelId: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID, connectorId: 'portal' },
-    b: { levelId: ROCCO_NETHER_PLACEHOLDER_LEVEL_ID, connectorId: 'entry' },
+    b: { levelId: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID, connectorId: 'entry' },
+  },
+  {
+    a: { levelId: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID, connectorId: 'north' },
+    b: { levelId: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID, connectorId: 'south' },
   },
 ];
 const DROPPED_INVENTORY_ITEM_SPRITE_DEFINITION_PREFIX = 'rocco-dropped-inventory-definition';
@@ -620,7 +628,8 @@ export class RoccoLevelManager {
         hasCoralRelic: () => this.inventory.hasItem(ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID),
         isStanIdentified: () => this.beginningAmbientState.stan.isIdentified,
       }),
-      new RoccoNetherPlaceholderLevel(this.localization),
+      new RoccoNetherConsoleHardwareSpawnLevel(this.localization),
+      new RoccoNetherEndOfHallwayDoorLevel(this.localization),
     ];
 
     for (const level of levels) {
@@ -1828,6 +1837,22 @@ export class RoccoLevelManager {
             id: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
             title: this.requireLevel(ROCCO_BAIT_SHOP_TOILET_LEVEL_ID).title,
             targetLevelId: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
+          },
+        ],
+      },
+      {
+        id: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+        title: this.requireLevel(ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID).title,
+        screens: [
+          {
+            id: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+            title: `${this.requireLevel(ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID).title} 1`,
+            targetLevelId: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+          },
+          {
+            id: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
+            title: `${this.requireLevel(ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID).title} 2`,
+            targetLevelId: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
           },
         ],
       },

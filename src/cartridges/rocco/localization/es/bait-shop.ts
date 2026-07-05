@@ -20,7 +20,7 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'FUERA UN VIDEOJUEGO',
     'A ver, Rocco, tranquilo...',
     'Aqu\u00ed dice que la llave estaba escondida en el exhibidor de tarjetas.',
-    '\u00a1A buenas horas, mangas verdes!',
+    '\u00a1Tendr\u00eda que haber le\u00eddo la revista antes!',
   ],
   toiletMagazineReadingMissingRelicLines: [
     'Y que, si no he tra\u00eddo la Reliquia coralina estoy muerto.',
@@ -34,7 +34,7 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
   ],
   toiletMagazineReadingCoralRelicLines: [
     'Aqu\u00ed dice que tengo que ponerme de pie....',
-    '....coger el collar abisal r\u00e1pidamente...',
+    '....coger la reliquia coralina r\u00e1pidamente...',
     '....pensar un deseo y romperlo: Un talisman un deseo',
   ],
   toiletMagazineKnownStanLine: '\u00a1Y STAN DE AFUERA!',

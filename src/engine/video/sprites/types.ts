@@ -105,12 +105,33 @@ export interface RoccoSpriteRenderDefaults {
 }
 
 export type RoccoSpriteAutoAdjustMode = 'match-visible-height';
+export type RoccoSpriteAutoAdjustSpeedScaleMode =
+  | 'uniform'
+  | 'vertical-only'
+  | 'horizontal-only';
+export type RoccoSpriteAutoAdjustScaleCurve = 'linear' | 'logarithmic' | 'exponential';
+
+export interface RoccoSpriteAutoAdjustPerspectiveRegion {
+  region: RoccoRect;
+  nearScale?: number;
+  farScale?: number;
+  speedScale?: boolean;
+  speedScaleMode?: RoccoSpriteAutoAdjustSpeedScaleMode;
+  scaleCurve?: RoccoSpriteAutoAdjustScaleCurve;
+  logScale?: boolean;
+}
 
 export interface RoccoSpriteAutoAdjustPerspectiveByY {
   nearY: number;
   farY: number;
   nearScale: number;
   farScale: number;
+  activeRegion?: RoccoRect;
+  regions?: readonly RoccoSpriteAutoAdjustPerspectiveRegion[];
+  scaleCurve?: RoccoSpriteAutoAdjustScaleCurve;
+  logScale?: boolean;
+  speedScale?: boolean;
+  speedScaleMode?: RoccoSpriteAutoAdjustSpeedScaleMode;
 }
 
 export interface RoccoSpriteAutoAdjust {
@@ -333,6 +354,7 @@ export interface RoccoSpriteInstance {
   depthMode?: RoccoDepthMode;
   opacity: number;
   tint?: string;
+  contrast?: number;
   navigation?: RoccoSpriteNavigationBinding;
   visibleDescription?: Partial<RoccoSpriteVisibleDescription>;
   ignoreMessages?: boolean;

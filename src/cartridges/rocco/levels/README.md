@@ -8,12 +8,13 @@ Use this file as the reference manual for creating, mounting, extending, and con
 
 A level is one playable screen or one connected screen in the Rocco cartridge.
 
-The current cartridge uses two level families:
+The current cartridge uses three level families:
 
 - `pier/` for the exterior panorama split into connected horizontal windows.
 - `bait-shop/` for full-screen interior rooms with their own background and walk map.
+- `nether/` for full-screen interior rooms with their own background and walk map plus local perspective adjustments for the player sprite.
 
-The same runtime supports both patterns, so new screens can follow either model.
+The same runtime supports both base patterns plus level-specific variants, so new screens can follow either model.
 
 ## Core Model
 
@@ -66,7 +67,7 @@ For new assets, the most reliable workflow is:
 - Keep both images in the same source dimensions.
 - Let the level helper scale both into design space together.
 
-That is the current bait shop pattern.
+That is the current bait shop and Nether pattern.
 
 ## Directory Layout
 
@@ -75,9 +76,9 @@ levels/
   README.md               This guide
   rocco-level-manager.ts  Shared active-level orchestration for Rocco screens
   rocco-level-types.ts    Shared level, connector, rectangle, and mount option types
-  nether-placeholder-level.ts  Temporary black-screen destination for the toilet portal
   pier/                   Exterior level graph, shared panorama scene, shared walk map
   bait-shop/              Interior levels, dedicated room scenes, dedicated walk maps
+  nether/                 Nether levels, arrival effects, dedicated room scenes, and perspective helpers
 ```
 
 Use one folder per location family when several screens share assets, state, or behavior.
@@ -141,11 +142,13 @@ This is ideal for:
 
 Use this when a room has its own complete background and its own complete walk map.
 
-The bait shop implementation shows the full pattern:
+The bait shop and Nether implementations show the full pattern:
 
 - `bait-shop-level.ts` mounts the first interior screen.
 - `bait-shop-second-level.ts` mounts the second interior screen.
 - `bait-shop-assets.ts` resolves the local asset URIs.
+- `nether-console-hardware-spawn-level.ts` mounts the first Nether screen with portal arrival and perspective scaling.
+- `nether-end-of-hallway-door-level.ts` mounts the second Nether screen with a fixed-scale player setup.
 
 Key idea:
 

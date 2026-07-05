@@ -1,4 +1,4 @@
-import { Assets, Container, Rectangle, Sprite, Texture } from 'pixi.js';
+import { Assets, ColorMatrixFilter, Container, Rectangle, Sprite, Texture } from 'pixi.js';
 
 import type { RoccoRenderableSprite } from './system';
 import type { RoccoSpriteDefinition, RoccoSpriteImage, RoccoSpritePresentationTransform } from './types';
@@ -8,6 +8,8 @@ interface SpriteNode {
   sprite: Sprite;
   frameKey: string;
   renderLayer: string;
+  contrastFilter: ColorMatrixFilter | null;
+  contrastValue: number;
 }
 
 interface PixiRoccoSpriteRendererOptions {
@@ -138,6 +140,8 @@ export class PixiRoccoSpriteRenderer {
       sprite,
       frameKey: '',
       renderLayer: '',
+      contrastFilter: null,
+      contrastValue: 1,
     };
   }
 
@@ -195,6 +199,28 @@ export class PixiRoccoSpriteRenderer {
     node.renderLayer = renderable.instance.renderLayer;
 
     node.sprite.tint = this.toTintNumber(renderable.instance.tint);
+    this.applyContrast(node, renderable.instance.contrast);
+  }
+
+  private applyContrast(node: SpriteNode, contrast?: number): void {
+    if (!Number.isFinite(contrast) || Math.abs((contrast ?? 1) - 1) < 0.001) {
+      node.sprite.filters = undefined;
+      node.contrastFilter = null;
+      node.contrastValue = 1;
+      return;
+    }
+
+    const resolvedContrast = contrast as number;
+    const filter = node.contrastFilter ?? new ColorMatrixFilter();
+    if (!node.contrastFilter || Math.abs(node.contrastValue - resolvedContrast) >= 0.001) {
+      filter.contrast(resolvedContrast - 1, false);
+      node.contrastFilter = filter;
+      node.contrastValue = resolvedContrast;
+    }
+
+    if (node.sprite.filters?.[0] !== filter || node.sprite.filters.length !== 1) {
+      node.sprite.filters = [filter];
+    }
   }
 
   private resolveTexture(renderable: RoccoRenderableSprite): { texture: Texture; key: string } {

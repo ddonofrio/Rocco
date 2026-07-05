@@ -29,6 +29,7 @@ import type {
   RoccoSpriteNavigationBinding,
   RoccoSpritePlacementOptions,
   RoccoSpriteAutoAdjustPerspectiveByY,
+  RoccoSpriteAutoAdjustPerspectiveRegion,
   RoccoSpriteVisibleDescription,
   RoccoSpriteVisiblePixelHit,
 } from './types';
@@ -37,6 +38,7 @@ const EPSILON = 0.0001;
 const DEFAULT_FOREGROUND_FACING_BIAS = 0.35;
 const MIN_FOREGROUND_FACING_BIAS_PIXELS = 12;
 const DEFAULT_WALK_MAP_WAYPOINT_EDGE_MARGIN = 18;
+const DEFAULT_EXPONENTIAL_SCALE_CURVE_STRENGTH = 4;
 const DEFAULT_RENDER_LAYER_ORDER = new Map(
   defaultRoccoRenderLayers.map((layer, index) => [layer.id, index]),
 );
@@ -138,6 +140,27 @@ function pointInPolygon(point: RoccoPoint, points: RoccoPoint[]): boolean {
     }
   }
   return inside;
+}
+
+function pointInRect(point: RoccoPoint, rect: RoccoRect): boolean {
+  return (
+    point.x >= rect.x &&
+    point.x <= rect.x + rect.width &&
+    point.y >= rect.y &&
+    point.y <= rect.y + rect.height
+  );
+}
+
+function normalizeExponentialInterpolation(value: number): number {
+  const clampedValue = clamp(value, 0, 1);
+  const denominator = Math.exp(DEFAULT_EXPONENTIAL_SCALE_CURVE_STRENGTH) - 1;
+  if (Math.abs(denominator) < EPSILON) {
+    return clampedValue;
+  }
+
+  return (
+    (Math.exp(DEFAULT_EXPONENTIAL_SCALE_CURVE_STRENGTH * clampedValue) - 1) / denominator
+  );
 }
 
 interface WorldRect {
@@ -783,13 +806,20 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
   }
 
   private integrateMotion(instance: RoccoSpriteInstance, deltaSeconds: number): void {
+    const definition = this.requireDefinition(instance.definitionId);
+    const perspectiveMotionScale =
+      this.resolvePerspectiveAutoAdjustMotionScale(instance, definition) ?? { x: 1, y: 1 };
+
     instance.motion.velocityX += instance.motion.accelerationX * deltaSeconds;
     instance.motion.velocityY += instance.motion.accelerationY * deltaSeconds;
 
     if (isFiniteNumber(instance.motion.maxSpeed) && instance.motion.maxSpeed > 0) {
-      const speed = Math.hypot(instance.motion.velocityX, instance.motion.velocityY);
-      if (speed > instance.motion.maxSpeed) {
-        const ratio = instance.motion.maxSpeed / speed;
+      const effectiveVelocityX = instance.motion.velocityX * perspectiveMotionScale.x;
+      const effectiveVelocityY = instance.motion.velocityY * perspectiveMotionScale.y;
+      const speed = Math.hypot(effectiveVelocityX, effectiveVelocityY);
+      const effectiveMaxSpeed = instance.motion.maxSpeed;
+      if (speed > effectiveMaxSpeed) {
+        const ratio = effectiveMaxSpeed / speed;
         instance.motion.velocityX *= ratio;
         instance.motion.velocityY *= ratio;
       }
@@ -797,8 +827,8 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
 
     const constrained = this.constrainOriginToWalkMap(
       instance,
-      instance.transform.x + instance.motion.velocityX * deltaSeconds,
-      instance.transform.y + instance.motion.velocityY * deltaSeconds,
+      instance.transform.x + instance.motion.velocityX * deltaSeconds * perspectiveMotionScale.x,
+      instance.transform.y + instance.motion.velocityY * deltaSeconds * perspectiveMotionScale.y,
       instance.motion.command?.options,
     );
     instance.transform.x = constrained.x;
@@ -880,8 +910,12 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     }
 
     const action = this.resolveMovementAction(definition, options);
-    const speed = options?.speed ?? action?.speed ?? instance.motion.maxSpeed ?? 120;
-    if (speed <= 0) {
+    const baseSpeed = options?.speed ?? action?.speed ?? instance.motion.maxSpeed ?? 120;
+    const perspectiveMotionScale =
+      this.resolvePerspectiveAutoAdjustMotionScale(instance, definition) ?? { x: 1, y: 1 };
+    const speedX = baseSpeed * perspectiveMotionScale.x;
+    const speedY = baseSpeed * perspectiveMotionScale.y;
+    if (speedX <= 0 && speedY <= 0) {
       return false;
     }
 
@@ -889,11 +923,11 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     const ny = dy / distance;
     const facing = toFacingDirection(nx, ny);
 
-    instance.motion.velocityX = nx * speed;
-    instance.motion.velocityY = ny * speed;
+    instance.motion.velocityX = nx * speedX;
+    instance.motion.velocityY = ny * speedY;
     if (options?.acceleration !== undefined && Number.isFinite(options.acceleration)) {
-      instance.motion.accelerationX = nx * options.acceleration;
-      instance.motion.accelerationY = ny * options.acceleration;
+      instance.motion.accelerationX = nx * options.acceleration * perspectiveMotionScale.x;
+      instance.motion.accelerationY = ny * options.acceleration * perspectiveMotionScale.y;
     }
 
     if (facing && options?.facingMode !== 'none') {
@@ -903,8 +937,10 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       }
     }
 
-    const stepDistance = Math.max(0, speed * deltaSeconds);
-    if (stepDistance >= Math.max(0, distance - stopDistance)) {
+    const stepX = instance.motion.velocityX * deltaSeconds;
+    const stepY = instance.motion.velocityY * deltaSeconds;
+    const projectedAdvance = nx * stepX + ny * stepY;
+    if (projectedAdvance >= Math.max(0, distance - stopDistance)) {
       const constrained = this.constrainOriginToWalkMap(instance, target.x, target.y, options);
       instance.transform.x = constrained.x;
       instance.transform.y = constrained.y;
@@ -915,8 +951,8 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
 
     const constrained = this.constrainOriginToWalkMap(
       instance,
-      instance.transform.x + nx * stepDistance,
-      instance.transform.y + ny * stepDistance,
+      instance.transform.x + stepX,
+      instance.transform.y + stepY,
       options,
     );
     instance.transform.x = constrained.x;
@@ -1793,10 +1829,19 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       return undefined;
     }
 
-    const nearY = perspectiveByY.nearY;
-    const farY = perspectiveByY.farY;
-    const nearScale = perspectiveByY.nearScale;
-    const farScale = perspectiveByY.farScale;
+    const resolvedPerspectiveByY = this.resolvePerspectiveAutoAdjustConfig(
+      instance,
+      definition,
+      perspectiveByY,
+    );
+    if (!resolvedPerspectiveByY) {
+      return undefined;
+    }
+
+    const nearY = resolvedPerspectiveByY.nearY;
+    const farY = resolvedPerspectiveByY.farY;
+    const nearScale = resolvedPerspectiveByY.nearScale;
+    const farScale = resolvedPerspectiveByY.farScale;
     if (
       !Number.isFinite(nearY) ||
       !Number.isFinite(farY) ||
@@ -1814,7 +1859,98 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     }
 
     const interpolation = clamp((groundPoint.y - farY) / (nearY - farY), 0, 1);
+    const scaleCurve = this.resolvePerspectiveAutoAdjustScaleCurve(resolvedPerspectiveByY);
+    if (scaleCurve === 'logarithmic') {
+      return Math.exp(Math.log(farScale) + (Math.log(nearScale) - Math.log(farScale)) * interpolation);
+    }
+
+    if (scaleCurve === 'exponential') {
+      return farScale + (nearScale - farScale) * normalizeExponentialInterpolation(interpolation);
+    }
+
     return farScale + (nearScale - farScale) * interpolation;
+  }
+
+  private resolvePerspectiveAutoAdjustMotionScale(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+  ): { x: number; y: number } | undefined {
+    const perspectiveByY = this.resolvePerspectiveAutoAdjustConfig(
+      instance,
+      definition,
+      definition.autoAdjust?.perspectiveByY,
+    );
+    if (!definition.autoAdjust?.enabled || !perspectiveByY?.speedScale) {
+      return undefined;
+    }
+
+    const scale = this.resolvePerspectiveAutoAdjustScale(instance, definition, perspectiveByY);
+    if (scale === undefined) {
+      return undefined;
+    }
+
+    switch (perspectiveByY.speedScaleMode) {
+      case 'horizontal-only':
+        return { x: scale, y: 1 };
+      case 'vertical-only':
+        return { x: 1, y: scale };
+      default:
+        return { x: scale, y: scale };
+    }
+  }
+
+  private resolvePerspectiveAutoAdjustConfig(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    perspectiveByY?: RoccoSpriteAutoAdjustPerspectiveByY,
+  ): RoccoSpriteAutoAdjustPerspectiveByY | undefined {
+    if (!perspectiveByY) {
+      return undefined;
+    }
+
+    const groundPoint = this.resolveInstanceGroundPoint(instance, definition);
+    const matchingRegion = perspectiveByY.regions?.find((candidate) =>
+      pointInRect(groundPoint, candidate.region),
+    );
+    if (matchingRegion) {
+      return this.mergePerspectiveAutoAdjustRegion(perspectiveByY, matchingRegion);
+    }
+
+    if (perspectiveByY.activeRegion && !pointInRect(groundPoint, perspectiveByY.activeRegion)) {
+      return undefined;
+    }
+
+    return perspectiveByY;
+  }
+
+  private mergePerspectiveAutoAdjustRegion(
+    base: RoccoSpriteAutoAdjustPerspectiveByY,
+    region: RoccoSpriteAutoAdjustPerspectiveRegion,
+  ): RoccoSpriteAutoAdjustPerspectiveByY {
+    return {
+      ...base,
+      nearScale: region.nearScale ?? base.nearScale,
+      farScale: region.farScale ?? base.farScale,
+      speedScale: region.speedScale ?? base.speedScale,
+      speedScaleMode: region.speedScaleMode ?? base.speedScaleMode,
+      scaleCurve: region.scaleCurve ?? base.scaleCurve,
+      logScale: region.logScale ?? base.logScale,
+      activeRegion: region.region,
+    };
+  }
+
+  private resolvePerspectiveAutoAdjustScaleCurve(
+    perspectiveByY: RoccoSpriteAutoAdjustPerspectiveByY,
+  ): 'linear' | 'logarithmic' | 'exponential' {
+    if (perspectiveByY.scaleCurve) {
+      return perspectiveByY.scaleCurve;
+    }
+
+    if (perspectiveByY.logScale) {
+      return 'logarithmic';
+    }
+
+    return 'linear';
   }
 
   private resolveAutoAdjustReferenceHeight(definition: RoccoSpriteDefinition): number | undefined {

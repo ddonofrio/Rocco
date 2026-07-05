@@ -1,5 +1,13 @@
 import { Application, Container, Graphics, Rectangle, Text, TextStyle } from 'pixi.js';
 
+import {
+  getEffectiveMusicVolume,
+  getEffectiveSfxVolume,
+  resolveRoccoSoundProfile,
+  setEffectiveMusicVolume,
+  setEffectiveSfxVolume,
+  type RoccoSoundProfile,
+} from '../audio';
 import type { RoccoCartridgeManifest } from '../cartridges/types';
 import {
   ROCCO_DISPLAY_BRIGHTNESS_MAX,
@@ -9,7 +17,6 @@ import {
   resolveRoccoDisplayProfile,
   type RoccoDisplayProfile,
 } from '../video/display';
-import { defaultRoccoRenderLayers } from '../video/render-layers';
 
 const DESIGN_W = 960;
 const DESIGN_H = 540;
@@ -37,9 +44,8 @@ const PANEL_W = DESIGN_W - PANEL_X * 2;
 const PANEL_INSET = 18;
 const SOFT_BUTTON_W = 132;
 const SOFT_BUTTON_H = 30;
-const BACK_BUTTON_W = 124;
-const BACK_BUTTON_H = 30;
 const DISPLAY_STEP = 0.1;
+const VOLUME_STEP = 0.1;
 const TOGGLE_W = 94;
 const TOGGLE_H = 24;
 
@@ -81,36 +87,45 @@ const SETTINGS_OPTIONS = [
     id: 'video',
     label: 'VIDEO',
     enabled: true,
+    statusLabel: 'READY',
     description: 'Console-wide display profile, filters, brightness, and contrast.',
   },
   {
     id: 'sound',
     label: 'SOUND',
-    enabled: false,
-    description: 'Audio output controls are disabled in this build.',
+    enabled: true,
+    statusLabel: 'READY',
+    description: 'Console-wide master, music, and effect output levels.',
   },
   {
     id: 'developer',
     label: 'DEVELOPER',
-    enabled: false,
-    description: 'Developer tools stay disabled in this build.',
+    enabled: true,
+    statusLabel: 'JUMPER',
+    description: 'Console developer mode is controlled by a physical jumper and cannot be changed here.',
   },
   {
     id: 'back',
     label: 'BACK',
     enabled: true,
+    statusLabel: 'READY',
     description: 'Return to cartridge selection.',
   },
 ] as const;
 
-const VIDEO_ROW_IDS = ['filters', 'brightness', 'contrast', 'back'] as const;
-const FILTER_ROW_IDS = ['roundedCorners', 'crtMask', 'edgeVignette', 'back'] as const;
-const RENDER_LAYER_COUNT = defaultRoccoRenderLayers.length;
-
-type MenuPage = 'cartridges' | 'settings' | 'video' | 'filters';
+const VIDEO_ROW_IDS = ['filters', 'brightness', 'contrast'] as const;
+const SOUND_ROW_IDS = ['master', 'music', 'effects'] as const;
+const FILTER_ROW_IDS = ['roundedCorners', 'crtMask', 'edgeVignette'] as const;
+type MenuPage = 'cartridges' | 'settings' | 'video' | 'sound' | 'filters';
 type SettingsOptionId = (typeof SETTINGS_OPTIONS)[number]['id'];
 type VideoRowId = (typeof VIDEO_ROW_IDS)[number];
+type SoundRowId = (typeof SOUND_ROW_IDS)[number];
 type FilterRowId = (typeof FILTER_ROW_IDS)[number];
+type FooterHintAction = {
+  key: string;
+  label: string;
+  onPress: () => void;
+};
 
 export interface CartridgeMenuResult {
   selectedId: string;
@@ -120,7 +135,10 @@ export interface CartridgeMenuResult {
 export interface CartridgeMenuOptions {
   initialLocales?: Record<string, string>;
   initialDisplayProfile?: Partial<RoccoDisplayProfile>;
+  initialSoundProfile?: Partial<RoccoSoundProfile>;
+  developerModeEnabled?: boolean;
   onDisplayProfileChange?: (profile: Partial<RoccoDisplayProfile>) => void;
+  onSoundProfileChange?: (profile: Partial<RoccoSoundProfile>) => void;
 }
 
 export class RoccoCartridgeMenu {
@@ -133,10 +151,16 @@ export class RoccoCartridgeMenu {
   private page: MenuPage = 'cartridges';
   private settingsSelectionId: SettingsOptionId = 'video';
   private videoSelectionId: VideoRowId = 'filters';
+  private soundSelectionId: SoundRowId = 'master';
   private filterSelectionId: FilterRowId = 'roundedCorners';
   private displayProfile = resolveRoccoDisplayProfile();
+  private soundProfile = resolveRoccoSoundProfile();
+  private developerModeEnabled = false;
   private onDisplayProfileChange:
     | ((profile: Partial<RoccoDisplayProfile>) => void)
+    | undefined;
+  private onSoundProfileChange:
+    | ((profile: Partial<RoccoSoundProfile>) => void)
     | undefined;
 
   private root: Container | null = null;
@@ -159,9 +183,13 @@ export class RoccoCartridgeMenu {
     this.page = 'cartridges';
     this.settingsSelectionId = 'video';
     this.videoSelectionId = 'filters';
+    this.soundSelectionId = 'master';
     this.filterSelectionId = 'roundedCorners';
     this.displayProfile = resolveRoccoDisplayProfile(options.initialDisplayProfile);
+    this.soundProfile = resolveRoccoSoundProfile(options.initialSoundProfile);
+    this.developerModeEnabled = options.developerModeEnabled ?? false;
     this.onDisplayProfileChange = options.onDisplayProfileChange;
+    this.onSoundProfileChange = options.onSoundProfileChange;
 
     this.mount();
     this.render();
@@ -178,6 +206,7 @@ export class RoccoCartridgeMenu {
     this.unmount();
     this.resolveSelection = null;
     this.onDisplayProfileChange = undefined;
+    this.onSoundProfileChange = undefined;
   }
 
   private mount(): void {
@@ -253,7 +282,33 @@ export class RoccoCartridgeMenu {
           ['UP DOWN', 'SELECT'],
           ['LEFT RIGHT', 'ADJUST'],
           ['ESC', 'BACK'],
-        ]);
+        ], {
+          key: 'ESC',
+          label: 'BACK',
+          onPress: () => {
+            this.page = 'settings';
+            this.settingsSelectionId = 'video';
+            this.render();
+          },
+        });
+        break;
+      case 'sound':
+        this.drawBackground(false);
+        this.drawHeader('SYSTEM SETTINGS', 'AUDIO OUTPUT');
+        this.drawSoundSettings();
+        this.drawFooter([
+          ['UP DOWN', 'SELECT'],
+          ['LEFT RIGHT', 'ADJUST'],
+          ['ESC', 'BACK'],
+        ], {
+          key: 'ESC',
+          label: 'BACK',
+          onPress: () => {
+            this.page = 'settings';
+            this.settingsSelectionId = 'sound';
+            this.render();
+          },
+        });
         break;
       case 'filters':
         this.drawBackground(false);
@@ -263,7 +318,15 @@ export class RoccoCartridgeMenu {
           ['UP DOWN', 'SELECT'],
           ['LEFT RIGHT', 'TOGGLE'],
           ['ESC', 'BACK'],
-        ]);
+        ], {
+          key: 'ESC',
+          label: 'BACK',
+          onPress: () => {
+            this.page = 'video';
+            this.videoSelectionId = 'filters';
+            this.render();
+          },
+        });
         break;
     }
   }
@@ -655,6 +718,8 @@ export class RoccoCartridgeMenu {
         this.settingsSelectionId = option.id;
         if (option.enabled && option.id === 'video') {
           this.page = 'video';
+        } else if (option.enabled && option.id === 'sound') {
+          this.page = 'sound';
         } else if (option.enabled && option.id === 'back') {
           this.page = 'cartridges';
         }
@@ -683,7 +748,7 @@ export class RoccoCartridgeMenu {
       label.y = 12;
       row.addChild(label);
 
-      const status = this.makeText(option.enabled ? 'READY' : 'DISABLED', {
+      const status = this.makeText(option.statusLabel, {
         fontSize: 10,
         fill: option.enabled ? C.detailValue : C.itemDisabled,
         letterSpacing: 1,
@@ -721,6 +786,33 @@ export class RoccoCartridgeMenu {
       this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 170, 'FILTERS', `${this.countEnabledFilters()} / 3 ON`);
       this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 198, 'BRIGHTNESS', this.formatPercent(this.displayProfile.brightness));
       this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 226, 'CONTRAST', this.formatPercent(this.displayProfile.contrast));
+    } else if (selectedOption.id === 'sound') {
+      this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 170, 'MASTER', this.formatPercent(this.soundProfile.masterVolume));
+      this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 198, 'MUSIC', this.formatPercent(this.getMusicOutputVolume()));
+      this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 226, 'SFX', this.formatPercent(this.getSfxOutputVolume()));
+    } else if (selectedOption.id === 'developer') {
+      this.drawDetailField(
+        rightX + PANEL_INSET,
+        LIST_TOP + 170,
+        'STATUS',
+        `${this.developerModeEnabled ? 'ON' : 'OFF'} (READ ONLY)`,
+      );
+
+      const jumperNote = this.makeText(
+        this.developerModeEnabled
+          ? 'Set the console jumper from DEVELOPER to NORMAL to disable developer mode.'
+          : 'Set the console jumper from NORMAL to DEVELOPER to enable developer mode.',
+        {
+          fontSize: 13,
+          fill: C.detailValue,
+          wordWrap: true,
+          wordWrapWidth: rightW - PANEL_INSET * 2,
+          leading: 6,
+        },
+      );
+      jumperNote.x = rightX + PANEL_INSET;
+      jumperNote.y = LIST_TOP + 202;
+      this.root!.addChild(jumperNote);
     } else {
       this.drawDetailField(
         rightX + PANEL_INSET,
@@ -732,26 +824,15 @@ export class RoccoCartridgeMenu {
   }
 
   private drawVideoSettings(): void {
-    this.drawPanel(PANEL_X, LIST_TOP, PANEL_W, 148, 'VIDEO STATUS');
+    this.drawPanel(PANEL_X, LIST_TOP, PANEL_W, 114, 'VIDEO STATUS');
     this.drawVideoInfoGrid();
 
-    this.drawPanel(PANEL_X, LIST_TOP + 170, PANEL_W, 214, 'OPTIONS');
+    this.drawPanel(PANEL_X, LIST_TOP + 136, PANEL_W, 214, 'OPTIONS');
 
-    let rowY = LIST_TOP + 212;
+    let rowY = LIST_TOP + 178;
     rowY = this.drawVideoOptionRow('filters', 'FILTERS', rowY);
     rowY = this.drawVideoOptionRow('brightness', 'BRIGHTNESS', rowY);
     this.drawVideoOptionRow('contrast', 'CONTRAST', rowY);
-    this.drawBackButton(
-      PANEL_X + PANEL_W - BACK_BUTTON_W - 18,
-      FOOTER_Y - BACK_BUTTON_H - 12,
-      this.videoSelectionId === 'back',
-      () => {
-        this.page = 'settings';
-        this.settingsSelectionId = 'video';
-        this.videoSelectionId = 'filters';
-        this.render();
-      },
-    );
   }
 
   private drawVideoInfoGrid(): void {
@@ -759,7 +840,6 @@ export class RoccoCartridgeMenu {
       ['DEFINITION', '960 x 540'],
       ['COLORS', '16.7M (24-BIT RGB)'],
       ['COLOR MODEL', 'NATIVE RGB'],
-      ['RENDER LAYERS', String(RENDER_LAYER_COUNT)],
     ];
 
     const startX = PANEL_X + PANEL_INSET;
@@ -774,7 +854,7 @@ export class RoccoCartridgeMenu {
     });
   }
 
-  private drawVideoOptionRow(id: Exclude<VideoRowId, 'back'>, label: string, y: number): number {
+  private drawVideoOptionRow(id: VideoRowId, label: string, y: number): number {
     const selected = this.videoSelectionId === id;
     const row = this.createInteractiveContainer(PANEL_X + 14, y, PANEL_W - 28, 46, () => {
       this.videoSelectionId = id;
@@ -868,21 +948,92 @@ export class RoccoCartridgeMenu {
     rowY = this.drawFilterOptionRow('roundedCorners', 'ROUNDED CORNERS', rowY);
     rowY = this.drawFilterOptionRow('crtMask', 'CRT SHADOW MASK', rowY);
     this.drawFilterOptionRow('edgeVignette', 'EDGE VIGNETTE', rowY);
-
-    this.drawBackButton(
-      PANEL_X + PANEL_W - BACK_BUTTON_W - 18,
-      FOOTER_Y - BACK_BUTTON_H - 12,
-      this.filterSelectionId === 'back',
-      () => {
-        this.page = 'video';
-        this.videoSelectionId = 'filters';
-        this.filterSelectionId = 'roundedCorners';
-        this.render();
-      },
-    );
   }
 
-  private drawFilterOptionRow(id: Exclude<FilterRowId, 'back'>, label: string, y: number): number {
+  private drawSoundSettings(): void {
+    this.drawPanel(PANEL_X, LIST_TOP, PANEL_W, 148, 'MIX STATUS');
+    this.drawSoundInfoGrid();
+
+    this.drawPanel(PANEL_X, LIST_TOP + 170, PANEL_W, 214, 'CHANNELS');
+
+    let rowY = LIST_TOP + 212;
+    rowY = this.drawSoundOptionRow('master', 'MASTER VOLUME', rowY);
+    rowY = this.drawSoundOptionRow('music', 'MUSIC VOLUME', rowY);
+    this.drawSoundOptionRow('effects', 'SFX VOLUME', rowY);
+  }
+
+  private drawSoundInfoGrid(): void {
+    const fields: Array<[string, string]> = [
+      ['MASTER', this.formatPercent(this.soundProfile.masterVolume)],
+      ['MUSIC OUTPUT', this.formatPercent(this.getMusicOutputVolume())],
+      ['SFX OUTPUT', this.formatPercent(this.getSfxOutputVolume())],
+      ['ROUTING', 'MASTER x CHANNEL'],
+    ];
+
+    const startX = PANEL_X + PANEL_INSET;
+    const startY = LIST_TOP + 48;
+    const columnGap = 390;
+    const rowGap = 34;
+
+    fields.forEach(([label, value], index) => {
+      const column = index % 2;
+      const row = Math.floor(index / 2);
+      this.drawDetailField(startX + column * columnGap, startY + row * rowGap, label, value);
+    });
+  }
+
+  private drawSoundOptionRow(id: SoundRowId, label: string, y: number): number {
+    const selected = this.soundSelectionId === id;
+    const row = this.createInteractiveContainer(PANEL_X + 14, y, PANEL_W - 28, 46, () => {
+      this.soundSelectionId = id;
+      this.render();
+    });
+
+    row.addChild(
+      new Graphics()
+        .rect(0, 0, PANEL_W - 28, 46)
+        .fill(selected ? C.itemBgSelected : C.itemBg)
+        .rect(0, 0, PANEL_W - 28, 46)
+        .stroke({ color: selected ? C.itemBorderSelected : C.itemBorder, width: 1 }),
+    );
+
+    const text = this.makeText(label, {
+      fontSize: 16,
+      fontWeight: selected ? '700' : '400',
+      fill: selected ? C.itemTitleSelected : C.itemTitle,
+      letterSpacing: 2,
+    });
+    text.x = 14;
+    text.y = 13;
+    row.addChild(text);
+
+    const value =
+      id === 'master'
+        ? this.soundProfile.masterVolume
+        : id === 'music'
+          ? this.getMusicOutputVolume()
+          : this.getSfxOutputVolume();
+    this.drawAdjustControl(
+      row,
+      PANEL_W - 28 - 214,
+      9,
+      200,
+      value,
+      () => {
+        this.soundSelectionId = id;
+        this.adjustSoundValue(id, -VOLUME_STEP);
+      },
+      () => {
+        this.soundSelectionId = id;
+        this.adjustSoundValue(id, VOLUME_STEP);
+      },
+    );
+
+    this.root!.addChild(row);
+    return y + 54;
+  }
+
+  private drawFilterOptionRow(id: FilterRowId, label: string, y: number): number {
     const selected = this.filterSelectionId === id;
     const enabled = this.displayProfile[id];
     const row = this.createInteractiveContainer(PANEL_X + 14, y, PANEL_W - 28, 46, () => {
@@ -937,7 +1088,10 @@ export class RoccoCartridgeMenu {
     this.root!.addChild(titleText);
   }
 
-  private drawFooter(hints: ReadonlyArray<readonly [string, string]>): void {
+  private drawFooter(
+    hints: ReadonlyArray<readonly [string, string]>,
+    interactiveHint?: FooterHintAction,
+  ): void {
     const root = this.root!;
 
     root.addChild(new Graphics().rect(0, FOOTER_Y, DESIGN_W, FOOTER_H).fill({ color: 0x0a0f09, alpha: 1 }));
@@ -953,18 +1107,37 @@ export class RoccoCartridgeMenu {
         fill: C.titleBrand,
         letterSpacing: 1,
       });
-      keyText.x = x;
-      keyText.y = FOOTER_Y + 16;
-      root.addChild(keyText);
-
       const labelText = this.makeText(`  ${label}`, {
         fontSize: 13,
         fill: C.footerHint,
         letterSpacing: 2,
       });
-      labelText.x = x + keyText.width;
-      labelText.y = FOOTER_Y + 16;
-      root.addChild(labelText);
+      const isInteractive =
+        interactiveHint?.key === key && interactiveHint?.label === label;
+
+      if (isInteractive) {
+        const action = this.createInteractiveContainer(
+          x - 4,
+          FOOTER_Y + 10,
+          keyText.width + labelText.width + 8,
+          24,
+          interactiveHint.onPress,
+        );
+        keyText.x = 4;
+        keyText.y = 6;
+        labelText.x = 4 + keyText.width;
+        labelText.y = 6;
+        action.addChild(keyText);
+        action.addChild(labelText);
+        root.addChild(action);
+      } else {
+        keyText.x = x;
+        keyText.y = FOOTER_Y + 16;
+        root.addChild(keyText);
+        labelText.x = x + keyText.width;
+        labelText.y = FOOTER_Y + 16;
+        root.addChild(labelText);
+      }
 
       x += keyText.width + labelText.width + 24;
     }
@@ -996,28 +1169,6 @@ export class RoccoCartridgeMenu {
     });
     text.x = (width - text.width) / 2;
     text.y = (height - text.height) / 2;
-    button.addChild(text);
-    this.root!.addChild(button);
-  }
-
-  private drawBackButton(x: number, y: number, selected: boolean, onPress: () => void): void {
-    const button = this.createInteractiveContainer(x, y, BACK_BUTTON_W, BACK_BUTTON_H, onPress);
-    button.addChild(
-      new Graphics()
-        .roundRect(0, 0, BACK_BUTTON_W, BACK_BUTTON_H, 4)
-        .fill(selected ? C.itemBorderSelected : C.buttonFill)
-        .roundRect(0, 0, BACK_BUTTON_W, BACK_BUTTON_H, 4)
-        .stroke({ color: selected ? C.titleBrand : C.buttonBorder, width: 2 }),
-    );
-
-    const text = this.makeText('BACK', {
-      fontSize: 14,
-      fontWeight: '700',
-      fill: selected ? C.buttonText : C.detailValue,
-      letterSpacing: 3,
-    });
-    text.x = (BACK_BUTTON_W - text.width) / 2;
-    text.y = (BACK_BUTTON_H - text.height) / 2;
     button.addChild(text);
     this.root!.addChild(button);
   }
@@ -1194,6 +1345,9 @@ export class RoccoCartridgeMenu {
       case 'video':
         this.onVideoKeyDown(e);
         break;
+      case 'sound':
+        this.onSoundKeyDown(e);
+        break;
       case 'filters':
         this.onFilterKeyDown(e);
         break;
@@ -1328,19 +1482,52 @@ export class RoccoCartridgeMenu {
       case 'Enter':
       case ' ':
         e.preventDefault();
-        if (this.filterSelectionId === 'back') {
-          this.page = 'video';
-          this.videoSelectionId = 'filters';
-          this.render();
-        } else {
-          this.toggleFilter(this.filterSelectionId);
-        }
+        this.toggleFilter(this.filterSelectionId);
         break;
       case 'Escape':
       case 'Backspace':
         e.preventDefault();
         this.page = 'video';
         this.videoSelectionId = 'filters';
+        this.render();
+        break;
+    }
+  }
+
+  private onSoundKeyDown(e: KeyboardEvent): void {
+    switch (e.key) {
+      case 'ArrowUp':
+      case 'Up':
+        e.preventDefault();
+        this.soundSelectionId = this.moveInCycle(SOUND_ROW_IDS, this.soundSelectionId, -1);
+        this.render();
+        break;
+      case 'ArrowDown':
+      case 'Down':
+        e.preventDefault();
+        this.soundSelectionId = this.moveInCycle(SOUND_ROW_IDS, this.soundSelectionId, 1);
+        this.render();
+        break;
+      case 'ArrowLeft':
+      case 'Left':
+        e.preventDefault();
+        this.adjustSelectedSoundValue(-VOLUME_STEP);
+        break;
+      case 'ArrowRight':
+      case 'Right':
+        e.preventDefault();
+        this.adjustSelectedSoundValue(VOLUME_STEP);
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        this.activateSoundSelection();
+        break;
+      case 'Escape':
+      case 'Backspace':
+        e.preventDefault();
+        this.page = 'settings';
+        this.settingsSelectionId = 'sound';
         this.render();
         break;
     }
@@ -1377,14 +1564,20 @@ export class RoccoCartridgeMenu {
       case 'video':
         this.page = 'video';
         break;
+      case 'sound':
+        this.page = 'sound';
+        break;
       case 'back':
         this.page = 'cartridges';
         break;
-      case 'sound':
       case 'developer':
         break;
     }
     this.render();
+  }
+
+  private activateSoundSelection(): void {
+    this.adjustSelectedSoundValue(VOLUME_STEP);
   }
 
   private activateVideoSelection(): void {
@@ -1396,10 +1589,6 @@ export class RoccoCartridgeMenu {
       case 'contrast':
         this.adjustVideoValue(this.videoSelectionId, DISPLAY_STEP);
         return;
-      case 'back':
-        this.page = 'settings';
-        this.settingsSelectionId = 'video';
-        break;
     }
     this.render();
   }
@@ -1410,6 +1599,10 @@ export class RoccoCartridgeMenu {
     }
   }
 
+  private adjustSelectedSoundValue(delta: number): void {
+    this.adjustSoundValue(this.soundSelectionId, delta);
+  }
+
   private adjustVideoValue(id: 'brightness' | 'contrast', delta: number): void {
     const nextValue = id === 'brightness'
       ? this.clamp(this.displayProfile.brightness + delta, ROCCO_DISPLAY_BRIGHTNESS_MIN, ROCCO_DISPLAY_BRIGHTNESS_MAX)
@@ -1417,15 +1610,37 @@ export class RoccoCartridgeMenu {
     this.updateDisplayProfile({ [id]: nextValue });
   }
 
-  private applySelectedFilterValue(enabled: boolean): void {
-    if (this.filterSelectionId === 'back') {
+  private adjustSoundValue(id: SoundRowId, delta: number): void {
+    if (id === 'master') {
+      this.updateSoundProfile({
+        masterVolume: this.clamp(this.soundProfile.masterVolume + delta, 0, 1),
+      });
       return;
     }
 
+    if (id === 'music') {
+      this.updateSoundProfile(
+        setEffectiveMusicVolume(
+          this.soundProfile,
+          this.clamp(this.getMusicOutputVolume() + delta, 0, 1),
+        ),
+      );
+      return;
+    }
+
+    this.updateSoundProfile(
+      setEffectiveSfxVolume(
+        this.soundProfile,
+        this.clamp(this.getSfxOutputVolume() + delta, 0, 1),
+      ),
+    );
+  }
+
+  private applySelectedFilterValue(enabled: boolean): void {
     this.updateDisplayProfile({ [this.filterSelectionId]: enabled });
   }
 
-  private toggleFilter(id: Exclude<FilterRowId, 'back'>): void {
+  private toggleFilter(id: FilterRowId): void {
     this.updateDisplayProfile({ [id]: !this.displayProfile[id] });
   }
 
@@ -1435,6 +1650,15 @@ export class RoccoCartridgeMenu {
       ...profile,
     });
     this.onDisplayProfileChange?.(this.displayProfile);
+    this.render();
+  }
+
+  private updateSoundProfile(profile: Partial<RoccoSoundProfile>): void {
+    this.soundProfile = resolveRoccoSoundProfile({
+      ...this.soundProfile,
+      ...profile,
+    });
+    this.onSoundProfileChange?.(this.soundProfile);
     this.render();
   }
 
@@ -1474,6 +1698,14 @@ export class RoccoCartridgeMenu {
     return Number(this.displayProfile.roundedCorners)
       + Number(this.displayProfile.crtMask)
       + Number(this.displayProfile.edgeVignette);
+  }
+
+  private getMusicOutputVolume(): number {
+    return getEffectiveMusicVolume(this.soundProfile);
+  }
+
+  private getSfxOutputVolume(): number {
+    return getEffectiveSfxVolume(this.soundProfile);
   }
 
   private formatPercent(value: number): string {

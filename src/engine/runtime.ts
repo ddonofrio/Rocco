@@ -1,7 +1,14 @@
 import { Application, Container, Graphics, type Ticker } from 'pixi.js';
 
 import type { RoccoEngine } from './engine-sdk';
-import { RoccoRuntimeAudioSystem } from './audio';
+import {
+  defaultSoundProfile,
+  getEffectiveMusicVolume,
+  getEffectiveSfxVolume,
+  resolveRoccoSoundProfile,
+  RoccoRuntimeAudioSystem,
+  type RoccoSoundProfile,
+} from './audio';
 import { RoccoJukeboxSystemImpl } from './audio/jukebox';
 import {
   RoccoDefaultEffectManager,
@@ -17,9 +24,18 @@ import { RoccoInputHandler } from './input-handler';
 import { RoccoCartridgeManager } from './cartridge-manager';
 import { RoccoPersistenceAdapter } from './persistence-adapter';
 
+function clone<T>(value: T): T {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 interface RuntimeOptions {
   mount: HTMLElement;
   configuredCartridgeId?: string;
+  developerModeEnabled?: boolean;
   onStatusChange?: (status: string) => void;
   onLog?: (channel: string, message: string) => void;
   onDisplayProfileChange?: (profile: Partial<RoccoDisplayProfile>) => void;
@@ -37,6 +53,8 @@ export class GameRuntime implements RoccoEngine {
   private activePlayerSpriteId: string | null = null;
   private statusMessage = 'Engine bootstrapping cartridge...';
   private compositionOverlay: Container | null = null;
+  private soundProfile: RoccoSoundProfile = { ...defaultSoundProfile };
+  private readonly developerModeEnabled: boolean;
 
   // Public subsystem access
   readonly video: RoccoRuntimeVideoSystem;
@@ -47,6 +65,7 @@ export class GameRuntime implements RoccoEngine {
 
   constructor(options: RuntimeOptions) {
     this.options = options;
+    this.developerModeEnabled = options.developerModeEnabled ?? true;
     
     this.audio = new RoccoRuntimeAudioSystem();
     this.jukebox = new RoccoJukeboxSystemImpl();
@@ -67,6 +86,7 @@ export class GameRuntime implements RoccoEngine {
     this.persistence = new RoccoPersistenceAdapter();
     
     this.effectRegistry.register(roccoAutoScrollRuntime);
+    this.applySoundProfile();
   }
 
   async init(): Promise<void> {
@@ -159,6 +179,10 @@ export class GameRuntime implements RoccoEngine {
     return this.inputHandler?.isInputEnabled() ?? true;
   }
 
+  isDeveloperModeEnabled(): boolean {
+    return this.developerModeEnabled;
+  }
+
   beginComposition(): void {
     if (!this.app || this.compositionOverlay) {
       return;
@@ -191,6 +215,18 @@ export class GameRuntime implements RoccoEngine {
     this.options.onLog?.(channel, message);
   }
 
+  getSoundProfile(): RoccoSoundProfile {
+    return clone(this.soundProfile);
+  }
+
+  setSoundProfile(profile: Partial<RoccoSoundProfile>): void {
+    this.soundProfile = resolveRoccoSoundProfile({
+      ...this.soundProfile,
+      ...profile,
+    });
+    this.applySoundProfile();
+  }
+
   private handleResize = (): void => {
     this.video.render(0);
   };
@@ -219,4 +255,9 @@ export class GameRuntime implements RoccoEngine {
     }
     return undefined;
   };
+
+  private applySoundProfile(): void {
+    this.audio.setVolume(getEffectiveSfxVolume(this.soundProfile));
+    this.jukebox.setVolume(getEffectiveMusicVolume(this.soundProfile));
+  }
 }

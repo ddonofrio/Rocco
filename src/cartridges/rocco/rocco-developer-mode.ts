@@ -1,3 +1,4 @@
+import type { RoccoEngine } from '../../engine/engine-sdk';
 import type { RoccoGridMenuDefinition } from '../../engine/video/grid-menu';
 import { createRoccoDialogueChoiceMenu } from './dialogue';
 import type { RoccoLocalization } from './localization';
@@ -16,9 +17,6 @@ import {
   ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
 } from './inventory';
 
-// Toggle this constant to enable or disable the cartridge-only developer mode.
-export const ROCCO_DEVELOPER_MODE_ENABLED = true;
-
 export const ROCCO_PLAYER_DEVELOPER_ACTION_ID = 'open-developer-mode';
 export const ROCCO_DEVELOPER_ROOT_MENU_ID = 'rocco-developer-mode-menu';
 export const ROCCO_DEVELOPER_LEVEL_MENU_ID = 'rocco-developer-level-menu';
@@ -29,6 +27,12 @@ export const ROCCO_DEVELOPER_INVENTORY_CHOICE_ID = 'inventory';
 export const ROCCO_DEVELOPER_CYCLE_SPRITE_CHOICE_ID = 'cycle-sprite';
 const ROCCO_DEVELOPER_MAGAZINE_CHOICE_ID = 'developer-magazine';
 const ROCCO_DEVELOPER_MICROMANIA_CHOICE_ID = 'developer-micromania';
+
+export function isRoccoDeveloperModeEnabled(
+  engine: Pick<RoccoEngine, 'isDeveloperModeEnabled'> | null | undefined,
+): boolean {
+  return engine?.isDeveloperModeEnabled?.() ?? true;
+}
 
 export interface RoccoDeveloperScreenOption {
   id: string;

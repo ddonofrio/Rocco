@@ -1,12 +1,19 @@
 import type { Application } from 'pixi.js';
+import type { RoccoSoundProfile } from './audio';
 import { builtinCartridgeConfigs, defaultBuiltinCartridgeId } from '../cartridges';
 import { RoccoBuiltinCartridgeProvider, RoccoDefaultCartridgeLoader, type RoccoCartridge } from './cartridges';
 import { RoccoCartridgeMenu } from './cartridge-menu/cartridge-menu';
 import type { RoccoEngine } from './engine-sdk';
 
+interface RoccoMenuSettingsEngine extends RoccoEngine {
+  getSoundProfile(): RoccoSoundProfile;
+  setSoundProfile(profile: Partial<RoccoSoundProfile>): void;
+  isDeveloperModeEnabled(): boolean;
+}
+
 interface CartridgeManagerOptions {
   app: Application;
-  engine: RoccoEngine;
+  engine: RoccoMenuSettingsEngine;
   configuredCartridgeId?: string;
 }
 
@@ -33,8 +40,13 @@ export class RoccoCartridgeManager {
       const result = await menu.show(allManifests, {
         initialLocales: this.loadInitialLocales(configById),
         initialDisplayProfile: engine.video.display.getProfile(),
+        initialSoundProfile: engine.getSoundProfile(),
+        developerModeEnabled: engine.isDeveloperModeEnabled(),
         onDisplayProfileChange: (profile) => {
           engine.video.display.setProfile(profile);
+        },
+        onSoundProfileChange: (profile) => {
+          engine.setSoundProfile(profile);
         },
       });
       selectedId = result.selectedId;

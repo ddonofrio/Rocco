@@ -92,13 +92,13 @@ import {
   createRoccoDeveloperLevelMenuDefinition,
   createRoccoDeveloperScreenMenuDefinition,
   createRoccoDeveloperRootMenuDefinition,
+  isRoccoDeveloperModeEnabled,
   type RoccoDeveloperLevelOption,
   ROCCO_DEVELOPER_CYCLE_SPRITE_CHOICE_ID,
   ROCCO_DEVELOPER_INVENTORY_CHOICE_ID,
   ROCCO_DEVELOPER_INVENTORY_MENU_ID,
   ROCCO_DEVELOPER_JUMP_CHOICE_ID,
   ROCCO_DEVELOPER_LEVEL_MENU_ID,
-  ROCCO_DEVELOPER_MODE_ENABLED,
   ROCCO_DEVELOPER_ROOT_MENU_ID,
   ROCCO_DEVELOPER_SCREEN_MENU_ID,
 } from '../rocco-developer-mode';
@@ -1568,7 +1568,7 @@ export class RoccoLevelManager {
   }
 
   private handleDeveloperGridAction(activation: RoccoGridMenuCartridgeAction): boolean {
-    if (!ROCCO_DEVELOPER_MODE_ENABLED) {
+    if (!this.isDeveloperModeEnabled()) {
       return false;
     }
 
@@ -1604,7 +1604,7 @@ export class RoccoLevelManager {
   }
 
   private openDeveloperRootMenu(): void {
-    if (!this.engine || !ROCCO_DEVELOPER_MODE_ENABLED) {
+    if (!this.engine || !this.isDeveloperModeEnabled()) {
       return;
     }
 
@@ -1638,7 +1638,7 @@ export class RoccoLevelManager {
   }
 
   private openDeveloperLevelMenu(): void {
-    if (!this.engine || !ROCCO_DEVELOPER_MODE_ENABLED) {
+    if (!this.engine || !this.isDeveloperModeEnabled()) {
       return;
     }
 
@@ -1653,7 +1653,7 @@ export class RoccoLevelManager {
   }
 
   private openDeveloperScreenMenu(levelOptionId: string): void {
-    if (!this.engine || !ROCCO_DEVELOPER_MODE_ENABLED) {
+    if (!this.engine || !this.isDeveloperModeEnabled()) {
       return;
     }
 
@@ -1673,7 +1673,7 @@ export class RoccoLevelManager {
   }
 
   private openDeveloperInventoryMenu(): void {
-    if (!this.engine || !ROCCO_DEVELOPER_MODE_ENABLED) {
+    if (!this.engine || !this.isDeveloperModeEnabled()) {
       return;
     }
 
@@ -1688,7 +1688,7 @@ export class RoccoLevelManager {
   }
 
   private async prepareDeveloperJump(screenId: string): Promise<void> {
-    if (!this.engine || !ROCCO_DEVELOPER_MODE_ENABLED) {
+    if (!this.engine || !this.isDeveloperModeEnabled()) {
       return;
     }
 
@@ -1712,7 +1712,7 @@ export class RoccoLevelManager {
   }
 
   private toggleDeveloperInventoryItem(itemId: string): void {
-    if (!ROCCO_DEVELOPER_MODE_ENABLED) {
+    if (!this.isDeveloperModeEnabled()) {
       return;
     }
 
@@ -1954,7 +1954,7 @@ export class RoccoLevelManager {
   }
 
   private handleDeveloperJumpSceneClick(activation: RoccoSceneClickAction): boolean {
-    if (!this.engine || !ROCCO_DEVELOPER_MODE_ENABLED || !this.developerJumpPending) {
+    if (!this.engine || !this.isDeveloperModeEnabled() || !this.developerJumpPending) {
       return false;
     }
 
@@ -1988,7 +1988,7 @@ export class RoccoLevelManager {
   }
 
   private activateDeveloperSpriteCycleMode(): void {
-    if (!this.engine || !ROCCO_DEVELOPER_MODE_ENABLED) {
+    if (!this.engine || !this.isDeveloperModeEnabled()) {
       return;
     }
 
@@ -2031,7 +2031,7 @@ export class RoccoLevelManager {
   }
 
   private handleDeveloperSpriteCycleSceneClick(activation: RoccoSceneClickAction): boolean {
-    if (!this.engine || !ROCCO_DEVELOPER_MODE_ENABLED || !this.developerSpriteCycleActive) {
+    if (!this.engine || !this.isDeveloperModeEnabled() || !this.developerSpriteCycleActive) {
       return false;
     }
 
@@ -2830,6 +2830,10 @@ export class RoccoLevelManager {
     const overlapWidth = Math.min(playerRight, doorRight) - Math.max(playerLeft, doorLeft);
     const overlapHeight = Math.min(playerBottom, doorBottom) - Math.max(playerTop, doorTop);
     return overlapWidth >= 1 && overlapHeight >= 1;
+  }
+
+  private isDeveloperModeEnabled(): boolean {
+    return isRoccoDeveloperModeEnabled(this.engine);
   }
 
   private async enterBaitShop(): Promise<void> {

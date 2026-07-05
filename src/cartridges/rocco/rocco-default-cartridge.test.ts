@@ -148,7 +148,6 @@ import {
   ROCCO_PLAYER_ACTION_MENU_ID,
   ROCCO_PLAYER_INVENTORY_ACTION_ID,
 } from './rocco-player-action-menu';
-import { ROCCO_DEVELOPER_MODE_ENABLED } from './rocco-developer-mode';
 
 vi.mock('pixi.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('pixi.js')>();
@@ -1087,6 +1086,9 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     isInputEnabled() {
       return state.inputEnabled;
     },
+    isDeveloperModeEnabled() {
+      return true;
+    },
 
     // Logging and status
     setStatus(status: string) {
@@ -1285,11 +1287,11 @@ describe('RoccoDefaultCartridge', () => {
     const roccoMenu = state.registeredActionMenuDefinitions.find(
       (definition) => definition.id === ROCCO_PLAYER_ACTION_MENU_ID,
     );
-    expect(roccoMenu?.items.map((item) => item.label)).toEqual(
-      ROCCO_DEVELOPER_MODE_ENABLED
-        ? ['Hablar', 'Inventario', 'Modo desarrollador']
-        : ['Hablar', 'Inventario'],
-    );
+    expect(roccoMenu?.items.map((item) => item.label)).toEqual([
+      'Hablar',
+      'Inventario',
+      'Modo desarrollador',
+    ]);
   });
 
   it('preserves the selected locale when the cartridge restarts itself', async () => {

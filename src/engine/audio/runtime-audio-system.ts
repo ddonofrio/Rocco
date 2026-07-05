@@ -21,6 +21,8 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   private readonly buffers = new Map<string, Promise<AudioBuffer | null>>();
   private readonly activeSources = new Map<string, Set<AudioBufferSourceNode>>();
   private context: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private masterVolume = 1;
 
   registerSound(definition: RoccoSoundDefinition): void {
     this.definitions.set(definition.id, clone(definition));
@@ -78,9 +80,15 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     this.buffers.clear();
     const context = this.context;
     this.context = null;
+    this.masterGain = null;
     if (context) {
       void context.close().catch(() => undefined);
     }
+  }
+
+  setVolume(volume: number): void {
+    this.masterVolume = clampVolume(volume);
+    this.applyMasterGainVolume();
   }
 
   private async playSoundAsync(soundId: string, options?: RoccoSoundPlayOptions): Promise<void> {
@@ -108,11 +116,12 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
 
     const source = context.createBufferSource();
     const gain = context.createGain();
+    const masterGain = this.ensureMasterGain();
     source.buffer = buffer;
     source.loop = options?.loop ?? definition.loop ?? false;
     gain.gain.value = clampVolume(options?.volume ?? definition.volume ?? 1);
     source.connect(gain);
-    gain.connect(context.destination);
+    gain.connect(masterGain);
     this.trackSource(soundId, source);
     source.start();
   }
@@ -164,6 +173,30 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
 
     this.context = new AudioContext();
     return this.context;
+  }
+
+  private ensureMasterGain(): GainNode {
+    const context = this.ensureContext();
+    if (!context) {
+      throw new Error('AudioContext not available');
+    }
+
+    if (this.masterGain) {
+      return this.masterGain;
+    }
+
+    this.masterGain = context.createGain();
+    this.applyMasterGainVolume();
+    this.masterGain.connect(context.destination);
+    return this.masterGain;
+  }
+
+  private applyMasterGainVolume(): void {
+    if (!this.masterGain) {
+      return;
+    }
+
+    this.masterGain.gain.value = this.masterVolume;
   }
 
   private trackSource(soundId: string, source: AudioBufferSourceNode): void {

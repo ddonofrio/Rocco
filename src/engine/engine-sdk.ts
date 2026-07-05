@@ -29,6 +29,9 @@ export interface RoccoEngine {
   setInputEnabled(enabled: boolean): void;
   isInputEnabled(): boolean;
 
+  // Console flags
+  isDeveloperModeEnabled?(): boolean;
+
   // Composition control (loading overlay)
   beginComposition(): void;
   endComposition(): void;

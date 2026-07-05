@@ -25,7 +25,7 @@ import {
   ROCCO_PLAYER_INVENTORY_ACTION_ID,
   ROCCO_PLAYER_TALK_ACTION_ID,
 } from '../../rocco-player-action-menu';
-import { ROCCO_DEVELOPER_MODE_ENABLED } from '../../rocco-developer-mode';
+import { isRoccoDeveloperModeEnabled } from '../../rocco-developer-mode';
 import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
@@ -590,8 +590,9 @@ async function createBaitShopToiletPortalSpriteDefinition(): Promise<{
 
 function createSeatedRoccoActionMenuDefinition(
   localization: RoccoLocalization,
+  developerModeEnabled: boolean,
 ): RoccoActionMenuDefinition {
-  const base = createRoccoPlayerActionMenuDefinition(localization);
+  const base = createRoccoPlayerActionMenuDefinition(localization, developerModeEnabled);
   const items: RoccoActionMenuDefinition['items'] = [
     {
       id: 'talk',
@@ -607,7 +608,7 @@ function createSeatedRoccoActionMenuDefinition(
     },
   ];
 
-  if (ROCCO_DEVELOPER_MODE_ENABLED) {
+  if (developerModeEnabled) {
     items.push({
       id: 'developer-mode',
       actionId: ROCCO_PLAYER_DEVELOPER_ACTION_ID,
@@ -858,7 +859,12 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     engine.video.gridMenus.closeMenu();
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(ROCCO_PLAYER_ACTION_MENU_ID);
-    engine.video.actionMenus.registerMenu(createRoccoPlayerActionMenuDefinition(this.localization));
+    engine.video.actionMenus.registerMenu(
+      createRoccoPlayerActionMenuDefinition(
+        this.localization,
+        isRoccoDeveloperModeEnabled(engine),
+      ),
+    );
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID);
@@ -1594,7 +1600,12 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
 
     this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
     this.engine.video.actionMenus.unregisterMenu(ROCCO_PLAYER_ACTION_MENU_ID);
-    this.engine.video.actionMenus.registerMenu(createSeatedRoccoActionMenuDefinition(this.localization));
+    this.engine.video.actionMenus.registerMenu(
+      createSeatedRoccoActionMenuDefinition(
+        this.localization,
+        isRoccoDeveloperModeEnabled(this.engine),
+      ),
+    );
     this.engine.video.render(0);
   }
 
@@ -1604,7 +1615,12 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     }
 
     this.engine.video.actionMenus.unregisterMenu(ROCCO_PLAYER_ACTION_MENU_ID);
-    this.engine.video.actionMenus.registerMenu(createRoccoPlayerActionMenuDefinition(this.localization));
+    this.engine.video.actionMenus.registerMenu(
+      createRoccoPlayerActionMenuDefinition(
+        this.localization,
+        isRoccoDeveloperModeEnabled(this.engine),
+      ),
+    );
     this.engine.video.render(0);
   }
 

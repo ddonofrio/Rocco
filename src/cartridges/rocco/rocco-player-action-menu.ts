@@ -6,7 +6,7 @@ import type { RoccoEngine } from '../../engine/engine-sdk';
 import { roccoDefaultActionMenuAssetUrls } from './rocco-default-assets';
 import { DEFAULT_SPRITE_INSTANCE_ID } from './rocco-default-constants';
 import {
-  ROCCO_DEVELOPER_MODE_ENABLED,
+  isRoccoDeveloperModeEnabled,
   ROCCO_PLAYER_DEVELOPER_ACTION_ID,
 } from './rocco-developer-mode';
 import { createRoccoLocalization, type RoccoLocalization } from './localization';
@@ -18,6 +18,7 @@ export { ROCCO_PLAYER_DEVELOPER_ACTION_ID } from './rocco-developer-mode';
 
 export function createRoccoPlayerActionMenuDefinition(
   localization: RoccoLocalization = createRoccoLocalization(),
+  developerModeEnabled = true,
 ): RoccoActionMenuDefinition {
   const items: RoccoActionMenuDefinition['items'] = [
     {
@@ -49,7 +50,7 @@ export function createRoccoPlayerActionMenuDefinition(
     },
   ];
 
-  if (ROCCO_DEVELOPER_MODE_ENABLED) {
+  if (developerModeEnabled) {
     items.push({
       id: 'developer-mode',
       actionId: ROCCO_PLAYER_DEVELOPER_ACTION_ID,
@@ -77,7 +78,12 @@ export function installRoccoPlayerActionMenu(
   engine: RoccoEngine,
   localization: RoccoLocalization = createRoccoLocalization(),
 ): void {
-  engine.video.actionMenus.registerMenu(createRoccoPlayerActionMenuDefinition(localization));
+  engine.video.actionMenus.registerMenu(
+    createRoccoPlayerActionMenuDefinition(
+      localization,
+      isRoccoDeveloperModeEnabled(engine),
+    ),
+  );
 }
 
 export function uninstallRoccoPlayerActionMenu(engine: RoccoEngine): void {

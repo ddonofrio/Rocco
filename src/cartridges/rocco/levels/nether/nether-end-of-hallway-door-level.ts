@@ -38,8 +38,9 @@ const NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID = 'rocco-nether-steam-machine-ambie
 const NETHER_END_OF_HALLWAY_AMBIENT_SOUND_VOLUME = 0.1;
 const NETHER_END_OF_HALLWAY_LIGHTS_PLANE_ID = 'rocco-nether-end-of-hallway-door-lights';
 const NETHER_END_OF_HALLWAY_RETURN_EXIT_TRIGGER_HEIGHT = 30;
-const NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE = DEFAULT_SPRITE_SCALE * 1.2 * 1.8 * 0.8;
+const NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE = DEFAULT_SPRITE_SCALE * 1.2 * 1.8 * 0.8 * 1.2;
 const NETHER_END_OF_HALLWAY_DOOR_ROCCO_TINT = '#e6e6e6';
+const NETHER_END_OF_HALLWAY_DOOR_FAR_SCALE = 0.8;
 const NETHER_LIGHTS_MIN_OPACITY = 0;
 const NETHER_LIGHTS_NOISE_MAX_OPACITY = 0.15;
 const NETHER_LIGHTS_NOISE_STEP_MIN_MS = 70;
@@ -201,6 +202,13 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       tint: NETHER_END_OF_HALLWAY_DOOR_ROCCO_TINT,
       localization: this.localization,
       playIntro: false,
+      perspectiveAutoAdjust: {
+        farY: walkMapProfile.farY,
+        nearY: walkMapProfile.nearY,
+        farScale: NETHER_END_OF_HALLWAY_DOOR_FAR_SCALE,
+        nearScale: 1,
+        scaleCurve: 'linear',
+      },
     });
     engine.video.render(0);
     this.sceneReady = true;

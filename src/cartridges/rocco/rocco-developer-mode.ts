@@ -38,6 +38,7 @@ export interface RoccoDeveloperScreenOption {
   id: string;
   title: string;
   targetLevelId: string;
+  requiresPlacementClick?: boolean;
 }
 
 export interface RoccoDeveloperLevelOption {

@@ -51,6 +51,7 @@ export const englishLevelsText: RoccoTextCatalog['levels'] = {
   statusScene: 'Scene',
   baitShopPlaceholderTitle: 'Bait Shop',
   baitShopToiletTitle: 'Bathroom',
+  resetOfficeTitle: 'Reset Office',
 };
 
 export const englishDeveloperText: RoccoTextCatalog['developer'] = {

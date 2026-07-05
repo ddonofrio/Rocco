@@ -136,6 +136,14 @@ import {
   RoccoNetherEndOfHallwayDoorLevel,
   ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
 } from './nether/nether-end-of-hallway-door-level';
+import {
+  RoccoNetherResetOfficeLevel,
+  ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+} from './nether/nether-reset-office-level';
+import {
+  RoccoNetherResetOfficeSecondLevel,
+  ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
+} from './nether/nether-reset-office-second-level';
 
 interface RoccoLevelConnectionEndpoint {
   levelId: string;
@@ -320,6 +328,10 @@ const ROCCO_LEVEL_CONNECTIONS: readonly RoccoLevelConnection[] = [
   {
     a: { levelId: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID, connectorId: 'north' },
     b: { levelId: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID, connectorId: 'south' },
+  },
+  {
+    a: { levelId: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID, connectorId: 'south' },
+    b: { levelId: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID, connectorId: 'south' },
   },
 ];
 const DROPPED_INVENTORY_ITEM_SPRITE_DEFINITION_PREFIX = 'rocco-dropped-inventory-definition';
@@ -630,6 +642,8 @@ export class RoccoLevelManager {
       }),
       new RoccoNetherConsoleHardwareSpawnLevel(this.localization),
       new RoccoNetherEndOfHallwayDoorLevel(this.localization),
+      new RoccoNetherResetOfficeLevel(this.localization),
+      new RoccoNetherResetOfficeSecondLevel(this.localization),
     ];
 
     for (const level of levels) {
@@ -1671,6 +1685,11 @@ export class RoccoLevelManager {
       return;
     }
 
+    if (levelOption.screens.length === 1) {
+      void this.prepareDeveloperJump(levelOption.screens[0].id);
+      return;
+    }
+
     this.developerJumpPending = false;
     this.deactivateDeveloperSpriteCycleMode();
     this.engine.setInputEnabled(true);
@@ -1711,6 +1730,12 @@ export class RoccoLevelManager {
     const switched = await this.switchToLevel(screenOption.targetLevelId);
     if (!switched) {
       this.refreshStatus();
+      return;
+    }
+
+    if (screenOption.requiresPlacementClick === false) {
+      this.refreshStatus();
+      this.engine.video.render(0);
       return;
     }
 
@@ -1853,6 +1878,18 @@ export class RoccoLevelManager {
             id: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
             title: `${this.requireLevel(ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID).title} 2`,
             targetLevelId: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
+          },
+        ],
+      },
+      {
+        id: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+        title: this.localization.text.levels.resetOfficeTitle,
+        screens: [
+          {
+            id: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+            title: this.localization.text.levels.resetOfficeTitle,
+            targetLevelId: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+            requiresPlacementClick: false,
           },
         ],
       },

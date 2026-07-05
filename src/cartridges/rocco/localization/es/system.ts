@@ -51,6 +51,7 @@ export const spanishLevelsText: RoccoTextCatalog['levels'] = {
   statusScene: 'Escena',
   baitShopPlaceholderTitle: 'Tienda de cebo',
   baitShopToiletTitle: 'Baño',
+  resetOfficeTitle: 'Oficina del reset',
 };
 
 export const spanishDeveloperText: RoccoTextCatalog['developer'] = {

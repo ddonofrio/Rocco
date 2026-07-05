@@ -56,6 +56,7 @@ export interface RoccoTextCatalog {
     statusScene: string;
     baitShopPlaceholderTitle: string;
     baitShopToiletTitle: string;
+    resetOfficeTitle: string;
   };
   baitBucket: {
     normalLookLines: string[];

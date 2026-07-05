@@ -1,6 +1,6 @@
 # Default Cartridge: `rocco-default`
 
-`rocco-default` is the main built-in cartridge for the ROCCO console. It implements the Pier exterior, the bait shop interior, and the first connected Nether screens starring Rocco, a Pelikan, a bait bucket, keys, and Rocco's inventory.
+`rocco-default` is the main built-in cartridge for the ROCCO console. It implements the Pier exterior, the bait shop interior, connected Nether screens, and the developer-only Reset Office screens starring Rocco, a Pelikan, a bait bucket, keys, and Rocco's inventory.
 
 ## Files
 
@@ -35,7 +35,7 @@ The cartridge starts in Pier Middle. The exterior uses the same background, fore
 | Pier End       | `pier-end`    | `rocco-pier-end-scene`    | Left side     |
 | Bait Shop      | `bait-shop`   | `rocco-bait-shop-scene`   | Interior      |
 
-Rocco transitions through edge connectors on connected screens. When his ground point enters an exit area, `RoccoLevelManager` loads the connected level, places Rocco on the matching entry point, and sets his facing direction. Using the keys on the bait shop door while Stan sleeps opens a separate transition into the bait shop scene. The toilet-room portal then leads into `nether-console-hardware-spawn`, which connects onward to `nether-end-of-hallway-door`.
+Rocco transitions through edge connectors on connected screens. When his ground point enters an exit area, `RoccoLevelManager` loads the connected level, places Rocco on the matching entry point, and sets his facing direction. Using the keys on the bait shop door while Stan sleeps opens a separate transition into the bait shop scene. The toilet-room portal then leads into `nether-console-hardware-spawn`, which connects onward to `nether-end-of-hallway-door`. Developer mode also exposes a separate two-screen Reset Office branch that is not yet wired into the normal level graph.
 
 ## Interactions
 
@@ -55,6 +55,7 @@ Rocco transitions through edge connectors on connected screens. When his ground 
 - Keys and the 20 EUR bill have localized failed-use responses for the bait bucket and the Pelikan.
 - Pier Middle exits are available without an inventory gate.
 - The toilet-room portal opens a first-time arrival sequence in Nether and then hands off to a connected second Nether screen.
+- Developer mode also exposes a two-screen Reset Office branch, and the second screen includes an office printer prop with `look`, `grab`, and `kick` actions.
 
 ## Localization
 

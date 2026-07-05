@@ -325,6 +325,25 @@ function setPlayerSpritePosition(state: EngineMockState, groundX: number, sprite
   rocco.transform.y = spriteY;
 }
 
+function completeLatestPlayerGoTo(state: EngineMockState): void {
+  const latestGoTo = state.goToSprites.findLast((entry) =>
+    entry.startsWith(`${DEFAULT_SPRITE_INSTANCE_ID}:`),
+  );
+  if (!latestGoTo) {
+    throw new Error('Expected Rocco goTo movement to exist.');
+  }
+
+  const [, coordinates] = latestGoTo.split(':');
+  const [groundXText] = coordinates.split(',');
+  const rocco = findLatestSpriteSnapshot(state, DEFAULT_SPRITE_INSTANCE_ID);
+  if (!rocco) {
+    throw new Error('Expected Rocco sprite to exist.');
+  }
+
+  setPlayerSpritePosition(state, Number(groundXText), rocco.transform.y);
+  state.isSpriteMovingValue = false;
+}
+
 async function flushAsyncTransition(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -2134,13 +2153,17 @@ describe('RoccoDefaultCartridge', () => {
         ),
       );
 
+      expect(state.playedSoundIds).not.toContain(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
+      completeLatestPlayerGoTo(state);
+      manager.update(16);
+
       expect(state.playedSoundIds).toContain(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
       expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).toContain(
         `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID}`,
       );
 
       expect(state.playedSpriteActionDirections).toContain(
-        `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:left`,
+        `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:up`,
       );
 
       manager.update(999);
@@ -2151,6 +2174,7 @@ describe('RoccoDefaultCartridge', () => {
         `rocco-bait-shop-placeholder-title:${localization.text.levels.baitShopPlaceholderTitle}`,
       );
 
+      completeLatestPlayerGoTo(state);
       manager.update(1);
       await flushAsyncTransition();
 
@@ -2179,7 +2203,7 @@ describe('RoccoDefaultCartridge', () => {
     }
   });
 
-  it('calls the police instead of opening the bait shop door when Stan is awake', async () => {
+  it('calls the police after Rocco reaches the bait shop door while Stan is awake', async () => {
     const localization = createRoccoLocalization('es');
     const state = makeEngineState();
     const engine = createEngineMock(state);
@@ -2208,6 +2232,14 @@ describe('RoccoDefaultCartridge', () => {
 
     expect(state.playedSoundIds).not.toContain(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
     expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).not.toContain(
+      `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID}`,
+    );
+
+    completeLatestPlayerGoTo(state);
+    manager.update(16);
+
+    expect(state.playedSoundIds).toContain(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).toContain(
       `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID}`,
     );
     expect(state.spriteMessages).toContain(

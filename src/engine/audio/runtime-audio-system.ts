@@ -1,5 +1,10 @@
 import type { RoccoAudioSystem, RoccoSoundDefinition, RoccoSoundPlayOptions } from './types';
 
+interface ActiveSoundNode {
+  source: AudioBufferSourceNode;
+  gain: GainNode;
+}
+
 function clone<T>(value: T): T {
   if (typeof structuredClone === 'function') {
     return structuredClone(value);
@@ -19,7 +24,7 @@ function clampVolume(value: number): number {
 export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   private readonly definitions = new Map<string, RoccoSoundDefinition>();
   private readonly buffers = new Map<string, Promise<AudioBuffer | null>>();
-  private readonly activeSources = new Map<string, Set<AudioBufferSourceNode>>();
+  private readonly activeSources = new Map<string, Set<ActiveSoundNode>>();
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private masterVolume = 1;
@@ -42,15 +47,27 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     void this.playSoundAsync(soundId, options);
   }
 
+  setSoundVolume(soundId: string, volume: number): void {
+    const sources = this.activeSources.get(soundId);
+    if (!sources) {
+      return;
+    }
+
+    const clampedVolume = clampVolume(volume);
+    for (const entry of sources) {
+      entry.gain.gain.value = clampedVolume;
+    }
+  }
+
   stopSound(soundId: string): void {
     const sources = this.activeSources.get(soundId);
     if (!sources) {
       return;
     }
 
-    for (const source of sources) {
+    for (const entry of sources) {
       try {
-        source.stop();
+        entry.source.stop();
       } catch {
         // The source may have already ended naturally.
       }
@@ -122,7 +139,7 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     gain.gain.value = clampVolume(options?.volume ?? definition.volume ?? 1);
     source.connect(gain);
     gain.connect(masterGain);
-    this.trackSource(soundId, source);
+    this.trackSource(soundId, source, gain);
     source.start();
   }
 
@@ -199,15 +216,16 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     this.masterGain.gain.value = this.masterVolume;
   }
 
-  private trackSource(soundId: string, source: AudioBufferSourceNode): void {
+  private trackSource(soundId: string, source: AudioBufferSourceNode, gain: GainNode): void {
     let sources = this.activeSources.get(soundId);
     if (!sources) {
       sources = new Set();
       this.activeSources.set(soundId, sources);
     }
-    sources.add(source);
+    const entry: ActiveSoundNode = { source, gain };
+    sources.add(entry);
     source.onended = () => {
-      sources?.delete(source);
+      sources?.delete(entry);
       if (sources?.size === 0) {
         this.activeSources.delete(soundId);
       }

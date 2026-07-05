@@ -604,6 +604,11 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     instance.depthMode = depthMode;
   }
 
+  setContrast(instanceId: string, contrast?: number): void {
+    const instance = this.requireInstance(instanceId);
+    instance.contrast = contrast;
+  }
+
   setInteractive(instanceId: string, interactive: boolean): void {
     const instance = this.requireInstance(instanceId);
     instance.interactive = interactive;

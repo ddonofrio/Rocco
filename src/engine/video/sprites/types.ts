@@ -446,6 +446,7 @@ export interface RoccoSpriteSystem {
   setRenderLayer(instanceId: string, renderLayer: string): void;
   setZIndex(instanceId: string, zIndex: number): void;
   setDepthMode(instanceId: string, depthMode: RoccoDepthMode): void;
+  setContrast(instanceId: string, contrast?: number): void;
   setInteractive(instanceId: string, interactive: boolean): void;
   setCollisionEnabled(instanceId: string, enabled: boolean): void;
   bindToWalkMap(instanceId: string, binding: RoccoSpriteNavigationBinding): void;

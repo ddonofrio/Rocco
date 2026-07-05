@@ -250,8 +250,8 @@ export class PixiRoccoSpriteMessageRenderer {
     graphics.clear();
     graphics
       .roundRect(0, 0, layout.width, layout.height, DEFAULT_RADIUS)
-      .fill({ color: fill, alpha: 0.94 })
-      .stroke({ color: stroke, width: strokeWidth, alpha: 0.88 });
+      .fill({ color: fill, alpha: 1 })
+      .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
 
     const targetLocalX = layout.targetX - layout.x;
     const targetLocalY = layout.targetY - layout.y;
@@ -264,11 +264,11 @@ export class PixiRoccoSpriteMessageRenderer {
       const dotX = Math.max(18, Math.min(layout.width - 18, targetLocalX));
       graphics
         .circle(dotX, layout.height + 8, 5)
-        .fill({ color: fill, alpha: 0.9 })
-        .stroke({ color: stroke, width: 1.5, alpha: 0.75 });
+        .fill({ color: fill, alpha: 1 })
+        .stroke({ color: stroke, width: 1.5, alpha: 1 });
       graphics
         .circle((dotX + targetLocalX) / 2, Math.min(targetLocalY - 4, layout.height + 20), 3)
-        .fill({ color: fill, alpha: 0.82 });
+        .fill({ color: fill, alpha: 1 });
       return;
     }
 
@@ -276,8 +276,8 @@ export class PixiRoccoSpriteMessageRenderer {
       const tailY = Math.max(14, Math.min(layout.height - 14, targetLocalY));
       graphics
         .poly([0, tailY - 8, 0, tailY + 8, Math.min(-14, targetLocalX), targetLocalY], true)
-        .fill({ color: fill, alpha: 0.94 })
-        .stroke({ color: stroke, width: strokeWidth, alpha: 0.88 });
+        .fill({ color: fill, alpha: 1 })
+        .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
       return;
     }
 
@@ -285,8 +285,8 @@ export class PixiRoccoSpriteMessageRenderer {
       const tailY = Math.max(14, Math.min(layout.height - 14, targetLocalY));
       graphics
         .poly([layout.width, tailY - 8, layout.width, tailY + 8, Math.max(layout.width + 14, targetLocalX), targetLocalY], true)
-        .fill({ color: fill, alpha: 0.94 })
-        .stroke({ color: stroke, width: strokeWidth, alpha: 0.88 });
+        .fill({ color: fill, alpha: 1 })
+        .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
       return;
     }
 
@@ -303,8 +303,8 @@ export class PixiRoccoSpriteMessageRenderer {
         ],
         true,
       )
-      .fill({ color: fill, alpha: 0.94 })
-      .stroke({ color: stroke, width: strokeWidth, alpha: 0.88 });
+      .fill({ color: fill, alpha: 1 })
+      .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
   }
 
   private resolveBubbleLayout(

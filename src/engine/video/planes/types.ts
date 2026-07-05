@@ -1,4 +1,5 @@
 export type RoccoColor = string;
+export type RoccoPlaneBlendMode = 'normal' | 'add' | 'multiply' | 'screen';
 
 export type RoccoPixelFormat =
   | 'native'
@@ -209,6 +210,9 @@ export interface RoccoGraphicPlane {
   viewport?: RoccoRect;
 
   opacity: number;
+  blendMode?: RoccoPlaneBlendMode;
+  contrast?: number;
+  occludesInput?: boolean;
   priority: number;
   renderLayer?: string;
   depthMode?: RoccoPlaneDepthMode;

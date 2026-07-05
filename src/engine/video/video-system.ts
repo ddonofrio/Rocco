@@ -562,7 +562,13 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
 
   private listRuntimePlaneOccluders(scene: RoccoPlaneScene): RuntimePlaneOccluder[] {
     return scene.planes
-      .filter((plane) => plane.enabled && plane.visible && plane.opacity > 0)
+      .filter(
+        (plane) =>
+          plane.enabled &&
+          plane.visible &&
+          plane.opacity > 0 &&
+          plane.occludesInput !== false,
+      )
       .map((plane, sceneOrder) => ({
         plane,
         renderLayerZIndex: this.resolveRenderLayerZIndex(plane.renderLayer ?? 'background.main'),

@@ -55,7 +55,8 @@ The current Pixi runtime renders these source kinds directly:
 - `wrap` controls infinite scrolling or repeated tiling on each axis.
 - `parallax` scales scroll movement independently per axis.
 - `viewport` crops rendering to a sub-rectangle inside the design space.
-- `renderLayer`, `priority`, and `opacity` control visual ordering and visibility inside the video SDK.
+- `renderLayer`, `priority`, `opacity`, `blendMode`, and `contrast` control visual ordering, composition, and per-plane grading inside the video SDK.
+- `occludesInput: false` keeps a visible plane out of scene-target and sprite click occlusion, which is useful for full-screen lighting or atmosphere passes.
 - `depthMode` can keep a plane fixed on one layer or switch it between layers from live sprite state.
 
 ## Dynamic Depth Modes

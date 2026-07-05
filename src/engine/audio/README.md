@@ -14,6 +14,7 @@ The audio system provides Web Audio sound registration, preloading, playback, an
 engine.audio.registerSound({ id: 'footstep', uri: '/sounds/footstep.mp3', volume: 0.8 });
 await engine.audio.preloadSound('footstep');
 engine.audio.playSound('footstep');
+engine.audio.setSoundVolume('footstep', 0.5);
 engine.audio.stopSound('footstep');
 ```
 
@@ -24,3 +25,4 @@ engine.audio.stopSound('footstep');
 - Sounds are loaded and cached as `AudioBuffer`.
 - Multiple simultaneous instances of the same sound are supported.
 - `restart: true` stops active instances before starting the next one.
+- `engine.audio.setSoundVolume()` updates the gain of currently playing instances, which is useful for ambience that reacts to scene state without restarting the loop.

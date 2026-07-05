@@ -731,6 +731,12 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
         sprite.depthMode = depthMode;
       }
     },
+    setContrast(instanceId: string, contrast?: number) {
+      const sprite = findLatestSpriteSnapshot(state, instanceId);
+      if (sprite) {
+        sprite.contrast = contrast;
+      }
+    },
     setInteractive(instanceId: string, interactive: boolean) {
       const sprite = findLatestSpriteSnapshot(state, instanceId);
       if (sprite) {
@@ -1004,6 +1010,9 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
     playSound(soundId: string) {
       state.playedSoundIds.push(soundId);
+    },
+    setSoundVolume() {
+      // noop
     },
     stopSound(soundId: string) {
       state.stoppedSoundIds.push(soundId);

@@ -39,6 +39,9 @@ function ensurePlaneDefaults(plane: RoccoGraphicPlane): RoccoGraphicPlane {
     enabled: plane.enabled ?? true,
     visible: plane.visible ?? true,
     opacity: plane.opacity ?? 1,
+    blendMode: plane.blendMode ?? 'normal',
+    contrast: plane.contrast,
+    occludesInput: plane.occludesInput ?? true,
     priority: plane.priority ?? 0,
     transform: {
       x: plane.transform?.x ?? 0,

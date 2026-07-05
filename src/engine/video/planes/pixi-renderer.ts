@@ -1,6 +1,7 @@
 import {
   Assets,
   Color,
+  ColorMatrixFilter,
   Container,
   Graphics,
   Sprite,
@@ -30,6 +31,8 @@ import { wrapValue } from './wrap';
 interface PlaneNode {
   root: Container;
   content: Container;
+  contrastFilter: ColorMatrixFilter | null;
+  contrastValue: number;
   sourceKey: string;
   viewportMask?: Graphics;
   mode: PlaneRenderMode;
@@ -172,7 +175,13 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     const root = new Container();
     const build = this.createSourceContainer(plane);
     root.addChild(build.content);
-    return { root, sourceKey: this.makeSourceKey(plane), ...build };
+    return {
+      root,
+      contrastFilter: null,
+      contrastValue: 1,
+      sourceKey: this.makeSourceKey(plane),
+      ...build,
+    };
   }
 
   private ensureLayerRoot(mounted: MountedScene, renderLayer: string): Container {
@@ -371,6 +380,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     root.visible = plane.enabled && plane.visible;
     root.alpha = Math.max(0, Math.min(1, plane.opacity));
     root.zIndex = plane.priority;
+    content.blendMode = plane.blendMode ?? 'normal';
 
     root.position.set(plane.transform.x, plane.transform.y);
     root.scale.set(plane.transform.scaleX, plane.transform.scaleY);
@@ -392,6 +402,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     }
 
     this.applyColorModel(content, plane.colorModel);
+    this.applyContrast(node, plane.contrast);
     this.applyViewport(root, node, plane);
 
     if (node.mode === 'tiling' && content.children[0] instanceof TilingSprite) {
@@ -409,6 +420,27 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
 
     container.tint = this.toColorNumber(colorModel.color);
     container.alpha *= Math.max(0, Math.min(1, colorModel.strength));
+  }
+
+  private applyContrast(node: PlaneNode, contrast?: number): void {
+    if (!Number.isFinite(contrast) || Math.abs((contrast ?? 1) - 1) < 0.001) {
+      node.content.filters = undefined;
+      node.contrastFilter = null;
+      node.contrastValue = 1;
+      return;
+    }
+
+    const resolvedContrast = contrast as number;
+    const filter = node.contrastFilter ?? new ColorMatrixFilter();
+    if (!node.contrastFilter || Math.abs(node.contrastValue - resolvedContrast) >= 0.001) {
+      filter.contrast(resolvedContrast - 1, false);
+      node.contrastFilter = filter;
+      node.contrastValue = resolvedContrast;
+    }
+
+    if (node.content.filters?.[0] !== filter || node.content.filters.length !== 1) {
+      node.content.filters = [filter];
+    }
   }
 
   private applyViewport(root: Container, node: PlaneNode, plane: RoccoGraphicPlane): void {

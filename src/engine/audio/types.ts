@@ -16,6 +16,7 @@ export interface RoccoAudioSystem {
   unregisterSound(soundId: string): void;
   preloadSound(soundId: string): Promise<void>;
   playSound(soundId: string, options?: RoccoSoundPlayOptions): void;
+  setSoundVolume(soundId: string, volume: number): void;
   stopSound(soundId: string): void;
   stopAllSounds(): void;
 }

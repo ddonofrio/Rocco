@@ -5,9 +5,19 @@ import type { RoccoBuiltinCartridgeConfig } from '../cartridges';
 import type { RoccoCartridge } from './cartridges';
 import type { RoccoConsoleFlags } from './engine-sdk';
 
+interface TestMenuResult {
+  selectedId: string;
+  selectedLocale?: string;
+}
+
+type TestMenuShowHandler = (
+  manifests: unknown,
+  options: unknown,
+) => TestMenuResult | Promise<TestMenuResult>;
+
 const testState = vi.hoisted(() => ({
   registrations: [] as RoccoBuiltinCartridgeConfig[],
-  menuShow: vi.fn(),
+  menuShow: vi.fn<TestMenuShowHandler>(),
 }));
 
 vi.mock('../cartridges', () => ({
@@ -21,8 +31,8 @@ vi.mock('../cartridges', () => ({
 
 vi.mock('./cartridge-menu/cartridge-menu', () => ({
   RoccoCartridgeMenu: class {
-    async show(manifests: unknown, options: unknown) {
-      return testState.menuShow(manifests, options);
+    show(manifests: unknown, options: unknown): Promise<TestMenuResult> {
+      return Promise.resolve(testState.menuShow(manifests, options));
     }
   },
 }));
@@ -135,7 +145,7 @@ describe('RoccoCartridgeManager', () => {
       createTestConfig('game', () => createTestCartridge('game')),
     ];
 
-    testState.menuShow.mockImplementationOnce(async (_manifests, options) => {
+    testState.menuShow.mockImplementationOnce((_manifests, options) => {
       const bootSettings = (options as { bootSettings: Array<{ getValueLabel(): string }> }).bootSettings;
       systemSettingsValue = bootSettings[0]?.getValueLabel() ?? '';
       return { selectedId: 'game' };

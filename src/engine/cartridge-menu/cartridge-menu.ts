@@ -718,7 +718,7 @@ export class RoccoCartridgeMenu {
         description: setting.description,
         detailLabel: setting.detailLabel,
         getValueLabel: () => setting.getValueLabel(),
-        activate: setting.activate,
+        activate: () => setting.activate?.(),
       })),
       backOption,
     ];

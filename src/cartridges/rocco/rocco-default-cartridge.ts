@@ -9,6 +9,11 @@ import { RoccoLevelManager } from './levels/rocco-level-manager';
 import { createRoccoLocalization } from './localization';
 import { roccoDefaultCartridgeManifest } from './rocco-default-manifest';
 
+const roccoDefaultGameMusicTrackUrls = [
+  `${import.meta.env.BASE_URL}cartridges/rocco/music/game-music-1.mp3`,
+  `${import.meta.env.BASE_URL}cartridges/rocco/music/game-music-2.mp3`,
+] as const;
+
 export class RoccoDefaultCartridge implements RoccoCartridge {
   readonly manifest = roccoDefaultCartridgeManifest;
   private levelManager: RoccoLevelManager | null = null;
@@ -29,12 +34,12 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
         tracks: [
           {
             id: 'game-music-1',
-            uri: '/cartridges/rocco/music/game-music-1.mp3',
+            uri: roccoDefaultGameMusicTrackUrls[0],
             volume: 0.5,
           },
           {
             id: 'game-music-2',
-            uri: '/cartridges/rocco/music/game-music-2.mp3',
+            uri: roccoDefaultGameMusicTrackUrls[1],
             volume: 0.5,
           },
         ],
@@ -55,7 +60,11 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
         },
       });
       await this.levelManager.mount(context.engine);
-      await context.engine.jukebox.playPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
+      await context.engine.jukebox
+        .playPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID)
+        .catch(() => {
+          context.engine.log('System', 'Background music could not start.');
+        });
     } finally {
       context.engine.endComposition();
     }

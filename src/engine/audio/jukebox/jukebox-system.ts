@@ -59,7 +59,7 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     }
 
     if (context.state === 'suspended') {
-      await context.resume();
+      await context.resume().catch(() => undefined);
     }
 
     this.currentPlaylistId = playlistId;

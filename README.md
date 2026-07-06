@@ -38,7 +38,7 @@ ROCCO works well with AI-powered coding tools because the codebase is organized 
 - Character speech bubbles, thought bubbles, hover titles, and status text.
 - Web Audio sound playback and jukebox playlists.
 - Scriptable effects such as auto-scroll.
-- Cartridge selection menu with localized metadata support.
+- Cartridge selection menu with localized metadata support and extensible boot-time settings modules.
 - CRT-style display profile and fullscreen viewport scaling.
 
 ## Project Structure
@@ -131,6 +131,7 @@ ROCCO uses a console/cartridge architecture:
 1. The engine is the console runtime.
 2. Cartridges are self-contained games.
 3. Cartridges mount through `RoccoCartridge` and receive a `RoccoEngine` context with subsystem SDKs such as `engine.video`, `engine.audio`, and `engine.persistence`.
-4. The engine stays generic; cartridge logic stays inside cartridge folders.
+4. Cartridges can contribute boot-time setup and settings modules before a cartridge is mounted.
+5. The engine stays generic; cartridge logic stays inside cartridge folders.
 
 For implementation details, read `README-AGENT.md`.

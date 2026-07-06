@@ -18,7 +18,7 @@ export { ROCCO_PLAYER_DEVELOPER_ACTION_ID } from './rocco-developer-mode';
 
 export function createRoccoPlayerActionMenuDefinition(
   localization: RoccoLocalization = createRoccoLocalization(),
-  developerModeEnabled = true,
+  developerModeEnabled = false,
 ): RoccoActionMenuDefinition {
   const items: RoccoActionMenuDefinition['items'] = [
     {

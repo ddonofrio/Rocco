@@ -1,6 +1,6 @@
 import { Application, Container, Graphics, type Ticker } from 'pixi.js';
 
-import type { RoccoEngine } from './engine-sdk';
+import type { RoccoConsoleFlags, RoccoEngine } from './engine-sdk';
 import {
   defaultSoundProfile,
   getEffectiveMusicVolume,
@@ -54,7 +54,7 @@ export class GameRuntime implements RoccoEngine {
   private statusMessage = 'Engine bootstrapping cartridge...';
   private compositionOverlay: Container | null = null;
   private soundProfile: RoccoSoundProfile = { ...defaultSoundProfile };
-  private readonly developerModeEnabled: boolean;
+  private consoleFlags: RoccoConsoleFlags;
 
   // Public subsystem access
   readonly video: RoccoRuntimeVideoSystem;
@@ -65,8 +65,10 @@ export class GameRuntime implements RoccoEngine {
 
   constructor(options: RuntimeOptions) {
     this.options = options;
-    this.developerModeEnabled = options.developerModeEnabled ?? true;
-    
+    this.consoleFlags = {
+      developerModeEnabled: options.developerModeEnabled ?? false,
+    };
+
     this.audio = new RoccoRuntimeAudioSystem();
     this.jukebox = new RoccoJukeboxSystemImpl();
     this.video = new RoccoRuntimeVideoSystem({
@@ -84,7 +86,7 @@ export class GameRuntime implements RoccoEngine {
       },
     });
     this.persistence = new RoccoPersistenceAdapter();
-    
+
     this.effectRegistry.register(roccoAutoScrollRuntime);
     this.applySoundProfile();
   }
@@ -180,7 +182,18 @@ export class GameRuntime implements RoccoEngine {
   }
 
   isDeveloperModeEnabled(): boolean {
-    return this.developerModeEnabled;
+    return this.consoleFlags.developerModeEnabled;
+  }
+
+  getConsoleFlags(): RoccoConsoleFlags {
+    return clone(this.consoleFlags);
+  }
+
+  setConsoleFlags(patch: Partial<RoccoConsoleFlags>): void {
+    this.consoleFlags = {
+      ...this.consoleFlags,
+      ...patch,
+    };
   }
 
   beginComposition(): void {

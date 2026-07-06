@@ -20,6 +20,7 @@ Actual cartridge implementations live in `src/cartridges`.
 
 ```text
 CartridgeManager selection
+  -> cartridge.setup({ console })
   -> CartridgeLoader.loadById() or loadDefault()
   -> cartridge.mount({ engine, locale })
   -> cartridge.start()
@@ -31,6 +32,8 @@ CartridgeManager selection
 
 Only `mount()` is required. All other lifecycle methods are optional.
 
+`setup()` is the boot-time lifecycle hook. The cartridge manager runs it during cartridge discovery before the boot menu is shown. Setup does not mount the cartridge. It is intended for generic boot extensions such as contributing settings modules or patching console-owned flags through the restricted setup console surface.
+
 ## Cartridge Context
 
 ```typescript
@@ -41,6 +44,33 @@ interface RoccoCartridgeContext {
 ```
 
 `engine` is the only runtime SDK surface cartridge code should use. Cartridges reach console capabilities through `RoccoEngine` and the subsystem handles it exposes, such as `engine.video`, `engine.audio`, `engine.effects`, `engine.jukebox`, and `engine.persistence`. `locale` is set by the cartridge menu when a localized cartridge is loaded.
+
+Boot-time setup uses a narrower context:
+
+```typescript
+interface RoccoCartridgeSetupContext {
+  console: {
+    getFlags(): RoccoConsoleFlags;
+    setFlags(patch: Partial<RoccoConsoleFlags>): void;
+  };
+}
+```
+
+The setup result can contribute generic boot settings:
+
+```typescript
+interface RoccoCartridgeBootSetting {
+  id: string;
+  label: string;
+  description: string;
+  statusLabel?: string;
+  detailLabel?: string;
+  getValueLabel(): string;
+  activate?(): Promise<void> | void;
+}
+```
+
+`RoccoCartridgeManager` merges contributed boot settings by `id` and passes them to the cartridge menu.
 
 ## Cartridge Actions
 

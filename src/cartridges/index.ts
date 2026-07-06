@@ -9,9 +9,13 @@ export interface RoccoBuiltinCartridgeConfig extends RoccoCartridgeRegistration 
   defaultLocale?: string;
 }
 
+interface RoccoLocalCartridgeModule {
+  localCartridgeConfigs?: readonly RoccoCartridgeRegistration[];
+}
+
 export const defaultBuiltinCartridgeId = roccoDefaultCartridgeManifest.id;
 
-export const builtinCartridgeConfigs: RoccoBuiltinCartridgeConfig[] = [
+const baseBuiltinCartridgeConfigs: RoccoBuiltinCartridgeConfig[] = [
   {
     manifest: roccoDefaultCartridgeManifest,
     createCartridge: () => new RoccoDefaultCartridge(),
@@ -22,4 +26,18 @@ export const builtinCartridgeConfigs: RoccoBuiltinCartridgeConfig[] = [
     manifest: terminalWorkInProgressCartridgeManifest,
     createCartridge: () => new RoccoTerminalWorkInProgressCartridge(),
   },
+];
+
+const localCartridgeModules = import.meta.glob<RoccoLocalCartridgeModule>(
+  './local/**/*.local-cartridge.ts',
+  { eager: true },
+);
+
+const localBuiltinCartridgeConfigs = Object.values(localCartridgeModules).flatMap(
+  (module) => module.localCartridgeConfigs ?? [],
+);
+
+export const builtinCartridgeConfigs: RoccoBuiltinCartridgeConfig[] = [
+  ...baseBuiltinCartridgeConfigs,
+  ...localBuiltinCartridgeConfigs,
 ];

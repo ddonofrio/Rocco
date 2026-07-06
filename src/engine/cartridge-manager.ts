@@ -1,20 +1,31 @@
 import type { Application } from 'pixi.js';
 import type { RoccoSoundProfile } from './audio';
 import { builtinCartridgeConfigs, defaultBuiltinCartridgeId } from '../cartridges';
-import { RoccoBuiltinCartridgeProvider, RoccoDefaultCartridgeLoader, type RoccoCartridge } from './cartridges';
+import {
+  RoccoBuiltinCartridgeProvider,
+  RoccoDefaultCartridgeLoader,
+  type RoccoCartridge,
+  type RoccoCartridgeBootSetting,
+} from './cartridges';
 import { RoccoCartridgeMenu } from './cartridge-menu/cartridge-menu';
-import type { RoccoEngine } from './engine-sdk';
+import type { RoccoConsoleFlags, RoccoEngine } from './engine-sdk';
 
 interface RoccoMenuSettingsEngine extends RoccoEngine {
   getSoundProfile(): RoccoSoundProfile;
   setSoundProfile(profile: Partial<RoccoSoundProfile>): void;
-  isDeveloperModeEnabled(): boolean;
+  getConsoleFlags(): RoccoConsoleFlags;
+  setConsoleFlags(patch: Partial<RoccoConsoleFlags>): void;
 }
 
 interface CartridgeManagerOptions {
   app: Application;
   engine: RoccoMenuSettingsEngine;
   configuredCartridgeId?: string;
+}
+
+interface RoccoCollectedBootSetup {
+  consoleFlags: Partial<RoccoConsoleFlags>;
+  bootSettings: RoccoCartridgeBootSetting[];
 }
 
 export class RoccoCartridgeManager {
@@ -33,6 +44,8 @@ export class RoccoCartridgeManager {
     const configById = new Map(
       builtinCartridgeConfigs.map((config) => [config.manifest.id, config] as const),
     );
+    const bootSetup = await this.collectBootSetup(builtinCartridgeConfigs, engine);
+    engine.setConsoleFlags(bootSetup.consoleFlags);
     let selectedId: string;
     let selectedLocale: string | undefined;
     if (allManifests.length > 1 && !configuredCartridgeId) {
@@ -41,7 +54,7 @@ export class RoccoCartridgeManager {
         initialLocales: this.loadInitialLocales(configById),
         initialDisplayProfile: engine.video.display.getProfile(),
         initialSoundProfile: engine.getSoundProfile(),
-        developerModeEnabled: engine.isDeveloperModeEnabled(),
+        bootSettings: bootSetup.bootSettings,
         onDisplayProfileChange: (profile) => {
           engine.video.display.setProfile(profile);
         },
@@ -116,6 +129,45 @@ export class RoccoCartridgeManager {
     } catch {
       return config.defaultLocale;
     }
+  }
+
+  private async collectBootSetup(
+    configs: readonly (typeof builtinCartridgeConfigs)[number][],
+    engine: RoccoMenuSettingsEngine,
+  ): Promise<RoccoCollectedBootSetup> {
+    const bootSettingsById = new Map<string, RoccoCartridgeBootSetting>();
+    let consoleFlags: Partial<RoccoConsoleFlags> = {};
+
+    for (const config of configs) {
+      try {
+        const cartridge = config.createCartridge();
+        const setupResult = await cartridge.setup?.({
+          console: {
+            getFlags: () => engine.getConsoleFlags(),
+            setFlags: (patch) => {
+              engine.setConsoleFlags(patch);
+            },
+          },
+        });
+
+        consoleFlags = {
+          ...consoleFlags,
+          ...setupResult?.consoleFlags,
+        };
+
+        for (const bootSetting of setupResult?.bootSettings ?? []) {
+          bootSettingsById.set(bootSetting.id, bootSetting);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        engine.log('System', `Cartridge setup '${config.manifest.id}' failed: ${message}`);
+      }
+    }
+
+    return {
+      consoleFlags,
+      bootSettings: [...bootSettingsById.values()],
+    };
   }
 
   private saveStoredLocale(

@@ -8,7 +8,6 @@ import {
   setEffectiveSfxVolume,
   type RoccoSoundProfile,
 } from '../audio';
-import type { RoccoCartridgeManifest } from '../cartridges/types';
 import {
   ROCCO_DISPLAY_BRIGHTNESS_MAX,
   ROCCO_DISPLAY_BRIGHTNESS_MIN,
@@ -17,6 +16,7 @@ import {
   resolveRoccoDisplayProfile,
   type RoccoDisplayProfile,
 } from '../video/display';
+import type { RoccoCartridgeBootSetting, RoccoCartridgeManifest } from '../cartridges/types';
 
 const DESIGN_W = 960;
 const DESIGN_H = 540;
@@ -82,7 +82,7 @@ const C = {
 
 const FONT = 'Cascadia Mono, Lucida Console, monospace';
 
-const SETTINGS_OPTIONS = [
+const BASE_SETTINGS_OPTIONS = [
   {
     id: 'video',
     label: 'VIDEO',
@@ -98,13 +98,6 @@ const SETTINGS_OPTIONS = [
     description: 'Console-wide master, music, and effect output levels.',
   },
   {
-    id: 'developer',
-    label: 'DEVELOPER',
-    enabled: true,
-    statusLabel: 'JUMPER',
-    description: 'Console developer mode is controlled by a physical jumper and cannot be changed here.',
-  },
-  {
     id: 'back',
     label: 'BACK',
     enabled: true,
@@ -117,7 +110,6 @@ const VIDEO_ROW_IDS = ['filters', 'brightness', 'contrast'] as const;
 const SOUND_ROW_IDS = ['master', 'music', 'effects'] as const;
 const FILTER_ROW_IDS = ['roundedCorners', 'crtMask', 'edgeVignette'] as const;
 type MenuPage = 'cartridges' | 'settings' | 'video' | 'sound' | 'filters';
-type SettingsOptionId = (typeof SETTINGS_OPTIONS)[number]['id'];
 type VideoRowId = (typeof VIDEO_ROW_IDS)[number];
 type SoundRowId = (typeof SOUND_ROW_IDS)[number];
 type FilterRowId = (typeof FILTER_ROW_IDS)[number];
@@ -126,6 +118,17 @@ type FooterHintAction = {
   label: string;
   onPress: () => void;
 };
+
+interface RoccoMenuSettingsOption {
+  id: string;
+  label: string;
+  enabled: boolean;
+  statusLabel: string;
+  description: string;
+  detailLabel?: string;
+  getValueLabel?(): string;
+  activate?(): Promise<void> | void;
+}
 
 export interface CartridgeMenuResult {
   selectedId: string;
@@ -136,7 +139,7 @@ export interface CartridgeMenuOptions {
   initialLocales?: Record<string, string>;
   initialDisplayProfile?: Partial<RoccoDisplayProfile>;
   initialSoundProfile?: Partial<RoccoSoundProfile>;
-  developerModeEnabled?: boolean;
+  bootSettings?: readonly RoccoCartridgeBootSetting[];
   onDisplayProfileChange?: (profile: Partial<RoccoDisplayProfile>) => void;
   onSoundProfileChange?: (profile: Partial<RoccoSoundProfile>) => void;
 }
@@ -149,13 +152,13 @@ export class RoccoCartridgeMenu {
   private scrollOffset = 0;
   private selectedIndex = 0;
   private page: MenuPage = 'cartridges';
-  private settingsSelectionId: SettingsOptionId = 'video';
+  private settingsSelectionId = 'video';
   private videoSelectionId: VideoRowId = 'filters';
   private soundSelectionId: SoundRowId = 'master';
   private filterSelectionId: FilterRowId = 'roundedCorners';
   private displayProfile = resolveRoccoDisplayProfile();
   private soundProfile = resolveRoccoSoundProfile();
-  private developerModeEnabled = false;
+  private bootSettings: readonly RoccoCartridgeBootSetting[] = [];
   private onDisplayProfileChange:
     | ((profile: Partial<RoccoDisplayProfile>) => void)
     | undefined;
@@ -187,7 +190,7 @@ export class RoccoCartridgeMenu {
     this.filterSelectionId = 'roundedCorners';
     this.displayProfile = resolveRoccoDisplayProfile(options.initialDisplayProfile);
     this.soundProfile = resolveRoccoSoundProfile(options.initialSoundProfile);
-    this.developerModeEnabled = options.developerModeEnabled ?? false;
+    this.bootSettings = options.bootSettings ?? [];
     this.onDisplayProfileChange = options.onDisplayProfileChange;
     this.onSoundProfileChange = options.onSoundProfileChange;
 
@@ -701,9 +704,30 @@ export class RoccoCartridgeMenu {
     return y + 28;
   }
 
+  private getSettingsOptions(): RoccoMenuSettingsOption[] {
+    const [videoOption, soundOption, backOption] = BASE_SETTINGS_OPTIONS;
+
+    return [
+      videoOption,
+      soundOption,
+      ...this.bootSettings.map((setting) => ({
+        id: setting.id,
+        label: setting.label,
+        enabled: true,
+        statusLabel: setting.statusLabel ?? 'READY',
+        description: setting.description,
+        detailLabel: setting.detailLabel,
+        getValueLabel: () => setting.getValueLabel(),
+        activate: setting.activate,
+      })),
+      backOption,
+    ];
+  }
+
   private drawSettingsHome(): void {
-    const selectedOption = SETTINGS_OPTIONS.find((option) => option.id === this.settingsSelectionId)
-      ?? SETTINGS_OPTIONS[0];
+    const settingsOptions = this.getSettingsOptions();
+    const selectedOption = settingsOptions.find((option) => option.id === this.settingsSelectionId)
+      ?? settingsOptions[0];
     const leftW = 320;
     const rightX = PANEL_X + leftW + 24;
     const rightW = PANEL_W - leftW - 24;
@@ -712,19 +736,17 @@ export class RoccoCartridgeMenu {
     this.drawPanel(rightX, LIST_TOP, rightW, 286, 'DETAIL');
 
     let rowY = LIST_TOP + 42;
-    for (const option of SETTINGS_OPTIONS) {
+    for (const option of settingsOptions) {
       const selected = option.id === this.settingsSelectionId;
-      const row = this.createInteractiveContainer(PANEL_X + 14, rowY, leftW - 28, 50, () => {
-        this.settingsSelectionId = option.id;
-        if (option.enabled && option.id === 'video') {
-          this.page = 'video';
-        } else if (option.enabled && option.id === 'sound') {
-          this.page = 'sound';
-        } else if (option.enabled && option.id === 'back') {
-          this.page = 'cartridges';
-        }
-        this.render();
-      });
+      const row = this.createInteractiveContainer(
+        PANEL_X + 14,
+        rowY,
+        leftW - 28,
+        50,
+        () => {
+          this.onSettingsRowPointerDown(option.id);
+        },
+      );
 
       row.addChild(
         new Graphics()
@@ -790,29 +812,13 @@ export class RoccoCartridgeMenu {
       this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 170, 'MASTER', this.formatPercent(this.soundProfile.masterVolume));
       this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 198, 'MUSIC', this.formatPercent(this.getMusicOutputVolume()));
       this.drawDetailField(rightX + PANEL_INSET, LIST_TOP + 226, 'SFX', this.formatPercent(this.getSfxOutputVolume()));
-    } else if (selectedOption.id === 'developer') {
+    } else if (selectedOption?.getValueLabel) {
       this.drawDetailField(
         rightX + PANEL_INSET,
         LIST_TOP + 170,
-        'STATUS',
-        `${this.developerModeEnabled ? 'ON' : 'OFF'} (READ ONLY)`,
+        selectedOption.detailLabel ?? 'VALUE',
+        selectedOption.getValueLabel(),
       );
-
-      const jumperNote = this.makeText(
-        this.developerModeEnabled
-          ? 'Set the console jumper from DEVELOPER to NORMAL to disable developer mode.'
-          : 'Set the console jumper from NORMAL to DEVELOPER to enable developer mode.',
-        {
-          fontSize: 13,
-          fill: C.detailValue,
-          wordWrap: true,
-          wordWrapWidth: rightW - PANEL_INSET * 2,
-          leading: 6,
-        },
-      );
-      jumperNote.x = rightX + PANEL_INSET;
-      jumperNote.y = LIST_TOP + 202;
-      this.root!.addChild(jumperNote);
     } else {
       this.drawDetailField(
         rightX + PANEL_INSET,
@@ -1381,12 +1387,14 @@ export class RoccoCartridgeMenu {
   }
 
   private onSettingsKeyDown(e: KeyboardEvent): void {
+    const settingsOptionIds = this.getSettingsOptions().map((option) => option.id);
+
     switch (e.key) {
       case 'ArrowUp':
       case 'Up':
         e.preventDefault();
         this.settingsSelectionId = this.moveInCycle(
-          SETTINGS_OPTIONS.map((option) => option.id),
+          settingsOptionIds,
           this.settingsSelectionId,
           -1,
         );
@@ -1396,7 +1404,7 @@ export class RoccoCartridgeMenu {
       case 'Down':
         e.preventDefault();
         this.settingsSelectionId = this.moveInCycle(
-          SETTINGS_OPTIONS.map((option) => option.id),
+          settingsOptionIds,
           this.settingsSelectionId,
           1,
         );
@@ -1560,20 +1568,44 @@ export class RoccoCartridgeMenu {
   }
 
   private activateSettingsSelection(): void {
-    switch (this.settingsSelectionId) {
+    const selectedOption = this.getSettingsOptions().find(
+      (option) => option.id === this.settingsSelectionId,
+    );
+    if (!selectedOption?.enabled) {
+      this.render();
+      return;
+    }
+
+    switch (selectedOption.id) {
       case 'video':
         this.page = 'video';
-        break;
+        this.render();
+        return;
       case 'sound':
         this.page = 'sound';
-        break;
+        this.render();
+        return;
       case 'back':
         this.page = 'cartridges';
-        break;
-      case 'developer':
-        break;
+        this.render();
+        return;
     }
-    this.render();
+
+    void Promise.resolve(selectedOption.activate?.())
+      .catch(() => undefined)
+      .then(() => {
+        this.render();
+      });
+  }
+
+  private onSettingsRowPointerDown(optionId: string): void {
+    if (this.settingsSelectionId !== optionId) {
+      this.settingsSelectionId = optionId;
+      this.render();
+      return;
+    }
+
+    this.activateSettingsSelection();
   }
 
   private activateSoundSelection(): void {

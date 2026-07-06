@@ -24,7 +24,7 @@ The engine is the core ROCCO console runtime. It owns rendering, audio, input, e
 ## Architecture
 
 - `GameRuntime` creates the Pixi application and engine subsystems.
-- `RoccoCartridgeManager` selects and mounts a cartridge.
+- `RoccoCartridgeManager` collects boot-time cartridge setup, shows the boot menu, and mounts a cartridge.
 - Cartridges receive `RoccoCartridgeContext` with `engine` and optional `locale`.
 - Cartridge code uses `RoccoEngine`; the engine keeps PixiJS and subsystem internals behind that SDK surface and the subsystem SDKs it exposes.
 - The render loop runs effects, video state, cartridge logic, and renderer sync in order.

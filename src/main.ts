@@ -22,7 +22,7 @@ viewportHost.mount();
 const runtime = new GameRuntime({
   mount: viewportHost.getStageElement(),
   viewportHost,
-  developerModeEnabled: true,
+  developerModeEnabled: false,
   onDisplayProfileChange: (profile) => {
     viewportHost.setDisplayProfile(profile);
   },

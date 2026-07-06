@@ -31,7 +31,7 @@ const ROCCO_DEVELOPER_MICROMANIA_CHOICE_ID = 'developer-micromania';
 export function isRoccoDeveloperModeEnabled(
   engine: Pick<RoccoEngine, 'isDeveloperModeEnabled'> | null | undefined,
 ): boolean {
-  return engine?.isDeveloperModeEnabled?.() ?? true;
+  return engine?.isDeveloperModeEnabled?.() ?? false;
 }
 
 export interface RoccoDeveloperScreenOption {

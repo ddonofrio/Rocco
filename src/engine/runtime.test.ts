@@ -3,6 +3,15 @@ import { describe, expect, it, vi } from 'vitest';
 import { GameRuntime } from './runtime';
 
 describe('GameRuntime', () => {
+  it('starts with developer mode disabled by default', () => {
+    const runtime = new GameRuntime({
+      mount: document.createElement('div'),
+    });
+
+    expect(runtime.isDeveloperModeEnabled()).toBe(false);
+    expect(runtime.getConsoleFlags().developerModeEnabled).toBe(false);
+  });
+
   it('destroys both audio systems during disposal', async () => {
     const runtime = new GameRuntime({
       mount: document.createElement('div'),

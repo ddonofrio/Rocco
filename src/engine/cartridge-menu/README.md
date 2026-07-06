@@ -8,7 +8,7 @@ The cartridge menu is the boot-time selection UI shown when multiple cartridges 
 
 ## Role in Boot
 
-`RoccoCartridgeManager` creates the menu after cartridge manifests are discovered and before a cartridge is mounted.
+`RoccoCartridgeManager` creates the menu after cartridge manifests are discovered and any boot-time cartridge setup hooks have run, and before a cartridge is mounted.
 
 The menu resolves with:
 
@@ -22,6 +22,16 @@ interface CartridgeMenuResult {
 `selectedId` chooses the cartridge. `selectedLocale` is present when the selected cartridge has localized manifest metadata and the user chooses a locale.
 
 The current implementation is self-contained in `cartridge-menu.ts` and does not use a dedicated menu sound asset.
+
+## System Settings
+
+The boot menu includes a `System Settings` page.
+
+- The engine contributes built-in console modules such as video and sound.
+- Cartridge setup hooks can contribute additional generic boot settings through `RoccoCartridgeBootSetting`.
+- A settings row can expose a live value label and an activation callback.
+- Keyboard activation uses Enter or Space on the selected row.
+- Pointer activation is two-step: the first click selects a row, and a second click activates it.
 
 ## Visual Design
 
@@ -69,6 +79,7 @@ The selected cartridge detail panel shows:
 - Clicking scroll arrows moves the list window.
 - Clicking `LOAD` loads the selected cartridge.
 - Clicking a language radio button changes the selected locale and redraws localized metadata.
+- In `System Settings`, the first click selects a module row and the second click activates it.
 
 Radio button hit areas are local to their option container. Keep the container position and hit-area coordinates aligned when changing layout.
 

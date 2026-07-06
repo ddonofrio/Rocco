@@ -81,6 +81,7 @@ index.html
      -> RoccoCartridgeManager.loadAndMount()
         -> RoccoDefaultCartridgeLoader
         -> RoccoBuiltinCartridgeProvider
+        -> cartridge.setup({ console }) for discovered cartridges
         -> RoccoCartridgeMenu.show() when multiple cartridges are available
         -> cartridge.mount({ engine, locale })
         -> cartridge.start()
@@ -101,6 +102,7 @@ A cartridge implements `RoccoCartridge`:
 ```typescript
 export interface RoccoCartridge {
   manifest: RoccoCartridgeManifest;
+  setup?(context: RoccoCartridgeSetupContext): Promise<RoccoCartridgeSetupResult | void> | RoccoCartridgeSetupResult | void;
   mount(context: RoccoCartridgeContext): Promise<void> | void;
   start?(): Promise<void> | void;
   update?(deltaMs: number): void;
@@ -151,6 +153,22 @@ export interface RoccoCartridgeContext {
 
 Cartridges that do not localize content can ignore `locale`.
 
+`setup()` is an optional boot-time hook. The cartridge manager runs it during cartridge discovery before the boot menu is shown. Setup can inspect or patch console flags through a narrow console surface and can contribute boot-time settings modules to the boot menu without mounting the cartridge.
+
+```typescript
+export interface RoccoCartridgeSetupContext {
+  console: {
+    getFlags(): RoccoConsoleFlags;
+    setFlags(patch: Partial<RoccoConsoleFlags>): void;
+  };
+}
+
+export interface RoccoCartridgeSetupResult {
+  consoleFlags?: Partial<RoccoConsoleFlags>;
+  bootSettings?: readonly RoccoCartridgeBootSetting[];
+}
+```
+
 ## RoccoEngine SDK Surface
 
 The full interface lives in `src/engine/engine-sdk.ts`.
@@ -161,8 +179,17 @@ The full interface lives in `src/engine/engine-sdk.ts`.
 - Scene management: `loadPlaneScene(scene)` and `serializePlaneScene(sceneId)`.
 - Player selection: `setPlayerSprite(id | null)` and `getPlayerSprite()`.
 - Input control: `setInputEnabled(enabled)` and `isInputEnabled()`.
+- Console flags: `isDeveloperModeEnabled()`, `getConsoleFlags()`, and `setConsoleFlags(patch)`.
 - Composition control: `beginComposition()` and `endComposition()`.
 - Status and logging: `setStatus(message)` and `log(channel, message)`.
+
+`RoccoConsoleFlags` is the console-owned boot state shared between the runtime, the cartridge manager, and any boot-time cartridge setup hooks:
+
+```typescript
+export interface RoccoConsoleFlags {
+  developerModeEnabled: boolean;
+}
+```
 
 ### Composition
 
@@ -348,9 +375,13 @@ The cartridge menu appears when multiple cartridges are available and no configu
 The menu:
 
 - Displays cartridge metadata.
+- Applies boot-time cartridge setup before rendering.
 - Supports keyboard and mouse selection.
+- Shows console settings modules supplied by the engine and by cartridge setup hooks.
 - Shows language radio buttons for manifests with `localizations`.
 - Returns `{ selectedId, selectedLocale }`.
+
+Boot-time settings modules are generic menu entries contributed through `RoccoCartridgeBootSetting`. They appear inside `System Settings`, can expose a current value label, and can perform synchronous or asynchronous actions when activated.
 
 `RoccoCartridgeManager` stores the selected locale for `rocco-default` in `localStorage` and passes it to `cartridge.mount({ engine, locale })`.
 

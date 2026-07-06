@@ -9,6 +9,10 @@ export interface RoccoEnginePersistence {
   savePlaneScene(scene: RoccoPlaneScene): Promise<void>;
 }
 
+export interface RoccoConsoleFlags {
+  developerModeEnabled: boolean;
+}
+
 export interface RoccoEngine {
   // Direct subsystem access
   readonly video: RoccoVideoSystem;
@@ -31,6 +35,8 @@ export interface RoccoEngine {
 
   // Console flags
   isDeveloperModeEnabled?(): boolean;
+  getConsoleFlags?(): RoccoConsoleFlags;
+  setConsoleFlags?(patch: Partial<RoccoConsoleFlags>): void;
 
   // Composition control (loading overlay)
   beginComposition(): void;

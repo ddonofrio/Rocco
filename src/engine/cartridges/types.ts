@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../engine-sdk';
+import type { RoccoConsoleFlags, RoccoEngine } from '../engine-sdk';
 import type { RoccoActionMenuActivation } from '../video/action-menu';
 import type { RoccoGridMenuActivation } from '../video/grid-menu';
 
@@ -46,8 +46,33 @@ export interface RoccoCartridgeContext {
   locale?: string;
 }
 
+export interface RoccoCartridgeSetupConsole {
+  getFlags(): RoccoConsoleFlags;
+  setFlags(patch: Partial<RoccoConsoleFlags>): void;
+}
+
+export interface RoccoCartridgeBootSetting {
+  id: string;
+  label: string;
+  description: string;
+  statusLabel?: string;
+  detailLabel?: string;
+  getValueLabel(): string;
+  activate?(): Promise<void> | void;
+}
+
+export interface RoccoCartridgeSetupContext {
+  console: RoccoCartridgeSetupConsole;
+}
+
+export interface RoccoCartridgeSetupResult {
+  consoleFlags?: Partial<RoccoConsoleFlags>;
+  bootSettings?: readonly RoccoCartridgeBootSetting[];
+}
+
 export interface RoccoCartridge {
   manifest: RoccoCartridgeManifest;
+  setup?(context: RoccoCartridgeSetupContext): Promise<RoccoCartridgeSetupResult | void> | RoccoCartridgeSetupResult | void;
   mount(context: RoccoCartridgeContext): Promise<void> | void;
   start?(): Promise<void> | void;
   update?(deltaMs: number): void;

@@ -93,6 +93,14 @@ Start with the narrowest useful validation:
 3. Run `npm run build` when bundling, assets, imports, or integration behavior need coverage.
 4. Run `npm run lint` when style or static analysis risk is relevant.
 
+Before any `git push`, always run the full web pre-push gate through the wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','build:web')"
+```
+
+Treat `npm run build:web` as mandatory before a push even if focused tests and `npm run typecheck` already passed. It is the closest local match to the default CI gate because it runs ESLint, TypeScript checking, and the browser production build together.
+
 Do not run `npm run format` for a narrow task unless the user asks for whole-repository formatting.
 
 ## Refinement Workflow

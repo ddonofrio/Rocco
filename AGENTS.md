@@ -86,4 +86,5 @@ Avoid direct `.\scripts\run-npm.ps1` calls without `-ExecutionPolicy Bypass`, an
 - For code changes, run the most focused test first.
 - Run `npm run typecheck` through the wrapper before handing off TypeScript changes.
 - Run `npm run build` only when broader integration or bundling needs verification.
+- Before any `git push`, always run `npm run build:web` through the wrapper, even if focused tests and `npm run typecheck` already passed locally.
 - Avoid `npm run format` for narrow tasks because it rewrites the whole repository.

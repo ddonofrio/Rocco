@@ -93,3 +93,31 @@ jobs:
           path: release/*.AppImage
           if-no-files-found: error
           retention-days: 14
+
+  build-mac:
+    name: Build macOS DMG
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build unsigned macOS DMG
+        run: npm run build:mac
+
+      - name: Upload macOS DMG artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: macos-latest-dmg
+          path: release/*.dmg
+          if-no-files-found: error
+          retention-days: 14

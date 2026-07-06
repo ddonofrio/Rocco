@@ -79,6 +79,7 @@ Common scripts:
 - `.\scripts\test.ps1` runs the Vitest suite.
 - `.\scripts\lint.ps1` runs ESLint.
 - `npm run build:web` builds the browser bundle.
+- `npm run build:mac` builds the unsigned macOS DMG.
 - `npm run build:windows` builds the portable Windows executable.
 - `npm run build:linux` builds the Linux AppImage.
 
@@ -94,6 +95,7 @@ npm run dev
 The GitHub Actions workflow publishes these downloadable artifacts:
 
 - `web-app-latest` for the web `dist/` bundle.
+- `macos-latest-dmg` for the unsigned macOS DMG build.
 - `windows-latest-portable` for the portable Windows executable.
 - `ubuntu-latest-appimage` for the Linux AppImage build.
 

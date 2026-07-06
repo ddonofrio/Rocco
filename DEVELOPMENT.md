@@ -52,6 +52,12 @@ Windows portable example:
 powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','build:windows')"
 ```
 
+macOS DMG example:
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','build:mac')"
+```
+
 Avoid these command forms:
 
 - `powershell -ExecutionPolicy Bypass -File .\scripts\run-npm.ps1 run typecheck`
@@ -63,6 +69,7 @@ Avoid these command forms:
 - `npm run dev` starts Vite.
 - `npm run build` runs the default web build alias.
 - `npm run build:web` runs ESLint, TypeScript checking, and the browser Vite build.
+- `npm run build:mac` runs TypeScript checking, the desktop Vite build, and `electron-builder` for the unsigned macOS DMG.
 - `npm run build:windows` runs TypeScript checking, the desktop Vite build, and `electron-builder` for the portable Windows executable.
 - `npm run build:linux` runs TypeScript checking, the desktop Vite build, and `electron-builder` for the Linux AppImage.
 - `npm run preview` serves the built output.
@@ -79,9 +86,11 @@ Use the wrapper examples above for Windows agent sessions.
 The GitHub Actions `Build` workflow uploads these artifacts:
 
 - `web-app-latest` containing the web `dist/` output.
+- `macos-latest-dmg` containing the unsigned macOS DMG.
 - `windows-latest-portable` containing the portable Windows executable.
 - `ubuntu-latest-appimage` containing the Linux AppImage.
 
+The unsigned macOS DMG is built in the workflow on `macos-latest`.
 The Linux AppImage is built in the workflow on `ubuntu-latest`.
 
 ## Validation Workflow

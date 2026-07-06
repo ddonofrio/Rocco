@@ -38,6 +38,8 @@ Walk maps are alpha-mask images. Opaque pixels are walkable and transparent pixe
 
 Use `loadRoccoSpriteWalkMapFromImage()`, register the map with `engine.video.sprites.registerWalkMap()`, and bind it with `engine.video.sprites.bindToWalkMap()` before using walk-map-constrained movement.
 
+`goTo()` builds walk-map-aware routes from those spans and simplifies dense curve segments into longer traversable lines before movement starts. This keeps click-to-walk motion responsive on curved corridors instead of repeatedly scraping against nearby blocked pixels.
+
 ### Auto Adjust
 
 Sprite definitions can opt into `autoAdjust` when the rendered pose needs runtime compensation without changing the world transform.

@@ -24,10 +24,18 @@ export interface RoccoLevelConnector {
 export interface RoccoLevelMountOptions {
   entryConnectorId?: string;
   entryPosition?: RoccoPoint;
+  forceArrivalSequence?: boolean;
   onKeysCollectRequested?: () => boolean;
   onKeysCollected?: () => void;
   onConnectorTransitionRequested?: (connectorId: string) => boolean;
-  onRestartRequested?: () => void;
+  onRestartRequested?: (request?: RoccoLevelRestartRequest) => void;
+}
+
+export interface RoccoLevelRestartRequest {
+  levelId: string;
+  entryConnectorId?: string;
+  entryPosition?: RoccoPoint;
+  forceArrivalSequence?: boolean;
 }
 
 export interface RoccoLevel {

@@ -97,6 +97,14 @@ Use this for cases where:
 
 The current toilet room uses this pattern to delay the Nether portal until the opening sequence finishes and Rocco is physically clear of the portal zone.
 
+## Checkpoint Restarts
+
+`RoccoLevelMountOptions.onRestartRequested` also supports level-local checkpoint restarts.
+
+A level can call it without arguments to request the cartridge-level restart behavior, or pass a `RoccoLevelRestartRequest` to remount a specific level with a chosen connector, player position, and optional forced arrival sequence.
+
+The current Nether first screen uses this path so a local defeat can remount the same screen at its entry checkpoint without rebuilding the whole cartridge state.
+
 ## Level IDs, Scene IDs, And Naming
 
 Use a stable naming convention:
@@ -148,7 +156,7 @@ The bait shop and Nether implementations show the full pattern:
 - `bait-shop-second-level.ts` mounts the second interior screen.
 - `bait-shop-assets.ts` resolves the local asset URIs.
 - `nether-console-hardware-spawn-level.ts` mounts the first Nether screen with portal arrival and perspective scaling.
-- `nether-end-of-hallway-door-level.ts` mounts the second Nether screen with a fixed-scale player setup.
+- `nether-end-of-hallway-door-level.ts` mounts the second Nether screen with a lighter perspective slope than Nether 1.
 
 Key idea:
 

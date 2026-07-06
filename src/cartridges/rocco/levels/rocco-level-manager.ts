@@ -107,6 +107,7 @@ import {
   findRoccoLevelConnector,
   type RoccoLevel,
   type RoccoLevelConnector,
+  type RoccoLevelRestartRequest,
 } from './rocco-level-types';
 import { resolveKeyLockedDoorLines } from './key-locked-door-lines';
 import { BAIT_SHOP_DOOR_OPENING_SOUND_ID } from './pier/pier-bait-shop-door';
@@ -896,10 +897,11 @@ export class RoccoLevelManager {
   }
 
   private createLevelMountOptions(): {
+    forceArrivalSequence?: boolean;
     onKeysCollectRequested: () => boolean;
     onKeysCollected: () => void;
     onConnectorTransitionRequested: (connectorId: string) => boolean;
-    onRestartRequested?: () => void;
+    onRestartRequested?: (request?: RoccoLevelRestartRequest) => void;
   } {
     return {
       onKeysCollectRequested: () => this.canCollectIntoInventory(ROCCO_INVENTORY_KEYS_ITEM_ID),
@@ -925,8 +927,57 @@ export class RoccoLevelManager {
       },
       onConnectorTransitionRequested: (connectorId: string) =>
         this.requestScriptedConnectorTransition(connectorId),
-      onRestartRequested: this.options.onRestartRequested,
+      onRestartRequested: (request) => {
+        if (request) {
+          void this.restartFromCheckpoint(request);
+          return;
+        }
+
+        this.options.onRestartRequested?.();
+      },
     };
+  }
+
+  private async restartFromCheckpoint(request: RoccoLevelRestartRequest): Promise<void> {
+    if (!this.engine || !this.activeLevel || this.transitioning) {
+      this.options.onRestartRequested?.();
+      return;
+    }
+
+    this.deactivateDeveloperSpriteCycleMode();
+    const currentLevel = this.activeLevel;
+    const targetLevel = this.requireLevel(request.levelId);
+    const engine = this.engine;
+    this.transitioning = true;
+    this.pendingExitIntent = null;
+    this.pendingDroppedInventoryPickup = null;
+    this.pendingBaitShopDoorUse = null;
+    engine.setInputEnabled(false);
+    engine.beginComposition();
+
+    try {
+      this.clearActiveLevelDroppedInventoryPresentation();
+      currentLevel.unmount(engine);
+      this.activeLevel = targetLevel;
+      const scene = await targetLevel.mount(engine, {
+        entryConnectorId: request.entryConnectorId,
+        entryPosition: request.entryPosition,
+        forceArrivalSequence: request.forceArrivalSequence,
+        ...this.createLevelMountOptions(),
+      });
+      this.syncActiveLevelDroppedInventoryPresentation();
+      this.transitionCooldownMs = 0;
+      this.updateStatus(scene);
+    } catch (error) {
+      engine.log('System', `Checkpoint restart failed: ${String(error)}`);
+      this.activeLevel = currentLevel;
+      this.options.onRestartRequested?.();
+    } finally {
+      engine.endComposition();
+      engine.setInputEnabled(true);
+      this.transitioning = false;
+      engine.video.render(0);
+    }
   }
 
   private openInventoryTransferMenu(

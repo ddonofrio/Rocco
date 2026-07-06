@@ -13,6 +13,11 @@ import {
   type RoccoSpriteInstance,
 } from '../../../../engine/video/sprites';
 import { createRoccoDialogueChoiceMenu } from '../../dialogue';
+import {
+  resolveRoccoInventoryItemLabel,
+  type RoccoCoralRelicAssemblyPlan,
+  type RoccoInventoryFusionStep,
+} from '../../inventory';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
   roccoDefaultActionMenuAssetUrls,
@@ -65,6 +70,8 @@ export const BAIT_SHOP_TOILET_SCENE_ID = 'rocco-bait-shop-toilet-scene';
 export interface RoccoBaitShopToiletLevelOptions {
   hasMagazine?: () => boolean;
   hasCoralRelic?: () => boolean;
+  getCoralRelicAssemblyPlan?: () => RoccoCoralRelicAssemblyPlan;
+  allowReuseDuringUrgency?: () => boolean;
   isStanIdentified?: () => boolean;
 }
 
@@ -1103,8 +1110,71 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     return this.options.hasCoralRelic?.() ?? false;
   }
 
+  private isToiletReuseDuringUrgencyEnabled(): boolean {
+    return this.options.allowReuseDuringUrgency?.() ?? false;
+  }
+
+  private resolveCoralRelicAssemblyPlan(): RoccoCoralRelicAssemblyPlan {
+    const plannedAssembly = this.options.getCoralRelicAssemblyPlan?.();
+    if (plannedAssembly) {
+      return plannedAssembly;
+    }
+
+    if (this.hasCoralRelic()) {
+      return {
+        status: 'ready',
+        steps: [],
+      };
+    }
+
+    return {
+      status: 'missing',
+      steps: [],
+    };
+  }
+
+  private createCraftableCoralRelicReadingLines(
+    steps: readonly RoccoInventoryFusionStep[],
+  ): readonly string[] {
+    return [
+      this.localization.text.baitShop.toiletMagazineReadingCraftableRelicIntroLine,
+      ...steps.map((step) => this.createCraftableCoralRelicStepLine(step)),
+      this.localization.text.baitShop.toiletMagazineReadingCraftableRelicOutroLine,
+    ].filter((line) => line.trim().length > 0);
+  }
+
+  private createCraftableCoralRelicStepLine(step: RoccoInventoryFusionStep): string {
+    const [firstItemId, secondItemId] = step.ingredientIds;
+    return this.formatTemplateLine(this.localization.text.baitShop.toiletMagazineReadingCraftStepLine, {
+      first: resolveRoccoInventoryItemLabel(firstItemId, this.localization) ?? firstItemId,
+      second: resolveRoccoInventoryItemLabel(secondItemId, this.localization) ?? secondItemId,
+      result: resolveRoccoInventoryItemLabel(step.resultItemId, this.localization) ?? step.resultItemId,
+    });
+  }
+
+  private formatTemplateLine(
+    template: string,
+    replacements: Record<string, string>,
+  ): string {
+    let formatted = template;
+    for (const [key, value] of Object.entries(replacements)) {
+      formatted = formatted.replaceAll(`{${key}}`, value);
+    }
+
+    return formatted;
+  }
+
   isEscapeUrgencyActive(): boolean {
     return this.escapeUrgencyActive && !this.toiletRemoved;
+  }
+
+  refreshDeveloperEventPresentation(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.syncToiletUrgencyPresentation();
+    this.engine.video.render(0);
   }
 
   shouldLoseOnExit(connectorId: string): boolean {
@@ -1234,7 +1304,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       return;
     }
 
-    if (this.hasCoralRelic()) {
+    if (this.resolveCoralRelicAssemblyPlan().status !== 'missing') {
       this.beginEscapeStandSequence();
       return;
     }
@@ -1319,9 +1389,13 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
 
   private createMagazineReadingLines(): readonly string[] {
     const introLines = this.localization.text.baitShop.toiletMagazineReadingIntroLines;
-    const branchLines = this.hasCoralRelic()
-      ? this.localization.text.baitShop.toiletMagazineReadingCoralRelicLines
-      : this.localization.text.baitShop.toiletMagazineReadingMissingRelicLines;
+    const coralRelicAssemblyPlan = this.resolveCoralRelicAssemblyPlan();
+    const branchLines =
+      coralRelicAssemblyPlan.status === 'ready'
+        ? this.localization.text.baitShop.toiletMagazineReadingCoralRelicLines
+        : coralRelicAssemblyPlan.status === 'craftable'
+          ? this.createCraftableCoralRelicReadingLines(coralRelicAssemblyPlan.steps)
+          : this.localization.text.baitShop.toiletMagazineReadingMissingRelicLines;
     return [
       ...introLines.slice(0, 2),
       this.isStanIdentified()
@@ -1582,7 +1656,10 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       return;
     }
 
-    if (this.escapeUrgencyActive || this.toiletRemoved) {
+    if (
+      this.toiletRemoved ||
+      (this.escapeUrgencyActive && !this.isToiletReuseDuringUrgencyEnabled())
+    ) {
       this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
       this.engine.video.render(0);
       return;
@@ -2889,6 +2966,13 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     }
 
     if (this.escapeUrgencyActive) {
+      if (this.isToiletReuseDuringUrgencyEnabled()) {
+        this.unregisterUrgentToiletTarget();
+        this.setToiletInteractive(true);
+        this.installToiletActionMenu();
+        return;
+      }
+
       this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
       this.setToiletInteractive(false);
       this.registerUrgentToiletTarget();

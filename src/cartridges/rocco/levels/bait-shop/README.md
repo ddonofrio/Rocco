@@ -20,5 +20,7 @@ This directory contains the bait shop interior levels for the `rocco-default` ca
 - The counter foreground uses plane `depthMode: { kind: 'sprite-y-threshold', subject: 'active-player' }` so it can render in front of or behind Rocco depending on his Y position.
 - Grabbing the first-screen souvenir table opens a close-up plus a shared transfer inventory with the table on the left, Rocco on the right, and the table storage projected as a 5x4 grid.
 - The toilet-room survival branch starts only when Rocco reads the magazine while holding the Coral Relic, then keeps local urgency state so he cannot sit back down, can step on the dropped relic, and can open the wish menu.
+- The magazine can also guide any craftable Coral Relic path that is already accessible inside the toilet room, including the final instruction to drop the relic on the floor, make a wish, and break it.
+- Developer mode can override toilet-room event flags through `Alter events -> Bait Shop -> Bathroom`, including a toggle that allows the toilet to be reused during the urgency state for manual testing.
 - The toilet-room portal is a scripted connector transition. The level keeps the portal pending until Rocco no longer overlaps the portal zone, then moves to the first Nether screen on contact.
 - All bait shop assets live under this cartridge directory. The runtime does not depend on `.local` content.

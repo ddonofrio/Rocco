@@ -15,6 +15,7 @@ import {
   BAIT_SHOP_SOUVENIR_JAPANESE_FLOAT_ITEM_ID,
   BAIT_SHOP_SOUVENIR_RAZOR_SHELL_ITEM_ID,
   BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID,
+  createBaitShopSouvenirTableItems,
 } from './souvenir-table-items';
 import type { RoccoInventoryGroundSpriteDefinition, RoccoInventoryItem } from './types';
 
@@ -44,8 +45,19 @@ const roccoSpiralRazorAssetUrl = new URL('./assets/souvenirs/spiral-razor.png', 
   .href;
 
 interface RoccoInventoryFusionRecipe {
+  resultItemId: string;
   ingredientIds: readonly [string, string];
   createResult(localization: RoccoLocalization): RoccoInventoryItem;
+}
+
+export interface RoccoInventoryFusionStep {
+  ingredientIds: readonly [string, string];
+  resultItemId: string;
+}
+
+export interface RoccoCoralRelicAssemblyPlan {
+  status: 'ready' | 'craftable' | 'missing';
+  steps: readonly RoccoInventoryFusionStep[];
 }
 
 function createGroundSpriteDefinition(
@@ -122,6 +134,7 @@ const DEFAULT_CORAL_RELIC_GROUND_SPRITE = createGroundSpriteDefinition(
 
 const ROCCO_INVENTORY_FUSION_RECIPES: readonly RoccoInventoryFusionRecipe[] = [
   {
+    resultItemId: ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
     ingredientIds: [
       BAIT_SHOP_SOUVENIR_JAPANESE_FLOAT_ITEM_ID,
       BAIT_SHOP_SOUVENIR_BEACH_NECKLACE_ITEM_ID,
@@ -129,6 +142,7 @@ const ROCCO_INVENTORY_FUSION_RECIPES: readonly RoccoInventoryFusionRecipe[] = [
     createResult: createRoccoFloatingAmuletInventoryItem,
   },
   {
+    resultItemId: ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
     ingredientIds: [
       BAIT_SHOP_SOUVENIR_AMBER_TURRITELLA_ITEM_ID,
       BAIT_SHOP_SOUVENIR_RAZOR_SHELL_ITEM_ID,
@@ -136,6 +150,7 @@ const ROCCO_INVENTORY_FUSION_RECIPES: readonly RoccoInventoryFusionRecipe[] = [
     createResult: createRoccoSpiralRazorInventoryItem,
   },
   {
+    resultItemId: ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
     ingredientIds: [
       ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
       ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
@@ -143,6 +158,7 @@ const ROCCO_INVENTORY_FUSION_RECIPES: readonly RoccoInventoryFusionRecipe[] = [
     createResult: createRoccoAbyssalTalismanInventoryItem,
   },
   {
+    resultItemId: ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
     ingredientIds: [
       ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
       BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID,
@@ -150,6 +166,10 @@ const ROCCO_INVENTORY_FUSION_RECIPES: readonly RoccoInventoryFusionRecipe[] = [
     createResult: createRoccoCoralRelicInventoryItem,
   },
 ];
+
+const ROCCO_INVENTORY_FUSION_RECIPES_BY_RESULT = new Map(
+  ROCCO_INVENTORY_FUSION_RECIPES.map((recipe) => [recipe.resultItemId, recipe] as const),
+);
 
 function resolveRoccoInventoryFusionRecipe(
   firstItemId: string,
@@ -160,6 +180,107 @@ function resolveRoccoInventoryFusionRecipe(
       (ingredientIds[0] === firstItemId && ingredientIds[1] === secondItemId) ||
       (ingredientIds[0] === secondItemId && ingredientIds[1] === firstItemId),
   );
+}
+
+function applyFusionRecipeToItemIds(
+  availableItemIds: ReadonlySet<string>,
+  recipe: RoccoInventoryFusionRecipe,
+): Set<string> {
+  const nextAvailableItemIds = new Set(availableItemIds);
+  nextAvailableItemIds.delete(recipe.ingredientIds[0]);
+  nextAvailableItemIds.delete(recipe.ingredientIds[1]);
+  nextAvailableItemIds.add(recipe.resultItemId);
+  return nextAvailableItemIds;
+}
+
+function buildFusionPlan(
+  targetItemId: string,
+  availableItemIds: ReadonlySet<string>,
+): { availableItemIds: Set<string>; steps: RoccoInventoryFusionStep[] } | null {
+  if (availableItemIds.has(targetItemId)) {
+    return {
+      availableItemIds: new Set(availableItemIds),
+      steps: [],
+    };
+  }
+
+  const recipe = ROCCO_INVENTORY_FUSION_RECIPES_BY_RESULT.get(targetItemId);
+  if (!recipe) {
+    return null;
+  }
+
+  let nextAvailableItemIds = new Set(availableItemIds);
+  const steps: RoccoInventoryFusionStep[] = [];
+  for (const ingredientId of recipe.ingredientIds) {
+    const ingredientPlan = buildFusionPlan(ingredientId, nextAvailableItemIds);
+    if (!ingredientPlan) {
+      return null;
+    }
+
+    nextAvailableItemIds = ingredientPlan.availableItemIds;
+    steps.push(...ingredientPlan.steps);
+  }
+
+  if (
+    !nextAvailableItemIds.has(recipe.ingredientIds[0]) ||
+    !nextAvailableItemIds.has(recipe.ingredientIds[1])
+  ) {
+    return null;
+  }
+
+  return {
+    availableItemIds: applyFusionRecipeToItemIds(nextAvailableItemIds, recipe),
+    steps: [
+      ...steps,
+      {
+        ingredientIds: recipe.ingredientIds,
+        resultItemId: recipe.resultItemId,
+      },
+    ],
+  };
+}
+
+export function planRoccoCoralRelicAssembly(
+  itemIds: Iterable<string>,
+): RoccoCoralRelicAssemblyPlan {
+  const availableItemIds = new Set(itemIds);
+  if (availableItemIds.has(ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID)) {
+    return {
+      status: 'ready',
+      steps: [],
+    };
+  }
+
+  const fusionPlan = buildFusionPlan(ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID, availableItemIds);
+  if (!fusionPlan) {
+    return {
+      status: 'missing',
+      steps: [],
+    };
+  }
+
+  return {
+    status: 'craftable',
+    steps: fusionPlan.steps,
+  };
+}
+
+export function resolveRoccoInventoryItemLabel(
+  itemId: string,
+  localization: RoccoLocalization,
+): string | undefined {
+  switch (itemId) {
+    case ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID:
+      return createRoccoFloatingAmuletInventoryItem(localization).label;
+    case ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID:
+      return createRoccoSpiralRazorInventoryItem(localization).label;
+    case ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID:
+      return createRoccoAbyssalTalismanInventoryItem(localization).label;
+    case ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID:
+      return createRoccoCoralRelicInventoryItem(localization).label;
+    default:
+      return createBaitShopSouvenirTableItems(localization).find((item) => item.id === itemId)?.label;
+  }
 }
 
 export class RoccoInventory extends RoccoInventoryStorage {

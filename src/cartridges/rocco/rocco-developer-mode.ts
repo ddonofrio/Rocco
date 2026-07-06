@@ -22,8 +22,12 @@ export const ROCCO_DEVELOPER_ROOT_MENU_ID = 'rocco-developer-mode-menu';
 export const ROCCO_DEVELOPER_LEVEL_MENU_ID = 'rocco-developer-level-menu';
 export const ROCCO_DEVELOPER_SCREEN_MENU_ID = 'rocco-developer-screen-menu';
 export const ROCCO_DEVELOPER_INVENTORY_MENU_ID = 'rocco-developer-inventory-menu';
+export const ROCCO_DEVELOPER_EVENT_LEVEL_MENU_ID = 'rocco-developer-event-level-menu';
+export const ROCCO_DEVELOPER_EVENT_SCREEN_MENU_ID = 'rocco-developer-event-screen-menu';
+export const ROCCO_DEVELOPER_EVENT_MENU_ID = 'rocco-developer-event-menu';
 export const ROCCO_DEVELOPER_JUMP_CHOICE_ID = 'jump';
 export const ROCCO_DEVELOPER_INVENTORY_CHOICE_ID = 'inventory';
+export const ROCCO_DEVELOPER_EVENTS_CHOICE_ID = 'events';
 export const ROCCO_DEVELOPER_CYCLE_SPRITE_CHOICE_ID = 'cycle-sprite';
 const ROCCO_DEVELOPER_MAGAZINE_CHOICE_ID = 'developer-magazine';
 const ROCCO_DEVELOPER_MICROMANIA_CHOICE_ID = 'developer-micromania';
@@ -47,6 +51,24 @@ export interface RoccoDeveloperLevelOption {
   screens: readonly RoccoDeveloperScreenOption[];
 }
 
+export interface RoccoDeveloperEventOption {
+  id: string;
+  text: string;
+  enabled: boolean;
+}
+
+export interface RoccoDeveloperEventScreenOption {
+  id: string;
+  title: string;
+  events: readonly RoccoDeveloperEventOption[];
+}
+
+export interface RoccoDeveloperEventLevelOption {
+  id: string;
+  title: string;
+  screens: readonly RoccoDeveloperEventScreenOption[];
+}
+
 interface RoccoDeveloperInventoryOption {
   itemId: string;
   itemLabel: string;
@@ -67,6 +89,10 @@ export function createRoccoDeveloperRootMenuDefinition(
       {
         id: ROCCO_DEVELOPER_INVENTORY_CHOICE_ID,
         text: localization.text.developer.inventory,
+      },
+      {
+        id: ROCCO_DEVELOPER_EVENTS_CHOICE_ID,
+        text: localization.text.developer.events,
       },
       {
         id: ROCCO_DEVELOPER_CYCLE_SPRITE_CHOICE_ID,
@@ -114,6 +140,48 @@ export function createRoccoDeveloperInventoryMenuDefinition(
     choices: createRoccoDeveloperInventoryOptions(localization, inventory).map((option) => ({
       id: option.itemId,
       text: `${option.present ? localization.text.developer.remove : localization.text.developer.add} ${option.itemLabel}`,
+    })),
+  }).gridMenu;
+}
+
+export function createRoccoDeveloperEventLevelMenuDefinition(
+  localization: RoccoLocalization,
+  levels: readonly RoccoDeveloperEventLevelOption[],
+): RoccoGridMenuDefinition {
+  return createRoccoDialogueChoiceMenu({
+    id: ROCCO_DEVELOPER_EVENT_LEVEL_MENU_ID,
+    title: localization.text.developer.eventLevelTitle,
+    choices: levels.map((level) => ({
+      id: level.id,
+      text: level.title,
+    })),
+  }).gridMenu;
+}
+
+export function createRoccoDeveloperEventScreenMenuDefinition(
+  localization: RoccoLocalization,
+  screens: readonly RoccoDeveloperEventScreenOption[],
+): RoccoGridMenuDefinition {
+  return createRoccoDialogueChoiceMenu({
+    id: ROCCO_DEVELOPER_EVENT_SCREEN_MENU_ID,
+    title: localization.text.developer.eventScreenTitle,
+    choices: screens.map((screen) => ({
+      id: screen.id,
+      text: screen.title,
+    })),
+  }).gridMenu;
+}
+
+export function createRoccoDeveloperEventMenuDefinition(
+  localization: RoccoLocalization,
+  events: readonly RoccoDeveloperEventOption[],
+): RoccoGridMenuDefinition {
+  return createRoccoDialogueChoiceMenu({
+    id: ROCCO_DEVELOPER_EVENT_MENU_ID,
+    title: localization.text.developer.eventTitle,
+    choices: events.map((event) => ({
+      id: event.id,
+      text: `${event.text}: ${event.enabled ? localization.text.developer.on : localization.text.developer.off}`,
     })),
   }).gridMenu;
 }

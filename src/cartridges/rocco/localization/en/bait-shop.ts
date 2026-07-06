@@ -34,9 +34,15 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
   ],
   toiletMagazineReadingCoralRelicLines: [
     'It says here I need to stand up....',
-    '....grab the Coral Relic quickly...',
-    '....make a wish and break it: One talisman one wish',
+    '....drop the Coral Relic on the floor quickly...',
+    '....make a wish and break it: one relic, one wish.',
   ],
+  toiletMagazineReadingCraftableRelicIntroLine:
+    'If I move fast enough, I can still assemble the Coral Relic.',
+  toiletMagazineReadingCraftStepLine:
+    'I need to join {first} with {second} to make {result}.',
+  toiletMagazineReadingCraftableRelicOutroLine:
+    'I need to stand up right now, assemble it, drop it on the floor, and break it.',
   toiletMagazineKnownStanLine: 'AND STAN OUTSIDE!',
   toiletMagazineUnknownStanLine: 'AND THE OLD MAN OUTSIDE!',
   coralRelicStepLabel: 'Step On',

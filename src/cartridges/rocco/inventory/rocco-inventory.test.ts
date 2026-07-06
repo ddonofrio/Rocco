@@ -11,13 +11,25 @@ import {
   createRoccoMysteriousKeyInventoryItem,
   createRoccoSpiralRazorInventoryItem,
   createRoccoTwentyEurosInventoryItem,
+  planRoccoCoralRelicAssembly,
   RoccoInventory,
+  ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
+  ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
+  ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MENU_ID,
+  ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
   ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
 } from './rocco-inventory';
 import { resolveRoccoInventoryUseLines } from './rocco-inventory-interactions';
-import { createBaitShopSouvenirTableItems } from './souvenir-table-items';
+import {
+  BAIT_SHOP_SOUVENIR_AMBER_TURRITELLA_ITEM_ID,
+  BAIT_SHOP_SOUVENIR_BEACH_NECKLACE_ITEM_ID,
+  BAIT_SHOP_SOUVENIR_JAPANESE_FLOAT_ITEM_ID,
+  BAIT_SHOP_SOUVENIR_RAZOR_SHELL_ITEM_ID,
+  BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID,
+  createBaitShopSouvenirTableItems,
+} from './souvenir-table-items';
 
 describe('RoccoInventory', () => {
   it('stores cartridge items and exposes them as a 3x3 grid menu', () => {
@@ -121,5 +133,62 @@ describe('RoccoInventory', () => {
     expect(createRoccoSpiralRazorInventoryItem(createRoccoLocalization('en')).label).toBe(
       'Turritella Razor',
     );
+  });
+
+  it('builds the remaining Coral Relic recipe steps from accessible items', () => {
+    expect(
+      planRoccoCoralRelicAssembly([
+        BAIT_SHOP_SOUVENIR_JAPANESE_FLOAT_ITEM_ID,
+        BAIT_SHOP_SOUVENIR_BEACH_NECKLACE_ITEM_ID,
+        BAIT_SHOP_SOUVENIR_AMBER_TURRITELLA_ITEM_ID,
+        BAIT_SHOP_SOUVENIR_RAZOR_SHELL_ITEM_ID,
+        BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID,
+      ]),
+    ).toEqual({
+      status: 'craftable',
+      steps: [
+        {
+          ingredientIds: [
+            BAIT_SHOP_SOUVENIR_AMBER_TURRITELLA_ITEM_ID,
+            BAIT_SHOP_SOUVENIR_RAZOR_SHELL_ITEM_ID,
+          ],
+          resultItemId: ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
+        },
+        {
+          ingredientIds: [
+            BAIT_SHOP_SOUVENIR_JAPANESE_FLOAT_ITEM_ID,
+            BAIT_SHOP_SOUVENIR_BEACH_NECKLACE_ITEM_ID,
+          ],
+          resultItemId: ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
+        },
+        {
+          ingredientIds: [
+            ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
+            ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
+          ],
+          resultItemId: ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
+        },
+        {
+          ingredientIds: [
+            ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
+            BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID,
+          ],
+          resultItemId: ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
+        },
+      ],
+    });
+  });
+
+  it('marks the Coral Relic as missing when the accessible items cannot complete the recipe', () => {
+    expect(
+      planRoccoCoralRelicAssembly([
+        BAIT_SHOP_SOUVENIR_JAPANESE_FLOAT_ITEM_ID,
+        BAIT_SHOP_SOUVENIR_BEACH_NECKLACE_ITEM_ID,
+        BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID,
+      ]),
+    ).toEqual({
+      status: 'missing',
+      steps: [],
+    });
   });
 });

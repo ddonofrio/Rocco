@@ -55,6 +55,7 @@ Rocco transitions through edge connectors on connected screens. When his ground 
 - Keys and the 20 EUR bill have localized failed-use responses for the bait bucket and the Pelikan.
 - Pier Middle exits are available without an inventory gate.
 - The toilet-room portal opens a first-time arrival sequence in Nether and then hands off to a connected second Nether screen.
+- Developer mode also exposes an `Alter events` path for runtime-only test overrides such as allowing the bait-shop toilet to be reused after the magazine warning.
 - Developer mode also exposes a two-screen Reset Office branch, and the second screen includes an office printer prop with `look`, `grab`, and `kick` actions.
 
 ## Localization

@@ -66,6 +66,7 @@ import {
   createRoccoMysteriousKeyInventoryItem,
   createRoccoTwentyEurosInventoryItem,
   createBaitShopSouvenirTableStorage,
+  planRoccoCoralRelicAssembly,
   RoccoInventory,
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
   ROCCO_INVENTORY_DROP_BUTTON_ID,
@@ -87,14 +88,22 @@ import {
   uninstallRoccoPlayerActionMenu,
 } from '../rocco-player-action-menu';
 import {
+  createRoccoDeveloperEventLevelMenuDefinition,
+  createRoccoDeveloperEventMenuDefinition,
+  createRoccoDeveloperEventScreenMenuDefinition,
   createRoccoDeveloperInventoryItem,
   createRoccoDeveloperInventoryMenuDefinition,
   createRoccoDeveloperLevelMenuDefinition,
   createRoccoDeveloperScreenMenuDefinition,
   createRoccoDeveloperRootMenuDefinition,
   isRoccoDeveloperModeEnabled,
+  type RoccoDeveloperEventLevelOption,
   type RoccoDeveloperLevelOption,
   ROCCO_DEVELOPER_CYCLE_SPRITE_CHOICE_ID,
+  ROCCO_DEVELOPER_EVENT_LEVEL_MENU_ID,
+  ROCCO_DEVELOPER_EVENT_MENU_ID,
+  ROCCO_DEVELOPER_EVENT_SCREEN_MENU_ID,
+  ROCCO_DEVELOPER_EVENTS_CHOICE_ID,
   ROCCO_DEVELOPER_INVENTORY_CHOICE_ID,
   ROCCO_DEVELOPER_INVENTORY_MENU_ID,
   ROCCO_DEVELOPER_JUMP_CHOICE_ID,
@@ -184,6 +193,10 @@ interface RoccoDeveloperSpriteCycleOriginalState {
   facing?: RoccoSpriteInstance['facing'];
 }
 
+interface RoccoDeveloperEventState {
+  allowToiletReuseDuringUrgency: boolean;
+}
+
 interface RoccoDeveloperSpriteCyclePreview {
   image: RoccoSpriteDefinition['images'][number];
   frame: RoccoSpriteFrame;
@@ -225,6 +238,7 @@ const DEVELOPER_SPRITE_CYCLE_FRAME_ID_PREFIX = '__rocco-developer-sprite-cycle-f
 const DEVELOPER_SPRITE_CYCLE_FRAME_DURATION_MS = 1000;
 const DEVELOPER_SPRITE_CYCLE_TOP_TITLE_ID = 'rocco-developer-sprite-cycle-top-title';
 const DEVELOPER_SPRITE_CYCLE_SPRITE_TITLE_ID = 'rocco-developer-sprite-cycle-sprite-title';
+const DEVELOPER_ALLOW_TOILET_REUSE_EVENT_ID = 'allow-toilet-reuse';
 const DEVELOPER_SPRITE_CYCLE_CURSOR_SIZE = 34;
 const ROCCO_SHARED_UI_ASSET_URLS = [
   roccoDefaultActionMenuAssetUrls.developerMode,
@@ -374,6 +388,10 @@ export class RoccoLevelManager {
   private stanMoneyExchange: StanMoneyExchangeSequence | null = null;
   private developerJumpPending = false;
   private developerSpriteCycleActive = false;
+  private readonly developerEvents: RoccoDeveloperEventState = {
+    allowToiletReuseDuringUrgency: false,
+  };
+  private developerEventScreenSelectionId: string | null = null;
   private readonly developerSpriteCycleIndexes = new Map<string, number>();
   private readonly developerSpriteCycleOriginalStates = new Map<
     string,
@@ -419,6 +437,8 @@ export class RoccoLevelManager {
     this.activeSceneId = null;
     this.developerJumpPending = false;
     this.developerSpriteCycleActive = false;
+    this.developerEvents.allowToiletReuseDuringUrgency = false;
+    this.developerEventScreenSelectionId = null;
     this.developerSpriteCycleIndexes.clear();
     this.developerSpriteCycleOriginalStates.clear();
     this.developerSpriteCyclePreviousCursorAttachment = null;
@@ -452,6 +472,8 @@ export class RoccoLevelManager {
     this.activeSceneId = null;
     this.developerJumpPending = false;
     this.developerSpriteCycleActive = false;
+    this.developerEvents.allowToiletReuseDuringUrgency = false;
+    this.developerEventScreenSelectionId = null;
     this.developerSpriteCycleIndexes.clear();
     this.developerSpriteCycleOriginalStates.clear();
     this.developerSpriteCyclePreviousCursorAttachment = null;
@@ -638,7 +660,16 @@ export class RoccoLevelManager {
       }),
       new RoccoBaitShopToiletLevel(this.localization, {
         hasMagazine: () => this.inventory.hasItem(ROCCO_INVENTORY_MAGAZINE_ITEM_ID),
-        hasCoralRelic: () => this.inventory.hasItem(ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID),
+        hasCoralRelic: () =>
+          this.hasAccessibleInventoryItem(
+            ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
+            ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
+          ),
+        getCoralRelicAssemblyPlan: () =>
+          planRoccoCoralRelicAssembly(
+            this.listAccessibleInventoryItemIds(ROCCO_BAIT_SHOP_TOILET_LEVEL_ID),
+          ),
+        allowReuseDuringUrgency: () => this.developerEvents.allowToiletReuseDuringUrgency,
         isStanIdentified: () => this.beginningAmbientState.stan.isIdentified,
       }),
       new RoccoNetherConsoleHardwareSpawnLevel(this.localization),
@@ -661,6 +692,25 @@ export class RoccoLevelManager {
     return level.connectors.find(
       (connector) => connector.exitArea && containsRoccoLevelRectPoint(connector.exitArea, playerGround),
     );
+  }
+
+  private hasAccessibleInventoryItem(levelId: string, itemId: string): boolean {
+    if (this.inventory.hasItem(itemId)) {
+      return true;
+    }
+
+    return (this.droppedInventoryItemsByLevel.get(levelId) ?? []).some(
+      (droppedItem) => droppedItem.item.id === itemId,
+    );
+  }
+
+  private listAccessibleInventoryItemIds(levelId: string): string[] {
+    const itemIds = new Set(this.inventory.listItems().map((item) => item.id));
+    for (const droppedItem of this.droppedInventoryItemsByLevel.get(levelId) ?? []) {
+      itemIds.add(droppedItem.item.id);
+    }
+
+    return [...itemIds];
   }
 
   private resolveClickedConnector(
@@ -1674,6 +1724,27 @@ export class RoccoLevelManager {
       return true;
     }
 
+    if (activation.definitionId === ROCCO_DEVELOPER_EVENT_LEVEL_MENU_ID) {
+      if (activation.interaction === 'activate' && activation.itemId) {
+        this.openDeveloperEventScreenMenu(activation.itemId);
+      }
+      return true;
+    }
+
+    if (activation.definitionId === ROCCO_DEVELOPER_EVENT_SCREEN_MENU_ID) {
+      if (activation.interaction === 'activate' && activation.itemId) {
+        this.openDeveloperEventMenu(activation.itemId);
+      }
+      return true;
+    }
+
+    if (activation.definitionId === ROCCO_DEVELOPER_EVENT_MENU_ID) {
+      if (activation.interaction === 'activate' && activation.itemId) {
+        this.toggleDeveloperEvent(activation.itemId);
+      }
+      return true;
+    }
+
     return false;
   }
 
@@ -1703,6 +1774,11 @@ export class RoccoLevelManager {
 
     if (itemId === ROCCO_DEVELOPER_INVENTORY_CHOICE_ID) {
       this.openDeveloperInventoryMenu();
+      return;
+    }
+
+    if (itemId === ROCCO_DEVELOPER_EVENTS_CHOICE_ID) {
+      this.openDeveloperEventLevelMenu();
       return;
     }
 
@@ -1766,6 +1842,67 @@ export class RoccoLevelManager {
     this.engine.video.render(0);
   }
 
+  private openDeveloperEventLevelMenu(): void {
+    if (!this.engine || !this.isDeveloperModeEnabled()) {
+      return;
+    }
+
+    this.developerJumpPending = false;
+    this.deactivateDeveloperSpriteCycleMode();
+    this.developerEventScreenSelectionId = null;
+    this.engine.setInputEnabled(true);
+    this.engine.video.gridMenus.openMenu(
+      createRoccoDeveloperEventLevelMenuDefinition(
+        this.localization,
+        this.createDeveloperEventLevelOptions(),
+      ),
+    );
+    this.refreshStatus();
+    this.engine.video.render(0);
+  }
+
+  private openDeveloperEventScreenMenu(levelOptionId: string): void {
+    if (!this.engine || !this.isDeveloperModeEnabled()) {
+      return;
+    }
+
+    const levelOption = this.findDeveloperEventLevelOption(levelOptionId);
+    if (!levelOption) {
+      return;
+    }
+
+    this.developerJumpPending = false;
+    this.deactivateDeveloperSpriteCycleMode();
+    this.developerEventScreenSelectionId = null;
+    this.engine.setInputEnabled(true);
+    this.engine.video.gridMenus.openMenu(
+      createRoccoDeveloperEventScreenMenuDefinition(this.localization, levelOption.screens),
+    );
+    this.refreshStatus();
+    this.engine.video.render(0);
+  }
+
+  private openDeveloperEventMenu(screenId: string): void {
+    if (!this.engine || !this.isDeveloperModeEnabled()) {
+      return;
+    }
+
+    const screenOption = this.findDeveloperEventScreenOption(screenId);
+    if (!screenOption) {
+      return;
+    }
+
+    this.developerJumpPending = false;
+    this.deactivateDeveloperSpriteCycleMode();
+    this.developerEventScreenSelectionId = screenId;
+    this.engine.setInputEnabled(true);
+    this.engine.video.gridMenus.openMenu(
+      createRoccoDeveloperEventMenuDefinition(this.localization, screenOption.events),
+    );
+    this.refreshStatus();
+    this.engine.video.render(0);
+  }
+
   private async prepareDeveloperJump(screenId: string): Promise<void> {
     if (!this.engine || !this.isDeveloperModeEnabled()) {
       return;
@@ -1824,6 +1961,24 @@ export class RoccoLevelManager {
     }
 
     this.openDeveloperInventoryMenu();
+  }
+
+  private toggleDeveloperEvent(eventId: string): void {
+    if (!this.isDeveloperModeEnabled()) {
+      return;
+    }
+
+    if (eventId === DEVELOPER_ALLOW_TOILET_REUSE_EVENT_ID) {
+      this.developerEvents.allowToiletReuseDuringUrgency =
+        !this.developerEvents.allowToiletReuseDuringUrgency;
+      if (this.activeLevel instanceof RoccoBaitShopToiletLevel) {
+        this.activeLevel.refreshDeveloperEventPresentation();
+      }
+    }
+
+    if (this.developerEventScreenSelectionId) {
+      this.openDeveloperEventMenu(this.developerEventScreenSelectionId);
+    }
   }
 
   private canCollectIntoInventory(itemId: string, showFullMessage = true): boolean {
@@ -1947,12 +2102,55 @@ export class RoccoLevelManager {
     ];
   }
 
+  private createDeveloperEventLevelOptions(): readonly RoccoDeveloperEventLevelOption[] {
+    return [
+      {
+        id: ROCCO_BAIT_SHOP_LEVEL_ID,
+        title: this.requireLevel(ROCCO_BAIT_SHOP_LEVEL_ID).title,
+        screens: [
+          {
+            id: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
+            title: this.requireLevel(ROCCO_BAIT_SHOP_TOILET_LEVEL_ID).title,
+            events: [
+              {
+                id: DEVELOPER_ALLOW_TOILET_REUSE_EVENT_ID,
+                text: this.localization.text.developer.allowToiletReuseEvent,
+                enabled: this.developerEvents.allowToiletReuseDuringUrgency,
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  }
+
   private findDeveloperLevelOption(levelOptionId: string): RoccoDeveloperLevelOption | undefined {
     return this.createDeveloperLevelOptions().find((levelOption) => levelOption.id === levelOptionId);
   }
 
   private findDeveloperScreenOption(screenId: string): RoccoDeveloperLevelOption['screens'][number] | undefined {
     for (const levelOption of this.createDeveloperLevelOptions()) {
+      const screenOption = levelOption.screens.find((screen) => screen.id === screenId);
+      if (screenOption) {
+        return screenOption;
+      }
+    }
+
+    return undefined;
+  }
+
+  private findDeveloperEventLevelOption(
+    levelOptionId: string,
+  ): RoccoDeveloperEventLevelOption | undefined {
+    return this.createDeveloperEventLevelOptions().find(
+      (levelOption) => levelOption.id === levelOptionId,
+    );
+  }
+
+  private findDeveloperEventScreenOption(
+    screenId: string,
+  ): RoccoDeveloperEventLevelOption['screens'][number] | undefined {
+    for (const levelOption of this.createDeveloperEventLevelOptions()) {
       const screenOption = levelOption.screens.find((screen) => screen.id === screenId);
       if (screenOption) {
         return screenOption;

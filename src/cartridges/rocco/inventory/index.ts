@@ -7,6 +7,8 @@ export {
   createRoccoAbyssalTalismanInventoryItem,
   createRoccoCoralRelicInventoryItem,
   createRoccoFloatingAmuletInventoryItem,
+  planRoccoCoralRelicAssembly,
+  resolveRoccoInventoryItemLabel,
   ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
   createRoccoSpiralRazorInventoryItem,
   createRoccoKeysInventoryItem,
@@ -29,3 +31,4 @@ export { RoccoInventoryStorage } from './inventory-storage';
 export { RoccoInventoryTransferSession } from './inventory-transfer-session';
 export { resolveRoccoInventoryUseLines } from './rocco-inventory-interactions';
 export type * from './types';
+export type { RoccoCoralRelicAssemblyPlan, RoccoInventoryFusionStep } from './rocco-inventory';

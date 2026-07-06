@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
+import type { RoccoActionMenuDefinition } from '../../../../engine/video/action-menu';
 import type { RoccoGridMenuDefinition } from '../../../../engine/video/grid-menu';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../../engine/video/planes';
 import type {
@@ -94,6 +95,7 @@ interface TestState {
   playedSpriteAnimations: string[];
   playedSoundIds: string[];
   stoppedSoundIds: string[];
+  registeredActionMenuIds: string[];
   openedGridMenuDefinitions: RoccoGridMenuDefinition[];
   closedGridMenuCount: number;
   activeGridMenuDefinitionId: string | undefined;
@@ -123,6 +125,7 @@ function createState(overrides: Partial<TestState> = {}): TestState {
     playedSpriteAnimations: [],
     playedSoundIds: [],
     stoppedSoundIds: [],
+    registeredActionMenuIds: [],
     openedGridMenuDefinitions: [],
     closedGridMenuCount: 0,
     activeGridMenuDefinitionId: undefined,
@@ -158,8 +161,14 @@ function createEngineMock(state: TestState): RoccoEngine {
         state.renderCalls += 1;
       },
       actionMenus: {
-        registerMenu: () => {},
-        unregisterMenu: () => {},
+        registerMenu: (definition: RoccoActionMenuDefinition) => {
+          if (!state.registeredActionMenuIds.includes(definition.id)) {
+            state.registeredActionMenuIds.push(definition.id);
+          }
+        },
+        unregisterMenu: (menuId: string) => {
+          state.registeredActionMenuIds = state.registeredActionMenuIds.filter((id) => id !== menuId);
+        },
         closeMenu: () => {},
       },
       gridMenus: {
@@ -379,6 +388,10 @@ function finishSitSequence(level: RoccoBaitShopToiletLevel, state: TestState): v
     actionId: 'use',
   });
 
+  state.isSpriteMovingValue = false;
+  level.update(16);
+  level.update(500);
+  level.update(500);
   state.isSpriteMovingValue = false;
   level.update(16);
   level.update(500);
@@ -611,5 +624,24 @@ describe('RoccoBaitShopToiletLevel', () => {
     expect(state.playedSpriteActions).toContain(
       `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:down`,
     );
+  });
+
+  it('can keep the toilet action menu available during urgency when the developer event is enabled', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = createState();
+    const engine = createEngineMock(state);
+    const level = new RoccoBaitShopToiletLevel(localization, {
+      hasMagazine: () => true,
+      hasCoralRelic: () => true,
+      allowReuseDuringUrgency: () => true,
+    });
+
+    await level.mount(engine);
+
+    finishSitSequence(level, state);
+    advanceCoralRelicReadingToStanding(level, state, localization);
+
+    expect(level.isEscapeUrgencyActive()).toBe(true);
+    expect(state.registeredActionMenuIds).toContain(TOILET_ACTION_MENU_ID);
   });
 });

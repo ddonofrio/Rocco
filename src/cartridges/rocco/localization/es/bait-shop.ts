@@ -34,9 +34,15 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
   ],
   toiletMagazineReadingCoralRelicLines: [
     'Aqu\u00ed dice que tengo que ponerme de pie....',
-    '....coger la reliquia coralina r\u00e1pidamente...',
-    '....pensar un deseo y romperlo: Un talisman un deseo',
+    '....tirar la reliquia coralina al suelo r\u00e1pidamente...',
+    '....pedir un deseo y romperla: una reliquia, un deseo.',
   ],
+  toiletMagazineReadingCraftableRelicIntroLine:
+    'Si me doy prisa, todav\u00eda puedo montar la Reliquia coralina.',
+  toiletMagazineReadingCraftStepLine:
+    'Tengo que unir {first} con {second} para hacer {result}.',
+  toiletMagazineReadingCraftableRelicOutroLine:
+    'Debo ponerme de pie ahora mismo, montarla, tirarla al suelo y romperla.',
   toiletMagazineKnownStanLine: '\u00a1Y STAN DE AFUERA!',
   toiletMagazineUnknownStanLine: '\u00a1Y EL VIEJO DE AFUERA!',
   coralRelicStepLabel: 'Pisar',

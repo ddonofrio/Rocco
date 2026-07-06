@@ -13,7 +13,9 @@
     "check": "npm run lint && npm run typecheck",
     "build": "npm run build:web",
     "build:web": "npm run check && vite build",
-    "build:desktop": "npm run typecheck && vite build --mode desktop && electron-builder --win portable --publish never",
+    "build:desktop": "npm run build:windows",
+    "build:windows": "npm run typecheck && vite build --mode desktop && electron-builder --win portable --publish never",
+    "build:linux": "npm run typecheck && vite build --mode desktop && electron-builder --linux AppImage --publish never",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -54,7 +56,7 @@
     ],
     "win": {
       "icon": "public/pwa-512x512.png",
-      "artifactName": "rocco-windows-portable-${version}.${ext}",
+      "artifactName": "windows-latest-portable-${version}.${ext}",
       "target": [
         {
           "target": "portable",
@@ -62,6 +64,14 @@
             "x64"
           ]
         }
+      ]
+    },
+    "linux": {
+      "icon": "public/pwa-512x512.png",
+      "category": "Game",
+      "artifactName": "ubuntu-latest-appimage-${version}.${ext}",
+      "target": [
+        "AppImage"
       ]
     }
   }

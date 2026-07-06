@@ -33,7 +33,7 @@ jobs:
       - name: Upload dist artifact
         uses: actions/upload-artifact@v6
         with:
-          name: rocco-dist
+          name: web-app-latest
           path: dist/
           if-no-files-found: error
           retention-days: 14
@@ -56,12 +56,40 @@ jobs:
         run: npm ci
 
       - name: Build portable Windows executable
-        run: npm run build:desktop
+        run: npm run build:windows
 
       - name: Upload Windows executable artifact
         uses: actions/upload-artifact@v6
         with:
-          name: rocco-windows-portable
+          name: windows-latest-portable
           path: release/*.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  build-linux:
+    name: Build Linux AppImage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Linux AppImage
+        run: npm run build:linux
+
+      - name: Upload Linux AppImage artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ubuntu-latest-appimage
+          path: release/*.AppImage
           if-no-files-found: error
           retention-days: 14

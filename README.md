@@ -25,6 +25,7 @@ ROCCO works well with AI-powered coding tools because the codebase is organized 
 - PixiJS for accelerated 2D rendering.
 - Dexie and IndexedDB for local persistence.
 - Vite for the development server and production build.
+- Electron and electron-builder for portable desktop packaging.
 - Vitest for tests.
 - PWA tooling for installable web builds.
 
@@ -77,6 +78,9 @@ Common scripts:
 - `.\scripts\build.ps1` runs the production build.
 - `.\scripts\test.ps1` runs the Vitest suite.
 - `.\scripts\lint.ps1` runs ESLint.
+- `npm run build:web` builds the browser bundle.
+- `npm run build:windows` builds the portable Windows executable.
+- `npm run build:linux` builds the Linux AppImage.
 
 If a compatible global Node installation is already available, standard npm commands also work:
 
@@ -84,6 +88,14 @@ If a compatible global Node installation is already available, standard npm comm
 npm install
 npm run dev
 ```
+
+## Build Artifacts
+
+The GitHub Actions workflow publishes these downloadable artifacts:
+
+- `web-app-latest` for the web `dist/` bundle.
+- `windows-latest-portable` for the portable Windows executable.
+- `ubuntu-latest-appimage` for the Linux AppImage build.
 
 ## Built-in Cartridges
 

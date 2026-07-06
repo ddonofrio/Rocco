@@ -46,6 +46,12 @@ Build example:
 powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','build')"
 ```
 
+Windows portable example:
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','build:windows')"
+```
+
 Avoid these command forms:
 
 - `powershell -ExecutionPolicy Bypass -File .\scripts\run-npm.ps1 run typecheck`
@@ -55,7 +61,10 @@ Avoid these command forms:
 ## Available Commands
 
 - `npm run dev` starts Vite.
-- `npm run build` runs TypeScript checking and Vite build.
+- `npm run build` runs the default web build alias.
+- `npm run build:web` runs ESLint, TypeScript checking, and the browser Vite build.
+- `npm run build:windows` runs TypeScript checking, the desktop Vite build, and `electron-builder` for the portable Windows executable.
+- `npm run build:linux` runs TypeScript checking, the desktop Vite build, and `electron-builder` for the Linux AppImage.
 - `npm run preview` serves the built output.
 - `npm run typecheck` runs `tsc --noEmit`.
 - `npm run lint` runs ESLint.
@@ -64,6 +73,16 @@ Avoid these command forms:
 - `npm run test:watch` runs Vitest in watch mode.
 
 Use the wrapper examples above for Windows agent sessions.
+
+## CI Artifacts
+
+The GitHub Actions `Build` workflow uploads these artifacts:
+
+- `web-app-latest` containing the web `dist/` output.
+- `windows-latest-portable` containing the portable Windows executable.
+- `ubuntu-latest-appimage` containing the Linux AppImage.
+
+The Linux AppImage is built in the workflow on `ubuntu-latest`.
 
 ## Validation Workflow
 

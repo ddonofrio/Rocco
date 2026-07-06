@@ -1,5 +1,4 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
-import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
 import {
   DEFAULT_DESIGN_HEIGHT,
@@ -151,5 +150,5 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     this.spriteController?.update(deltaMs);
   }
 
-  handleAction(_activation: RoccoActionMenuActivation): void {}
+  handleAction(): void {}
 }

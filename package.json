@@ -53,7 +53,7 @@
       "package.json"
     ],
     "win": {
-      "icon": "public/favicon.ico",
+      "icon": "public/pwa-512x512.png",
       "artifactName": "rocco-windows-portable-${version}.${ext}",
       "target": [
         {

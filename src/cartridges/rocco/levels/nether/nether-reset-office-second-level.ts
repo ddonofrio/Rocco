@@ -1,6 +1,5 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type {
-  RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
@@ -343,5 +342,5 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     this.spriteController?.update(deltaMs);
   }
 
-  handleAction(_activation: RoccoActionMenuActivation): void {}
+  handleAction(): void {}
 }

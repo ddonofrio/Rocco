@@ -1,6 +1,5 @@
-import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../engine/cartridges';
+import type { RoccoCartridgeActionResult } from '../../../../engine/cartridges';
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
-import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
 import type { RoccoLocalization } from '../../localization';
 import {
@@ -238,9 +237,9 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     this.spriteController?.update(deltaMs);
   }
 
-  handleAction(_activation: RoccoActionMenuActivation): void {}
+  handleAction(): void {}
 
-  handleSceneClick(_activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {}
+  handleSceneClick(): RoccoCartridgeActionResult | void {}
 
   private updateLightsOverlay(deltaMs: number): void {
     if (!this.engine || !this.sceneReady || !Number.isFinite(deltaMs) || deltaMs <= 0) {

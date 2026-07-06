@@ -7,13 +7,13 @@ vi.mock('pixi.js', async (importOriginal) => {
     ...actual,
     Assets: {
       ...actual.Assets,
-      load: vi.fn(async () => actual.Texture.WHITE),
+      load: vi.fn(() => Promise.resolve(actual.Texture.WHITE)),
     },
   };
 });
 
 import type { RoccoRenderableSprite } from './system';
-import type { RoccoSpriteDefinition, RoccoSpriteFrame, RoccoSpriteInstance } from './types';
+import type { RoccoSpriteDefinition, RoccoSpriteInstance } from './types';
 import { PixiRoccoSpriteRenderer } from './pixi-renderer';
 
 interface SpriteNodeInternals {
@@ -102,7 +102,7 @@ function createRenderable(contrast?: number): RoccoRenderableSprite {
   const definition = createDefinition();
   return {
     definition,
-    frame: definition.frames[0] as RoccoSpriteFrame,
+    frame: definition.frames[0],
     instance: createInstance(contrast),
   };
 }

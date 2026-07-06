@@ -2,13 +2,18 @@
   "name": "rocco",
   "private": true,
   "version": "0.1.0",
+  "description": "ROCCO retro game console emulator and built-in game",
   "type": "module",
+  "main": "electron/main.mjs",
   "engines": {
     "node": ">=24.0.0"
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run lint && tsc --noEmit && vite build",
+    "check": "npm run lint && npm run typecheck",
+    "build": "npm run build:web",
+    "build:web": "npm run check && vite build",
+    "build:desktop": "npm run typecheck && vite build --mode desktop && electron-builder --win portable --publish never",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -20,6 +25,8 @@
     "@eslint/js": "^10.0.1",
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3",
     "eslint": "^10.4.1",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.6.0",
@@ -33,5 +40,29 @@
   "dependencies": {
     "dexie": "^4.4.3",
     "pixi.js": "^8.18.1"
+  },
+  "build": {
+    "appId": "com.rocco.game",
+    "productName": "Rocco",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "public/favicon.ico",
+      "artifactName": "rocco-windows-portable-${version}.${ext}",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
   }
 }

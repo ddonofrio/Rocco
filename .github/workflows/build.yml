@@ -37,3 +37,31 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 14
+
+  build-windows:
+    name: Build Windows executable
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build portable Windows executable
+        run: npm run build:desktop
+
+      - name: Upload Windows executable artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: rocco-windows-portable
+          path: release/*.exe
+          if-no-files-found: error
+          retention-days: 14

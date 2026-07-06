@@ -96,6 +96,23 @@ function createSlopedWalkMap(): RoccoSpriteWalkMap {
   };
 }
 
+function createCurvedCorridorWalkMap(): RoccoSpriteWalkMap {
+  return {
+    id: 'curved-corridor-walk-map',
+    width: 101,
+    height: 140,
+    origin: { x: 0, y: 0 },
+    alphaThreshold: 1,
+    columns: Array.from({ length: 101 }, (_, x) => {
+      const yMin = 20 + Math.floor(x / 2);
+      return {
+        x,
+        spans: [{ yMin, yMax: yMin + 40 }],
+      };
+    }),
+  };
+}
+
 function createDirectionalTestDefinition(): RoccoSpriteDefinition {
   return {
     ...createTestDefinition(),
@@ -550,5 +567,36 @@ describe('RoccoSpriteSystemSDK', () => {
     const updated = system.getSprite(sprite.id);
     expect(updated?.transform.x).toBe(100);
     expect(updated?.transform.y).toBe(30);
+  });
+
+  it('collapses smooth walk-map curves into direct traversable movement', () => {
+    const system = new RoccoSpriteSystemSDK();
+    system.loadSpriteDefinition({ ...createTestDefinition(), groundAnchor: { x: 0, y: 0 } });
+    system.registerWalkMap(createCurvedCorridorWalkMap());
+    const sprite = system.createSpriteFromDefinition('hero', {
+      transform: { x: 0, y: 30, scaleX: 1, scaleY: 1, rotation: 0 },
+    });
+    system.bindToWalkMap(sprite.id, {
+      walkMapId: 'curved-corridor-walk-map',
+      groundAnchor: { x: 0, y: 0 },
+      followSurface: true,
+    });
+
+    expect(system.goTo(sprite.id, 100, 80, { speed: 100 })).toBe(true);
+
+    const commanded = system.getSprite(sprite.id);
+    expect(commanded?.motion.command?.kind).toBe('move-to');
+    if (commanded?.motion.command?.kind === 'move-to') {
+      expect(commanded.motion.command.target).toEqual({ x: 100, y: 80 });
+    }
+
+    for (let index = 0; index < 20; index += 1) {
+      system.update(100);
+    }
+
+    const updated = system.getSprite(sprite.id);
+    expect(updated?.transform.x).toBe(100);
+    expect(updated?.transform.y).toBe(80);
+    expect(system.isMoving(sprite.id)).toBe(false);
   });
 });

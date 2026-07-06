@@ -2448,12 +2448,31 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     startGround: RoccoPoint,
     goalGround: RoccoPoint,
   ): RoccoPoint[] {
+    const densePath = this.buildDenseGroundPathFromWalkMapNodePath(walkMap, nodePath, startGround, goalGround);
+    const simplifiedPath = this.simplifyWalkMapGroundPath(walkMap, densePath);
+    if (simplifiedPath.length <= 1) {
+      return [];
+    }
+
+    return simplifiedPath.slice(1);
+  }
+
+  private buildDenseGroundPathFromWalkMapNodePath(
+    walkMap: RoccoSpriteWalkMap,
+    nodePath: readonly WalkMapPathNode[],
+    startGround: RoccoPoint,
+    goalGround: RoccoPoint,
+  ): RoccoPoint[] {
     const origin = walkMap.origin;
     const waypoints: RoccoPoint[] = [];
+    const startY = startGround.y - origin.y;
+    const totalSegments = Math.max(1, nodePath.length - 1);
     let currentX = startGround.x - origin.x;
     let currentY = startGround.y - origin.y;
     const goalX = goalGround.x - origin.x;
     const goalY = goalGround.y - origin.y;
+
+    this.pushWalkMapWaypoint(waypoints, origin, currentX, currentY);
 
     for (let index = 0; index < nodePath.length - 1; index += 1) {
       const currentNode = nodePath[index];
@@ -2464,7 +2483,9 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
 
       const overlapYMin = Math.max(currentNode.yMin, nextNode.yMin);
       const overlapYMax = Math.min(currentNode.yMax, nextNode.yMax);
-      const crossingY = this.resolveWalkMapInteriorY(currentY, overlapYMin, overlapYMax);
+      const progress = (index + 1) / totalSegments;
+      const desiredY = startY + (goalY - startY) * progress;
+      const crossingY = this.resolveWalkMapInteriorY(desiredY, overlapYMin, overlapYMax);
 
       if (Math.abs(crossingY - currentY) > EPSILON) {
         this.pushWalkMapWaypoint(waypoints, origin, currentNode.x, currentY);
@@ -2473,6 +2494,7 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       }
 
       currentX = nextNode.x;
+      this.pushWalkMapWaypoint(waypoints, origin, currentX, currentY);
     }
 
     if (Math.abs(currentX - goalX) > EPSILON) {
@@ -2488,6 +2510,47 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     }
 
     return waypoints;
+  }
+
+  private simplifyWalkMapGroundPath(
+    walkMap: RoccoSpriteWalkMap,
+    points: readonly RoccoPoint[],
+  ): RoccoPoint[] {
+    if (points.length <= 2) {
+      return [...points];
+    }
+
+    const firstPoint = points[0];
+    if (!firstPoint) {
+      return [];
+    }
+
+    const simplified: RoccoPoint[] = [firstPoint];
+    let anchorIndex = 0;
+    while (anchorIndex < points.length - 1) {
+      const anchorPoint = points[anchorIndex];
+      if (!anchorPoint) {
+        break;
+      }
+
+      let nextIndex = anchorIndex + 1;
+      while (nextIndex + 1 < points.length) {
+        const candidatePoint = points[nextIndex + 1];
+        if (!candidatePoint || !this.isWalkMapSegmentTraversable(walkMap, anchorPoint, candidatePoint)) {
+          break;
+        }
+
+        nextIndex += 1;
+      }
+
+      const nextPoint = points[nextIndex];
+      if (nextPoint) {
+        this.pushDistinctPoint(simplified, nextPoint);
+      }
+      anchorIndex = nextIndex;
+    }
+
+    return simplified;
   }
 
   private resolveWalkMapInteriorY(value: number, yMin: number, yMax: number): number {
@@ -2508,16 +2571,56 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     localX: number,
     localY: number,
   ): void {
-    const point = {
+    const point: RoccoPoint = {
       x: origin.x + localX,
       y: origin.y + localY,
     };
-    const previous = waypoints[waypoints.length - 1];
+    this.pushDistinctPoint(waypoints, point);
+  }
+
+  private pushDistinctPoint(points: RoccoPoint[], point: RoccoPoint): void {
+    const previous = points[points.length - 1];
     if (previous && Math.abs(previous.x - point.x) <= EPSILON && Math.abs(previous.y - point.y) <= EPSILON) {
       return;
     }
 
-    waypoints.push(point);
+    points.push(point);
+  }
+
+  private isWalkMapSegmentTraversable(
+    walkMap: RoccoSpriteWalkMap,
+    start: RoccoPoint,
+    end: RoccoPoint,
+  ): boolean {
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(deltaX), Math.abs(deltaY))));
+    for (let step = 0; step <= steps; step += 1) {
+      const progress = step / steps;
+      const sampleX = start.x + deltaX * progress;
+      const sampleY = start.y + deltaY * progress;
+      if (!this.isWalkMapPointWalkable(walkMap, sampleX, sampleY)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private isWalkMapPointWalkable(walkMap: RoccoSpriteWalkMap, worldX: number, worldY: number): boolean {
+    const localX = Math.round(worldX - walkMap.origin.x);
+    if (localX < 0 || localX >= walkMap.width) {
+      return false;
+    }
+
+    const columnIndex = this.walkMapColumnIndexes.get(walkMap.id);
+    const column = columnIndex?.get(localX);
+    if (!column) {
+      return false;
+    }
+
+    const localY = worldY - walkMap.origin.y;
+    return column.spans.some((span) => localY >= span.yMin && localY <= span.yMax);
   }
 
   private createWalkMapPathNodeKey(node: WalkMapPathNode): string {

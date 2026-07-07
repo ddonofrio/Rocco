@@ -26,21 +26,6 @@ export function createRoccoPlayerActionMenuDefinition(
       actionId: ROCCO_PLAYER_TALK_ACTION_ID,
       label: localization.text.actions.talk,
       imageUri: roccoDefaultActionMenuAssetUrls.talk,
-      result: {
-        kind: 'sprite-message',
-        message: {
-          spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-          mode: 'think',
-          text: localization.text.rocco.selfTalkLines,
-          lineSelection: {
-            mode: 'random',
-            count: 1,
-            historyKey: 'rocco-self-talk',
-            avoidImmediateRepeat: true,
-          },
-          ttlMs: 5200,
-        },
-      },
     },
     {
       id: 'inventory',

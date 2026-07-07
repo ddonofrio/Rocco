@@ -1,5 +1,6 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type {
+  RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
@@ -8,6 +9,7 @@ import {
   type RoccoSpriteDefinition,
 } from '../../../../engine/video/sprites';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
+import { roccoCartridgeMessageRuntime } from '../../dialogue';
 import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
@@ -139,24 +141,6 @@ function resolveResetOfficePrinterText(localization: RoccoLocalization): ResetOf
   );
 }
 
-function makePrinterMessageResult(text: string[], historyKey: string) {
-  return {
-    kind: 'sprite-message' as const,
-    message: {
-      spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-      mode: 'think' as const,
-      text,
-      lineSelection: {
-        mode: 'random' as const,
-        count: 1,
-        historyKey,
-        avoidImmediateRepeat: true,
-      },
-      ttlMs: NETHER_RESET_OFFICE_PRINTER_MESSAGE_TTL_MS,
-    },
-  };
-}
-
 async function createResetOfficePrinterSpriteDefinition(
   localization: RoccoLocalization,
 ): Promise<RoccoSpriteDefinition> {
@@ -212,7 +196,6 @@ async function createResetOfficePrinterSpriteDefinition(
 function createResetOfficePrinterActionMenuDefinition(
   localization: RoccoLocalization,
 ): RoccoActionMenuDefinition {
-  const printerText = resolveResetOfficePrinterText(localization);
   return {
     id: NETHER_RESET_OFFICE_PRINTER_ACTION_MENU_ID,
     targetInstanceIds: [NETHER_RESET_OFFICE_PRINTER_SPRITE_INSTANCE_ID],
@@ -230,21 +213,18 @@ function createResetOfficePrinterActionMenuDefinition(
         actionId: 'look',
         label: localization.text.actions.look,
         imageUri: roccoDefaultActionMenuAssetUrls.look,
-        result: makePrinterMessageResult(printerText.lookLines, 'reset-office-printer-look'),
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
         imageUri: roccoDefaultActionMenuAssetUrls.grab,
-        result: makePrinterMessageResult(printerText.grabLines, 'reset-office-printer-grab'),
       },
       {
         id: 'kick',
         actionId: 'kick',
         label: localization.text.actions.kick,
         imageUri: roccoDefaultActionMenuAssetUrls.kick,
-        result: makePrinterMessageResult(printerText.kickLines, 'reset-office-printer-kick'),
       },
     ],
   };
@@ -256,6 +236,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
   readonly connectors = NETHER_RESET_OFFICE_SECOND_CONNECTORS;
 
   private readonly localization: RoccoLocalization;
+  private engine: RoccoEngine | null = null;
   private spriteController: RoccoDefaultSpriteController | null = null;
 
   constructor(localization: RoccoLocalization) {
@@ -267,6 +248,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
   ): Promise<RoccoPlaneScene> {
+    this.engine = engine;
     this.spriteController = null;
 
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
@@ -334,6 +316,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     engine.video.sprites.removeSprite(NETHER_RESET_OFFICE_PRINTER_SPRITE_INSTANCE_ID);
     uninstallDefaultSprite(engine);
     engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
+    this.engine = null;
     this.spriteController = null;
     engine.video.render(0);
   }
@@ -342,5 +325,45 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     this.spriteController?.update(deltaMs);
   }
 
-  handleAction(): void {}
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (!this.engine || activation.targetInstanceId !== NETHER_RESET_OFFICE_PRINTER_SPRITE_INSTANCE_ID) {
+      return;
+    }
+
+    const printerText = resolveResetOfficePrinterText(this.localization);
+    if (activation.actionId === 'look') {
+      this.showPrinterThought(printerText.lookLines, 'reset-office-printer-look');
+      return;
+    }
+
+    if (activation.actionId === 'grab') {
+      this.showPrinterThought(printerText.grabLines, 'reset-office-printer-grab');
+      return;
+    }
+
+    if (activation.actionId === 'kick') {
+      this.showPrinterThought(printerText.kickLines, 'reset-office-printer-kick');
+    }
+  }
+
+  private showPrinterThought(lines: readonly string[], historyKey: string): void {
+    if (!this.engine) {
+      return;
+    }
+
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: NETHER_RESET_OFFICE_PRINTER_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
+  }
 }

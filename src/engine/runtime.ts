@@ -114,7 +114,6 @@ export class GameRuntime implements RoccoEngine {
       viewportHost: this.options.viewportHost,
       getActiveCartridge: () => this.cartridgeManager.getActiveCartridge(),
       getActivePlayerSpriteId: () => this.activePlayerSpriteId,
-      showSpriteMessage: (message) => this.video.messages.showMessage(message),
       log: (channel, message) => this.log(channel, message),
     });
     this.inputHandler.mount();

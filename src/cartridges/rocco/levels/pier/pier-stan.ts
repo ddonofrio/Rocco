@@ -5,7 +5,7 @@ import {
   createRoccoSpriteAutoCroppedFrames,
   type RoccoSpriteDefinition,
 } from '../../../../engine/video/sprites';
-import { RoccoDialogueSession } from '../../dialogue';
+import { RoccoDialogueSession, roccoCartridgeMessageRuntime } from '../../dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import { roccoDefaultStanAssetUrl } from '../../rocco-default-assets';
 import {
@@ -23,7 +23,11 @@ import {
   DEFAULT_STAN_Z_INDEX,
   DEFAULT_SPRITE_INSTANCE_ID,
 } from '../../rocco-default-constants';
-import { installDefaultStanActionMenu, uninstallDefaultStanActionMenu } from './pier-stan-action-menu';
+import {
+  DEFAULT_STAN_MESSAGE_TTL_MS,
+  installDefaultStanActionMenu,
+  uninstallDefaultStanActionMenu,
+} from './pier-stan-action-menu';
 import type { RoccoPierSideAmbientController } from './pier-side-level';
 
 export const DEFAULT_STAN_DIALOGUE_MENU_ID = 'rocco-stan-dialogue-menu';
@@ -278,6 +282,10 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     }
 
     this.awakeIdleMs = 0;
+    if (this.handleSimpleAction(activation.actionId)) {
+      return;
+    }
+
     if (activation.actionId !== 'talk') {
       return;
     }
@@ -331,6 +339,42 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     this.dialogue.beginConversation({
       choices: this.localization.text.stan.rootChoices,
     });
+  }
+
+  private handleSimpleAction(actionId: string): boolean {
+    if (actionId === 'look') {
+      this.showRoccoThought(this.localization.text.stan.lookLines, 'stan-look');
+      return true;
+    }
+
+    if (actionId === 'grab') {
+      this.showRoccoThought(this.localization.text.stan.grabLines, 'stan-grab');
+      return true;
+    }
+
+    if (actionId === 'kick') {
+      this.showRoccoThought(this.localization.text.stan.kickLines, 'stan-kick');
+      return true;
+    }
+
+    return false;
+  }
+
+  private showRoccoThought(lines: readonly string[], historyKey: string): void {
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: DEFAULT_STAN_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
   }
 
   private wakeForRearPresence(): void {

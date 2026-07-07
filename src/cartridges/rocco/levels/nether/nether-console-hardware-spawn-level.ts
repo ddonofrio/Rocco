@@ -1,6 +1,7 @@
 import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../engine/cartridges';
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type {
+  RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
@@ -10,6 +11,7 @@ import type {
   RoccoSpriteDefinition,
 } from '../../../../engine/video/sprites';
 import type { RoccoLocalization } from '../../localization';
+import { roccoCartridgeMessageRuntime } from '../../dialogue';
 import {
   roccoDefaultActionMenuAssetUrls,
   roccoDefaultYouLoseSoundUrl,
@@ -274,29 +276,9 @@ function resolveNetherSecurityCameraText(
   );
 }
 
-function makeNetherSecurityCameraMessageResult(text: string[], historyKey: string) {
-  return {
-    kind: 'sprite-message' as const,
-    message: {
-      spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-      mode: 'think' as const,
-      text,
-      lineSelection: {
-        mode: 'random' as const,
-        count: 1,
-        historyKey,
-        avoidImmediateRepeat: true,
-      },
-      ttlMs: NETHER_SECURITY_CAMERA_MESSAGE_TTL_MS,
-    },
-  };
-}
-
 function createNetherSecurityCameraActionMenuDefinition(
   localization: RoccoLocalization,
 ): RoccoActionMenuDefinition {
-  const cameraText = resolveNetherSecurityCameraText(localization);
-
   return {
     id: NETHER_SECURITY_CAMERA_ACTION_MENU_ID,
     targetInstanceIds: [NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID],
@@ -314,30 +296,18 @@ function createNetherSecurityCameraActionMenuDefinition(
         actionId: 'look',
         label: localization.text.actions.look,
         imageUri: roccoDefaultActionMenuAssetUrls.look,
-        result: makeNetherSecurityCameraMessageResult(
-          cameraText.lookLines,
-          'nether-security-camera-look',
-        ),
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
         imageUri: roccoDefaultActionMenuAssetUrls.grab,
-        result: makeNetherSecurityCameraMessageResult(
-          cameraText.grabLines,
-          'nether-security-camera-grab',
-        ),
       },
       {
         id: 'kick',
         actionId: 'kick',
         label: localization.text.actions.kick,
         imageUri: roccoDefaultActionMenuAssetUrls.kick,
-        result: makeNetherSecurityCameraMessageResult(
-          cameraText.kickLines,
-          'nether-security-camera-kick',
-        ),
       },
     ],
   };
@@ -810,7 +780,29 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
     this.updateLeftSideSecurityWatch(deltaMs);
   }
 
-  handleAction(): void {}
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (
+      !this.engine ||
+      activation.targetInstanceId !== NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID
+    ) {
+      return;
+    }
+
+    const cameraText = resolveNetherSecurityCameraText(this.localization);
+    if (activation.actionId === 'look') {
+      this.showSecurityCameraThought(cameraText.lookLines, 'nether-security-camera-look');
+      return;
+    }
+
+    if (activation.actionId === 'grab') {
+      this.showSecurityCameraThought(cameraText.grabLines, 'nether-security-camera-grab');
+      return;
+    }
+
+    if (activation.actionId === 'kick') {
+      this.showSecurityCameraThought(cameraText.kickLines, 'nether-security-camera-kick');
+    }
+  }
 
   handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
     if (this.securityDefeatSequence) {
@@ -852,6 +844,27 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
         restart: true,
       },
     );
+  }
+
+  private showSecurityCameraThought(lines: readonly string[], historyKey: string): void {
+    if (!this.engine) {
+      return;
+    }
+
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: NETHER_SECURITY_CAMERA_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
   }
 
   private installPipeSmoke(engine: RoccoEngine): void {

@@ -8,6 +8,7 @@ import {
   roccoDefaultActionMenuAssetUrls,
   roccoDefaultBaitBucketAssetUrls,
 } from '../../rocco-default-assets';
+import { roccoCartridgeMessageRuntime } from '../../dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
   DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID,
@@ -63,24 +64,6 @@ function makeActionMenuBase(id: string): Omit<RoccoActionMenuDefinition, 'items'
   };
 }
 
-function makeRandomMessageResult(mode: 'say' | 'think', text: string[], historyKey: string) {
-  return {
-    kind: 'sprite-message' as const,
-    message: {
-      spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-      mode,
-      text,
-      lineSelection: {
-        mode: 'random' as const,
-        count: 1,
-        historyKey,
-        avoidImmediateRepeat: true,
-      },
-      ttlMs: ACTION_MESSAGE_TTL_MS,
-    },
-  };
-}
-
 function createNormalBaitBucketActionMenu(
   localization: RoccoLocalization,
 ): RoccoActionMenuDefinition {
@@ -92,22 +75,12 @@ function createNormalBaitBucketActionMenu(
         actionId: 'look',
         label: localization.text.actions.look,
         imageUri: roccoDefaultActionMenuAssetUrls.look,
-        result: makeRandomMessageResult(
-          'think',
-          localization.text.baitBucket.normalLookLines,
-          'bait-bucket-normal-look',
-        ),
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
         imageUri: roccoDefaultActionMenuAssetUrls.grab,
-        result: makeRandomMessageResult(
-          'think',
-          localization.text.baitBucket.normalGrabLines,
-          'bait-bucket-normal-grab',
-        ),
       },
       {
         id: 'kick',
@@ -130,22 +103,12 @@ function createDroppedBaitBucketActionMenu(
         actionId: 'look',
         label: localization.text.actions.look,
         imageUri: roccoDefaultActionMenuAssetUrls.look,
-        result: makeRandomMessageResult(
-          'think',
-          localization.text.baitBucket.droppedLookLines,
-          'bait-bucket-dropped-look',
-        ),
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
         imageUri: roccoDefaultActionMenuAssetUrls.grab,
-        result: makeRandomMessageResult(
-          'think',
-          localization.text.baitBucket.droppedGrabLines,
-          'bait-bucket-dropped-grab',
-        ),
       },
     ],
   };
@@ -295,11 +258,15 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
   }
 
   handleAction(activation: RoccoActionMenuActivation): void {
-    if (
-      activation.targetInstanceId !== DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID ||
-      activation.actionId !== KICK_ACTION_ID ||
-      this.state !== 'normal'
-    ) {
+    if (activation.targetInstanceId !== DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID) {
+      return;
+    }
+
+    if (this.handleSimpleAction(activation.actionId)) {
+      return;
+    }
+
+    if (activation.actionId !== KICK_ACTION_ID || this.state !== 'normal') {
       return;
     }
 
@@ -332,6 +299,47 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
     );
     this.engine.video.render(0);
     this.state = 'approaching-kick';
+  }
+
+  private handleSimpleAction(actionId: string): boolean {
+    if (this.state === 'normal' && actionId === 'look') {
+      this.showRoccoThought(this.localization.text.baitBucket.normalLookLines, 'bait-bucket-normal-look');
+      return true;
+    }
+
+    if (this.state === 'normal' && actionId === 'grab') {
+      this.showRoccoThought(this.localization.text.baitBucket.normalGrabLines, 'bait-bucket-normal-grab');
+      return true;
+    }
+
+    if (this.state === 'dropped' && actionId === 'look') {
+      this.showRoccoThought(this.localization.text.baitBucket.droppedLookLines, 'bait-bucket-dropped-look');
+      return true;
+    }
+
+    if (this.state === 'dropped' && actionId === 'grab') {
+      this.showRoccoThought(this.localization.text.baitBucket.droppedGrabLines, 'bait-bucket-dropped-grab');
+      return true;
+    }
+
+    return false;
+  }
+
+  private showRoccoThought(lines: readonly string[], historyKey: string): void {
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: ACTION_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
   }
 
   private updateApproach(): void {

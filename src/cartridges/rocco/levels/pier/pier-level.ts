@@ -11,10 +11,11 @@ import {
   pickDefaultFeedingLookLine,
   uninstallDefaultFeedingLookActionMenu,
 } from './pier-feeding-interactions';
-import type { RoccoNonRepeatingLineSelectionState } from '../../../../game/non-repeating-line-selection';
+import type { RoccoNonRepeatingLineSelectionState } from '../../dialogue';
 import {
   installDefaultActionMenu,
   DEFAULT_ACTION_MENU_ID,
+  showDefaultPelikanSimpleReaction,
   showDefaultPelikanTalkReaction,
 } from './pier-pelikan-action-menu';
 import {
@@ -287,11 +288,15 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
       return;
     }
 
-    if (
-      activation.targetInstanceId !== DEFAULT_PELIKAN_SPRITE_INSTANCE_ID ||
-      activation.actionId !== 'talk' ||
-      !this.engine
-    ) {
+    if (activation.targetInstanceId !== DEFAULT_PELIKAN_SPRITE_INSTANCE_ID || !this.engine) {
+      return;
+    }
+
+    if (showDefaultPelikanSimpleReaction(this.engine, activation.actionId, this.localization)) {
+      return;
+    }
+
+    if (activation.actionId !== 'talk') {
       return;
     }
 

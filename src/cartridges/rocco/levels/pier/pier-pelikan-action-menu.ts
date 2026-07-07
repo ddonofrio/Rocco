@@ -1,5 +1,6 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoActionMenuDefinition } from '../../../../engine/video/action-menu';
+import { roccoCartridgeMessageRuntime } from '../../dialogue';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
@@ -34,19 +35,6 @@ export function createDefaultActionMenuDefinition(
         actionId: 'look',
         label: localization.text.actions.look,
         imageUri: roccoDefaultActionMenuAssetUrls.look,
-        result: {
-          kind: 'sprite-message',
-          message: {
-            spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-            mode: 'think',
-            text: localization.text.pelikan.lookLines,
-            lineSelection: {
-              mode: 'random',
-              count: 2,
-            },
-            ttlMs: DEFAULT_PELIKAN_MESSAGE_TTL_MS,
-          },
-        },
       },
       {
         id: 'talk',
@@ -59,38 +47,12 @@ export function createDefaultActionMenuDefinition(
         actionId: 'grab',
         label: localization.text.actions.grab,
         imageUri: roccoDefaultActionMenuAssetUrls.grab,
-        result: {
-          kind: 'sprite-message',
-          message: {
-            spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-            mode: 'think',
-            text: localization.text.pelikan.grabLines,
-            lineSelection: {
-              mode: 'random',
-              count: 1,
-            },
-            ttlMs: DEFAULT_PELIKAN_MESSAGE_TTL_MS,
-          },
-        },
       },
       {
         id: 'kick',
         actionId: 'kick',
         label: localization.text.actions.kick,
         imageUri: roccoDefaultActionMenuAssetUrls.kick,
-        result: {
-          kind: 'sprite-message',
-          message: {
-            spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-            mode: 'think',
-            text: localization.text.pelikan.kickLines,
-            lineSelection: {
-              mode: 'random',
-              count: 1,
-            },
-            ttlMs: DEFAULT_PELIKAN_MESSAGE_TTL_MS,
-          },
-        },
       },
     ],
   };
@@ -109,17 +71,53 @@ export function showDefaultPelikanTalkReaction(
   engine: RoccoEngine,
   localization: RoccoLocalization = createRoccoLocalization(),
 ): void {
-  engine.video.messages.showMessage({
-    spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-    mode: 'say',
-    text: localization.text.pelikan.talkLines,
-    lineSelection: {
-      mode: 'random',
+  roccoCartridgeMessageRuntime.say(
+    engine,
+    DEFAULT_SPRITE_INSTANCE_ID,
+    localization.text.pelikan.talkLines,
+    {
+      ttlMs: DEFAULT_PELIKAN_MESSAGE_TTL_MS,
+    },
+    {
       count: 1,
       historyKey: 'pelikan-talk',
       avoidImmediateRepeat: true,
     },
-    ttlMs: DEFAULT_PELIKAN_MESSAGE_TTL_MS,
-  });
+  );
   engine.video.render(0);
+}
+
+export function showDefaultPelikanSimpleReaction(
+  engine: RoccoEngine,
+  actionId: string,
+  localization: RoccoLocalization = createRoccoLocalization(),
+): boolean {
+  const selection =
+    actionId === 'look'
+      ? { lines: localization.text.pelikan.lookLines, count: 2, historyKey: 'pelikan-look' }
+      : actionId === 'grab'
+        ? { lines: localization.text.pelikan.grabLines, count: 1, historyKey: 'pelikan-grab' }
+        : actionId === 'kick'
+          ? { lines: localization.text.pelikan.kickLines, count: 1, historyKey: 'pelikan-kick' }
+          : undefined;
+
+  if (!selection) {
+    return false;
+  }
+
+  roccoCartridgeMessageRuntime.think(
+    engine,
+    DEFAULT_SPRITE_INSTANCE_ID,
+    selection.lines,
+    {
+      ttlMs: DEFAULT_PELIKAN_MESSAGE_TTL_MS,
+    },
+    {
+      count: selection.count,
+      historyKey: selection.historyKey,
+      avoidImmediateRepeat: true,
+    },
+  );
+  engine.video.render(0);
+  return true;
 }

@@ -26,10 +26,7 @@ function createSignature(lines: readonly string[]): string {
   return lines.map((line, index) => `${index}:${line}`).join('\u001f');
 }
 
-function normalizeIndexes(
-  indexes: readonly number[],
-  maxExclusive: number,
-): number[] {
+function normalizeIndexes(indexes: readonly number[], maxExclusive: number): number[] {
   const seen = new Set<number>();
   const normalized: number[] = [];
 
@@ -55,11 +52,7 @@ function refillIndexes(
     (index) => !usedIndexes.includes(index),
   );
 
-  if (
-    avoidImmediateRepeat &&
-    lastSelectedIndex !== undefined &&
-    indexes.length > 1
-  ) {
+  if (avoidImmediateRepeat && lastSelectedIndex !== undefined && indexes.length > 1) {
     const filtered = indexes.filter((index) => index !== lastSelectedIndex);
     if (filtered.length > 0) {
       indexes = filtered;
@@ -113,8 +106,7 @@ export function selectNonRepeatingLines(
     pickedIndexes.push(pickedIndex);
   }
 
-  const lastSelectedIndex =
-    pickedIndexes[pickedIndexes.length - 1] ?? priorLastSelectedIndex;
+  const lastSelectedIndex = pickedIndexes[pickedIndexes.length - 1] ?? priorLastSelectedIndex;
 
   return {
     lines: pickedIndexes.map((index) => options.lines[index] ?? ''),

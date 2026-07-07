@@ -3,7 +3,6 @@ import type { RoccoActionMenuDefinition } from '../../../../engine/video/action-
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
-  DEFAULT_SPRITE_INSTANCE_ID,
   DEFAULT_STAN_SPRITE_INSTANCE_ID,
 } from '../../rocco-default-constants';
 
@@ -12,25 +11,7 @@ export const DEFAULT_STAN_ACTION_MENU_ID = 'rocco-stan-action-menu';
 const DEFAULT_STAN_ACTION_MENU_ITEM_SIZE = 92;
 const DEFAULT_STAN_ACTION_MENU_ORBIT_RADIUS = 88;
 const DEFAULT_STAN_ACTION_MENU_ORBIT_SPEED = 0.08;
-const DEFAULT_STAN_MESSAGE_TTL_MS = 7200;
-
-function makeRandomMessageResult(mode: 'say' | 'think', text: string[], historyKey: string) {
-  return {
-    kind: 'sprite-message' as const,
-    message: {
-      spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-      mode,
-      text,
-      lineSelection: {
-        mode: 'random' as const,
-        count: 1,
-        historyKey,
-        avoidImmediateRepeat: true,
-      },
-      ttlMs: DEFAULT_STAN_MESSAGE_TTL_MS,
-    },
-  };
-}
+export const DEFAULT_STAN_MESSAGE_TTL_MS = 7200;
 
 export function createDefaultStanActionMenuDefinition(
   localization: RoccoLocalization = createRoccoLocalization(),
@@ -52,7 +33,6 @@ export function createDefaultStanActionMenuDefinition(
         actionId: 'look',
         label: localization.text.actions.look,
         imageUri: roccoDefaultActionMenuAssetUrls.look,
-        result: makeRandomMessageResult('think', localization.text.stan.lookLines, 'stan-look'),
       },
       {
         id: 'talk',
@@ -65,14 +45,12 @@ export function createDefaultStanActionMenuDefinition(
         actionId: 'grab',
         label: localization.text.actions.grab,
         imageUri: roccoDefaultActionMenuAssetUrls.grab,
-        result: makeRandomMessageResult('think', localization.text.stan.grabLines, 'stan-grab'),
       },
       {
         id: 'kick',
         actionId: 'kick',
         label: localization.text.actions.kick,
         imageUri: roccoDefaultActionMenuAssetUrls.kick,
-        result: makeRandomMessageResult('think', localization.text.stan.kickLines, 'stan-kick'),
       },
     ],
   };

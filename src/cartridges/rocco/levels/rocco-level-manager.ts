@@ -85,8 +85,10 @@ import {
   installRoccoPlayerActionMenu,
   isRoccoPlayerDeveloperAction,
   isRoccoPlayerInventoryAction,
+  ROCCO_PLAYER_TALK_ACTION_ID,
   uninstallRoccoPlayerActionMenu,
 } from '../rocco-player-action-menu';
+import { roccoCartridgeMessageRuntime } from '../dialogue';
 import {
   createRoccoDeveloperEventLevelMenuDefinition,
   createRoccoDeveloperEventMenuDefinition,
@@ -606,6 +608,14 @@ export class RoccoLevelManager {
       return;
     }
 
+    if (
+      activation.targetInstanceId === DEFAULT_SPRITE_INSTANCE_ID &&
+      activation.actionId === ROCCO_PLAYER_TALK_ACTION_ID
+    ) {
+      this.showRoccoSelfTalk();
+      return;
+    }
+
     if (this.handlePierBaitShopDoorAction(activation)) {
       return;
     }
@@ -960,20 +970,24 @@ export class RoccoLevelManager {
           return;
         }
 
-        this.engine?.video.messages.think(
+        if (!this.engine) {
+          return;
+        }
+
+        roccoCartridgeMessageRuntime.think(
+          this.engine,
           DEFAULT_SPRITE_INSTANCE_ID,
           this.localization.text.keys.collectedLines,
           {
-            lineSelection: {
-              mode: 'random',
-              count: 1,
-              historyKey: 'keys-collected',
-              avoidImmediateRepeat: true,
-            },
             ttlMs: 5600,
           },
+          {
+            count: 1,
+            historyKey: 'keys-collected',
+            avoidImmediateRepeat: true,
+          },
         );
-        this.engine?.video.render(0);
+        this.engine.video.render(0);
       },
       onConnectorTransitionRequested: (connectorId: string) =>
         this.requestScriptedConnectorTransition(connectorId),
@@ -2011,17 +2025,17 @@ export class RoccoLevelManager {
       return;
     }
 
-    this.engine.video.messages.think(
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
       DEFAULT_SPRITE_INSTANCE_ID,
       this.localization.text.inventory.fullLines,
       {
-        lineSelection: {
-          mode: 'random',
-          count: 1,
-          historyKey: 'inventory-full',
-          avoidImmediateRepeat: true,
-        },
         ttlMs: 3200,
+      },
+      {
+        count: 1,
+        historyKey: 'inventory-full',
+        avoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);
@@ -2189,7 +2203,8 @@ export class RoccoLevelManager {
       return;
     }
 
-    this.engine.video.messages.think(
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
       DEFAULT_SPRITE_INSTANCE_ID,
       resolveRoccoInventoryUseLines({
         itemId: carriedItem.item.id,
@@ -2197,13 +2212,12 @@ export class RoccoLevelManager {
         localization: this.localization,
       }),
       {
-        lineSelection: {
-          mode: 'random',
-          count: 1,
-          historyKey: `inventory-use:${carriedItem.item.id}:${activation.targetInstanceId}`,
-          avoidImmediateRepeat: true,
-        },
         ttlMs: 5200,
+      },
+      {
+        count: 1,
+        historyKey: `inventory-use:${carriedItem.item.id}:${activation.targetInstanceId}`,
+        avoidImmediateRepeat: true,
       },
     );
     this.engine.video.gridMenus.clearCarriedItem();
@@ -2701,20 +2715,20 @@ export class RoccoLevelManager {
         restart: true,
       },
     );
-    this.engine.video.messages.say(
+    roccoCartridgeMessageRuntime.say(
+      this.engine,
       DEFAULT_STAN_SPRITE_INSTANCE_ID,
       this.localization.text.inventory.moneyOnStanAcceptedLines,
       {
-        lineSelection: {
-          mode: 'random',
-          count: 1,
-          historyKey: 'inventory-money-on-stan-accepted',
-          avoidImmediateRepeat: true,
-        },
         ttlMs: STAN_MONEY_ACCEPTED_TTL_MS,
         style: {
           fill: DEFAULT_STAN_DIALOGUE_TEXT_COLOR,
         },
+      },
+      {
+        count: 1,
+        historyKey: 'inventory-money-on-stan-accepted',
+        avoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);
@@ -3077,15 +3091,40 @@ export class RoccoLevelManager {
       return;
     }
 
-    this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, [...lines], {
-      lineSelection: {
-        mode: 'random',
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: PIER_DOOR_VARIANT_MESSAGE_TTL_MS,
+      },
+      {
         count: 1,
         historyKey,
         avoidImmediateRepeat: true,
       },
-      ttlMs: PIER_DOOR_VARIANT_MESSAGE_TTL_MS,
-    });
+    );
+    this.engine.video.render(0);
+  }
+
+  private showRoccoSelfTalk(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      this.localization.text.rocco.selfTalkLines,
+      {
+        ttlMs: 5200,
+      },
+      {
+        count: 1,
+        historyKey: 'rocco-self-talk',
+        avoidImmediateRepeat: true,
+      },
+    );
     this.engine.video.render(0);
   }
 

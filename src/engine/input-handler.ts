@@ -1,7 +1,6 @@
 import type { RoccoRuntimeVideoSystem } from './video';
 import type { RoccoCursorActionEvent, RoccoCursorMoveEvent } from './video/cursor';
 import type { RoccoViewportHost } from './video/viewport';
-import type { RoccoSpriteMessageRequest } from './video/messages';
 import type { RoccoCartridge, RoccoCartridgeActionResult, RoccoSceneClickAction } from './cartridges';
 import type { RoccoRuntimeAudioSystem } from './audio';
 import type { RoccoJukeboxSystem } from './audio/jukebox';
@@ -16,7 +15,6 @@ interface InputHandlerOptions {
   viewportHost?: RoccoViewportHost;
   getActiveCartridge: () => RoccoCartridge | null;
   getActivePlayerSpriteId: () => string | null;
-  showSpriteMessage: (message: RoccoSpriteMessageRequest) => void;
   log: (channel: string, message: string) => void;
 }
 
@@ -49,7 +47,6 @@ export class RoccoInputHandler {
   private readonly viewportHost?: RoccoViewportHost;
   private readonly getActiveCartridge: () => RoccoCartridge | null;
   private readonly getActivePlayerSpriteId: () => string | null;
-  private readonly showSpriteMessage: (message: RoccoSpriteMessageRequest) => void;
   private readonly logFn: (channel: string, message: string) => void;
   private activeHoverDescription: string | null = null;
   private inputEnabled = true;
@@ -61,7 +58,6 @@ export class RoccoInputHandler {
     this.viewportHost = options.viewportHost;
     this.getActiveCartridge = options.getActiveCartridge;
     this.getActivePlayerSpriteId = options.getActivePlayerSpriteId;
-    this.showSpriteMessage = options.showSpriteMessage;
     this.logFn = options.log;
   }
 
@@ -229,9 +225,6 @@ export class RoccoInputHandler {
     this.setHoverDescription(undefined);
     this.videoSystem.render(0);
     if (activation) {
-      if (activation.result?.kind === 'sprite-message') {
-        this.showSpriteMessage(activation.result.message);
-      }
       void this.getActiveCartridge()?.handleAction?.(activation);
       this.logFn(
         'ActionMenu',

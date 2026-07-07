@@ -15,32 +15,13 @@ import {
   DEFAULT_KEYS_SPRITE_INSTANCE_ID,
   DEFAULT_KEYS_SPRITE_WIDTH,
   DEFAULT_KEYS_Z_INDEX,
-  DEFAULT_SPRITE_INSTANCE_ID,
 } from '../../rocco-default-constants';
 
 const KEYS_FRAME_ID = 'keys-idle-frame';
-const KEYS_ACTION_MESSAGE_TTL_MS = 5200;
+export const KEYS_ACTION_MESSAGE_TTL_MS = 5200;
 
 export const KEYS_ACTION_MENU_ID = 'rocco-keys-action-menu';
 export const KEYS_GRAB_ACTION_ID = 'grab';
-
-function makeRandomMessageResult(mode: 'say' | 'think', text: string[], historyKey: string) {
-  return {
-    kind: 'sprite-message' as const,
-    message: {
-      spriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-      mode,
-      text,
-      lineSelection: {
-        mode: 'random' as const,
-        count: 1,
-        historyKey,
-        avoidImmediateRepeat: true,
-      },
-      ttlMs: KEYS_ACTION_MESSAGE_TTL_MS,
-    },
-  };
-}
 
 export function createDefaultKeysActionMenu(
   localization: RoccoLocalization,
@@ -62,7 +43,6 @@ export function createDefaultKeysActionMenu(
         actionId: 'look',
         label: localization.text.actions.look,
         imageUri: roccoDefaultActionMenuAssetUrls.look,
-        result: makeRandomMessageResult('think', localization.text.keys.lookLines, 'keys-look'),
       },
       {
         id: 'grab',
@@ -75,7 +55,6 @@ export function createDefaultKeysActionMenu(
         actionId: 'kick',
         label: localization.text.actions.kick,
         imageUri: roccoDefaultActionMenuAssetUrls.kick,
-        result: makeRandomMessageResult('think', localization.text.keys.kickLines, 'keys-kick'),
       },
     ],
   };

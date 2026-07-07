@@ -12,7 +12,7 @@ import {
   type RoccoSpriteDefinition,
   type RoccoSpriteInstance,
 } from '../../../../engine/video/sprites';
-import { createRoccoDialogueChoiceMenu } from '../../dialogue';
+import { createRoccoDialogueChoiceMenu, roccoCartridgeMessageRuntime } from '../../dialogue';
 import {
   resolveRoccoInventoryItemLabel,
   type RoccoCoralRelicAssemblyPlan,
@@ -2111,15 +2111,19 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       return;
     }
 
-    this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, lines, {
-      lineSelection: {
-        mode: 'random',
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      lines,
+      {
+        ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+      },
+      {
         count: 1,
         historyKey,
         avoidImmediateRepeat: true,
       },
-      ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-    });
+    );
     this.engine.video.render(0);
   }
 
@@ -2139,15 +2143,19 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       return;
     }
 
-    this.engine.video.messages.think(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID, lines, {
-      lineSelection: {
-        mode: 'random',
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID,
+      lines,
+      {
+        ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+      },
+      {
         count: 1,
         historyKey,
         avoidImmediateRepeat: true,
       },
-      ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-    });
+    );
     this.engine.video.render(0);
   }
 

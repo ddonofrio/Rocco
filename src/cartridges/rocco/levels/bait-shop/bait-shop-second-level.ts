@@ -11,6 +11,7 @@ import {
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID,
 } from '../../inventory';
+import { roccoCartridgeMessageRuntime } from '../../dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
   roccoDefaultActionMenuAssetUrls,
@@ -729,15 +730,19 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       return;
     }
 
-    this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, [...lines], {
-      lineSelection: {
-        mode: 'random',
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+      },
+      {
         count: 1,
         historyKey,
         avoidImmediateRepeat: true,
       },
-      ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-    });
+    );
     this.engine.video.render(0);
   }
 

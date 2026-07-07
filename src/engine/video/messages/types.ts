@@ -4,13 +4,6 @@ export type RoccoSpriteMessageMode = 'say' | 'think';
 export type RoccoSpriteMessageSide = 'auto' | 'left' | 'right' | 'above';
 export type RoccoSpriteMessageText = string | string[];
 
-export interface RoccoSpriteMessageLineSelection {
-  mode: 'random';
-  count: number;
-  historyKey?: string;
-  avoidImmediateRepeat?: boolean;
-}
-
 export interface RoccoSpriteMessageStyle {
   fill?: string;
   fontFamily?: string;
@@ -41,7 +34,6 @@ export interface RoccoSpriteMessageRequest {
   mode: RoccoSpriteMessageMode;
   text: RoccoSpriteMessageText;
   background?: boolean;
-  lineSelection?: RoccoSpriteMessageLineSelection;
   ttlMs?: number;
   side?: RoccoSpriteMessageSide;
   offset?: RoccoPoint;

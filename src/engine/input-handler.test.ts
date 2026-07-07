@@ -125,7 +125,6 @@ function createInputHandler(state: InputHandlerTestState): RoccoInputHandler {
     }),
     getActiveCartridge: () => cartridge,
     getActivePlayerSpriteId: () => 'rocco',
-    showSpriteMessage: () => {},
     log: (channel, message) => {
       state.logs.push(`${channel}:${message}`);
     },
@@ -246,7 +245,6 @@ describe('RoccoInputHandler', () => {
       }),
       getActiveCartridge: () => null,
       getActivePlayerSpriteId: () => null,
-      showSpriteMessage: () => {},
       log: () => {},
     });
 
@@ -335,7 +333,6 @@ describe('RoccoInputHandler', () => {
       }),
       getActiveCartridge: () => cartridge,
       getActivePlayerSpriteId: () => null,
-      showSpriteMessage: () => {},
       log: () => {},
     });
 

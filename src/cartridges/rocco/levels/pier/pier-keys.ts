@@ -1,6 +1,7 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import { roccoDefaultKeysSoundUrl } from '../../rocco-default-assets';
+import { roccoCartridgeMessageRuntime } from '../../dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
   DEFAULT_KEYS_X,
@@ -22,6 +23,7 @@ import {
   createDefaultKeysActionMenu,
   createDefaultKeysSpriteDefinition,
   KEYS_ACTION_MENU_ID,
+  KEYS_ACTION_MESSAGE_TTL_MS,
   KEYS_GRAB_ACTION_ID,
 } from './pier-keys-definition';
 
@@ -100,11 +102,15 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   }
 
   handleAction(activation: RoccoActionMenuActivation): void {
-    if (
-      activation.targetInstanceId !== DEFAULT_KEYS_SPRITE_INSTANCE_ID ||
-      activation.actionId !== KEYS_GRAB_ACTION_ID ||
-      this.state !== 'revealed'
-    ) {
+    if (activation.targetInstanceId !== DEFAULT_KEYS_SPRITE_INSTANCE_ID) {
+      return;
+    }
+
+    if (this.handleSimpleAction(activation.actionId)) {
+      return;
+    }
+
+    if (activation.actionId !== KEYS_GRAB_ACTION_ID || this.state !== 'revealed') {
       return;
     }
 
@@ -181,6 +187,41 @@ class RoccoKeysController implements RoccoDefaultKeysController {
       this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
       this.engine.video.render(0);
     }
+  }
+
+  private handleSimpleAction(actionId: string): boolean {
+    if (this.state !== 'revealed') {
+      return false;
+    }
+
+    if (actionId === 'look') {
+      this.showRoccoThought(this.localization.text.keys.lookLines, 'keys-look');
+      return true;
+    }
+
+    if (actionId === 'kick') {
+      this.showRoccoThought(this.localization.text.keys.kickLines, 'keys-kick');
+      return true;
+    }
+
+    return false;
+  }
+
+  private showRoccoThought(lines: readonly string[], historyKey: string): void {
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: KEYS_ACTION_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
   }
 
   private startGrabApproach(): void {

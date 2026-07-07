@@ -12,6 +12,7 @@ import {
   type RoccoPoint,
 } from '../../../../engine/video/sprites';
 import { BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID } from '../../inventory';
+import { roccoCartridgeMessageRuntime } from '../../dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import {
@@ -671,16 +672,16 @@ export class RoccoBaitShopLevel implements RoccoLevel {
         moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
         facing: 'up',
         onReached: () => {
-          engine.video.messages.think(
+          roccoCartridgeMessageRuntime.think(
+            engine,
             DEFAULT_SPRITE_INSTANCE_ID,
             this.resolveShellCityLookLines(),
             {
-              lineSelection: {
-                mode: 'random',
-                count: 1,
-                historyKey: BAIT_SHOP_SHELL_CITY_HISTORY_KEY,
-              },
               ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+            },
+            {
+              count: 1,
+              historyKey: BAIT_SHOP_SHELL_CITY_HISTORY_KEY,
             },
           );
           engine.video.render(0);
@@ -691,16 +692,16 @@ export class RoccoBaitShopLevel implements RoccoLevel {
         moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
         facing: 'up-left',
         onReached: () => {
-          engine.video.messages.think(
+          roccoCartridgeMessageRuntime.think(
+            engine,
             DEFAULT_SPRITE_INSTANCE_ID,
             this.resolveWindowLookLines(),
             {
-              lineSelection: {
-                mode: 'random',
-                count: 1,
-                historyKey: BAIT_SHOP_WINDOW_HISTORY_KEY,
-              },
               ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+            },
+            {
+              count: 1,
+              historyKey: BAIT_SHOP_WINDOW_HISTORY_KEY,
             },
           );
           engine.video.render(0);
@@ -711,16 +712,16 @@ export class RoccoBaitShopLevel implements RoccoLevel {
         moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
         facing: 'down-left',
         onReached: () => {
-          engine.video.messages.think(
+          roccoCartridgeMessageRuntime.think(
+            engine,
             DEFAULT_SPRITE_INSTANCE_ID,
             this.localization.text.baitShop.leftBarrelLookLines,
             {
-              lineSelection: {
-                mode: 'random',
-                count: 1,
-                historyKey: BAIT_SHOP_LEFT_BARREL_HISTORY_KEY,
-              },
               ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+            },
+            {
+              count: 1,
+              historyKey: BAIT_SHOP_LEFT_BARREL_HISTORY_KEY,
             },
           );
           engine.video.render(0);
@@ -1312,15 +1313,19 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       return;
     }
 
-    this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, lines, {
-      lineSelection: {
-        mode: 'random',
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      lines,
+      {
+        ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+      },
+      {
         count: 1,
         historyKey,
         avoidImmediateRepeat: true,
       },
-      ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-    });
+    );
     this.engine.video.render(0);
   }
 

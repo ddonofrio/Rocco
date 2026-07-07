@@ -3,7 +3,7 @@ import type { RoccoActionMenuDefinition } from '../../../../engine/video/action-
 import {
   selectNonRepeatingLines,
   type RoccoNonRepeatingLineSelectionState,
-} from '../../../../game/non-repeating-line-selection';
+} from '../../dialogue';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {

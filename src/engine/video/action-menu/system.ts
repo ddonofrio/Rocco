@@ -136,7 +136,6 @@ export class RoccoActionMenuSystemSDK implements RoccoActionMenuSystem {
       targetDefinitionId: state.targetDefinitionId,
       itemId: item.id,
       actionId: item.actionId,
-      result: item.result ? clone(item.result) : undefined,
     };
     this.closeMenu();
     return activation;

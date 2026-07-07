@@ -1,16 +1,8 @@
-import type { RoccoSpriteMessageRequest } from '../messages';
-
-export type RoccoActionMenuItemResult = {
-  kind: 'sprite-message';
-  message: RoccoSpriteMessageRequest;
-};
-
 export interface RoccoActionMenuItem {
   id: string;
   actionId: string;
   imageUri: string;
   label?: string;
-  result?: RoccoActionMenuItemResult;
 }
 
 export interface RoccoActionMenuDefinition {
@@ -44,7 +36,6 @@ export interface RoccoActionMenuActivation {
   targetDefinitionId: string;
   itemId: string;
   actionId: string;
-  result?: RoccoActionMenuItemResult;
 }
 
 export interface RoccoActionMenuRenderable {

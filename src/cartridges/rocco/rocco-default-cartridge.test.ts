@@ -123,6 +123,7 @@ import { DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS } from './levels/pier/pier-level';
 import {
   createDefaultActionMenuDefinition,
   DEFAULT_ACTION_MENU_ID,
+  showDefaultPelikanSimpleReaction,
 } from './levels/pier/pier-pelikan-action-menu';
 import { RoccoLevelManager } from './levels/rocco-level-manager';
 import {
@@ -1617,11 +1618,13 @@ describe('RoccoDefaultCartridge', () => {
   });
 
   it('responds when trying inventory items on unsupported Pier targets', async () => {
+    const localization = createRoccoLocalization();
     const state = makeEngineState();
     const engine = createEngineMock(state);
     const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
+      localization,
     });
 
     await manager.mount(engine);
@@ -1644,8 +1647,16 @@ describe('RoccoDefaultCartridge', () => {
       ),
     );
 
-    expect(state.spriteMessages.some((message) => message.includes('not locked'))).toBe(true);
-    expect(state.spriteMessages.some((message) => message.includes('paying the Pelikan'))).toBe(true);
+    expect(
+      localization.text.inventory.keysOnBaitBucketLines.some((line) =>
+        state.spriteMessages.some((message) => message.includes(line)),
+      ),
+    ).toBe(true);
+    expect(
+      localization.text.inventory.moneyOnPelikanLines.some((line) =>
+        state.spriteMessages.some((message) => message.includes(line)),
+      ),
+    ).toBe(true);
     expect(state.clearedCarriedGridMenuCount).toBe(2);
   });
 
@@ -1800,11 +1811,33 @@ describe('RoccoDefaultCartridge', () => {
       'grab',
       'kick',
     ]);
-    expect(stanMenu?.items[2]?.result?.message.mode).toBe('think');
-    expect(stanMenu?.items[2]?.result?.message.text).toEqual(localization.text.stan.grabLines);
-    expect(stanMenu?.items[3]?.result?.message.mode).toBe('think');
-    expect(stanMenu?.items[3]?.result?.message.text).toEqual(localization.text.stan.kickLines);
+    manager.handleAction(
+      makeActionActivation(
+        DEFAULT_STAN_SPRITE_INSTANCE_ID,
+        'grab',
+        DEFAULT_STAN_ACTION_MENU_ID,
+      ),
+    );
+    expect(
+      localization.text.stan.grabLines.some((line) =>
+        state.spriteMessages.includes(`${DEFAULT_SPRITE_INSTANCE_ID}:think:${line}`),
+      ),
+    ).toBe(true);
 
+    manager.handleAction(
+      makeActionActivation(
+        DEFAULT_STAN_SPRITE_INSTANCE_ID,
+        'kick',
+        DEFAULT_STAN_ACTION_MENU_ID,
+      ),
+    );
+    expect(
+      localization.text.stan.kickLines.some((line) =>
+        state.spriteMessages.includes(`${DEFAULT_SPRITE_INSTANCE_ID}:think:${line}`),
+      ),
+    ).toBe(true);
+
+    state.spriteMessages.length = 0;
     manager.handleAction(
       makeActionActivation(
         DEFAULT_STAN_SPRITE_INSTANCE_ID,
@@ -2697,7 +2730,10 @@ describe('default cartridge helpers', () => {
   });
 
   it('localizes the default Pelikan action menu to Spanish', () => {
-    const menu = createDefaultActionMenuDefinition(createRoccoLocalization('es'));
+    const localization = createRoccoLocalization('es');
+    const menu = createDefaultActionMenuDefinition(localization);
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
 
     expect(menu.items.map((item) => item.label)).toEqual([
       'Mirar',
@@ -2705,8 +2741,13 @@ describe('default cartridge helpers', () => {
       'Coger',
       'Patear',
     ]);
-    expect(menu.items[0]?.result?.message.text).toContain(
-      'Se planta como un sacerdote del mal tiempo.',
-    );
+
+    showDefaultPelikanSimpleReaction(engine, 'look', localization);
+
+    expect(
+      localization.text.pelikan.lookLines.some((line) =>
+        state.spriteMessages.some((message) => message.includes(line)),
+      ),
+    ).toBe(true);
   });
 });

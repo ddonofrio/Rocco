@@ -27,7 +27,7 @@ Before touching code, read this minimum set:
 Use this command to list project-owned docs without dependency noise:
 
 ```powershell
-rg --files -g 'README*.md' -g 'DEVELOPMENT.md' -g 'AGENTS.md' -g '!node_modules/**' -g '!.local/**' -g '!dist/**'
+Get-ChildItem -Path . -Filter "README*.md" -Recurse | Where-Object { $_.FullName -notmatch 'node_modules|\.local|dist' } | Select-Object FullName
 ```
 
 If the available context window is large, prefer reading all project-owned documentation before editing. The docs are intentionally layered: root docs give the map, engine docs give system concepts, cartridge docs give game rules, and leaf docs give implementation details.

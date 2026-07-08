@@ -4,7 +4,10 @@ The cartridge menu is the boot-time selection UI shown when multiple cartridges 
 
 ## Files
 
-- `cartridge-menu.ts` - `RoccoCartridgeMenu`, the PixiJS menu UI and input handler.
+- `cartridge-menu.ts` - `RoccoCartridgeMenu`, the boot-menu facade that owns Pixi composition, event handling, and final selection confirmation.
+- `cartridge-menu-session.ts` - Internal boot-menu session state and routing helper for page selection, list scroll/selection, localized manifest selection, and display/sound profiles.
+- `system-settings-page-renderer.ts` - Internal Pixi composition helper for the `System Settings` home, video, sound, and filter pages.
+- `pixi-ui-primitives.ts` - Internal PixiJS panel, footer, button, control, interaction, and text helpers reused by the menu.
 
 ## Role in Boot
 
@@ -21,7 +24,7 @@ interface CartridgeMenuResult {
 
 `selectedId` chooses the cartridge. `selectedLocale` is present when the selected cartridge has localized manifest metadata and the user chooses a locale.
 
-The current implementation is self-contained in `cartridge-menu.ts` and does not use a dedicated menu sound asset.
+The current implementation keeps boot-menu session state and page routing in `cartridge-menu-session.ts`, delegates settings-page Pixi composition to `system-settings-page-renderer.ts`, delegates repeated Pixi primitives to `pixi-ui-primitives.ts`, and does not use a dedicated menu sound asset.
 
 ## System Settings
 

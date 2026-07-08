@@ -4,8 +4,8 @@ The cursor subsystem owns the console pointer overlay and converts browser point
 
 ## Files
 
-- `rocco-cursor-host.ts` - DOM cursor overlay, pointer event routing, design-space conversion, and image attachments.
-- `rocco-cursor-host.test.ts` - jsdom tests for cursor visibility, coordinates, events, and attachments.
+- `host.ts` - DOM cursor overlay, pointer event routing, design-space conversion, and image attachments.
+- `host.test.ts` - jsdom tests for cursor visibility, coordinates, events, and attachments.
 - `index.ts` - Barrel export.
 
 ## Behavior

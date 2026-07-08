@@ -6,5 +6,5 @@ export {
   ROCCO_DISPLAY_BRIGHTNESS_MIN,
   ROCCO_DISPLAY_CONTRAST_MAX,
   ROCCO_DISPLAY_CONTRAST_MIN,
-} from './rocco-display-profile';
-export type { RoccoDisplayProfile } from './rocco-display-profile';
+} from './profile';
+export type { RoccoDisplayProfile } from './profile';

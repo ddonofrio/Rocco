@@ -21,7 +21,7 @@ Use documentation in layers:
 3. `README-AGENT.md` gives architecture, engine SDK, and subsystem SDK concepts.
 4. `DEVELOPMENT.md` gives commands, validation, and Windows workflow notes.
 5. `src/engine/**/README.md` files explain engine systems.
-6. `src/cartridges/**/README.md` files explain cartridge content and game rules.
+6. `src/cartridges/**/README.md` files explain cartridge content and cartridge rules.
 
 Useful routes:
 
@@ -35,15 +35,15 @@ After reading, inspect the closest existing implementation and tests. Prefer `rg
 
 ## Project Overview
 
-ROCCO is a browser-based retro game console emulator built with TypeScript, PixiJS, and Vite. It runs cartridges: self-contained game modules that plug into a stable engine SDK surface and subsystem SDKs.
+ROCCO is a browser-based retro console runtime built with TypeScript, PixiJS, and Vite. It runs cartridges: self-contained cartridge modules that plug into a stable engine SDK surface and subsystem SDKs.
 
 The key metaphor is:
 
 - The engine is the console runtime.
-- Cartridges are games.
+- Cartridges are the software cartridges that plug into the runtime.
 - The `RoccoEngine` SDK surface and subsystem SDKs are the slot between them.
 
-The engine provides capabilities such as rendering, audio, input, effects, persistence, and lifecycle management. Cartridges provide content and game logic.
+The engine provides capabilities such as rendering, audio, input, effects, persistence, and lifecycle management. Cartridges provide content and cartridge logic.
 
 ## Directory Map
 
@@ -445,11 +445,11 @@ Only use the `RoccoEngine` interface and exposed subsystem SDKs inside cartridge
 Tests use Vitest. Run focused tests first, then typecheck.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','test','--','src/cartridges/rocco/rocco-default-cartridge.test.ts')"
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','test','--','tests/cartridges/rocco/rocco-default-cartridge.test.ts')"
 ```
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','typecheck')"
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','typecheck')"
 ```
 
 ## Code Conventions

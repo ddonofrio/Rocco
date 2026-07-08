@@ -27,10 +27,10 @@ Before touching code, read this minimum set:
 Use this command to list project-owned docs without dependency noise:
 
 ```powershell
-Get-ChildItem -Path . -Filter "README*.md" -Recurse | Where-Object { $_.FullName -notmatch 'node_modules|\.local|dist' } | Select-Object FullName
+Get-ChildItem -Path . -Filter "README*.md" -Recurse | Where-Object { $_.FullName -notmatch 'node_modules|dist|[\\/]\.[^\\/]+[\\/]' } | Select-Object FullName
 ```
 
-If the available context window is large, prefer reading all project-owned documentation before editing. The docs are intentionally layered: root docs give the map, engine docs give system concepts, cartridge docs give game rules, and leaf docs give implementation details.
+If the available context window is large, prefer reading all project-owned documentation before editing. The docs are intentionally layered: root docs give the map, engine docs give system concepts, cartridge docs give cartridge rules, and leaf docs give implementation details.
 
 ## Efficient Reading Routes
 
@@ -55,16 +55,16 @@ Keep repeated concepts at increasing depth. For example, the root README may say
 
 ## Command Usage on Windows
 
-Run npm scripts through the repository wrapper with a PowerShell array:
+Run npm scripts through the repository wrapper with a PowerShell array and a repo-root lookup:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','typecheck')"
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','typecheck')"
 ```
 
 Focused Rocco cartridge test:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','test','--','src/cartridges/rocco/rocco-default-cartridge.test.ts')"
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','test','--','tests/cartridges/rocco/rocco-default-cartridge.test.ts')"
 ```
 
 Avoid direct `.\scripts\run-npm.ps1` calls without `-ExecutionPolicy Bypass`, and avoid passing npm arguments after `-File` as plain positional arguments.

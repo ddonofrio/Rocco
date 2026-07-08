@@ -4,9 +4,9 @@ The post-processing module contains pixel-level helpers used by video renderers.
 
 ## Files
 
-- `rocco-color-key.ts` - Color parsing, color distance, matching, and pixel replacement helpers.
-- `rocco-water-color-effect.ts` - Water color effect configuration, defaults, parsing, clamping, and cloning.
-- `rocco-water-color-effect.test.ts` - Unit tests for water color parsing and option resolution.
+- `color-key.ts` - Color parsing, color distance, matching, and pixel replacement helpers.
+- `water-color-effect.ts` - Water color effect configuration, defaults, parsing, clamping, and cloning.
+- `water-color-effect.test.ts` - Unit tests for water color parsing and option resolution.
 - `index.ts` - Barrel export.
 
 ## Water Color Effect

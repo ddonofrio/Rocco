@@ -23,4 +23,4 @@ This directory contains the bait shop interior levels for the `rocco-default` ca
 - The magazine can also guide any craftable Coral Relic path that is already accessible inside the toilet room, including the final instruction to drop the relic on the floor, make a wish, and break it.
 - Developer mode can override toilet-room event flags through `Alter events -> Bait Shop -> Bathroom`, including a toggle that allows the toilet to be reused during the urgency state for manual testing.
 - The toilet-room portal is a scripted connector transition. The level keeps the portal pending until Rocco no longer overlaps the portal zone, then moves to the first Nether screen on contact.
-- All bait shop assets live under this cartridge directory. The runtime does not depend on `.local` content.
+- All bait shop assets live under this cartridge directory. The runtime does not depend on workspace-only generated content.

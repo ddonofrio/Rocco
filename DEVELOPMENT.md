@@ -28,34 +28,34 @@ The Vite development server serves the app on the default Vite port unless the p
 
 ## Npm Wrapper
 
-For agent work, prefer `scripts/run-npm.ps1` with a real PowerShell array. This avoids execution-policy and argument-parsing issues.
+For agent work, prefer `scripts/run-npm.ps1` with a real PowerShell array and a repo-root lookup. This avoids execution-policy and argument-parsing issues.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','typecheck')"
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','typecheck')"
 ```
 
 Focused test example:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','test','--','src/cartridges/rocco/rocco-default-cartridge.test.ts')"
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','test','--','tests/cartridges/rocco/rocco-default-cartridge.test.ts')"
 ```
 
 Build example:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','build')"
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','build')"
 ```
 
 Windows portable example:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','build:windows')"
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','build:windows')"
 ```
 
 macOS DMG example:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','build:mac')"
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','build:mac')"
 ```
 
 Avoid these command forms:
@@ -67,6 +67,7 @@ Avoid these command forms:
 ## Available Commands
 
 - `npm run dev` starts Vite.
+- `npm run check` runs tracked-content hygiene, ESLint, and TypeScript checking.
 - `npm run build` runs the default web build alias.
 - `npm run build:web` runs ESLint, TypeScript checking, and the browser Vite build.
 - `npm run build:mac` runs TypeScript checking, the desktop Vite build, and `electron-builder` for the unsigned macOS DMG.
@@ -105,10 +106,12 @@ Start with the narrowest useful validation:
 Before any `git push`, always run the full web pre-push gate through the wrapper:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath 'C:\Users\diego\Documents\New project\Rocco'; & .\scripts\run-npm.ps1 -NpmArgs @('run','build:web')"
+powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','build:web')"
 ```
 
 Treat `npm run build:web` as mandatory before a push even if focused tests and `npm run typecheck` already passed. It is the closest local match to the default CI gate because it runs ESLint, TypeScript checking, and the browser production build together.
+
+When you need the smallest repo-wide validation flow, run `npm run check` through the wrapper. It runs tracked-content hygiene, ESLint, and TypeScript checking together.
 
 Do not run `npm run format` for a narrow task unless the user asks for whole-repository formatting.
 
@@ -145,7 +148,7 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 - `scripts/` contains local development scripts.
 - `public/` contains static browser assets.
 - `dist/` contains generated production output.
-- `.local/` contains local generated tools and temporary files.
+- Workspace-only generated tools and temporary files stay untracked.
 
 ## Rocco Pier Notes
 
@@ -163,7 +166,7 @@ The Pier water effect selects water-colored pixels, animates those pixels with a
 
 Relevant files:
 
-- `src/engine/video/post-processing/rocco-water-color-effect.ts`
+- `src/engine/video/post-processing/water-color-effect.ts`
 - `src/engine/video/planes/pixi-renderer.ts`
 - `src/cartridges/rocco/levels/pier/pier-video-effects.ts`
 - `src/cartridges/rocco/rocco-default-constants.ts`

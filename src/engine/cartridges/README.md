@@ -1,6 +1,6 @@
 # Cartridge Infrastructure
 
-This directory contains the engine-side infrastructure for cartridges: shared types, loader logic, and cartridge providers.
+This directory contains the console-side infrastructure for cartridges: shared types, loader logic, and cartridge providers.
 
 Actual cartridge implementations live in `src/cartridges`.
 
@@ -14,7 +14,7 @@ Actual cartridge implementations live in `src/cartridges`.
 
 | Directory    | Contents                                   |
 | ------------ | ------------------------------------------ |
-| `providers/` | Built-in cartridge provider implementation |
+| `providers/` | Built-in console-side cartridge providers; see `providers/README.md` |
 
 ## Cartridge Lifecycle
 
@@ -127,3 +127,7 @@ When a localized cartridge is selected, `RoccoCartridgeMenu` returns `selectedLo
 6. Register the cartridge in `src/cartridges/index.ts`.
 
 Cartridge code should not import PixiJS or engine renderer internals.
+
+## Reading Next
+
+- `src/engine/cartridges/providers/README.md` for the console-side provider layer used by the default cartridge loader.

@@ -9,7 +9,7 @@ export default [
   },
   js.configs.recommended,
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'tests/**/*.ts'],
     ignores: ['dist/**'],
     languageOptions: {
       globals: globals.browser,

@@ -28,4 +28,4 @@ This directory contains the Nether level family for the `rocco-default` cartridg
 - The Reset Office pair is intentionally disconnected from the normal Nether graph and currently loads only through developer mode.
 - The Reset Office first screen uses a fixed developer entry at `371,138` facing down, while both office screens enter from each other at the bottom edge with mirrored horizontal placement.
 - The Reset Office second screen mounts a printer sprite prop at the left side of the room with `look`, `grab`, and `kick` actions.
-- All Nether assets live under this cartridge directory. The runtime does not depend on `.local` content.
+- All Nether assets live under this cartridge directory. The runtime does not depend on workspace-only generated content.

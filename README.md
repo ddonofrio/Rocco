@@ -1,6 +1,6 @@
 # ROCCO
 
-ROCCO is a browser-based retro game console emulator with built-in cartridges. The project is designed for cartridge development through code and AI-assisted editing rather than a visual level editor.
+ROCCO is a browser-based retro console runtime with built-in cartridges. The project is organized for cartridge development through code and AI-assisted editing rather than a visual level editor.
 
 The console is called ROCCO, the main demo cartridge is called ROCCO, and the player character is also Rocco.
 
@@ -15,7 +15,7 @@ Start with these files before editing:
 
 ## For Humans
 
-ROCCO is both a small game console runtime and a development platform. The engine provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the actual game content and interact with the engine through a stable TypeScript SDK surface plus subsystem SDKs.
+ROCCO is a cartridge-oriented console runtime. Its engine layer provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the cartridge content and interact with the runtime through a stable TypeScript SDK surface plus subsystem SDKs.
 
 ROCCO works well with AI-powered coding tools because the codebase is organized around documented concepts: engine systems, cartridge infrastructure, built-in cartridges, levels, sprites, effects, and localized text catalogs.
 
@@ -46,7 +46,7 @@ ROCCO works well with AI-powered coding tools because the codebase is organized 
 ```text
 src/
   main.ts                  Entry point
-  engine/                  Core console engine
+  engine/                  Core console runtime systems
     audio/                 Sound and jukebox systems
     cartridges/            Cartridge interfaces, loader, and providers
     cartridge-menu/        Boot-time cartridge selection UI
@@ -131,9 +131,9 @@ The GitHub Actions workflow publishes these downloadable artifacts:
 ROCCO uses a console/cartridge architecture:
 
 1. The engine is the console runtime.
-2. Cartridges are self-contained games.
+2. Cartridges are self-contained software cartridges.
 3. Cartridges mount through `RoccoCartridge` and receive a `RoccoEngine` context with subsystem SDKs such as `engine.video`, `engine.audio`, and `engine.persistence`.
 4. Cartridges can contribute boot-time setup and settings modules before a cartridge is mounted.
-5. The engine stays generic; cartridge logic stays inside cartridge folders.
+5. The console runtime stays generic; cartridge logic stays inside cartridge folders.
 
 For implementation details, read `README-AGENT.md`.

@@ -41,3 +41,7 @@ engine.effects.add({
 4. Export it from `effects/index.ts`.
 
 The `targetType` determines how the effect manager resolves the runtime target.
+
+## Reading Next
+
+- `src/engine/effects/runtimes/README.md` for the built-in runtime folder boundary and the shipped `auto-scroll` runtime.

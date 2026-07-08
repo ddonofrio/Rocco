@@ -1,14 +1,14 @@
 export {
   defaultDisplayProfile,
   RoccoDisplayProfileRenderer,
-} from '../display/rocco-display-profile';
-export { RoccoViewportHost } from './rocco-viewport-host';
+} from '../display/profile';
+export { RoccoViewportHost } from './host';
 export type {
   RoccoViewportHostOptions,
   RoccoViewportMetrics,
   RoccoViewportScaleMode,
-} from './rocco-viewport-host';
-export type { RoccoDisplayProfile } from '../display/rocco-display-profile';
+} from './host';
+export type { RoccoDisplayProfile } from '../display/profile';
 export type {
   RoccoCursorActionEvent,
   RoccoCursorAttachment,
@@ -18,4 +18,4 @@ export type {
   RoccoCursorMoveHandler,
   RoccoCursorPoint,
   RoccoCursorProfile,
-} from '../cursor/rocco-cursor-host';
+} from '../cursor/host';

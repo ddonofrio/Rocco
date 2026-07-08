@@ -1,7 +1,7 @@
 export {
   defaultRoccoCursorProfile,
   RoccoCursorHost,
-} from './rocco-cursor-host';
+} from './host';
 export type {
   RoccoCursorActionEvent,
   RoccoCursorAttachment,
@@ -11,4 +11,4 @@ export type {
   RoccoCursorMoveHandler,
   RoccoCursorPoint,
   RoccoCursorProfile,
-} from './rocco-cursor-host';
+} from './host';

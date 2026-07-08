@@ -7,7 +7,7 @@ export {
   type RoccoResolvedWaterColorEffect,
   type RoccoWaterColorEffect,
   type RoccoWaterColorRgb,
-} from './rocco-water-color-effect';
+} from './water-color-effect';
 export {
   loadRoccoImageElement,
   makeRoccoColorKeyReplacedImageUri,
@@ -15,4 +15,4 @@ export {
   parseRoccoColorKeyColors,
   type RoccoColorKeyReplaceImageOptions,
   type RoccoColorKeyReplacement,
-} from './rocco-color-key';
+} from './color-key';

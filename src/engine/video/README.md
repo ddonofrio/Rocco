@@ -4,7 +4,7 @@ The video SDK is the visual rendering layer of the ROCCO console. It keeps cartr
 
 ## Key Files
 
-- `video-system.ts` - `RoccoRuntimeVideoSystem`, the top-level visual facade.
+- `runtime-system.ts` - `RoccoRuntimeVideoSystem`, the top-level visual facade.
 - `types.ts` - Video SDK module and system interface types.
 - `render-layers.ts` - Render layer definitions and z-order.
 - `index.ts` - Barrel export.
@@ -62,3 +62,12 @@ display.profile      90
 - `engine.video.sprites`, `sceneTargets`, `actionMenus`, `gridMenus`, `messages`, `primitives`, `titles`, and `display` expose cartridge-facing visual capabilities.
 - The active player selected through `engine.setPlayerSprite(id | null)` is also used by player-aware plane depth modes.
 - `engine.video.render(0)` can be used to force an immediate visual sync after scripted changes.
+
+## Reading Next
+
+- `src/engine/video/action-menu/README.md` for radial target actions.
+- `src/engine/video/display/README.md` for display-profile state and CRT chrome.
+- `src/engine/video/messages/README.md` for sprite-anchored speech and thought bubbles.
+- `src/engine/video/primitives/README.md` for debug geometry overlays.
+- `src/engine/video/titles/README.md` for hover descriptions and other text overlays.
+- `src/engine/video/viewport/README.md` for browser-host scaling, cursor plumbing, and display integration.

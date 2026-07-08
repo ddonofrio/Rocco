@@ -6,7 +6,13 @@ The sprite system manages animated entities such as player characters, NPCs, and
 
 - `types.ts` - Sprite definitions, instances, frames, clips, action profiles, walk maps, motion, facing, depth, and system types.
 - `store.ts` - Definition validation and instance creation.
-- `system.ts` - Sprite state, movement, animation, walk maps, hit testing, and depth sorting.
+- `system.ts` - Sprite SDK facade for state, walk maps, hit testing, depth sorting, and public sprite commands.
+- `motion-animation-driver.ts` - Internal motion-command and animation-progression seam used by `system.ts`.
+- `go-to-completion-policy.ts` - Internal `goTo()` completion-facing helper for target-aware arrival policy used by `system.ts`.
+- `collision-helpers.ts` - Internal collision-shape resolution, world-shape conversion, and hit/intersection helpers used by the sprite SDK.
+- `visual-helpers.ts` - Internal alpha-mask loading, visible-bounds caching, and visible-pixel hit-testing helpers used by the sprite SDK.
+- `depth.ts` - Internal render-layer and depth-order helpers used by the sprite SDK.
+- `walk-map-navigation.ts` - Internal walk-map projection and route-building helpers used by the sprite SDK.
 - `walkmap.ts` - Walk-map creation from image data or URI.
 - `auto-crop.ts` - Automatic frame extraction from transparent sprite sheets.
 - `pixi-renderer.ts` - PixiJS sprite renderer.

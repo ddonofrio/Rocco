@@ -7,7 +7,7 @@ export {
   type RoccoRenderLayer,
   type RoccoRenderLayerKind,
 } from './render-layers';
-export { RoccoRuntimeVideoSystem, type RoccoRuntimeVideoSystemOptions } from './video-system';
+export { RoccoRuntimeVideoSystem, type RoccoRuntimeVideoSystemOptions } from './runtime-system';
 
 export * as planes from './planes';
 export * as sprites from './sprites';

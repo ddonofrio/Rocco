@@ -9,6 +9,13 @@ const repoRoot = path.resolve(path.dirname(scriptFilePath), '..');
 const localWorkspaceDir = '.local';
 const localWorkspaceGlob = localWorkspaceDir + '/**';
 const localPathPattern = /(^|[^A-Za-z0-9_-])(?:\.\/)?\.local[\\/]/;
+const mojibakeFragments = [
+  '\u00C3',
+  '\u00C2',
+  '\u00E2\u20AC',
+  '\u00E2\u201A\u00AC',
+  '\uFFFD',
+];
 
 const allowlist = [
   {
@@ -23,6 +30,11 @@ const allowlist = [
     filePath: 'eslint.config.js',
     ruleId: 'local-only-path',
     matches: (line) => line.includes(localWorkspaceGlob),
+  },
+  {
+    filePath: 'DEVELOPMENT.md',
+    ruleId: 'mojibake-fragment',
+    matches: (line) => line.includes('mojibake fragments such as'),
   },
 ];
 
@@ -76,6 +88,10 @@ function createFailure(filePath, lineNumber, ruleId, message) {
   return { filePath, lineNumber, ruleId, message };
 }
 
+function findMojibakeFragment(line) {
+  return mojibakeFragments.find((fragment) => line.includes(fragment));
+}
+
 function scanFile(filePath) {
   const absolutePath = path.join(repoRoot, filePath);
   const fileContent = readFileSync(absolutePath, 'utf8');
@@ -102,6 +118,18 @@ function scanFile(filePath) {
           lineIndex + 1,
           'local-only-path',
           'contains a local-only `.local` path reference',
+        ),
+      );
+    }
+
+    const mojibakeFragment = findMojibakeFragment(line);
+    if (mojibakeFragment && !isAllowlisted(filePath, 'mojibake-fragment', line)) {
+      failures.push(
+        createFailure(
+          filePath,
+          lineIndex + 1,
+          'mojibake-fragment',
+          `contains suspicious mojibake fragment \`${mojibakeFragment}\``,
         ),
       );
     }

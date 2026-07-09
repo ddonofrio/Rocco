@@ -124,6 +124,7 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 ## Text Encoding
 
 - Keep source files and localization catalogs in UTF-8.
+- `npm run check:tracked-content` also rejects tracked text files that still contain suspicious mojibake fragments.
 - If a terminal, patch path, or editor risks mangling non-ASCII text, prefer ASCII-only text or TypeScript Unicode escapes such as `\u00f1` instead of pasting raw accented characters.
 - Before handing off localization edits, search the touched files for mojibake fragments such as `Ã`, `â‚¬`, or replacement glyphs and fix them immediately.
 

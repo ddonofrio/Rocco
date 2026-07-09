@@ -47,4 +47,32 @@ export const spanishNetherText: RoccoTextCatalog['nether'] = {
     finalChoice: '\u00bfHola?',
     securityAlertLine: '\u00a1Seguridad!',
   },
+  timbre: {
+    lookLines: [
+      'Es un timbre dorado.',
+    ],
+  },
+  doorHandle: {
+    lookLines: [
+      'Parece un mecanismo para abrir la puerta desde fuera.',
+    ],
+  },
+  ascendingPipes: {
+    lookLines: [
+      'Son tuber\u00edas que van del suelo al techo.',
+      'Este lugar est\u00e1 lleno de estas.',
+      'Son de metal gris y parecen robustas.',
+      'Esta tiene una v\u00e1lvula de volante en medio.',
+    ],
+  },
+  wheelValve: {
+    lookLines: [
+      'Es la t\u00edpica rueda con cinco radios de metal.',
+      'Un volante de v\u00e1lvula, grande y pesado.',
+      'Los radios est\u00e1n algo oxidados pero firmes.',
+    ],
+    grabLines: [
+      'Ni loco toco nada de aqu\u00ed, esto est\u00e1 por explotar.',
+    ],
+  },
 };

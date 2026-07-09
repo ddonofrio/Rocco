@@ -23,6 +23,8 @@ export interface RoccoTextCatalog {
     kick: string;
     talk: string;
     inventory: string;
+    see: string;
+    press: string;
   };
   descriptions: {
     rocco: string;
@@ -46,9 +48,13 @@ export interface RoccoTextCatalog {
     pelikan: string;
     oldMan: string;
     stan: string;
-    intercomunicador: string;
-    noisyMachine: string;
-    shelf: string;
+  intercomunicador: string;
+  noisyMachine: string;
+  shelf: string;
+    timbre: string;
+    doorHandle: string;
+    ascendingPipes: string;
+    wheelValve: string;
   };
   levels: {
     beginning: string;
@@ -254,7 +260,20 @@ export interface RoccoTextCatalog {
       finalChoice: string;
       securityAlertLine: string;
     };
-  };
+      timbre: {
+        lookLines: string[];
+      };
+      doorHandle: {
+        lookLines: string[];
+      };
+      ascendingPipes: {
+        lookLines: string[];
+      };
+      wheelValve: {
+        lookLines: string[];
+        grabLines: string[];
+      };
+    };
 }
 
 export interface RoccoLocalization {

@@ -1,10 +1,21 @@
-import type { RoccoCartridgeActionResult } from '../../../../engine/cartridges';
+import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../engine/cartridges';
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
+import type {
+  RoccoActionMenuActivation,
+  RoccoActionMenuDefinition,
+} from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
 import type { RoccoLocalization } from '../../localization';
 import {
+  roccoCartridgeMessageRuntime,
+} from '../../dialogue';
+import {
+  roccoDefaultActionMenuAssetUrls,
+} from '../../rocco-default-assets';
+import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
+  DEFAULT_SPRITE_INSTANCE_ID,
   DEFAULT_SPRITE_SCALE,
   DEFAULT_WALK_MAP_ID,
 } from '../../rocco-default-constants';
@@ -46,6 +57,74 @@ const NETHER_LIGHTS_NOISE_STEP_MIN_MS = 70;
 const NETHER_LIGHTS_NOISE_STEP_MAX_MS = 220;
 const NETHER_LIGHTS_NOISE_SMOOTHING_MS = 120;
 const NETHER_LIGHTS_PULSE_UPDATE_EPSILON = 0.001;
+const NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID =
+  'rocco-nether-end-of-hallway-door-timbre-target';
+const NETHER_END_OF_HALLWAY_TIMBRE_DEFINITION_ID =
+  'rocco-nether-end-of-hallway-door-timbre';
+const NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ID =
+  'rocco-nether-end-of-hallway-door-timbre-action-menu';
+const NETHER_END_OF_HALLWAY_TIMBRE_SHAPE = {
+  kind: 'rect' as const,
+  x: 624,
+  y: 228,
+  width: 38,
+  height: 35,
+};
+const NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ITEM_SIZE = 92;
+const NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ORBIT_RADIUS = 88;
+const NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ORBIT_SPEED = 0.08;
+const NETHER_END_OF_HALLWAY_TIMBRE_MESSAGE_TTL_MS = 5200;
+const NETHER_END_OF_HALLWAY_TIMBRE_LOOK_HISTORY_KEY = 'nether-end-of-hallway-door-timbre-look';
+const NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID =
+  'rocco-nether-end-of-hallway-door-door-handle-target';
+const NETHER_END_OF_HALLWAY_DOOR_HANDLE_DEFINITION_ID =
+  'rocco-nether-end-of-hallway-door-door-handle';
+const NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ID =
+  'rocco-nether-end-of-hallway-door-door-handle-action-menu';
+const NETHER_END_OF_HALLWAY_DOOR_HANDLE_SHAPE = {
+  kind: 'rect' as const,
+  x: 516,
+  y: 254,
+  width: 53,
+  height: 46,
+};
+const NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ITEM_SIZE = 92;
+const NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ORBIT_RADIUS = 88;
+const NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ORBIT_SPEED = 0.08;
+const NETHER_END_OF_HALLWAY_DOOR_HANDLE_MESSAGE_TTL_MS = 5200;
+const NETHER_END_OF_HALLWAY_DOOR_HANDLE_LOOK_HISTORY_KEY = 'nether-end-of-hallway-door-door-handle-look';
+const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID =
+  'rocco-nether-end-of-hallway-door-ascending-pipes-target';
+const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_DEFINITION_ID =
+  'rocco-nether-end-of-hallway-door-ascending-pipes';
+const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_SHAPE = {
+  kind: 'rect' as const,
+  x: 48,
+  y: 0,
+  width: 135,
+  height: 540,
+};
+const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_MESSAGE_TTL_MS = 5200;
+const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_HISTORY_KEY = 'nether-end-of-hallway-door-ascending-pipes';
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID =
+  'rocco-nether-end-of-hallway-door-wheel-valve-target';
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_DEFINITION_ID =
+  'rocco-nether-end-of-hallway-door-wheel-valve';
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ID =
+  'rocco-nether-end-of-hallway-door-wheel-valve-action-menu';
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_SHAPE = {
+  kind: 'rect' as const,
+  x: 113,
+  y: 264,
+  width: 88,
+  height: 92,
+};
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ITEM_SIZE = 92;
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ORBIT_RADIUS = 88;
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ORBIT_SPEED = 0.08;
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_MESSAGE_TTL_MS = 5200;
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_LOOK_HISTORY_KEY = 'nether-end-of-hallway-door-wheel-valve-look';
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_GRAB_HISTORY_KEY = 'nether-end-of-hallway-door-wheel-valve-grab';
 const NETHER_END_OF_HALLWAY_ENTRY_GROUND_POINT = {
   x: Math.round(DEFAULT_DESIGN_WIDTH * 0.5),
   y: DEFAULT_DESIGN_HEIGHT - 22,
@@ -213,12 +292,24 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     engine.video.render(0);
     this.sceneReady = true;
 
+    this.installTimbre(engine);
+    this.installDoorHandle(engine);
+    this.installAscendingPipes(engine);
+    this.installWheelValve(engine);
+
     return scene;
   }
 
   unmount(engine: RoccoEngine): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
+    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID);
+    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID);
+    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID);
     engine.audio.stopSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
     engine.audio.unregisterSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
     uninstallDefaultSprite(engine);
@@ -238,9 +329,253 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     this.spriteController?.update(deltaMs);
   }
 
-  handleAction(): void {}
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (
+      this.engine &&
+      activation.targetInstanceId === NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID
+    ) {
+      this.handleTimbreAction(activation);
+      return;
+    }
 
-  handleSceneClick(): RoccoCartridgeActionResult | void {}
+    if (
+      this.engine &&
+      activation.targetInstanceId === NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID
+    ) {
+      this.handleDoorHandleAction(activation);
+    }
+
+    if (
+      this.engine &&
+      activation.targetInstanceId === NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID
+    ) {
+      this.handleWheelValveAction(activation);
+    }
+  }
+
+  handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
+    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID) {
+      this.showAscendingPipesThought();
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID) {
+      return { suppressDefaultPlayerMove: true };
+    }
+  }
+
+  private installTimbre(engine: RoccoEngine): void {
+    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID);
+    engine.video.sceneTargets?.registerTarget({
+      instanceId: NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID,
+      definitionId: NETHER_END_OF_HALLWAY_TIMBRE_DEFINITION_ID,
+      shape: NETHER_END_OF_HALLWAY_TIMBRE_SHAPE,
+      priority: 22,
+      suppressDefaultPlayerMove: true,
+      visibleDescription: {
+        enabled: true,
+        text: this.localization.text.descriptions.timbre,
+      },
+    });
+    engine.video.actionMenus.registerMenu(
+      createNetherEndOfHallwayTimbreActionMenuDefinition(this.localization),
+    );
+  }
+
+  private handleTimbreAction(activation: RoccoActionMenuActivation): void {
+    if (activation.actionId !== 'look') {
+      return;
+    }
+
+    this.showTimbreThought(
+      this.localization.text.nether.timbre.lookLines,
+      NETHER_END_OF_HALLWAY_TIMBRE_LOOK_HISTORY_KEY,
+    );
+  }
+
+  private showTimbreThought(lines: readonly string[], historyKey: string): void {
+    if (!this.engine) {
+      return;
+    }
+
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: NETHER_END_OF_HALLWAY_TIMBRE_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
+  }
+
+  private installDoorHandle(engine: RoccoEngine): void {
+    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ID);
+    engine.video.sceneTargets?.unregisterTarget(
+      NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID,
+    );
+    engine.video.sceneTargets?.registerTarget({
+      instanceId: NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID,
+      definitionId: NETHER_END_OF_HALLWAY_DOOR_HANDLE_DEFINITION_ID,
+      shape: NETHER_END_OF_HALLWAY_DOOR_HANDLE_SHAPE,
+      priority: 22,
+      suppressDefaultPlayerMove: true,
+      visibleDescription: {
+        enabled: true,
+        text: this.localization.text.descriptions.doorHandle,
+      },
+    });
+    engine.video.actionMenus.registerMenu(
+      createNetherEndOfHallwayDoorHandleActionMenuDefinition(this.localization),
+    );
+  }
+
+  private handleDoorHandleAction(activation: RoccoActionMenuActivation): void {
+    if (activation.actionId === 'grab') {
+      return;
+    }
+
+    if (activation.actionId !== 'look') {
+      return;
+    }
+
+    this.showDoorHandleThought(
+      this.localization.text.nether.doorHandle.lookLines,
+      NETHER_END_OF_HALLWAY_DOOR_HANDLE_LOOK_HISTORY_KEY,
+    );
+  }
+
+  private showDoorHandleThought(lines: readonly string[], historyKey: string): void {
+    if (!this.engine) {
+      return;
+    }
+
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: NETHER_END_OF_HALLWAY_DOOR_HANDLE_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
+  }
+
+  private installAscendingPipes(engine: RoccoEngine): void {
+    engine.video.sceneTargets?.unregisterTarget(
+      NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID,
+    );
+    engine.video.sceneTargets?.registerTarget({
+      instanceId: NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID,
+      definitionId: NETHER_END_OF_HALLWAY_ASCENDING_PIPES_DEFINITION_ID,
+      shape: NETHER_END_OF_HALLWAY_ASCENDING_PIPES_SHAPE,
+      priority: 22,
+      suppressDefaultPlayerMove: true,
+      visibleDescription: {
+        enabled: true,
+        text: this.localization.text.descriptions.ascendingPipes,
+      },
+    });
+  }
+
+  private showAscendingPipesThought(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...this.localization.text.nether.ascendingPipes.lookLines],
+      {
+        ttlMs: NETHER_END_OF_HALLWAY_ASCENDING_PIPES_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey: NETHER_END_OF_HALLWAY_ASCENDING_PIPES_HISTORY_KEY,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
+  }
+
+  private installWheelValve(engine: RoccoEngine): void {
+    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID);
+    engine.video.sceneTargets?.registerTarget({
+      instanceId: NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID,
+      definitionId: NETHER_END_OF_HALLWAY_WHEEL_VALVE_DEFINITION_ID,
+      shape: NETHER_END_OF_HALLWAY_WHEEL_VALVE_SHAPE,
+      priority: 23,
+      suppressDefaultPlayerMove: true,
+      visibleDescription: {
+        enabled: true,
+        text: this.localization.text.descriptions.wheelValve,
+      },
+    });
+    engine.video.actionMenus.registerMenu(
+      createNetherEndOfHallwayWheelValveActionMenuDefinition(this.localization),
+    );
+  }
+
+  private handleWheelValveAction(activation: RoccoActionMenuActivation): void {
+    if (activation.actionId === 'grab') {
+      this.showWheelValveThought(
+        this.localization.text.nether.wheelValve.grabLines,
+        NETHER_END_OF_HALLWAY_WHEEL_VALVE_GRAB_HISTORY_KEY,
+      );
+      return;
+    }
+
+    if (activation.actionId !== 'look') {
+      return;
+    }
+
+    this.showWheelValveThought(
+      this.localization.text.nether.wheelValve.lookLines,
+      NETHER_END_OF_HALLWAY_WHEEL_VALVE_LOOK_HISTORY_KEY,
+    );
+  }
+
+  private showWheelValveThought(lines: readonly string[], historyKey: string): void {
+    if (!this.engine) {
+      return;
+    }
+
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: NETHER_END_OF_HALLWAY_WHEEL_VALVE_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
+  }
 
   private updateLightsOverlay(deltaMs: number): void {
     if (!this.engine || !this.sceneReady || !Number.isFinite(deltaMs) || deltaMs <= 0) {
@@ -286,4 +621,97 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       },
     );
   }
+}
+
+function createNetherEndOfHallwayTimbreActionMenuDefinition(
+  localization: RoccoLocalization,
+): RoccoActionMenuDefinition {
+  return {
+    id: NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ID,
+    targetInstanceIds: [NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID],
+    renderLayer: 'ui.action-menu',
+    itemSize: NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ITEM_SIZE,
+    orbitRadius: NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ORBIT_RADIUS,
+    orbitSpeedRadiansPerSecond: NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ORBIT_SPEED,
+    hoverScale: 1.16,
+    circleFill: '#0f1610',
+    circleStroke: '#d7e6c5',
+    circleStrokeWidth: 2,
+    items: [
+      {
+        id: 'see',
+        actionId: 'look',
+        label: localization.text.actions.see,
+        imageUri: roccoDefaultActionMenuAssetUrls.look,
+      },
+      {
+        id: 'press',
+        actionId: 'press',
+        label: localization.text.actions.press,
+        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+      },
+    ],
+  };
+}
+
+function createNetherEndOfHallwayDoorHandleActionMenuDefinition(
+  localization: RoccoLocalization,
+): RoccoActionMenuDefinition {
+  return {
+    id: NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ID,
+    targetInstanceIds: [NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID],
+    renderLayer: 'ui.action-menu',
+    itemSize: NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ITEM_SIZE,
+    orbitRadius: NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ORBIT_RADIUS,
+    orbitSpeedRadiansPerSecond: NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ORBIT_SPEED,
+    hoverScale: 1.16,
+    circleFill: '#0f1610',
+    circleStroke: '#d7e6c5',
+    circleStrokeWidth: 2,
+    items: [
+      {
+        id: 'see',
+        actionId: 'look',
+        label: localization.text.actions.see,
+        imageUri: roccoDefaultActionMenuAssetUrls.look,
+      },
+      {
+        id: 'grab',
+        actionId: 'grab',
+        label: localization.text.actions.grab,
+        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+      },
+    ],
+  };
+}
+
+function createNetherEndOfHallwayWheelValveActionMenuDefinition(
+  localization: RoccoLocalization,
+): RoccoActionMenuDefinition {
+  return {
+    id: NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ID,
+    targetInstanceIds: [NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID],
+    renderLayer: 'ui.action-menu',
+    itemSize: NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ITEM_SIZE,
+    orbitRadius: NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ORBIT_RADIUS,
+    orbitSpeedRadiansPerSecond: NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ORBIT_SPEED,
+    hoverScale: 1.16,
+    circleFill: '#0f1610',
+    circleStroke: '#d7e6c5',
+    circleStrokeWidth: 2,
+    items: [
+      {
+        id: 'look',
+        actionId: 'look',
+        label: localization.text.actions.look,
+        imageUri: roccoDefaultActionMenuAssetUrls.look,
+      },
+      {
+        id: 'grab',
+        actionId: 'grab',
+        label: localization.text.actions.grab,
+        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+      },
+    ],
+  };
 }

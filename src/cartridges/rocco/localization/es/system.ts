@@ -16,6 +16,8 @@ export const spanishActionsText: RoccoTextCatalog['actions'] = {
   kick: 'Patear',
   talk: 'Hablar',
   inventory: 'Inventario',
+  see: 'Ver',
+  press: 'Presionar',
 };
 
 export const spanishDescriptionsText: RoccoTextCatalog['descriptions'] = {
@@ -43,6 +45,10 @@ export const spanishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   intercomunicador: 'Intercomunicador',
   noisyMachine: 'M\u00e1quina tremendamente ruidosa',
   shelf: 'Estanter\u00eda vac\u00eda',
+  timbre: 'Timbre',
+  doorHandle: 'Manija de la puerta',
+  ascendingPipes: 'Tuber\u00edas ascendentes',
+  wheelValve: 'V\u00e1lvula de volante',
 };
 
 export const spanishLevelsText: RoccoTextCatalog['levels'] = {

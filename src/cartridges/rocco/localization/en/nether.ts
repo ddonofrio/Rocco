@@ -47,4 +47,32 @@ export const englishNetherText: RoccoTextCatalog['nether'] = {
     finalChoice: 'Hello?',
     securityAlertLine: 'Security!',
   },
+  timbre: {
+    lookLines: [
+      'It is a golden doorbell.',
+    ],
+  },
+  doorHandle: {
+    lookLines: [
+      'It looks like a mechanism to open the door from the outside.',
+    ],
+  },
+  ascendingPipes: {
+    lookLines: [
+      'These pipes run from the floor to the ceiling.',
+      'This place is packed with them.',
+      'They are gray metal and look sturdy.',
+      'This one has a wheel valve in the middle.',
+    ],
+  },
+  wheelValve: {
+    lookLines: [
+      'It is the usual wheel with five metal spokes.',
+      'A big, heavy valve wheel.',
+      'The spokes are a bit rusty but still firm.',
+    ],
+    grabLines: [
+      "No way I'm touching anything here, this is about to blow.",
+    ],
+  },
 };

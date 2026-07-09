@@ -15,6 +15,7 @@ const suspiciousMojibakeLeadPattern = /[\u00C2\u00C3\u00E2\u0080-\u009F\uFFFD]/u
 const replacementCharacter = '\uFFFD';
 const maxReportedMojibakeLines = 5;
 
+// Keep allowlist entries narrow and line-specific so the check stays meaningful.
 const allowlist = [
   {
     filePath: '.gitignore',
@@ -81,7 +82,7 @@ function writeStderr(message) {
   process.stderr.write(`${message}\n`);
 }
 
-function isTrackedTextFile(filePath) {
+function trackedFileExistsInWorktree(filePath) {
   const absolutePath = path.join(repoRoot, filePath);
   if (!existsSync(absolutePath)) {
     return false;
@@ -96,7 +97,7 @@ function readTrackedTextFiles() {
     .toString('utf8')
     .split('\0')
     .filter(Boolean)
-    .filter((filePath) => isTrackedTextFile(filePath));
+    .filter((filePath) => trackedFileExistsInWorktree(filePath));
 
   if (trackedFiles.length === 0) {
     return [];
@@ -136,6 +137,32 @@ function findWorkspacePathMatch(line) {
 
 function createFailure(filePath, lineNumber, ruleId, message) {
   return { filePath, lineNumber, ruleId, message };
+}
+
+function isFailure(value) {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    typeof value.filePath === 'string' &&
+    typeof value.lineNumber === 'number' &&
+    typeof value.ruleId === 'string' &&
+    typeof value.message === 'string'
+  );
+}
+
+function normalizeFailure(
+  filePath,
+  error,
+  fallbackRuleId = 'tracked-content-error',
+  fallbackMessage = 'unexpected hygiene-check error',
+) {
+  if (isFailure(error)) {
+    return error;
+  }
+
+  const detail =
+    error instanceof Error && error.message ? error.message : 'unknown failure while scanning tracked content';
+  return createFailure(filePath, 1, fallbackRuleId, `${fallbackMessage} (${detail})`);
 }
 
 function decodeUtf8Text(filePath, fileContent) {
@@ -248,7 +275,7 @@ function truncateForMessage(text, maxLength = 96) {
   if (normalized.length <= maxLength) {
     return normalized;
   }
-  return `${normalized.slice(0, maxLength - 1)}…`;
+  return `${normalized.slice(0, maxLength - 3)}...`;
 }
 
 function collectReplacementCharacterFailures(filePath, fileContent) {
@@ -348,12 +375,28 @@ function scanFile(filePath) {
 }
 
 function main() {
+  let trackedFiles;
+  try {
+    trackedFiles = readTrackedTextFiles();
+  } catch (error) {
+    const failure = normalizeFailure(
+      '.',
+      error,
+      'tracked-content-bootstrap',
+      'failed to enumerate tracked text files',
+    );
+    writeStderr('Tracked-content hygiene check failed:');
+    writeStderr(`- [${failure.ruleId}] ${failure.filePath}:${failure.lineNumber} ${failure.message}`);
+    process.exitCode = 1;
+    return;
+  }
+
   const failures = [];
-  for (const filePath of readTrackedTextFiles()) {
+  for (const filePath of trackedFiles) {
     try {
       failures.push(...scanFile(filePath));
-    } catch (failure) {
-      failures.push(failure);
+    } catch (error) {
+      failures.push(normalizeFailure(filePath, error));
     }
   }
 

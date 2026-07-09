@@ -124,9 +124,14 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 ## Text Encoding
 
 - Keep source files and localization catalogs in UTF-8.
-- `npm run check:tracked-content` rejects tracked text files that are not valid UTF-8 and flags text that reparses cleanly as likely mojibake.
+- `npm run check:tracked-content` scans tracked files that Git classifies as text, not every path in the worktree.
+- The check rejects byte streams that are not valid UTF-8 before it runs any content heuristics.
+- After UTF-8 validation, the check tries a narrow mojibake repair pass for common Latin-1 and Windows-1252 misdecodes and reports lines whose repaired text scores as clearly less suspicious than the original.
+- The check also rejects literal Unicode replacement characters (`U+FFFD`) because they mean the text is already lossy.
+- Mojibake detection is heuristic by design. Treat reports as "this line deserves inspection", not as proof that every non-ASCII character is wrong.
+- When a legitimate line needs an exception, add the narrowest possible entry to the allowlist in `scripts/check-tracked-content.mjs` and scope it to one file, one rule, and one stable line pattern.
 - If a terminal, patch path, or editor risks mangling non-ASCII text, prefer ASCII-only text or TypeScript Unicode escapes such as `\u00f1` instead of pasting raw accented characters.
-- Before handing off localization edits, scan the touched files for likely mojibake, such as stray `U+00C3`/`U+00C2` lead characters or literal replacement glyphs, and fix them immediately.
+- Before handing off localization edits, scan the touched files for likely mojibake, such as stray `U+00C3`/`U+00C2` lead characters, Windows-1252 punctuation fragments, or literal replacement glyphs, and fix them immediately.
 
 ## Test Environment Notes
 

@@ -76,6 +76,16 @@ interface RoccoCartridgeBootSetting {
 
 `RoccoCartridgeAction` is the union of engine-routed UI activations that cartridges can handle. It includes radial action menu activations, generic grid menu activations, and generic grid item use activations against sprite targets.
 
+`handleAction()` can also synchronously return:
+
+```typescript
+interface RoccoCartridgeActionResult {
+  suppressDefaultPlayerMove?: boolean;
+}
+```
+
+When `suppressDefaultPlayerMove` is `true`, the runtime skips the default player `goTo()` that normally follows a `scene-click`. Promise-returning handlers do not participate in this suppression check, so use a direct return value or scene-target metadata when the decision must happen before movement.
+
 ## Manifest
 
 ```typescript

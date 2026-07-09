@@ -32,6 +32,7 @@ The boot menu includes a `System Settings` page.
 
 - The engine contributes built-in console modules such as video and sound.
 - Cartridge setup hooks can contribute additional generic boot settings through `RoccoCartridgeBootSetting`.
+- The runtime seeds the menu with the current display profile, sound profile, and merged boot settings so the settings pages reflect live console state.
 - A settings row can expose a live value label and an activation callback.
 - Keyboard activation uses Enter or Space on the selected row.
 - Pointer activation is two-step: the first click selects a row, and a second click activates it.
@@ -120,6 +121,8 @@ Cartridges without `localizations` do not show language controls.
 
 ## Usage
 
+Minimal engine-side usage:
+
 ```typescript
 const menu = new RoccoCartridgeMenu(app);
 const result = await menu.show(manifests, {
@@ -130,5 +133,24 @@ const result = await menu.show(manifests, {
 
 menu.dispose();
 ```
+
+The runtime-owned cartridge manager uses the fuller integration shape:
+
+```typescript
+const result = await menu.show(manifests, {
+  initialLocales,
+  initialDisplayProfile: runtimeEngine.video.display.getProfile(),
+  initialSoundProfile: runtimeEngine.getSoundProfile(),
+  bootSettings,
+  onDisplayProfileChange: (profile) => {
+    runtimeEngine.video.display.setProfile(profile);
+  },
+  onSoundProfileChange: (profile) => {
+    runtimeEngine.setSoundProfile(profile);
+  },
+});
+```
+
+`getSoundProfile()` and `setSoundProfile()` are runtime-owned boot-menu hooks used by `RoccoCartridgeManager`. They are not part of the cartridge-facing `RoccoEngine` interface.
 
 The menu owns its Pixi containers while displayed and removes them on disposal.

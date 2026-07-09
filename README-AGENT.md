@@ -106,7 +106,7 @@ export interface RoccoCartridge {
   mount(context: RoccoCartridgeContext): Promise<void> | void;
   start?(): Promise<void> | void;
   update?(deltaMs: number): void;
-  handleAction?(activation: RoccoCartridgeAction): Promise<void> | void;
+  handleAction?(activation: RoccoCartridgeAction): Promise<void> | RoccoCartridgeActionResult | void;
   stop?(): Promise<void> | void;
   dispose?(): Promise<void> | void;
 }
@@ -169,6 +169,16 @@ export interface RoccoCartridgeSetupResult {
 }
 ```
 
+`handleAction()` can synchronously return:
+
+```typescript
+export interface RoccoCartridgeActionResult {
+  suppressDefaultPlayerMove?: boolean;
+}
+```
+
+When `suppressDefaultPlayerMove` is `true`, the runtime skips the default click-to-walk that would otherwise follow a `scene-click`. This check is synchronous: the runtime only inspects the direct return value, not a later async resolution. Scene targets can request the same behavior through `RoccoSceneTargetDefinition.suppressDefaultPlayerMove`.
+
 ## RoccoEngine SDK Surface
 
 The full interface lives in `src/engine/engine-sdk.ts`.
@@ -225,13 +235,19 @@ Always re-enable input after a sequence completes or fails.
 Cartridges reach these capabilities through subsystem handles on `engine`.
 
 - `engine.audio.registerSound(definition)` registers a sound asset.
+- `engine.audio.unregisterSound(id)` removes a sound definition and stops its active instances.
 - `engine.audio.preloadSound(id)` loads a sound buffer.
 - `engine.audio.playSound(id, options?)` plays a sound.
+- `engine.audio.setSoundVolume(id, volume)` updates the gain of currently playing instances.
 - `engine.audio.stopSound(id)` stops active instances of a sound.
+- `engine.audio.stopAllSounds()` stops every active one-shot sound.
 - `engine.jukebox.registerPlaylist(playlist)` registers background music.
+- `engine.jukebox.unregisterPlaylist(id)` removes a playlist definition.
 - `engine.jukebox.playPlaylist(id)` starts a playlist.
 - `engine.jukebox.stopPlaylist()` stops the active playlist.
+- `engine.jukebox.isPlaying()` reports whether a playlist is currently active.
 - `engine.jukebox.setVolume(volume)` sets the master jukebox volume multiplier.
+- `engine.jukebox.getCurrentTrack()` returns the active track id when one is playing.
 - `engine.effects.add(effect)` registers and starts a per-tick effect.
 - `engine.effects.remove(effectId)` removes an effect.
 - `engine.effects.update(effectId, patch)` edits an active effect.
@@ -292,6 +308,7 @@ The cartridge-facing video SDK lives under `engine.video`. `RoccoRuntimeVideoSys
 
 ### Display and Immediate Sync
 
+- `engine.video.display.getProfile()` returns the current display-profile state.
 - `engine.video.display.setProfile(profile)` applies the display profile such as CRT overlay settings.
 - `engine.video.render(0)` forces an immediate sync after scripted UI or choreography changes.
 
@@ -384,6 +401,8 @@ The menu:
 Boot-time settings modules are generic menu entries contributed through `RoccoCartridgeBootSetting`. They appear inside `System Settings`, can expose a current value label, and can perform synchronous or asynchronous actions when activated.
 
 `RoccoCartridgeManager` stores the selected locale for `rocco-default` in `localStorage` and passes it to `cartridge.mount({ engine, locale })`.
+
+`RoccoCartridgeManager` also seeds `RoccoCartridgeMenu.show()` with the current locale selections, display profile, sound profile, and merged boot settings. Display and sound changes made inside the boot menu are wired back into runtime-owned setters while the menu is open. Those sound-profile hooks are part of the runtime/menu integration and are not cartridge-facing `RoccoEngine` methods.
 
 `rocco-default` supports English and Spanish. Text catalogs live in `src/cartridges/rocco/localization`.
 

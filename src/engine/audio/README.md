@@ -16,6 +16,8 @@ await engine.audio.preloadSound('footstep');
 engine.audio.playSound('footstep');
 engine.audio.setSoundVolume('footstep', 0.5);
 engine.audio.stopSound('footstep');
+engine.audio.stopAllSounds();
+engine.audio.unregisterSound('footstep');
 ```
 
 ## Notes
@@ -26,3 +28,5 @@ engine.audio.stopSound('footstep');
 - Multiple simultaneous instances of the same sound are supported.
 - `restart: true` stops active instances before starting the next one.
 - `engine.audio.setSoundVolume()` updates the gain of currently playing instances, which is useful for ambience that reacts to scene state without restarting the loop.
+- `engine.audio.unregisterSound()` removes a definition and stops any active instances for that sound.
+- `engine.audio.stopAllSounds()` is the broad cleanup helper for scene teardown or cartridge shutdown.

@@ -41,7 +41,7 @@ display.profile      90
 | `titles/`          | Temporary text overlays and hover descriptions            |
 | `display/`         | CRT-style display profile                                 |
 | `cursor/`          | Custom cursor, image attachments, and pointer coordinates |
-| `viewport/`        | Fullscreen contain-scaling host                           |
+| `viewport/`        | Runtime-owned fullscreen contain-scaling host             |
 | `post-processing/` | Pixel-level helpers and water effects                     |
 
 ## Architecture Notes
@@ -60,6 +60,8 @@ display.profile      90
 - Use `engine.loadPlaneScene(scene)` through the engine SDK surface when replacing the active scene so runtime bookkeeping stays in sync.
 - `engine.video.planes` handles plane-level inspection and mutation after a scene is active, including planes that resolve their render layer dynamically at render time.
 - `engine.video.sprites`, `sceneTargets`, `actionMenus`, `gridMenus`, `messages`, `primitives`, `titles`, and `display` expose cartridge-facing visual capabilities.
+- The default runtime always wires `sceneTargets`, but the top-level `RoccoVideoSystem` interface keeps it optional so alternative implementations can omit it.
+- `engine.video.viewport` exists for runtime coordination with the browser host. Cartridges should treat viewport lifecycle and DOM ownership as runtime-internal.
 - The active player selected through `engine.setPlayerSprite(id | null)` is also used by player-aware plane depth modes.
 - `engine.video.render(0)` can be used to force an immediate visual sync after scripted changes.
 

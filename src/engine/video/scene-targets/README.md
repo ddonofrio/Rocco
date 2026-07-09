@@ -51,5 +51,6 @@ engine.video.sceneTargets?.unregisterTarget('bait-shop-shell-city-sign-target');
 - `hitTest()` returns interactive targets only, ordered by descending `priority`.
 - `hitTestVisible()` returns enabled targets with visible descriptions, also ordered by descending `priority`.
 - A target can be look-only by setting `interactive: false` while keeping `visibleDescription.enabled`.
+- `suppressDefaultPlayerMove: true` prevents the runtime from issuing the default player click-to-walk when this target is clicked, which is useful for menu opens, cutscenes, or other click handlers that should resolve in place.
 - `renderPlaneId` mirrors the resolved render layer of a plane after depth-mode evaluation, which is useful for hotspots that belong to painted props inside a foreground plane.
 - `RoccoInputHandler` merges sprite hits and scene-target hits so cartridges receive the same `scene-click` shape regardless of whether the target is rendered.

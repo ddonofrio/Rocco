@@ -32,4 +32,4 @@ It also applies the stage `brightness()` and `contrast()` filter and keeps borde
 
 ## Boundary
 
-Cartridges can patch the active profile through `engine.video.display.setProfile()`, but they do not touch the DOM overlay directly. `RoccoRuntimeVideoSystem` stores the current profile, and `RoccoViewportHost` applies it through `RoccoDisplayProfileRenderer` whenever viewport metrics or profile values change.
+Cartridges can inspect the current display-profile state through `engine.video.display.getProfile()` and patch it through `engine.video.display.setProfile()`, but they do not touch the DOM overlay directly. `RoccoRuntimeVideoSystem` stores the current profile, and `RoccoViewportHost` applies it through `RoccoDisplayProfileRenderer` whenever viewport metrics or profile values change.

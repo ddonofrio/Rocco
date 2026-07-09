@@ -701,4 +701,37 @@ describe('RoccoSpriteSystemSDK', () => {
     expect(updated?.transform.y).toBe(80);
     expect(system.isMoving(sprite.id)).toBe(false);
   });
+
+  it('excludes fully transparent sprites by default but includes them when requested', () => {
+    const system = new RoccoSpriteSystemSDK();
+    system.loadSpriteDefinition(createTestDefinition());
+    const visible = system.createSpriteFromDefinition('hero', {
+      id: 'visible',
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+    });
+    const transparent = system.createSpriteFromDefinition('hero', {
+      id: 'anchor',
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      opacity: 0,
+    });
+
+    expect(system.listRenderableSprites().map((renderable) => renderable.instance.id)).toEqual([
+      visible.id,
+    ]);
+    expect(
+      system.listRenderableSprites({ includeTransparent: true }).map((renderable) => renderable.instance.id),
+    ).toEqual(expect.arrayContaining([visible.id, transparent.id]));
+
+    const hidden = system.createSpriteFromDefinition('hero', {
+      id: 'hidden',
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      enabled: false,
+    });
+    expect(
+      system.listRenderableSprites({ includeTransparent: true }).map((renderable) => renderable.instance.id),
+    ).toEqual(expect.arrayContaining([visible.id, transparent.id]));
+    expect(
+      system.listRenderableSprites({ includeTransparent: true }).map((renderable) => renderable.instance.id),
+    ).not.toContain(hidden.id);
+  });
 });

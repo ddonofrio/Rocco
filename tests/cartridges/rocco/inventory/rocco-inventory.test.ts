@@ -6,6 +6,7 @@ import {
   DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
 } from '../../../../src/cartridges/rocco/rocco-default-constants';
 import {
+  createRoccoBataInventoryItem,
   createRoccoKeysInventoryItem,
   createRoccoMagazineInventoryItem,
   createRoccoMysteriousKeyInventoryItem,
@@ -14,12 +15,14 @@ import {
   planRoccoCoralRelicAssembly,
   RoccoInventory,
   ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
+  ROCCO_INVENTORY_BATA_ITEM_ID,
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
   ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MENU_ID,
   ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
   ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
+  ROCCO_PLAYER_INVENTORY_STORAGE_ID,
 } from '../../../../src/cartridges/rocco/inventory/rocco-inventory';
 import { resolveRoccoInventoryUseLines } from '../../../../src/cartridges/rocco/inventory/rocco-inventory-interactions';
 import {
@@ -190,5 +193,18 @@ describe('RoccoInventory', () => {
       status: 'missing',
       steps: [],
     });
+  });
+});
+
+describe('createRoccoBataInventoryItem', () => {
+  it('builds a lab-coat inventory item bound to the player storage', () => {
+    const localization = createRoccoLocalization('es');
+    const item = createRoccoBataInventoryItem(localization);
+
+    expect(item.id).toBe(ROCCO_INVENTORY_BATA_ITEM_ID);
+    expect(item.label).toBe(localization.text.inventory.bataLabel);
+    expect(item.imageUri).toContain('lab-coat.png');
+    expect(item.allowedStorageIds).toEqual([ROCCO_PLAYER_INVENTORY_STORAGE_ID]);
+    expect(item.groundSprite).toBeDefined();
   });
 });

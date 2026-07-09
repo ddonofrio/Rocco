@@ -1241,6 +1241,10 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
       return { suppressDefaultPlayerMove: true };
     }
 
+    if (this.advanceIntercomConversation()) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
     if (activation.targetInstanceId === NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID) {
       return { suppressDefaultPlayerMove: true };
     }
@@ -1664,6 +1668,60 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
       remainingDeltaMs -= this.intercomPendingStep.remainingMs;
       this.completeIntercomPendingStep();
     }
+  }
+
+  private advanceIntercomConversation(): boolean {
+    if (!this.engine || !this.intercomPendingStep || this.intercomPhase === 'idle') {
+      return false;
+    }
+
+    if (this.intercomPhase === 'awaiting-choice') {
+      return false;
+    }
+
+    const spriteInstanceId = this.intercomPendingStep.messageSpriteInstanceId;
+    if (!spriteInstanceId) {
+      this.completeIntercomPendingStep();
+      return true;
+    }
+
+    const messageId = `${spriteInstanceId}:active-message`;
+    const message = this.engine.video.messages
+      .listMessages()
+      .find((candidate) => candidate.id === messageId);
+    if (!message) {
+      this.completeIntercomPendingStep();
+      return true;
+    }
+
+    const remainingLines = message.lines.slice(message.lineIndex + 1);
+    if (remainingLines.length === 0) {
+      this.engine.video.messages.removeMessage(messageId);
+      this.completeIntercomPendingStep();
+      this.engine.video.render(0);
+      return true;
+    }
+
+    this.engine.video.messages.showMessage({
+      id: message.id,
+      spriteInstanceId: message.spriteInstanceId,
+      mode: message.mode,
+      text: remainingLines,
+      background: message.background,
+      ttlMs: message.durationMs,
+      side: message.side,
+      offset: message.offset,
+      renderLayer: message.renderLayer,
+      zIndex: message.zIndex,
+      maxWidth: message.maxWidth,
+      style: message.style,
+    });
+    this.intercomPendingStep = {
+      ...this.intercomPendingStep,
+      remainingMs: remainingLines.length * message.durationMs,
+    };
+    this.engine.video.render(0);
+    return true;
   }
 
   private completeIntercomPendingStep(): void {

@@ -682,4 +682,103 @@ describe('RoccoInputHandler', () => {
     ]);
     expect(goToCalls).toEqual([]);
   });
+
+  it('uses a carried grid item on the visible target by dispatching a scene click alongside the carry activation', () => {
+    let actionHandler: RoccoCursorActionHandler | undefined;
+    const handledActions: unknown[] = [];
+    const carriedItem = {
+      definitionId: 'rocco-player-inventory',
+      item: {
+        id: 'rocco-bata',
+        label: 'Lab coat',
+        imageUri: '/test/lab-coat.png',
+      },
+    };
+
+    const handler = new RoccoInputHandler({
+      videoSystem: createVideoSystemMock({
+        resolveSceneTargets() {
+          return {
+            visibleTarget: {
+              kind: 'sprite',
+              instanceId: 'stan',
+              definitionId: 'stan-definition',
+              text: 'Stan',
+            },
+            target: undefined,
+          };
+        },
+        gridMenus: {
+          ...createVideoSystemMock().gridMenus,
+          activateAt() {
+            return {
+              kind: 'grid-menu',
+              definitionId: 'rocco-player-inventory',
+              interaction: 'carry',
+              items: [],
+            };
+          },
+          getCarriedItem() {
+            return carriedItem;
+          },
+          isOpen() {
+            return true;
+          },
+          setHoverAt() {
+            return false;
+          },
+        },
+      }),
+      audioSystem: asAudioSystem({}),
+      jukeboxSystem: asJukeboxSystem({}),
+      viewportHost: asViewportHost({
+        setCursorActionHandler(handler: RoccoCursorActionHandler | undefined) {
+          actionHandler = handler;
+        },
+        setCursorMoveHandler() {
+          // noop
+        },
+        setCursorLeaveHandler() {
+          // noop
+        },
+        setCursorAttachment() {
+          // noop
+        },
+      }),
+      getActiveCartridge: () => ({
+        manifest: {
+          id: 'test-cartridge',
+          title: 'Test Cartridge',
+          version: '1.0.0',
+        },
+        mount() {
+          // noop
+        },
+        handleAction(action) {
+          handledActions.push(action);
+        },
+      }),
+      getActivePlayerSpriteId: () => 'rocco',
+      log: () => {},
+    });
+
+    handler.mount();
+    actionHandler?.(makeClickEvent(320, 180));
+
+    expect(handledActions).toEqual([
+      {
+        kind: 'grid-menu',
+        definitionId: 'rocco-player-inventory',
+        interaction: 'carry',
+        items: [],
+      },
+      {
+        kind: 'scene-click',
+        sceneX: 320,
+        sceneY: 180,
+        targetInstanceId: 'stan',
+        targetDefinitionId: 'stan-definition',
+      },
+    ]);
+  });
 });

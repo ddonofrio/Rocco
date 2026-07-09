@@ -208,6 +208,25 @@ export class RoccoInputHandler {
     this.inputPresentation.setHoverDescription(undefined);
     if (activation) {
       void this.getActiveCartridge()?.handleAction?.(activation);
+      if (activation.interaction === 'carry') {
+        const carriedItem = this.videoSystem.gridMenus.getCarriedItem();
+        const targets = this.videoSystem.resolveSceneTargets(event.sceneX, event.sceneY);
+        const actionTarget = targets.visibleTarget ?? targets.target;
+        if (carriedItem && actionTarget) {
+          const sceneClickAction: RoccoSceneClickAction = {
+            kind: 'scene-click',
+            sceneX: event.sceneX,
+            sceneY: event.sceneY,
+            targetInstanceId: actionTarget.instanceId,
+            targetDefinitionId: actionTarget.definitionId,
+          };
+          void this.getActiveCartridge()?.handleAction?.(sceneClickAction);
+          this.logFn(
+            'GridMenu',
+            `USE carried grid item '${carriedItem.item.id}' on ${actionTarget.kind} '${actionTarget.instanceId}' directly from grid menu.`,
+          );
+        }
+      }
       this.logFn(
         'GridMenu',
         `ACTION '${activation.interaction}'${activation.itemId ? ` for '${activation.itemId}'` : ''} on grid menu '${activation.definitionId}'.`,

@@ -30,6 +30,7 @@ export const ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID = 'rocco-mysterious-key';
 export const ROCCO_PLAYER_INVENTORY_STORAGE_ID = 'rocco-player-inventory';
 export const ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID = 'rocco-spiral-razor';
 export const ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID = 'rocco-twenty-euros';
+export const ROCCO_INVENTORY_BATA_ITEM_ID = 'rocco-bata';
 const INVENTORY_BACKDROP_ALPHA = 0.32;
 const INVENTORY_BUTTON_HEIGHT = 40;
 const INVENTORY_BUTTON_GAP = 14;
@@ -42,6 +43,9 @@ const roccoCoralRelicAssetUrl = new URL('./assets/souvenirs/coral-relic.png', im
 const roccoFloatingAmuletAssetUrl = new URL('./assets/souvenirs/floating-amulet.png', import.meta.url)
   .href;
 const roccoSpiralRazorAssetUrl = new URL('./assets/souvenirs/spiral-razor.png', import.meta.url)
+  .href;
+const roccoBataAssetUrl = new URL('../assets/props/lab-coat.png', import.meta.url).href;
+const roccoBataGroundAssetUrl = new URL('../assets/props/lab-coat-ground.png', import.meta.url)
   .href;
 
 interface RoccoInventoryFusionRecipe {
@@ -130,6 +134,12 @@ const DEFAULT_CORAL_RELIC_GROUND_SPRITE = createGroundSpriteDefinition(
   909,
   1232,
   24,
+);
+const DEFAULT_BATA_GROUND_SPRITE = createGroundSpriteDefinition(
+  roccoBataGroundAssetUrl,
+  300,
+  320,
+  44,
 );
 
 const ROCCO_INVENTORY_FUSION_RECIPES: readonly RoccoInventoryFusionRecipe[] = [
@@ -448,5 +458,17 @@ export function createRoccoCoralRelicInventoryItem(
     imageUri: roccoCoralRelicAssetUrl,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_CORAL_RELIC_GROUND_SPRITE,
+  };
+}
+
+export function createRoccoBataInventoryItem(
+  localization: RoccoLocalization,
+): RoccoInventoryItem {
+  return {
+    id: ROCCO_INVENTORY_BATA_ITEM_ID,
+    label: localization.text.inventory.bataLabel,
+    imageUri: roccoBataAssetUrl,
+    allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
+    groundSprite: DEFAULT_BATA_GROUND_SPRITE,
   };
 }

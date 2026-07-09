@@ -191,6 +191,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       loop: true,
     });
     this.spriteController = await installDefaultSprite(engine, {
+      appearance: options.roccoAppearance,
       initialFacing,
       initialPosition: projectOriginToWalkMap(
         walkMapProfile.walkMap,

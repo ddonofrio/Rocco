@@ -5,6 +5,7 @@ export {
 export { createBaitShopSouvenirTableItems } from './souvenir-table-items';
 export {
   createRoccoAbyssalTalismanInventoryItem,
+  createRoccoBataInventoryItem,
   createRoccoCoralRelicInventoryItem,
   createRoccoFloatingAmuletInventoryItem,
   planRoccoCoralRelicAssembly,
@@ -26,6 +27,7 @@ export {
   ROCCO_PLAYER_INVENTORY_STORAGE_ID,
   ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
   ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
+  ROCCO_INVENTORY_BATA_ITEM_ID,
 } from './rocco-inventory';
 export { RoccoInventoryStorage } from './inventory-storage';
 export { RoccoInventoryTransferSession } from './inventory-transfer-session';

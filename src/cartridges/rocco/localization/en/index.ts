@@ -2,6 +2,7 @@ import type { RoccoTextCatalog } from '../types';
 import { englishBaitShopText } from './bait-shop';
 import { englishPelikanText, englishRoccoText, englishStanText } from './characters';
 import { englishInventoryText } from './inventory';
+import { englishNetherText } from './nether';
 import {
   englishBaitBucketText,
   englishFeedingText,
@@ -33,4 +34,5 @@ export const roccoEnglishText: RoccoTextCatalog = {
   middleLevel: englishMiddleLevelText,
   pierDoor: englishPierDoorText,
   baitShop: englishBaitShopText,
+  nether: englishNetherText,
 };

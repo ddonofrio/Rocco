@@ -118,6 +118,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     engine.video.messages.clearMessages();
     engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
     this.spriteController = await installDefaultSprite(engine, {
+      appearance: options.roccoAppearance,
       initialFacing,
       initialPosition: { ...initialPosition },
       scale: NETHER_RESET_OFFICE_ROCCO_SCALE,

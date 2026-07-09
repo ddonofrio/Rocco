@@ -13,8 +13,11 @@ export const englishInventoryText: RoccoTextCatalog['inventory'] = {
   magazineLabel: 'Magazine',
   micromaniaLabel: 'Micromania',
   mysteriousKeyLabel: 'Key',
-  magazineOnSelfLine: 'I would like to read it, but sitting down.',
   twentyEurosLabel: '\u20ac20',
+  bataLabel: 'Lab coat',
+  magazineOnSelfLine: 'I would like to read it, but sitting down.',
+  bataOnSelfLine: 'I put it on.',
+  bataAlreadyOnSelfLine: 'I am already wearing it.',
   cannotUseItemLines: [
     'I cannot use that there.',
     'That does not fit. Not even in the sad way.',

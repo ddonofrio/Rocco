@@ -23,7 +23,7 @@ export const spanishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   baitBucket: 'Cubeta de cebo',
   baitShopDoor: 'Puerta de la tienda de cebo',
   backRightDoor: 'Puerta del fondo a la derecha',
-  toilet: 'V\u00e1ter',
+  toilet: 'Váter',
   bathroom: 'Baño',
   seatedRocco: 'Rocco en estado puro',
   shellCitySign: 'Cartel de Shell City',
@@ -36,10 +36,13 @@ export const spanishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   barrel: 'Barril',
   keys: 'Llaves',
   magazine: 'Revista',
-  micromania: 'Microman\u00eda',
+  micromania: 'Micromanía',
   oldMan: 'Viejo',
   stan: 'Stan',
-  pelikan: 'Pelícano',
+  pelikan: 'Pel\u00edcano',
+  intercomunicador: 'Intercomunicador',
+  noisyMachine: 'M\u00e1quina tremendamente ruidosa',
+  shelf: 'Estanter\u00eda vac\u00eda',
 };
 
 export const spanishLevelsText: RoccoTextCatalog['levels'] = {
@@ -68,11 +71,11 @@ export const spanishDeveloperText: RoccoTextCatalog['developer'] = {
   eventTitle: 'Elegir evento',
   pierLevelLabel: 'Muelle',
   inventoryTitle: 'Inventario de desarrollador',
-  add: 'A\u00f1adir',
+  add: 'Añadir',
   remove: 'Quitar',
   on: 'ON',
   off: 'OFF',
-  allowToiletReuseEvent: 'Permitir usar v\u00e1ter m\u00e1s de una vez',
+  allowToiletReuseEvent: 'Permitir usar váter más de una vez',
   clickToJumpStatus: 'Modo desarrollador: haz clic en cualquier parte para saltar.',
   clickToCycleSpriteStatus:
     'Modo desarrollador: haz clic en un sprite para cambiar su imagen. Haz clic fuera para salir.',

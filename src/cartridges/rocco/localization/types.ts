@@ -46,6 +46,9 @@ export interface RoccoTextCatalog {
     pelikan: string;
     oldMan: string;
     stan: string;
+    intercomunicador: string;
+    noisyMachine: string;
+    shelf: string;
   };
   levels: {
     beginning: string;
@@ -85,7 +88,10 @@ export interface RoccoTextCatalog {
     micromaniaLabel: string;
     mysteriousKeyLabel: string;
     twentyEurosLabel: string;
+    bataLabel: string;
     magazineOnSelfLine: string;
+    bataOnSelfLine: string;
+    bataAlreadyOnSelfLine: string;
     cannotUseItemLines: string[];
     keysOnStanArrestLine: string;
     moneyOnStanAcceptedLines: string[];
@@ -218,6 +224,36 @@ export interface RoccoTextCatalog {
     windowKnownStanCleaningLine: string;
     windowUnknownStanCleaningLine: string;
     leftBarrelLookLines: string[];
+  };
+  nether: {
+    intercom: {
+      lookLines: string[];
+      firstChoices: {
+        helloAnyoneThere: string;
+        helloImRocco: string;
+        turnOffCamera: string;
+        whereAmI: string;
+      };
+      firstReplyLine: string;
+      secondChoices: {
+        whatHappened: string;
+        iDoNotKnowHowIGotHere: string;
+        whatEmergency: string;
+        helpMeGetOut: string;
+      };
+      secondReplyLines: string[];
+      secondReplyThoughtLines: string[];
+      thirdChoices: {
+        whatIfNotFound: string;
+        howToResetConsole: string;
+        whereIsAnExit: string;
+        labCoatQuestion: string;
+        niceVoice: string;
+      };
+      thirdReplyLines: string[];
+      finalChoice: string;
+      securityAlertLine: string;
+    };
   };
 }
 

@@ -68,6 +68,7 @@ import {
   createBaitShopSouvenirTableStorage,
   planRoccoCoralRelicAssembly,
   RoccoInventory,
+  ROCCO_INVENTORY_BATA_ITEM_ID,
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
   ROCCO_INVENTORY_DROP_BUTTON_ID,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
@@ -82,12 +83,21 @@ import {
   type RoccoInventoryItem,
 } from '../inventory';
 import {
+  applyDefaultSpriteAppearance,
+  createRoccoAppearanceSpriteDefinition,
+} from '../rocco-default-sprites';
+import {
   installRoccoPlayerActionMenu,
   isRoccoPlayerDeveloperAction,
   isRoccoPlayerInventoryAction,
   ROCCO_PLAYER_TALK_ACTION_ID,
   uninstallRoccoPlayerActionMenu,
 } from '../rocco-player-action-menu';
+import {
+  DEFAULT_ROCCO_PLAYER_APPEARANCE,
+  ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+  type RoccoPlayerAppearance,
+} from '../rocco-player-appearance';
 import { roccoCartridgeMessageRuntime } from '../dialogue';
 import {
   createRoccoDeveloperEventLevelMenuDefinition,
@@ -287,6 +297,11 @@ interface RoccoPendingBaitShopDoorUse {
   levelId: string;
 }
 
+interface RoccoNetherEntrySnapshot {
+  inventoryItems: RoccoInventoryItem[];
+  roccoAppearance: RoccoPlayerAppearance;
+}
+
 const PIER_START_CONNECTORS: readonly RoccoLevelConnector[] = [
   {
     id: 'west',
@@ -393,6 +408,7 @@ export class RoccoLevelManager {
   private readonly developerEvents: RoccoDeveloperEventState = {
     allowToiletReuseDuringUrgency: false,
   };
+  private roccoAppearance: RoccoPlayerAppearance = DEFAULT_ROCCO_PLAYER_APPEARANCE;
   private developerEventScreenSelectionId: string | null = null;
   private readonly developerSpriteCycleIndexes = new Map<string, number>();
   private readonly developerSpriteCycleOriginalStates = new Map<
@@ -403,6 +419,7 @@ export class RoccoLevelManager {
   private pendingExitIntent: RoccoPendingExitIntent | null = null;
   private pendingDroppedInventoryPickup: RoccoPendingDroppedInventoryPickup | null = null;
   private pendingBaitShopDoorUse: RoccoPendingBaitShopDoorUse | null = null;
+  private netherEntrySnapshot: RoccoNetherEntrySnapshot | null = null;
 
   constructor(options: RoccoLevelManagerOptions = {}) {
     this.options = {
@@ -450,6 +467,7 @@ export class RoccoLevelManager {
     this.activeInventoryTransferSession = null;
     this.activeInventoryTransferCloseHandler = null;
     this.activeDroppedInventoryRuntimeIds.clear();
+    this.netherEntrySnapshot = null;
     const level = this.requireLevel(DEFAULT_START_LEVEL_ID);
     this.activeLevel = level;
     const scene = await level.mount(engine, this.createLevelMountOptions());
@@ -485,6 +503,7 @@ export class RoccoLevelManager {
     this.activeInventoryTransferSession = null;
     this.activeInventoryTransferCloseHandler = null;
     this.clearActiveLevelDroppedInventoryPresentation();
+    this.netherEntrySnapshot = null;
     this.engine.video.actionMenus.unregisterMenu(DROPPED_CORAL_RELIC_ACTION_MENU_ID);
     this.engine.audio.unregisterSound(STAN_POLICE_DEFEAT_SOUND_ID);
     this.engine.video.gridMenus.closeMenu();
@@ -682,13 +701,64 @@ export class RoccoLevelManager {
         allowReuseDuringUrgency: () => this.developerEvents.allowToiletReuseDuringUrgency,
         isStanIdentified: () => this.beginningAmbientState.stan.isIdentified,
       }),
+      ...this.createNetherLevels(),
+    ];
+
+    for (const level of levels) {
+      this.levels.set(level.id, level);
+    }
+  }
+
+  private createNetherLevels(): readonly RoccoLevel[] {
+    return [
       new RoccoNetherConsoleHardwareSpawnLevel(this.localization),
       new RoccoNetherEndOfHallwayDoorLevel(this.localization),
       new RoccoNetherResetOfficeLevel(this.localization),
       new RoccoNetherResetOfficeSecondLevel(this.localization),
     ];
+  }
 
-    for (const level of levels) {
+  private isNetherLevelId(levelId: string): boolean {
+    return levelId.startsWith('nether-');
+  }
+
+  private isEnteringNether(fromLevelId: string, toLevelId: string): boolean {
+    return !this.isNetherLevelId(fromLevelId) && this.isNetherLevelId(toLevelId);
+  }
+
+  private createNetherEntrySnapshot(): RoccoNetherEntrySnapshot {
+    return {
+      inventoryItems: this.inventory.listItems(),
+      roccoAppearance: this.roccoAppearance,
+    };
+  }
+
+  private captureNetherEntrySnapshot(snapshot = this.createNetherEntrySnapshot()): void {
+    this.netherEntrySnapshot = snapshot;
+  }
+
+  private restoreNetherEntrySnapshot(): void {
+    const snapshot = this.netherEntrySnapshot;
+    this.clearNetherDroppedInventoryItems();
+    this.resetNetherLevels();
+    if (!snapshot) {
+      return;
+    }
+
+    this.inventory.replaceItems(snapshot.inventoryItems);
+    this.roccoAppearance = snapshot.roccoAppearance;
+  }
+
+  private clearNetherDroppedInventoryItems(): void {
+    for (const levelId of [...this.droppedInventoryItemsByLevel.keys()]) {
+      if (this.isNetherLevelId(levelId)) {
+        this.droppedInventoryItemsByLevel.delete(levelId);
+      }
+    }
+  }
+
+  private resetNetherLevels(): void {
+    for (const level of this.createNetherLevels()) {
       this.levels.set(level.id, level);
     }
   }
@@ -837,6 +907,9 @@ export class RoccoLevelManager {
     this.deactivateDeveloperSpriteCycleMode();
     const currentLevel = this.activeLevel;
     const targetLevel = this.requireLevel(levelId);
+    const nextNetherEntrySnapshot = this.isEnteringNether(currentLevel.id, targetLevel.id)
+      ? this.createNetherEntrySnapshot()
+      : null;
     const engine = this.engine;
     this.transitioning = true;
     this.pendingExitIntent = null;
@@ -848,6 +921,9 @@ export class RoccoLevelManager {
       currentLevel.unmount(engine);
       this.activeLevel = targetLevel;
       const scene = await targetLevel.mount(engine, this.createLevelMountOptions());
+      if (nextNetherEntrySnapshot) {
+        this.captureNetherEntrySnapshot(nextNetherEntrySnapshot);
+      }
       this.syncActiveLevelDroppedInventoryPresentation();
       this.updateStatus(scene);
       return true;
@@ -876,6 +952,9 @@ export class RoccoLevelManager {
     }
 
     const targetLevel = this.requireLevel(targetEndpoint.levelId);
+    const nextNetherEntrySnapshot = this.isEnteringNether(currentLevel.id, targetLevel.id)
+      ? this.createNetherEntrySnapshot()
+      : null;
     const engine = this.engine;
     const entryPosition = connector.preservePlayerPosition
       ? this.resolveMirroredPlayerPosition()
@@ -894,6 +973,9 @@ export class RoccoLevelManager {
         entryPosition,
         ...this.createLevelMountOptions(),
       });
+      if (nextNetherEntrySnapshot) {
+        this.captureNetherEntrySnapshot(nextNetherEntrySnapshot);
+      }
       this.syncActiveLevelDroppedInventoryPresentation();
       this.transitionCooldownMs = PIER_LEVEL_TRANSITION_COOLDOWN_MS;
       this.updateStatus(scene);
@@ -957,13 +1039,17 @@ export class RoccoLevelManager {
   }
 
   private createLevelMountOptions(): {
+    roccoAppearance: RoccoPlayerAppearance;
     forceArrivalSequence?: boolean;
     onKeysCollectRequested: () => boolean;
     onKeysCollected: () => void;
     onConnectorTransitionRequested: (connectorId: string) => boolean;
     onRestartRequested?: (request?: RoccoLevelRestartRequest) => void;
+    onPickupRequested: (item: RoccoInventoryItem) => boolean;
+    onPickupCollected: (item: RoccoInventoryItem) => void;
   } {
     return {
+      roccoAppearance: this.roccoAppearance,
       onKeysCollectRequested: () => this.canCollectIntoInventory(ROCCO_INVENTORY_KEYS_ITEM_ID),
       onKeysCollected: () => {
         if (!this.tryAddItemToInventory(createRoccoKeysInventoryItem(this.localization))) {
@@ -999,6 +1085,45 @@ export class RoccoLevelManager {
 
         this.options.onRestartRequested?.();
       },
+      onPickupRequested: (item) => this.canCollectIntoInventory(item.id),
+      onPickupCollected: (item) => {
+        if (!this.tryAddItemToInventory(item)) {
+          return;
+        }
+
+        if (!this.engine) {
+          return;
+        }
+
+        if (item.id === ROCCO_INVENTORY_BATA_ITEM_ID) {
+          void this.engine.video
+            .preloadSpriteDefinition(
+              createRoccoAppearanceSpriteDefinition(
+                this.engine,
+                ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+                this.localization,
+              ),
+            )
+            .catch(() => {
+              this.engine?.log('Assets', 'Rocco lab coat assets could not be preloaded.');
+            });
+        }
+
+        roccoCartridgeMessageRuntime.think(
+          this.engine,
+          DEFAULT_SPRITE_INSTANCE_ID,
+          this.localization.text.inventory.pickupLine,
+          {
+            ttlMs: 3200,
+          },
+          {
+            count: 1,
+            historyKey: `pickup-${item.id}`,
+            avoidImmediateRepeat: true,
+          },
+        );
+        this.engine.video.render(0);
+      },
     };
   }
 
@@ -1010,18 +1135,29 @@ export class RoccoLevelManager {
 
     this.deactivateDeveloperSpriteCycleMode();
     const currentLevel = this.activeLevel;
-    const targetLevel = this.requireLevel(request.levelId);
     const engine = this.engine;
+    const shouldRestoreNetherEntrySnapshot = this.isNetherLevelId(request.levelId);
     this.transitioning = true;
     this.pendingExitIntent = null;
     this.pendingDroppedInventoryPickup = null;
     this.pendingBaitShopDoorUse = null;
+    this.developerJumpPending = false;
+    this.activeInventoryTransferSession = null;
+    this.activeInventoryTransferCloseHandler = null;
     engine.setInputEnabled(false);
+    engine.video.gridMenus.clearCarriedItem();
+    engine.video.gridMenus.closeMenu();
+    engine.video.actionMenus.closeMenu();
+    engine.video.messages.clearMessages();
     engine.beginComposition();
 
     try {
       this.clearActiveLevelDroppedInventoryPresentation();
       currentLevel.unmount(engine);
+      if (shouldRestoreNetherEntrySnapshot) {
+        this.restoreNetherEntrySnapshot();
+      }
+      const targetLevel = this.requireLevel(request.levelId);
       this.activeLevel = targetLevel;
       const scene = await targetLevel.mount(engine, {
         entryConnectorId: request.entryConnectorId,
@@ -2203,6 +2339,11 @@ export class RoccoLevelManager {
       return;
     }
 
+    if (this.shouldEquipLabCoat(activation, carriedItem)) {
+      void this.equipLabCoat();
+      return { suppressDefaultPlayerMove: true };
+    }
+
     roccoCartridgeMessageRuntime.think(
       this.engine,
       DEFAULT_SPRITE_INSTANCE_ID,
@@ -2222,6 +2363,80 @@ export class RoccoLevelManager {
     );
     this.engine.video.gridMenus.clearCarriedItem();
     this.engine.video.render(0);
+  }
+
+  private shouldEquipLabCoat(
+    activation: RoccoSceneClickAction,
+    carriedItem: RoccoGridMenuCarriedItem,
+  ): boolean {
+    return (
+      carriedItem.item.id === ROCCO_INVENTORY_BATA_ITEM_ID &&
+      activation.targetInstanceId === DEFAULT_SPRITE_INSTANCE_ID
+    );
+  }
+
+  private equipLabCoat(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    let shouldClearCarriedItem = false;
+    this.engine.setInputEnabled(false);
+
+    try {
+      if (this.roccoAppearance === ROCCO_LAB_COAT_PLAYER_APPEARANCE) {
+        roccoCartridgeMessageRuntime.think(
+          this.engine,
+          DEFAULT_SPRITE_INSTANCE_ID,
+          [this.localization.text.inventory.bataAlreadyOnSelfLine],
+          {
+            ttlMs: 3200,
+          },
+          {
+            count: 1,
+            historyKey: 'inventory-bata-self-already-wearing',
+            avoidImmediateRepeat: true,
+          },
+        );
+        shouldClearCarriedItem = true;
+        return;
+      }
+
+      applyDefaultSpriteAppearance(
+        this.engine,
+        ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+        this.localization,
+      );
+      this.roccoAppearance = ROCCO_LAB_COAT_PLAYER_APPEARANCE;
+      this.inventory.removeItem(ROCCO_INVENTORY_BATA_ITEM_ID);
+      if (this.engine.video.gridMenus.isOpen(ROCCO_INVENTORY_MENU_ID)) {
+        this.engine.video.gridMenus.openMenu(
+          this.inventory.createGridMenuDefinition(this.localization),
+        );
+      }
+      roccoCartridgeMessageRuntime.think(
+        this.engine,
+        DEFAULT_SPRITE_INSTANCE_ID,
+        [this.localization.text.inventory.bataOnSelfLine],
+        {
+          ttlMs: 3200,
+        },
+        {
+          count: 1,
+          historyKey: 'inventory-bata-self-equip',
+          avoidImmediateRepeat: true,
+        },
+      );
+      shouldClearCarriedItem = true;
+    } catch (error) {
+      this.engine.log('System', `Rocco lab coat equip failed: ${String(error)}`);
+    } finally {
+      if (shouldClearCarriedItem) {
+        this.engine.video.gridMenus.clearCarriedItem();
+      }
+      this.engine.setInputEnabled(true);
+      this.engine.video.render(0);
+    }
   }
 
   private handlePierBaitShopDoorAction(activation: RoccoActionMenuActivation): boolean {

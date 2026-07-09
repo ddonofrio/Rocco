@@ -271,6 +271,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
     engine.video.sprites.loadSpriteDefinition(printerDefinition);
     this.spriteController = await installDefaultSprite(engine, {
+      appearance: options.roccoAppearance,
       initialFacing,
       initialPosition: { ...initialPosition },
       scale: NETHER_RESET_OFFICE_ROCCO_SCALE,

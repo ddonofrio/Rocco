@@ -40,6 +40,9 @@ export const englishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   pelikan: 'Pelikan',
   oldMan: 'Old man',
   stan: 'Stan',
+  intercomunicador: 'Intercom',
+  noisyMachine: 'Noisy machine',
+  shelf: 'Empty shelf',
 };
 
 export const englishLevelsText: RoccoTextCatalog['levels'] = {

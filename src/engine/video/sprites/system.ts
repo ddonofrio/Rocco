@@ -622,10 +622,15 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     }
   }
 
-  listRenderableSprites(): RoccoRenderableSprite[] {
+  listRenderableSprites(options?: { includeTransparent?: boolean }): RoccoRenderableSprite[] {
     const renderables: RoccoRenderableSprite[] = [];
+    const includeTransparent = options?.includeTransparent === true;
     for (const instance of this.instances.values()) {
-      if (!instance.enabled || !instance.visible || instance.opacity <= 0) {
+      if (
+        !instance.enabled ||
+        !instance.visible ||
+        (!includeTransparent && instance.opacity <= 0)
+      ) {
         continue;
       }
 

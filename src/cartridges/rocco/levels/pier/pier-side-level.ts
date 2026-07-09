@@ -85,6 +85,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
     const [cloudController, spriteController, ambientController] = await Promise.all([
       installDefaultCloud(engine),
       installDefaultSprite(engine, {
+        appearance: options.roccoAppearance,
         initialFacing: entryConnector?.entryFacing ?? 'down',
         initialPosition: entryConnector?.entryPoint,
         playIntro: false,

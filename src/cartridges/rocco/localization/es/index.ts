@@ -2,6 +2,7 @@ import type { RoccoTextCatalog } from '../types';
 import { spanishBaitShopText } from './bait-shop';
 import { spanishPelikanText, spanishRoccoText, spanishStanText } from './characters';
 import { spanishInventoryText } from './inventory';
+import { spanishNetherText } from './nether';
 import {
   spanishBaitBucketText,
   spanishFeedingText,
@@ -33,4 +34,5 @@ export const roccoSpanishText: RoccoTextCatalog = {
   middleLevel: spanishMiddleLevelText,
   pierDoor: spanishPierDoorText,
   baitShop: spanishBaitShopText,
+  nether: spanishNetherText,
 };

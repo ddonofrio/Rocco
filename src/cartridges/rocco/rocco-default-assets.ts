@@ -1,3 +1,9 @@
+import {
+  DEFAULT_ROCCO_PLAYER_APPEARANCE,
+  ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+  type RoccoPlayerAppearance,
+} from './rocco-player-appearance';
+
 export const roccoDefaultRunLeftAssetUrls = [
   new URL('./assets/characters/rocco/run-left-1.png', import.meta.url).href,
   new URL('./assets/characters/rocco/run-left-2.png', import.meta.url).href,
@@ -82,3 +88,58 @@ export const roccoDefaultStandingAssetUrls = {
   right: new URL('./assets/characters/rocco/stand-right.png', import.meta.url).href,
   'down-right': new URL('./assets/characters/rocco/stand-down-right.png', import.meta.url).href,
 } as const;
+
+export const roccoLabCoatRunLeftAssetUrls = [
+  new URL('./assets/characters/rocco/lab-coat/run-left-1.png', import.meta.url).href,
+  new URL('./assets/characters/rocco/lab-coat/run-left-2.png', import.meta.url).href,
+] as const;
+
+export const roccoLabCoatRunRightAssetUrls = [
+  new URL('./assets/characters/rocco/lab-coat/run-right-1.png', import.meta.url).href,
+  new URL('./assets/characters/rocco/lab-coat/run-right-2.png', import.meta.url).href,
+] as const;
+
+export const roccoLabCoatStandingAssetUrls = {
+  down: new URL('./assets/characters/rocco/lab-coat/stand-down.png', import.meta.url).href,
+  'down-left': new URL(
+    './assets/characters/rocco/lab-coat/stand-down-left.png',
+    import.meta.url,
+  ).href,
+  left: new URL('./assets/characters/rocco/lab-coat/stand-left.png', import.meta.url).href,
+  'up-left': new URL('./assets/characters/rocco/lab-coat/stand-up-left.png', import.meta.url).href,
+  up: new URL('./assets/characters/rocco/lab-coat/stand-up.png', import.meta.url).href,
+  'up-right': new URL('./assets/characters/rocco/lab-coat/stand-up-right.png', import.meta.url)
+    .href,
+  right: new URL('./assets/characters/rocco/lab-coat/stand-right.png', import.meta.url).href,
+  'down-right': new URL(
+    './assets/characters/rocco/lab-coat/stand-down-right.png',
+    import.meta.url,
+  ).href,
+} as const;
+
+interface RoccoPlayerAppearanceAssetUrls {
+  runLeft: typeof roccoDefaultRunLeftAssetUrls;
+  runRight: typeof roccoDefaultRunRightAssetUrls;
+  standing: typeof roccoDefaultStandingAssetUrls;
+  pickUp: string;
+}
+
+export function resolveRoccoPlayerAppearanceAssetUrls(
+  appearance: RoccoPlayerAppearance = DEFAULT_ROCCO_PLAYER_APPEARANCE,
+): RoccoPlayerAppearanceAssetUrls {
+  if (appearance === ROCCO_LAB_COAT_PLAYER_APPEARANCE) {
+    return {
+      runLeft: roccoLabCoatRunLeftAssetUrls,
+      runRight: roccoLabCoatRunRightAssetUrls,
+      standing: roccoLabCoatStandingAssetUrls,
+      pickUp: roccoDefaultPickUpAssetUrl,
+    };
+  }
+
+  return {
+    runLeft: roccoDefaultRunLeftAssetUrls,
+    runRight: roccoDefaultRunRightAssetUrls,
+    standing: roccoDefaultStandingAssetUrls,
+    pickUp: roccoDefaultPickUpAssetUrl,
+  };
+}

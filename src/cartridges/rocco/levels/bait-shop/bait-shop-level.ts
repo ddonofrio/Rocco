@@ -658,6 +658,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     this.syncHiddenKeysTarget();
     this.installActionMenus(engine);
     this.spriteController = await installDefaultSprite(engine, {
+      appearance: options.roccoAppearance,
       initialFacing,
       initialPosition: { ...initialPosition },
       scale: BAIT_SHOP_ROCCO_SCALE,

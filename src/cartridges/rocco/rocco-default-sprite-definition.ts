@@ -20,12 +20,14 @@ import {
   DEFAULT_SPRITE_STANDING_SEQUENCE_RIGHT_ANIMATION_ID,
 } from './rocco-default-constants';
 import {
-  roccoDefaultPickUpAssetUrl,
-  roccoDefaultRunLeftAssetUrls,
-  roccoDefaultRunRightAssetUrls,
-  roccoDefaultStandingAssetUrls,
+  resolveRoccoPlayerAppearanceAssetUrls,
 } from './rocco-default-assets';
 import { createRoccoLocalization, type RoccoLocalization } from './localization';
+import {
+  DEFAULT_ROCCO_PLAYER_APPEARANCE,
+  ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+  type RoccoPlayerAppearance,
+} from './rocco-player-appearance';
 
 const STANDING_DIRECTIONS: RoccoFacingDirection[] = [
   'down',
@@ -110,46 +112,57 @@ function makeDefaultHitbox() {
   };
 }
 
+export interface RoccoDefaultSpriteDefinitionOptions {
+  appearance?: RoccoPlayerAppearance;
+}
+
 export function createDefaultSpriteDefinition(
   localization: RoccoLocalization = createRoccoLocalization(),
+  options: RoccoDefaultSpriteDefinitionOptions = {},
 ): RoccoSpriteDefinition {
+  const appearance = options.appearance ?? DEFAULT_ROCCO_PLAYER_APPEARANCE;
+  const appearanceAssets = resolveRoccoPlayerAppearanceAssetUrls(appearance);
+
   return {
     id: DEFAULT_SPRITE_DEFINITION_ID,
-    name: 'Rocco Player Sprite',
+    name:
+      appearance === ROCCO_LAB_COAT_PLAYER_APPEARANCE
+        ? 'Rocco Player Sprite (Lab Coat)'
+        : 'Rocco Player Sprite',
     images: [
       {
         id: 'rocco-run-left-1',
-        uri: roccoDefaultRunLeftAssetUrls[0],
+        uri: appearanceAssets.runLeft[0],
         width: DEFAULT_SPRITE_FRAME_WIDTH,
         height: DEFAULT_SPRITE_FRAME_HEIGHT,
       },
       {
         id: 'rocco-run-left-2',
-        uri: roccoDefaultRunLeftAssetUrls[1],
+        uri: appearanceAssets.runLeft[1],
         width: DEFAULT_SPRITE_FRAME_WIDTH,
         height: DEFAULT_SPRITE_FRAME_HEIGHT,
       },
       {
         id: 'rocco-run-right-1',
-        uri: roccoDefaultRunRightAssetUrls[0],
+        uri: appearanceAssets.runRight[0],
         width: DEFAULT_SPRITE_FRAME_WIDTH,
         height: DEFAULT_SPRITE_FRAME_HEIGHT,
       },
       {
         id: 'rocco-run-right-2',
-        uri: roccoDefaultRunRightAssetUrls[1],
+        uri: appearanceAssets.runRight[1],
         width: DEFAULT_SPRITE_FRAME_WIDTH,
         height: DEFAULT_SPRITE_FRAME_HEIGHT,
       },
       {
         id: PICK_UP_IMAGE_ID,
-        uri: roccoDefaultPickUpAssetUrl,
+        uri: appearanceAssets.pickUp,
         width: DEFAULT_SPRITE_FRAME_WIDTH,
         height: DEFAULT_SPRITE_FRAME_HEIGHT,
       },
       ...STANDING_DIRECTIONS.map((direction) => ({
         id: makeStandingImageId(direction),
-        uri: roccoDefaultStandingAssetUrls[direction],
+        uri: appearanceAssets.standing[direction],
         width: DEFAULT_SPRITE_FRAME_WIDTH,
         height: DEFAULT_SPRITE_FRAME_HEIGHT,
       })),
@@ -315,6 +328,7 @@ export function createDefaultSpriteDefinition(
     },
     metadata: {
       purpose: 'default-rocco-player',
+      appearance,
     },
   };
 }

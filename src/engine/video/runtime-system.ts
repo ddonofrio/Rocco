@@ -306,10 +306,13 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
   render(delta: number): void {
     this.syncActivePlaneScene();
     const spriteRenderables = this.spriteSystem.listRenderableSprites();
+    const messageAnchorRenderables = this.spriteSystem.listRenderableSprites({
+      includeTransparent: true,
+    });
     this.syncSprites(spriteRenderables);
     this.syncActionMenu();
     this.syncGridMenu();
-    this.syncMessages(spriteRenderables);
+    this.syncMessages(spriteRenderables, messageAnchorRenderables);
     this.syncPrimitives();
     this.syncTitles();
     this.planeRenderer.render(delta);
@@ -371,13 +374,18 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.gridMenuRenderer.sync(this.gridMenuSystem.getRenderableMenu());
   }
 
-  private syncMessages(renderables = this.spriteSystem.listRenderableSprites()): void {
+  private syncMessages(
+    spriteRenderables = this.spriteSystem.listRenderableSprites(),
+    messageAnchorRenderables = this.spriteSystem.listRenderableSprites({
+      includeTransparent: true,
+    }),
+  ): void {
     this.messageRenderer.sync(
       this.messageSystem.listRenderableMessages(
-        renderables,
+        messageAnchorRenderables,
         this.resolveDesignSize(),
       ),
-      renderables,
+      spriteRenderables,
     );
   }
 

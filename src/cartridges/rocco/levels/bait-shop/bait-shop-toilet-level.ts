@@ -831,6 +831,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     this.restoreDefaultActionMenus();
     this.installToiletActionMenu();
     this.spriteController = await installDefaultSprite(engine, {
+      appearance: options.roccoAppearance,
       initialFacing,
       initialPosition: { ...initialPosition },
       scale: BAIT_SHOP_TOILET_ROCCO_SCALE,

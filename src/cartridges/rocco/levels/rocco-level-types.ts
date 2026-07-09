@@ -4,6 +4,8 @@ import type { RoccoActionMenuActivation } from '../../../engine/video/action-men
 import type { RoccoGridMenuActivation } from '../../../engine/video/grid-menu';
 import type { RoccoPlaneScene } from '../../../engine/video/planes';
 import type { RoccoFacingDirection, RoccoPoint } from '../../../engine/video/sprites';
+import type { RoccoInventoryItem } from '../inventory';
+import type { RoccoPlayerAppearance } from '../rocco-player-appearance';
 
 export interface RoccoLevelRect {
   x: number;
@@ -24,11 +26,14 @@ export interface RoccoLevelConnector {
 export interface RoccoLevelMountOptions {
   entryConnectorId?: string;
   entryPosition?: RoccoPoint;
+  roccoAppearance?: RoccoPlayerAppearance;
   forceArrivalSequence?: boolean;
   onKeysCollectRequested?: () => boolean;
   onKeysCollected?: () => void;
   onConnectorTransitionRequested?: (connectorId: string) => boolean;
   onRestartRequested?: (request?: RoccoLevelRestartRequest) => void;
+  onPickupRequested?: (item: RoccoInventoryItem) => boolean;
+  onPickupCollected?: (item: RoccoInventoryItem) => void;
 }
 
 export interface RoccoLevelRestartRequest {

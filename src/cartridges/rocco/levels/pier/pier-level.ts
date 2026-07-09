@@ -230,6 +230,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
       }),
       installDefaultSprite(engine, {
         ...spriteInstallOptions,
+        appearance: options.roccoAppearance,
         localization: this.localization,
       }),
     ]);

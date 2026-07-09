@@ -314,6 +314,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     await installBaitShopWalkMap(engine, baitShopSecondScreenAssetUrls.walkMap);
     engine.video.sprites.loadSpriteDefinition(magazineDefinition);
     this.spriteController = await installDefaultSprite(engine, {
+      appearance: options.roccoAppearance,
       initialFacing,
       initialPosition: { ...initialPosition },
       scale: BAIT_SHOP_ROCCO_SCALE,

@@ -16,6 +16,10 @@ import {
 } from './rocco-default-constants';
 import { createRoccoLocalization, type RoccoLocalization } from './localization';
 import { createDefaultSpriteDefinition } from './rocco-default-sprite-definition';
+import {
+  DEFAULT_ROCCO_PLAYER_APPEARANCE,
+  type RoccoPlayerAppearance,
+} from './rocco-player-appearance';
 
 const POSITION_EPSILON = 1;
 const INTRO_THOUGHT_DURATION_MS = 6400;
@@ -28,6 +32,7 @@ export interface RoccoDefaultSpriteController {
 }
 
 export interface RoccoDefaultSpriteInstallOptions {
+  appearance?: RoccoPlayerAppearance;
   initialFacing?: RoccoFacingDirection;
   initialPosition?: RoccoPoint;
   scale?: number;
@@ -50,7 +55,9 @@ function createInstalledSpriteDefinition(
   localization: RoccoLocalization,
   options: RoccoDefaultSpriteInstallOptions,
 ): RoccoSpriteDefinition {
-  const definition = createDefaultSpriteDefinition(localization);
+  const definition = createDefaultSpriteDefinition(localization, {
+    appearance: options.appearance ?? DEFAULT_ROCCO_PLAYER_APPEARANCE,
+  });
   if (!options.perspectiveAutoAdjust) {
     return definition;
   }
@@ -62,6 +69,37 @@ function createInstalledSpriteDefinition(
     perspectiveByY: clone(options.perspectiveAutoAdjust),
   };
   return customized;
+}
+
+export function createRoccoAppearanceSpriteDefinition(
+  engine: RoccoEngine,
+  appearance: RoccoPlayerAppearance,
+  localization: RoccoLocalization = createRoccoLocalization(),
+): RoccoSpriteDefinition {
+  const currentDefinition = engine.video.sprites.getSpriteDefinition(DEFAULT_SPRITE_DEFINITION_ID);
+  return createInstalledSpriteDefinition(localization, {
+    appearance,
+    perspectiveAutoAdjust: currentDefinition?.autoAdjust?.perspectiveByY,
+  });
+}
+
+export function applyDefaultSpriteAppearance(
+  engine: RoccoEngine,
+  appearance: RoccoPlayerAppearance,
+  localization: RoccoLocalization = createRoccoLocalization(),
+): void {
+  const definition = createRoccoAppearanceSpriteDefinition(engine, appearance, localization);
+  engine.video.sprites.loadSpriteDefinition(definition);
+  void engine.video
+    .preloadSpriteDefinition(definition)
+    .then(() => {
+      engine.video.sprites.loadSpriteDefinition(definition);
+      engine.video.render(0);
+    })
+    .catch(() => {
+      engine.log('Assets', 'Rocco appearance assets could not be preloaded.');
+    });
+  engine.video.render(0);
 }
 
 class RoccoRunningSpriteController implements RoccoDefaultSpriteController {

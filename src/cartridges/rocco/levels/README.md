@@ -34,18 +34,30 @@ A level provides:
 
 `RoccoLevelManager` owns:
 
-- Level registration.
 - The active level.
-- Screen-to-screen transitions.
-- Scripted connector transitions requested by the active level.
 - Shared cartridge inventory.
 - Level lifetime and per-level state retention.
 - Status text updates.
 
+`levels/runtime/` owns:
+
+- Level registration and lookup.
+- Screen-to-screen connector graph resolution.
+- Pending exit-intent tracking.
+- Transition cooldown state.
+- Cartridge-wide action-routing priority and delegation.
+- Scripted connector transition resolution requested by the active level.
+- Inventory runtime orchestration for the player inventory and storage-transfer menus.
+- Dropped-item persistence and dropped-item pickup presentation.
+- Blocking scripted cartridge sequences.
+- Developer-only runtime state such as jump placement, event overrides, and sprite-cycle mode.
+
 This is the main separation of responsibilities:
 
 - A level defines one screen and its local behavior.
-- The manager connects levels and moves Rocco between them.
+- Runtime helpers describe how screens connect.
+- Runtime helpers also own cartridge-wide subsystems that span multiple screens.
+- The manager orchestrates the active runtime flow and delegates shared action routing to cartridge-owned helpers.
 
 ## Design Resolution And Asset Space
 
@@ -76,6 +88,7 @@ levels/
   README.md               This guide
   rocco-level-manager.ts  Shared active-level orchestration for Rocco screens
   rocco-level-types.ts    Shared level, connector, rectangle, and mount option types
+  runtime/                Cartridge runtime helpers for registration, transitions, action routing, inventory, dropped items, scripted sequences, and developer mode
   pier/                   Exterior level graph, shared panorama scene, shared walk map
   bait-shop/              Interior levels, dedicated room scenes, dedicated walk maps
   nether/                 Nether levels, arrival effects, dedicated room scenes, and perspective helpers
@@ -340,8 +353,8 @@ The manager already supports the standard transition pattern:
 
 1. A scene click in a connector zone records a pending exit intent.
 2. Rocco starts walking through the walk map.
-3. The manager checks the player ground point during `update()`.
-4. When the ground point enters the connector `exitArea`, the manager switches levels.
+3. The transition controller checks the player ground point during `update()`.
+4. When the ground point enters the connector `exitArea`, the manager switches levels using the resolved connection.
 
 This is the reference behavior for edge travel.
 
@@ -353,7 +366,7 @@ To connect two screens:
 2. Register both levels in `RoccoLevelManager`.
 3. Add one connection entry that pairs `(levelId, connectorId)` with `(otherLevelId, otherConnectorId)`.
 
-The current manager keeps the connection graph in `ROCCO_LEVEL_CONNECTIONS`, covering both Pier exterior edges and interior links such as the bait shop screen pair.
+The current transition controller keeps the connection graph in one cartridge-owned runtime helper, covering both Pier exterior edges and interior links such as the bait shop screen pair.
 
 ### Choosing Exit Areas
 

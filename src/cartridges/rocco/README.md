@@ -12,7 +12,7 @@
 - `rocco-default-sprites.ts` - Rocco player sprite installation.
 - `rocco-player-appearance.ts` - Player appearance IDs and the default versus lab-coat appearance contract.
 - `rocco-player-action-menu.ts` - Rocco self action menu with Talk and Inventory actions.
-- `rocco-developer-mode.ts` - Developer-mode menu definitions, inventory seeding, and event-toggle helpers.
+- `rocco-developer-mode.ts` - Developer-mode menu definitions, inventory seeding, and event-toggle helpers used by the runtime controller.
 - `scripted-scene-interaction-controller.ts` - Shared walk-then-react controller for scene-target choreography.
 
 ## Subdirectories
@@ -22,6 +22,7 @@
 | `assets/`       | Shared cartridge assets for characters, props, sounds, and icons  |
 | `dialogue/`     | Reusable cartridge dialogue helpers and branching conversation runtime |
 | `inventory/`    | Rocco cartridge inventory state, souvenir assets, fusion recipes, prop storages, and grid-menu projection |
+| `levels/runtime/` | Cartridge runtime helpers for registration, transitions, action routing, inventory runtime, dropped-item runtime, scripted sequences, and developer mode |
 | `levels/pier/`  | Pier exterior levels, transitions, assets, effects, and interactions |
 | `levels/bait-shop/` | Bait shop interior levels, scene assets, walk maps, and per-level Rocco setup |
 | `levels/nether/` | Nether and Reset Office levels, arrival effects, walk maps, and per-level Rocco setup |
@@ -44,7 +45,7 @@ The cartridge starts in Pier Middle and currently spans four level families.
 | Reset Office | Reset Office 1 | `nether-reset-office` | `rocco-nether-reset-office-scene` | Developer-only branch |
 | Reset Office | Reset Office 2 | `nether-reset-office-second` | `rocco-nether-reset-office-second-scene` | Developer-only branch with the printer prop |
 
-Rocco transitions through edge connectors on connected screens. When his ground point enters an exit area, `RoccoLevelManager` loads the connected level, places Rocco on the matching entry point, and sets his facing direction. Using the keys on the bait shop door while Stan sleeps opens a separate transition into the bait shop interior. The bait-shop toilet portal then leads into `nether-console-hardware-spawn`, which connects onward to `nether-end-of-hallway-door`. Developer mode also exposes the separate two-screen Reset Office branch, which stays outside the normal level graph.
+Rocco transitions through edge connectors on connected screens. Cartridge runtime controllers resolve the connector graph, exit intent, action-routing priority, inventory runtime, dropped-item flow, scripted sequences, and developer-mode state, while `RoccoLevelManager` mounts the connected level, places Rocco on the matching entry point, and coordinates the active high-level flow. Using the keys on the bait shop door while Stan sleeps opens a separate transition into the bait shop interior. The bait-shop toilet portal then leads into `nether-console-hardware-spawn`, which connects onward to `nether-end-of-hallway-door`. Developer mode also exposes the separate two-screen Reset Office branch, which stays outside the normal level graph.
 
 ## Interactions
 

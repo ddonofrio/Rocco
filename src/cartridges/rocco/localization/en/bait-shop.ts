@@ -5,6 +5,7 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
   toiletLookLines: ['A toilet.'],
   toiletReadLabel: 'Read',
   toiletUseLabel: 'Use',
+  portalDescription: 'Portal to the Nether',
   toiletStaySeatedLines: [
     'No. I need to finish this first.',
     'Not yet. First I need to finish this.',

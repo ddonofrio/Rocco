@@ -167,6 +167,7 @@ export interface RoccoTextCatalog {
     toiletLookLines: string[];
     toiletReadLabel: string;
     toiletUseLabel: string;
+    portalDescription: string;
     toiletStaySeatedLines: string[];
     toiletNeedMagazineLine: string;
     toiletUrgentLine: string;

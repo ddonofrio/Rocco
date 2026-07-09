@@ -260,8 +260,6 @@ const BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID = 'rocco-bait-shop-toilet-medalli
 const BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_VOLUME = 0.45;
 const BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID = 'rocco-bait-shop-toilet-portal-loop-sound';
 const BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_VOLUME = 0.5;
-const BAIT_SHOP_TOILET_PORTAL_DESCRIPTION_ES = 'Portal al Nether';
-const BAIT_SHOP_TOILET_PORTAL_DESCRIPTION_EN = 'Portal to the Nether';
 const BAIT_SHOP_TOILET_SPELL_SOUND_ID = 'rocco-bait-shop-toilet-spell-sound';
 const BAIT_SHOP_TOILET_SPELL_SOUND_VOLUME = 0.42;
 const BAIT_SHOP_TOILET_WISH_LINE_TTL_MS = 2800;
@@ -2932,9 +2930,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
   }
 
   private resolvePortalDescription(): string {
-    return this.localization.locale === 'es'
-      ? BAIT_SHOP_TOILET_PORTAL_DESCRIPTION_ES
-      : BAIT_SHOP_TOILET_PORTAL_DESCRIPTION_EN;
+    return this.localization.text.baitShop.portalDescription;
   }
 
   private startPortalLoopSound(): void {

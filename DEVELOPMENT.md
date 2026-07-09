@@ -24,7 +24,7 @@ This installs dependencies through the local script workflow.
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1
 ```
 
-The Vite development server serves the app on the default Vite port unless the port is already in use.
+The Vite development server binds to `0.0.0.0:5174`. If port `5174` is already in use, Vite falls back to the next available port.
 
 ## Npm Wrapper
 

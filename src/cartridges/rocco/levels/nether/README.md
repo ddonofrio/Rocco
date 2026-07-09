@@ -5,7 +5,7 @@ This directory contains the Nether level family for the `rocco-default` cartridg
 ## Files
 
 - `nether-console-hardware-spawn-level.ts` - `RoccoNetherConsoleHardwareSpawnLevel`, the first Nether screen with the one-time portal arrival sequence, region-aware perspective scaling, security-camera defeat logic, and the forward connector into Nether 2.
-- `nether-end-of-hallway-door-level.ts` - `RoccoNetherEndOfHallwayDoorLevel`, the second Nether screen with a milder perspective setup and the return connector back to Nether 1.
+- `nether-end-of-hallway-door-level.ts` - `RoccoNetherEndOfHallwayDoorLevel`, the second Nether screen with a milder perspective setup, mounted doorbell, door-handle, ascending-pipes, and wheel-valve interactions, and the return connector back to Nether 1.
 - `nether-reset-office-level.ts` - `RoccoNetherResetOfficeLevel`, the first Reset Office screen, available through developer mode and connected to its second screen through the same mirrored horizontal handoff used by the bait shop pair.
 - `nether-reset-office-second-level.ts` - `RoccoNetherResetOfficeSecondLevel`, the second Reset Office screen, which mirrors horizontal return placement and includes the office printer prop interaction.
 - `nether-level-support.ts` - Shared scene loading, walk-map projection, and ground-point helpers for Nether screens.
@@ -24,7 +24,7 @@ This directory contains the Nether level family for the `rocco-default` cartridg
 - The first screen applies region-aware perspective scaling to Rocco, including vertical-only movement speed compensation, without changing other levels.
 - The first screen also runs a non-blocking foreground lighting plane, a matching background-contrast pulse, a matching Rocco-contrast pulse, and a left-weighted ambient machine loop mix.
 - The first screen mounts animated pipe-smoke decoration behind Rocco plus an interactive security camera that can trigger a local checkpoint restart back to the entry sequence.
-- The second screen runs its own lighting plane plus ambient machine loop, uses a softer perspective scale response than Nether 1, and returns to Nether 1 through a bottom exit connector.
+- The second screen runs its own lighting plane plus ambient machine loop, uses a softer perspective scale response than Nether 1, mounts scene targets for the doorbell, door handle, ascending pipes, and wheel valve, registers radial action menus for the doorbell, door handle, and wheel valve, and returns to Nether 1 through its bottom `south` exit connector.
 - The Reset Office pair is intentionally disconnected from the normal Nether graph and currently loads only through developer mode.
 - The Reset Office first screen uses a fixed developer entry at `371,138` facing down, while both office screens enter from each other at the bottom edge with mirrored horizontal placement.
 - The Reset Office second screen mounts a printer sprite prop at the left side of the room with `look`, `grab`, and `kick` actions.

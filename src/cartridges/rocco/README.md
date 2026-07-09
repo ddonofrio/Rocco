@@ -84,14 +84,17 @@ Localized catalogs cover:
 
 ```text
 assets/
-  actions/              Action menu icons
+  actions/              Action menu icons and the developer sprite-cycle cursor
   characters/
-    rocco/              Rocco standing and running frames
+    rocco/              Default Rocco standing, running, and pickup frames
+      lab-coat/         Lab-coat standing and running variants
     pelikan/            Pelikan idle, flight, feeding frames, and sound
     stan/               Stan seated pose sheet for Pier Beginning
   props/
     bait-bucket/        Normal and dropped bait bucket images
-    keys/               Keys image and defeat sound
+    keys/               Keys image, mysterious key image, and defeat sound
+    lab-coat*.png       Lab coat prop and ground variant
+    magazine/           Closed and inventory magazine images
     money/              20 EUR bill image
   sounds/               Shared cartridge sounds
 ```

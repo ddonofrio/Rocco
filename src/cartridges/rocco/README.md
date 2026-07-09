@@ -1,6 +1,6 @@
 # Default Cartridge: `rocco-default`
 
-`rocco-default` is the main built-in cartridge for the ROCCO console. It implements the Pier exterior, the bait shop interior, connected Nether screens, and the developer-only Reset Office screens starring Rocco, a Pelikan, a bait bucket, keys, and Rocco's inventory.
+`rocco-default` is the main built-in cartridge for the ROCCO console. It implements the Pier exterior, the bait shop interior, connected Nether screens, the developer-only Reset Office screens, and the cartridge-owned inventory systems that tie those spaces together.
 
 ## Files
 
@@ -18,24 +18,30 @@
 | --------------- | ----------------------------------------------------------------- |
 | `assets/`       | Shared cartridge assets for characters, props, sounds, and icons  |
 | `dialogue/`     | Reusable cartridge dialogue helpers and branching conversation runtime |
-| `inventory/`    | Rocco cartridge inventory state, prop storages, and grid-menu projection |
+| `inventory/`    | Rocco cartridge inventory state, souvenir assets, fusion recipes, prop storages, and grid-menu projection |
 | `levels/pier/`  | Pier exterior levels, transitions, assets, effects, and interactions |
-| `levels/bait-shop/` | Bait shop interior level, scene assets, walk map, and per-level Rocco setup |
-| `levels/nether/` | Nether levels, arrival effects, walk maps, and per-level Rocco setup |
+| `levels/bait-shop/` | Bait shop interior levels, scene assets, walk maps, and per-level Rocco setup |
+| `levels/nether/` | Nether and Reset Office levels, arrival effects, walk maps, and per-level Rocco setup |
 | `localization/` | English and Spanish text catalogs for the cartridge                |
 
-## Pier Map
+## World Structure
 
-The cartridge starts in Pier Middle. The exterior uses the same background, foreground, cloud, and walk-map artwork across three horizontal windows, and Pier Beginning can branch into the bait shop interior.
+The cartridge starts in Pier Middle and currently spans four level families.
 
-| Level          | ID            | Scene ID                  | Source Window |
-| -------------- | ------------- | ------------------------- | ------------- |
-| Pier Beginning | `pier-start`  | `rocco-pier-start-scene`  | Right side    |
-| Pier Middle    | `pier-middle` | `rocco-pier-middle-scene` | Center        |
-| Pier End       | `pier-end`    | `rocco-pier-end-scene`    | Left side     |
-| Bait Shop      | `bait-shop`   | `rocco-bait-shop-scene`   | Interior      |
+| Family | Level | ID | Scene ID | Notes |
+| ------ | ----- | -- | -------- | ----- |
+| Pier exterior | Pier Beginning | `pier-start` | `rocco-pier-start-scene` | Right panorama window |
+| Pier exterior | Pier Middle | `pier-middle` | `rocco-pier-middle-scene` | Center panorama window and default start |
+| Pier exterior | Pier End | `pier-end` | `rocco-pier-end-scene` | Left panorama window |
+| Bait shop | Front room | `bait-shop` | `rocco-bait-shop-scene` | First interior screen |
+| Bait shop | Back room | `bait-shop-second` | `rocco-bait-shop-second-scene` | Souvenir-table and toilet-door screen |
+| Bait shop | Toilet room | `bait-shop-toilet` | `rocco-bait-shop-toilet-scene` | Magazine sequence, ritual branch, and portal trigger |
+| Nether | Console hardware spawn | `nether-console-hardware-spawn` | `rocco-nether-console-hardware-spawn-scene` | First Nether screen after the portal arrival |
+| Nether | End of hallway door | `nether-end-of-hallway-door` | `rocco-nether-end-of-hallway-door-scene` | Second Nether screen with mounted scene-target interactions |
+| Reset Office | Reset Office 1 | `nether-reset-office` | `rocco-nether-reset-office-scene` | Developer-only branch |
+| Reset Office | Reset Office 2 | `nether-reset-office-second` | `rocco-nether-reset-office-second-scene` | Developer-only branch with the printer prop |
 
-Rocco transitions through edge connectors on connected screens. When his ground point enters an exit area, `RoccoLevelManager` loads the connected level, places Rocco on the matching entry point, and sets his facing direction. Using the keys on the bait shop door while Stan sleeps opens a separate transition into the bait shop scene. The toilet-room portal then leads into `nether-console-hardware-spawn`, which connects onward to `nether-end-of-hallway-door`. Developer mode also exposes a separate two-screen Reset Office branch that is not yet wired into the normal level graph.
+Rocco transitions through edge connectors on connected screens. When his ground point enters an exit area, `RoccoLevelManager` loads the connected level, places Rocco on the matching entry point, and sets his facing direction. Using the keys on the bait shop door while Stan sleeps opens a separate transition into the bait shop interior. The bait-shop toilet portal then leads into `nether-console-hardware-spawn`, which connects onward to `nether-end-of-hallway-door`. Developer mode also exposes the separate two-screen Reset Office branch, which stays outside the normal level graph.
 
 ## Interactions
 
@@ -46,12 +52,14 @@ Rocco transitions through edge connectors on connected screens. When his ground 
 - The bait bucket can be examined, grabbed, kicked, and dropped.
 - The Pelikan reacts to Rocco and can enter a feeding sequence after the bait bucket is dropped.
 - The keys are revealed through the Pier Middle sequence and can be collected.
-- The inventory starts with a 20 EUR bill and later stores collected keys.
+- The inventory starts with a 20 EUR bill and later stores collected keys, the magazine, the mysterious key, the lab coat, and fused ritual items.
 - Clicking Rocco opens a radial menu with self-talk and inventory options.
 - The inventory option toggles a reorderable 3x3 grid menu populated from Rocco cartridge inventory state.
 - The bait shop souvenir table reuses the same cartridge inventory layer as a left-right transfer view, with a 5x4 table layout and table-only placement rules.
 - Full player inventory blocks new pickups instead of reusing an occupied slot.
 - Picking an inventory item can carry it on the console cursor for generic use attempts on sprites.
+- Swapping a compatible carried item onto another inventory item fuses both ingredients into one result. The current recipe chain crafts Floating Amulet, Turritella Razor, Abyssal Talisman, and Coral Relic.
+- The bait-shop toilet branch can inspect the reachable Coral Relic assembly plan and adapts its ritual guidance to the ingredients that are already accessible.
 - Keys and the 20 EUR bill have localized failed-use responses for the bait bucket and the Pelikan.
 - Pier Middle exits are available without an inventory gate.
 - The toilet-room portal opens a first-time arrival sequence in Nether and then hands off to a connected second Nether screen.
@@ -97,6 +105,9 @@ assets/
     magazine/           Closed and inventory magazine images
     money/              20 EUR bill image
   sounds/               Shared cartridge sounds
+inventory/
+  assets/
+    souvenirs/          Souvenir-table collectibles and crafted ritual-item images
 ```
 
 ## Conventions
@@ -104,6 +115,7 @@ assets/
 - Instance IDs for interactive sprites are defined in `rocco-default-constants.ts`.
 - Asset URIs use Vite-compatible `import ... as string` patterns.
 - Shared Rocco sprite logic lives in `rocco-default-sprites.ts` and `rocco-default-sprite-definition.ts`.
+- Inventory-owned souvenir and crafted-item art lives under `inventory/assets/souvenirs`.
 - Pier-specific state, transitions, sprites, and controllers live inside `levels/pier`.
 - Bait shop interior scene state, planes, and assets live inside `levels/bait-shop`.
 - Nether scene state, perspective helpers, arrival effects, and assets live inside `levels/nether`.

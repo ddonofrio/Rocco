@@ -54,7 +54,7 @@ src/
     persistence/           IndexedDB persistence adapter
     video/                 Rendering systems and visual subsystems
   cartridges/              Built-in cartridge implementations
-    rocco/                 Main Pier map demo cartridge
+    rocco/                 Main demo cartridge with Pier, bait shop, Nether, and developer screens
     terminal/              Archived reference demo cartridge
 public/                    Static browser assets
 scripts/                   Windows-friendly development scripts
@@ -101,20 +101,20 @@ The GitHub Actions workflow publishes these downloadable artifacts:
 
 ## Built-in Cartridges
 
-### ROCCO Pier Map
+### ROCCO Default Cartridge
 
 `rocco-default` is the main demo cartridge.
 
-- Three connected Pier levels: Pier Beginning, Pier Middle, and Pier End.
-- Shared scene artwork with right, centered, and left horizontal windows.
-- Edge connectors that teleport Rocco between levels and set the entry facing.
-- Per-level state retention for Pier interactions.
+- Three connected Pier exterior levels with shared panorama artwork and edge connectors.
+- Separate bait shop interior screens, a toilet-room branch, and a connected Nether screen pair.
+- Developer-only Reset Office screens that stay outside the normal level graph.
+- Per-level state retention across Pier, bait shop, Nether, and developer screens.
 - Opening beat where Rocco arrives at the pier, asks the player for help, and can be skipped with a scene click.
 - Click-to-walk pathfinding through walk maps.
-- Pelikan NPC, Stan branching dialogue, bait bucket interaction, bait shop door gating, bait shop interior transition, keys reveal, and key collection.
-- Rocco action menu with self-talk and inventory access.
-- Cartridge inventory shown through a generic reorderable 3x3 grid menu.
-- Inventory item cursor use for keys and the 20 EUR bill against Pier objects.
+- Pelikan NPC, Stan branching dialogue, bait bucket interaction, bait shop door gating, keys reveal, key collection, and Nether interaction sequences.
+- Rocco action menu with self-talk, inventory access, and shared transfer storage for the bait shop souvenir table.
+- Cartridge inventory shown through a generic reorderable 3x3 grid menu with carried-item cursor use.
+- Inventory fusion chains that craft Floating Amulet, Turritella Razor, Abyssal Talisman, and Coral Relic from compatible souvenir items.
 - English and Spanish localization for menu metadata, level titles, actions, descriptions, and dialogue.
 - Water wave post-processing clipped to the original water mask.
 

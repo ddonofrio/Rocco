@@ -8,7 +8,8 @@ This document is written for AI coding agents. It explains the ROCCO console arc
 - Read `AGENTS.md`, this file, `DEVELOPMENT.md`, and the relevant directory READMEs before editing.
 - If the context window is large, read all project-owned README files before touching code.
 - Keep documentation as present-tense reference material. Do not write dated notes, historical edit logs, or edit narratives.
-- Use the `RoccoEngine` SDK surface and exposed subsystem SDKs from cartridge code. Do not import PixiJS or internal engine renderers into cartridges.
+- Treat README files as live contracts for current shipped behavior and architecture. When cartridge scope, asset ownership, or engine-cartridge boundaries change, update the root overview and the nearest leaf README in the same change.
+- Use the `RoccoEngine` SDK surface and exposed subsystem SDKs from cartridge code. Avoid importing PixiJS rendering classes or internal engine renderers into cartridges. The current Rocco cartridge still has a narrow `pixi.js` `Assets` preloading exception where no engine helper exists, so prefer SDK helpers for new work.
 - Remove dead code. Do not leave unused imports, variables, or functions.
 - Match nearby naming, file layout, and test style before introducing new patterns.
 
@@ -26,7 +27,7 @@ Use documentation in layers:
 Useful routes:
 
 - Cartridge behavior: `src/engine/cartridges/README.md`, then the target cartridge README.
-- Rocco Pier behavior: `src/cartridges/rocco/README.md`, then `src/cartridges/rocco/levels/pier/README.md`, then `src/cartridges/rocco/levels/bait-shop/README.md` when the interior matters.
+- Rocco cartridge behavior: `src/cartridges/rocco/README.md`, then `src/cartridges/rocco/levels/pier/README.md`, `src/cartridges/rocco/levels/bait-shop/README.md`, `src/cartridges/rocco/levels/nether/README.md`, and `src/cartridges/rocco/inventory/README.md` as needed.
 - Localization: `src/engine/cartridges/README.md`, `src/engine/cartridge-menu/README.md`, and `src/cartridges/rocco/localization/README.md`.
 - Rendering and water effects: `src/engine/video/README.md`, `src/engine/video/planes/README.md`, and `src/engine/video/post-processing/README.md`.
 - Sprites, walk maps, or actions: `src/engine/video/sprites/README.md` and the relevant cartridge README.
@@ -64,7 +65,7 @@ src/
     persistence/                  Dexie and IndexedDB records
     video/                        Rendering systems and visual subsystems
   cartridges/
-    rocco/                        rocco-default cartridge
+    rocco/                        rocco-default cartridge with Pier, bait shop, Nether, and developer screens
     terminal/                     Archived reference cartridge
 ```
 
@@ -414,17 +415,20 @@ Boot-time settings modules are generic menu entries contributed through `RoccoCa
 
 The main demo cartridge lives in `src/cartridges/rocco`.
 
-- Three connected Pier levels: Pier Beginning, Pier Middle, and Pier End.
-- Separate bait shop interior level under `src/cartridges/rocco/levels/bait-shop`.
+- Three connected Pier exterior levels: Pier Beginning, Pier Middle, and Pier End.
+- Separate bait shop front room, back room, and toilet-room branch under `src/cartridges/rocco/levels/bait-shop`.
+- Connected Nether screen pair plus a developer-only Reset Office pair under `src/cartridges/rocco/levels/nether`.
 - Shared pier scene artwork with right, centered, and left source-image windows.
 - Level graph with east/west connectors, entry points, and entry facing.
 - Per-level state retained by keeping level instances alive in `RoccoLevelManager`.
 - The first Pier Middle mount plays an opening beat through the Rocco sprite controller, and scene clicks can cancel it.
-- Rocco cartridge inventory for the 20 EUR bill, collected keys, and slot order.
+- Rocco cartridge inventory for the 20 EUR bill, collected keys, the magazine, the mysterious key, the lab coat, and souvenir-derived ritual items.
+- Bait shop souvenir-table storage projected as a shared 5x4 transfer grid seeded from inventory-owned souvenir assets.
+- Inventory fusion by swapping compatible items inside the player grid, with recipe chains for Floating Amulet, Turritella Razor, Abyssal Talisman, and Coral Relic.
 - Rocco self action menu with Talk and Inventory options.
 - Cartridge-owned inventory item use attempts against Pier objects through `scene-click` plus the carried grid payload.
 - Rocco player sprite with click-to-walk and directional actions.
-- Pelikan NPC, bait bucket, feeding sequence, keys reveal, key collection, the bait shop door gate in Pier Beginning, and the bait shop interior transition.
+- Pelikan NPC, bait bucket, feeding sequence, keys reveal, key collection, the bait shop door gate in Pier Beginning, the bait shop interior transition, and the bait-shop toilet portal into Nether.
 - Stan wake logic, branching dialogue menus, and the reusable cartridge dialogue runtime.
 - English and Spanish localization.
 - Water wave post-processing clipped to the source water mask.
@@ -476,7 +480,7 @@ powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string
 - TypeScript interfaces at the engine and SDK boundaries.
 - Interfaces for data shapes.
 - `structuredClone` for defensive copies when crossing module boundaries.
-- No direct PixiJS usage outside Pixi renderer modules and Pixi-specific UI modules.
+- Avoid direct PixiJS usage outside Pixi renderer modules and Pixi-specific UI modules. Current cartridge-side uses of `pixi.js` `Assets` are narrow preloading exceptions, not a pattern to extend.
 - Barrel `index.ts` exports for modules.
 - `kebab-case` file names.
 - `PascalCase` class names.

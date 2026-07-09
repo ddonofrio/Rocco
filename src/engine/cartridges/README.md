@@ -43,7 +43,7 @@ interface RoccoCartridgeContext {
 }
 ```
 
-`engine` is the only runtime SDK surface cartridge code should use. Cartridges reach console capabilities through `RoccoEngine` and the subsystem handles it exposes, such as `engine.video`, `engine.audio`, `engine.effects`, `engine.jukebox`, and `engine.persistence`. `locale` is set by the cartridge menu when a localized cartridge is loaded.
+`engine` is the primary runtime SDK surface cartridge code should use. Cartridges reach console capabilities through `RoccoEngine` and the subsystem handles it exposes, such as `engine.video`, `engine.audio`, `engine.effects`, `engine.jukebox`, and `engine.persistence`. `locale` is set by the cartridge menu when a localized cartridge is loaded. Current cartridge-side `pixi.js` `Assets` usage is limited to a narrow raw-asset preloading exception where no engine helper exists yet.
 
 Boot-time setup uses a narrower context:
 
@@ -124,7 +124,7 @@ When a localized cartridge is selected, `RoccoCartridgeMenu` returns `selectedLo
 
 ## Built-in Cartridges
 
-- `src/cartridges/rocco` contains `rocco-default`, the main Pier map cartridge.
+- `src/cartridges/rocco` contains `rocco-default`, the main demo cartridge spanning Pier, bait shop, Nether, and developer-only Reset Office screens.
 - `src/cartridges/terminal` contains `terminal-work-in-progress`, an archived reference cartridge.
 
 ## Creating a Cartridge
@@ -136,7 +136,7 @@ When a localized cartridge is selected, `RoccoCartridgeMenu` returns `selectedLo
 5. Add cartridge assets.
 6. Register the cartridge in `src/cartridges/index.ts`.
 
-Cartridge code should not import PixiJS or engine renderer internals.
+Avoid importing PixiJS rendering classes or engine renderer internals into cartridge code. Prefer engine SDK helpers for asset preloading and scene work; the current Rocco cartridge's `pixi.js` `Assets` imports are a narrow compatibility exception, not the default pattern.
 
 ## Reading Next
 

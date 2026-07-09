@@ -1,13 +1,17 @@
-import { Assets } from 'pixi.js';
 import { describe, expect, it, vi } from 'vitest';
+
+const { loadAssetMock } = vi.hoisted(() => ({
+  loadAssetMock: vi.fn(),
+}));
 
 vi.mock('pixi.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('pixi.js')>();
+  loadAssetMock.mockImplementation(() => Promise.resolve(actual.Texture.WHITE));
   return {
     ...actual,
     Assets: {
       ...actual.Assets,
-      load: vi.fn(() => Promise.resolve(actual.Texture.WHITE)),
+      load: loadAssetMock,
     },
   };
 });
@@ -118,9 +122,9 @@ describe('RoccoRuntimeVideoSystem', () => {
 
     await system.preloadAssetUrls(['grab.png', 'kick.png', 'grab.png']);
 
-    expect(Assets.load).toHaveBeenCalledTimes(2);
-    expect(Assets.load).toHaveBeenNthCalledWith(1, 'grab.png');
-    expect(Assets.load).toHaveBeenNthCalledWith(2, 'kick.png');
+    expect(loadAssetMock).toHaveBeenCalledTimes(2);
+    expect(loadAssetMock).toHaveBeenNthCalledWith(1, 'grab.png');
+    expect(loadAssetMock).toHaveBeenNthCalledWith(2, 'kick.png');
   });
 
   it('keeps threshold planes in front when the active player is behind the threshold', () => {

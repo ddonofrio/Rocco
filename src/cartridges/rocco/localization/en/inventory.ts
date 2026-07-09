@@ -4,11 +4,7 @@ export const englishInventoryText: RoccoTextCatalog['inventory'] = {
   title: 'Inventory',
   dropButtonLabel: 'Drop',
   pickupLine: "I'll keep it.",
-  fullLines: [
-    "I can't carry any more stuff.",
-    'My pockets are already full.',
-    'If I keep stuffing things in there, something will explode.',
-  ],
+  fullLines: ['I do not have room in my pockets for anything else.'],
   keysLabel: 'Keys',
   magazineLabel: 'Magazine',
   micromaniaLabel: 'Micromania',

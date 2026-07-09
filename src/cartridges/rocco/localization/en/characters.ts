@@ -23,12 +23,14 @@ export const englishPelikanText: RoccoTextCatalog['pelikan'] = {
   kickLines: [
     'No. I am not starting a fight I secretly want to lose.',
     'If I get closer, it will hurt me in a very literal way.',
-    'Survival is still an option. Barely.',
+    'That thing is older than my bravery.',
+    'No. Even desperation has standards.',
   ],
   grabLines: [
     'No touching the bird. I have enough bad endings queued.',
     'Touching it feels like choosing pain for no reason.',
     'I need these fingers for whatever comes after this minute.',
+    'I prefer my hands attached and my regrets abstract.',
   ],
   talkLines: [
     'You look like you have never apologized to anyone.',

@@ -4,6 +4,7 @@ export const englishBaitBucketText: RoccoTextCatalog['baitBucket'] = {
   normalLookLines: [
     'A bucket of bait. Something still wants to be alive in there.',
     'It smells like the bottom of things.',
+    'Someone left food for the birds. At least someone planned something.',
     'The worms keep moving. Small lives are stubborn.',
     'I wonder if they know they are bait.',
   ],
@@ -11,17 +12,20 @@ export const englishBaitBucketText: RoccoTextCatalog['baitBucket'] = {
     'No. I do not need another thing in my hands right now.',
     'I can barely carry myself. The bucket can stay there.',
     'It is wet, heavy, and honest. More than I can say for me.',
+    'My pockets are not made for bait or confessions.',
     'Touching it would make this feel too real.',
   ],
   droppedLookLines: [
     'The bucket is open now. Everything spills eventually.',
     'The worms found daylight and probably regret it.',
     'That mess looks like my thoughts when I stop moving.',
+    'The pier has one more thing it can hold against me.',
     'Even the bait ended up where gravity wanted it.',
   ],
   droppedGrabLines: [
     'No. Some things cannot be put back neatly.',
     'I am done pretending a spill can be undone.',
+    'The worms can keep their little disaster.',
     'My hands are already full of bad ideas.',
     'If I pick it up, I will only drop it again.',
   ],
@@ -33,8 +37,9 @@ export const englishFeedingText: RoccoTextCatalog['feeding'] = {
     'The Pelikan eats like the world never ended for it.',
     'That beak knows exactly what it wants. I envy that.',
     'I do not want to watch something disappear.',
+    'The worms leave before they understand the sky.',
     'Nature is not cruel. It is just finished arguing.',
-    'That bird has no doubt in it at all.',
+    'The bucket belongs to the bird now. Maybe I never had anything either.',
   ],
 };
 
@@ -49,6 +54,7 @@ export const englishKeysText: RoccoTextCatalog['keys'] = {
   kickLines: [
     'No. I am not kicking away the first good sign I have seen.',
     'They are small, but they are not nothing.',
+    'If I lose them, I know exactly where my head will go.',
     'Let us not test gravity twice today.',
   ],
   collectedLines: [
@@ -61,6 +67,7 @@ export const englishKeysText: RoccoTextCatalog['keys'] = {
     'Of course. Even a second chance can slip.',
     'I watched the last bright thing fall and did nothing right.',
     'My hands remembered how to fail.',
+    'The sea keeps taking what I almost manage to keep.',
     'Gravity still knows my name.',
   ],
   defeatTitle: 'You lose',

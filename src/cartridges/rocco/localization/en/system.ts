@@ -32,7 +32,7 @@ export const englishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   bench: 'Stool',
   postcardRack: 'Postcards',
   souvenirTable: 'Souvenir table',
-  hiddenKeys: 'Hidden keys',
+  hiddenKeys: 'Hidden key',
   cashRegister: 'Cash register',
   window: 'Window',
   barrel: 'Barrel',

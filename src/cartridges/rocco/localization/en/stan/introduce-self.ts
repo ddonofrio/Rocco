@@ -14,7 +14,7 @@ export const englishStanIntroduceSelfChoice: RoccoDialogueChoiceNode = branch(
         leaf(
           'intro-nothing-direction',
           'Do you have a recommendation?',
-          'Yes. Stop booing sleeping salesmen. Then improvise.',
+          'Come back when Shell City is open and buy something from me.',
         ),
         leaf(
           'intro-nothing-purpose',

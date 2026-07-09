@@ -1,6 +1,7 @@
 import type { RoccoTextCatalog } from '../types';
 
 export const englishNetherText: RoccoTextCatalog['nether'] = {
+  arrivalThoughtLine: 'What is this place?',
   intercom: {
     lookLines: [
       'It is an industrial intercom.',

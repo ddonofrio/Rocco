@@ -48,9 +48,9 @@ export interface RoccoTextCatalog {
     pelikan: string;
     oldMan: string;
     stan: string;
-  intercomunicador: string;
-  noisyMachine: string;
-  shelf: string;
+    intercomunicador: string;
+    noisyMachine: string;
+    shelf: string;
     timbre: string;
     doorHandle: string;
     ascendingPipes: string;
@@ -95,6 +95,10 @@ export interface RoccoTextCatalog {
     mysteriousKeyLabel: string;
     twentyEurosLabel: string;
     bataLabel: string;
+    floatingAmuletLabel: string;
+    spiralRazorLabel: string;
+    abyssalTalismanLabel: string;
+    coralRelicLabel: string;
     magazineOnSelfLine: string;
     bataOnSelfLine: string;
     bataAlreadyOnSelfLine: string;
@@ -232,6 +236,7 @@ export interface RoccoTextCatalog {
     leftBarrelLookLines: string[];
   };
   nether: {
+    arrivalThoughtLine: string;
     intercom: {
       lookLines: string[];
       firstChoices: {
@@ -260,20 +265,20 @@ export interface RoccoTextCatalog {
       finalChoice: string;
       securityAlertLine: string;
     };
-      timbre: {
-        lookLines: string[];
-      };
-      doorHandle: {
-        lookLines: string[];
-      };
-      ascendingPipes: {
-        lookLines: string[];
-      };
-      wheelValve: {
-        lookLines: string[];
-        grabLines: string[];
-      };
+    timbre: {
+      lookLines: string[];
     };
+    doorHandle: {
+      lookLines: string[];
+    };
+    ascendingPipes: {
+      lookLines: string[];
+    };
+    wheelValve: {
+      lookLines: string[];
+      grabLines: string[];
+    };
+  };
 }
 
 export interface RoccoLocalization {

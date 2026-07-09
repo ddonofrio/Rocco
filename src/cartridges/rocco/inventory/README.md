@@ -23,7 +23,7 @@ The inventory belongs to the cartridge. The engine provides generic slot-panel U
 - The default Pier inventory starts with `rocco-twenty-euros`.
 - Collected keys are added as `rocco-keys`.
 - Story pickups can also add the magazine, the mysterious key, the lab coat, and crafted bait-shop ritual items such as `rocco-floating-amulet`, `rocco-spiral-razor`, `rocco-abyssal-talisman`, and `rocco-coral-relic`.
-- Items keep a slot index so grid reorder operations can persist.
+- Items keep a slot index so grid reorder operations survive within the live cartridge state for the current run.
 - The inventory projects its current items into a reorderable 3x3 grid menu definition.
 - Swapping a compatible carried item onto another player-inventory item fuses both ingredients into one result and replaces them in the grid.
 - The current fusion chain is `Japanese Float + Beach Necklace -> Floating Amulet`, `Amber Turritella + Razor Shell -> Turritella Razor`, `Floating Amulet + Turritella Razor -> Abyssal Talisman`, and `Abyssal Talisman + Red Coral -> Coral Relic`.

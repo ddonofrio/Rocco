@@ -42,6 +42,7 @@ export interface RoccoVideoSystem {
   setRenderLayerOrder(layers: RoccoRenderLayer[]): void;
   getRenderLayerOrder(): RoccoRenderLayer[];
 
+  preloadAssetUrls(assetUrls: readonly string[]): Promise<void>;
   preloadPlaneScene(scene: RoccoPlaneScene): Promise<void>;
   preloadSpriteDefinition(definition: RoccoSpriteDefinition): Promise<void>;
   preloadSpriteDefinitions(definitions: RoccoSpriteDefinition[]): Promise<void>;

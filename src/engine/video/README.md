@@ -56,7 +56,8 @@ display.profile      90
 
 ## Cartridge-Facing Entry Points
 
-- `engine.video.preloadPlaneScene(scene)` and `engine.video.preloadSpriteDefinition(definition)` preload video assets.
+- `engine.video.preloadAssetUrls(assetUrls)` preloads raw image or UI asset URLs that belong to the console video layer.
+- `engine.video.preloadPlaneScene(scene)` and `engine.video.preloadSpriteDefinition(definition)` preload scene and sprite-definition assets.
 - Use `engine.loadPlaneScene(scene)` through the engine SDK surface when replacing the active scene so runtime bookkeeping stays in sync.
 - `engine.video.planes` handles plane-level inspection and mutation after a scene is active, including planes that resolve their render layer dynamically at render time.
 - `engine.video.sprites`, `sceneTargets`, `actionMenus`, `gridMenus`, `messages`, `primitives`, `titles`, and `display` expose cartridge-facing visual capabilities.

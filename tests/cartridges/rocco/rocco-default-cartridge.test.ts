@@ -976,6 +976,10 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     getRenderLayerOrder() {
       return [];
     },
+    preloadAssetUrls(assetUrls: readonly string[]) {
+      void assetUrls;
+      return Promise.resolve();
+    },
     preloadPlaneScene(scene: RoccoPlaneScene) {
       state.preloadedPlaneSceneIds.push(scene.id);
       return Promise.resolve();

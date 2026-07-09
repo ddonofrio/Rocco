@@ -1,4 +1,4 @@
-import type { Container } from 'pixi.js';
+import { Assets, type Container } from 'pixi.js';
 
 import { PixiRoccoActionMenuRenderer, RoccoActionMenuSystemSDK } from './action-menu';
 import {
@@ -219,6 +219,11 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
 
   getRenderLayerOrder(): RoccoRenderLayer[] {
     return clone(this.renderLayers);
+  }
+
+  async preloadAssetUrls(assetUrls: readonly string[]): Promise<void> {
+    const uniqueAssetUrls = [...new Set(assetUrls)];
+    await Promise.all(uniqueAssetUrls.map((assetUrl) => Assets.load(assetUrl)));
   }
 
   loadPlaneScene(scene: RoccoPlaneScene): void {

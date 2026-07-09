@@ -17,7 +17,7 @@ Each locale has its own directory. The directory `index.ts` assembles a complete
 | `en/`                                  | English source catalog                                                                      |
 | `es/`                                  | Spanish catalog                                                                             |
 | `en/system.ts`, `es/system.ts`         | Manifest metadata, action labels, visible descriptions, level labels, and developer UI text |
-| `en/inventory.ts`, `es/inventory.ts`   | Inventory labels and item-use responses                                                     |
+| `en/inventory.ts`, `es/inventory.ts`   | Inventory labels, crafted-item labels, and item-use responses                               |
 | `en/pier.ts`, `es/pier.ts`             | Pier object, feeding, keys, and Pier Middle lines                                           |
 | `en/characters.ts`, `es/characters.ts` | Rocco, Pelikan, and Stan action-menu lines                                                  |
 | `en/bait-shop.ts`, `es/bait-shop.ts`   | Bait shop interior text                                                                     |
@@ -37,7 +37,7 @@ Catalogs cover:
 - Speech and thought lines.
 - Stan branching dialogue tree and action-menu reaction lines.
 - Rocco self-talk lines.
-- Inventory title, item labels, failed-use lines, and Stan's police trap line.
+- Inventory title, base-item labels, crafted-item labels, failed-use lines, and Stan's police trap line.
 - Visible object descriptions, including the bait shop door.
 - Pier level titles and status labels, including the bait shop title.
 - Keys defeat title.

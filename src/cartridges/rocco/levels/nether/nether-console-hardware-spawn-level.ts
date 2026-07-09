@@ -2589,10 +2589,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
   }
 
   private resolveArrivalThoughtLine(): string {
-    if (this.localization.locale === 'es') {
-      return '\u00bfqu\u00e9 es este lugar?';
-    }
-
-    return 'What is this place?';
+    return this.localization.text.nether.arrivalThoughtLine;
   }
 }

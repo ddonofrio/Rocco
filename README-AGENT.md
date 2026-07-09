@@ -9,7 +9,7 @@ This document is written for AI coding agents. It explains the ROCCO console arc
 - If the context window is large, read all project-owned README files before touching code.
 - Keep documentation as present-tense reference material. Do not write dated notes, historical edit logs, or edit narratives.
 - Treat README files as live contracts for current shipped behavior and architecture. When cartridge scope, asset ownership, or engine-cartridge boundaries change, update the root overview and the nearest leaf README in the same change.
-- Use the `RoccoEngine` SDK surface and exposed subsystem SDKs from cartridge code. Avoid importing PixiJS rendering classes or internal engine renderers into cartridges. The current Rocco cartridge still has a narrow `pixi.js` `Assets` preloading exception where no engine helper exists, so prefer SDK helpers for new work.
+- Use the `RoccoEngine` SDK surface and exposed subsystem SDKs from cartridge code. Avoid importing PixiJS rendering classes or internal engine renderers into cartridges. Use engine-owned preload helpers such as `engine.video.preloadAssetUrls(...)`, `engine.video.preloadPlaneScene(...)`, and `engine.video.preloadSpriteDefinition(...)` instead.
 - Remove dead code. Do not leave unused imports, variables, or functions.
 - Match nearby naming, file layout, and test style before introducing new patterns.
 
@@ -262,6 +262,7 @@ The cartridge-facing video SDK lives under `engine.video`. `RoccoRuntimeVideoSys
 
 ### Video Preloading
 
+- `engine.video.preloadAssetUrls(assetUrls)` preloads raw image or UI asset URLs through the console video layer.
 - `engine.video.preloadPlaneScene(scene)` preloads plane assets before the active scene is switched through `engine.loadPlaneScene(scene)`.
 - `engine.video.preloadSpriteDefinition(definition)` preloads a single sprite definition and its assets.
 - `engine.video.preloadSpriteDefinitions(definitions)` preloads multiple sprite definitions.
@@ -480,7 +481,7 @@ powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string
 - TypeScript interfaces at the engine and SDK boundaries.
 - Interfaces for data shapes.
 - `structuredClone` for defensive copies when crossing module boundaries.
-- Avoid direct PixiJS usage outside Pixi renderer modules and Pixi-specific UI modules. Current cartridge-side uses of `pixi.js` `Assets` are narrow preloading exceptions, not a pattern to extend.
+- Avoid direct PixiJS usage outside Pixi renderer modules and Pixi-specific UI modules.
 - Barrel `index.ts` exports for modules.
 - `kebab-case` file names.
 - `PascalCase` class names.

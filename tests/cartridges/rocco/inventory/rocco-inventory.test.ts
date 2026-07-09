@@ -129,12 +129,15 @@ describe('RoccoInventory', () => {
     expect(inventory.listItems()).toHaveLength(9);
   });
 
-  it('uses the updated Turritella razor label', () => {
-    expect(createRoccoSpiralRazorInventoryItem(createRoccoLocalization('es')).label).toBe(
-      'Navaja turritela',
+  it('reads fused item labels from the localization catalog', () => {
+    const spanishLocalization = createRoccoLocalization('es');
+    const englishLocalization = createRoccoLocalization('en');
+
+    expect(createRoccoSpiralRazorInventoryItem(spanishLocalization).label).toBe(
+      spanishLocalization.text.inventory.spiralRazorLabel,
     );
-    expect(createRoccoSpiralRazorInventoryItem(createRoccoLocalization('en')).label).toBe(
-      'Turritella Razor',
+    expect(createRoccoSpiralRazorInventoryItem(englishLocalization).label).toBe(
+      englishLocalization.text.inventory.spiralRazorLabel,
     );
   });
 

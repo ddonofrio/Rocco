@@ -1,5 +1,3 @@
-import { Assets } from 'pixi.js';
-
 import type { RoccoEngine } from '../../../engine/engine-sdk';
 import type {
   RoccoCartridgeAction,
@@ -439,7 +437,7 @@ export class RoccoLevelManager {
 
   async mount(engine: RoccoEngine): Promise<RoccoLevelManagerMountResult> {
     this.engine = engine;
-    await Promise.all(ROCCO_SHARED_UI_ASSET_URLS.map((uri) => Assets.load(uri))).catch(() => {
+    await this.engine.video.preloadAssetUrls(ROCCO_SHARED_UI_ASSET_URLS).catch(() => {
       this.engine?.log('Assets', 'Some shared Rocco UI assets could not be preloaded.');
     });
     this.engine.audio.registerSound({

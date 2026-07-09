@@ -418,7 +418,7 @@ export function createRoccoFloatingAmuletInventoryItem(
 ): RoccoInventoryItem {
   return {
     id: ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
-    label: localization.locale === 'es' ? 'Amuleto flotante' : 'Floating Amulet',
+    label: localization.text.inventory.floatingAmuletLabel,
     imageUri: roccoFloatingAmuletAssetUrl,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_FLOATING_AMULET_GROUND_SPRITE,
@@ -430,7 +430,7 @@ export function createRoccoSpiralRazorInventoryItem(
 ): RoccoInventoryItem {
   return {
     id: ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
-    label: localization.locale === 'es' ? 'Navaja turritela' : 'Turritella Razor',
+    label: localization.text.inventory.spiralRazorLabel,
     imageUri: roccoSpiralRazorAssetUrl,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_SPIRAL_RAZOR_GROUND_SPRITE,
@@ -442,7 +442,7 @@ export function createRoccoAbyssalTalismanInventoryItem(
 ): RoccoInventoryItem {
   return {
     id: ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
-    label: localization.locale === 'es' ? 'Talism\u00e1n abisal' : 'Abyssal Talisman',
+    label: localization.text.inventory.abyssalTalismanLabel,
     imageUri: roccoAbyssalTalismanAssetUrl,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_ABYSSAL_TALISMAN_GROUND_SPRITE,
@@ -454,7 +454,7 @@ export function createRoccoCoralRelicInventoryItem(
 ): RoccoInventoryItem {
   return {
     id: ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
-    label: localization.locale === 'es' ? 'Reliquia coralina' : 'Coral Relic',
+    label: localization.text.inventory.coralRelicLabel,
     imageUri: roccoCoralRelicAssetUrl,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_CORAL_RELIC_GROUND_SPRITE,

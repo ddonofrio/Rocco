@@ -1,7 +1,6 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
-import { Assets } from 'pixi.js';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
   DEFAULT_FEEDING_LOOK_ACTION_ID,
@@ -173,11 +172,11 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
       backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X,
     });
 
-    await Promise.all([
-      Assets.load(roccoDefaultActionMenuAssetUrls.grab),
-      Assets.load(roccoDefaultActionMenuAssetUrls.kick),
-      Assets.load(roccoDefaultActionMenuAssetUrls.look),
-      Assets.load(roccoDefaultActionMenuAssetUrls.talk),
+    await engine.video.preloadAssetUrls([
+      roccoDefaultActionMenuAssetUrls.grab,
+      roccoDefaultActionMenuAssetUrls.kick,
+      roccoDefaultActionMenuAssetUrls.look,
+      roccoDefaultActionMenuAssetUrls.talk,
     ]).catch(() => {
       engine.log('Assets', 'Some action menu icons could not be preloaded.');
     });

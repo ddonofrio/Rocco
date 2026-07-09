@@ -1,4 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { Assets } from 'pixi.js';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('pixi.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('pixi.js')>();
+  return {
+    ...actual,
+    Assets: {
+      ...actual.Assets,
+      load: vi.fn(() => Promise.resolve(actual.Texture.WHITE)),
+    },
+  };
+});
 
 import type { RoccoPlaneScene } from '../../../src/engine/video/planes';
 import type { RoccoSpriteDefinition } from '../../../src/engine/video/sprites';
@@ -101,6 +113,16 @@ function createSystemWithActivePlayer(y: number): {
 }
 
 describe('RoccoRuntimeVideoSystem', () => {
+  it('preloads raw asset URLs through the video system without reloading duplicates', async () => {
+    const system = new RoccoRuntimeVideoSystem();
+
+    await system.preloadAssetUrls(['grab.png', 'kick.png', 'grab.png']);
+
+    expect(Assets.load).toHaveBeenCalledTimes(2);
+    expect(Assets.load).toHaveBeenNthCalledWith(1, 'grab.png');
+    expect(Assets.load).toHaveBeenNthCalledWith(2, 'kick.png');
+  });
+
   it('keeps threshold planes in front when the active player is behind the threshold', () => {
     const { internals } = createSystemWithActivePlayer(300);
 

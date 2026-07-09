@@ -107,6 +107,10 @@ function getRegisteredSceneTarget<T>(state: TestState, instanceId: string): T | 
 function createEngineMock(state: TestState): RoccoEngine {
   return {
     video: {
+      preloadAssetUrls: (assetUrls: readonly string[]) => {
+        void assetUrls;
+        return Promise.resolve();
+      },
       preloadPlaneScene: (scene: RoccoPlaneScene) => {
         state.preloadedPlaneSceneIds.push(scene.id);
         return Promise.resolve();

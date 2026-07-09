@@ -10,7 +10,10 @@
 - `rocco-default-assets.ts` - Shared cartridge asset URIs.
 - `rocco-default-sprite-definition.ts` - Rocco player sprite definition.
 - `rocco-default-sprites.ts` - Rocco player sprite installation.
+- `rocco-player-appearance.ts` - Player appearance IDs and the default versus lab-coat appearance contract.
 - `rocco-player-action-menu.ts` - Rocco self action menu with Talk and Inventory actions.
+- `rocco-developer-mode.ts` - Developer-mode menu definitions, inventory seeding, and event-toggle helpers.
+- `scripted-scene-interaction-controller.ts` - Shared walk-then-react controller for scene-target choreography.
 
 ## Subdirectories
 
@@ -59,6 +62,7 @@ Rocco transitions through edge connectors on connected screens. When his ground 
 - Full player inventory blocks new pickups instead of reusing an occupied slot.
 - Picking an inventory item can carry it on the console cursor for generic use attempts on sprites.
 - Swapping a compatible carried item onto another inventory item fuses both ingredients into one result. The current recipe chain crafts Floating Amulet, Turritella Razor, Abyssal Talisman, and Coral Relic.
+- Fusion rules live in `inventory/rocco-inventory.ts` through `ROCCO_INVENTORY_FUSION_RECIPES` and `planRoccoCoralRelicAssembly()`.
 - The bait-shop toilet branch can inspect the reachable Coral Relic assembly plan and adapts its ritual guidance to the ingredients that are already accessible.
 - Keys and the 20 EUR bill have localized failed-use responses for the bait bucket and the Pelikan.
 - Pier Middle exits are available without an inventory gate.
@@ -83,7 +87,7 @@ Localized catalogs cover:
 - Action labels.
 - Speech and thought lines.
 - Stan branching dialogue tree and cowardly Grab and Kick reactions.
-- Inventory title, item labels, and failed-use responses.
+- Inventory title, item labels, crafted-item labels, and failed-use responses.
 - Object descriptions, including the bait shop door hover label.
 - Level titles and status labels, including the bait shop title.
 - Keys defeat title.

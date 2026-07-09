@@ -114,7 +114,7 @@ The GitHub Actions workflow publishes these downloadable artifacts:
 - Pelikan NPC, Stan branching dialogue, bait bucket interaction, bait shop door gating, keys reveal, key collection, and Nether interaction sequences.
 - Rocco action menu with self-talk, inventory access, and shared transfer storage for the bait shop souvenir table.
 - Cartridge inventory shown through a generic reorderable 3x3 grid menu with carried-item cursor use.
-- Inventory fusion chains that craft Floating Amulet, Turritella Razor, Abyssal Talisman, and Coral Relic from compatible souvenir items.
+- Inventory fusion chains that craft Floating Amulet, Turritella Razor, Abyssal Talisman, and Coral Relic from compatible souvenir items, with the rules living under `src/cartridges/rocco/inventory`.
 - English and Spanish localization for menu metadata, level titles, actions, descriptions, and dialogue.
 - Water wave post-processing clipped to the original water mask.
 

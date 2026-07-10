@@ -5,6 +5,7 @@ export default defineConfig({
     dir: 'tests',
     include: ['**/*.test.ts'],
     environment: 'jsdom',
+    setupFiles: ['./tests/setup.ts'],
     pool: 'vmForks',
   },
 });

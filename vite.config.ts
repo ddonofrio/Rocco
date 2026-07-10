@@ -8,6 +8,13 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: isDesktopBuild ? './' : '/',
+    build: {
+      // Pixi.js and the game runtime are inherently large; Pixi already
+      // code-splits its renderers on demand, so raise the warning threshold
+      // above the known entry-chunk size instead of forcing brittle manual
+      // chunks that would defeat Pixi's lazy loading.
+      chunkSizeWarningLimit: 800,
+    },
     server: {
       // Temporary: expose the dev server on the local network for playtests.
       host: '0.0.0.0',

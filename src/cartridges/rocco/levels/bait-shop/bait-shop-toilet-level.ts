@@ -4,7 +4,7 @@ import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../../../engine/video/action-menu';
-import type { RoccoGridMenuActivation } from '../../../../engine/video/grid-menu';
+import type { RoccoGridMenuCarriedItem, RoccoGridMenuActivation } from '../../../../engine/video/grid-menu';
 import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../../../engine/video/planes';
 import {
   createRoccoSpriteAutoCroppedFrames,
@@ -15,6 +15,7 @@ import {
 import { createRoccoDialogueChoiceMenu, roccoCartridgeMessageRuntime } from '../../dialogue';
 import {
   DEFAULT_CORAL_RELIC_GROUND_SPRITE,
+  ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
   resolveRoccoInventoryItemLabel,
   roccoCoralRelicAssetUrl,
   type RoccoCoralRelicAssemblyPlan,
@@ -1110,6 +1111,39 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       BAIT_SHOP_TOILET_STAY_SEATED_HISTORY_KEY,
     );
     return { suppressDefaultPlayerMove: true };
+  }
+
+  handleInventorySceneClick(
+    activation: RoccoSceneClickAction,
+    carriedItem: RoccoGridMenuCarriedItem,
+  ): boolean {
+    if (this.sequence || this.readingSequence || this.wishSequence || this.throwSequence) {
+      return false;
+    }
+
+    if (this.roccoSeated) {
+      return false;
+    }
+
+    if (
+      carriedItem.item.id !== ROCCO_INVENTORY_MAGAZINE_ITEM_ID ||
+      activation.targetInstanceId !== BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID
+    ) {
+      return false;
+    }
+
+    if (!this.hasMagazine()) {
+      return false;
+    }
+
+    this.startSitSequence();
+
+    if (this.engine) {
+      this.engine.video.gridMenus.clearCarriedItem();
+      this.engine.video.render(0);
+    }
+
+    return true;
   }
 
   private handlePortalSceneClick(activation: RoccoSceneClickAction): boolean {

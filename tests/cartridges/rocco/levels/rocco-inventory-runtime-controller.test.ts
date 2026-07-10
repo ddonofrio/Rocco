@@ -138,7 +138,7 @@ describe('RoccoInventoryRuntimeController', () => {
 
     const { engine, state } = createInventoryEngine();
     const storeDroppedInventoryItem = vi.fn<
-      (levelId: string, droppedItem: StoredDroppedInventoryItem) => void
+      (levelId: string, droppedItem: StoredDroppedInventoryItem) => boolean
     >();
     const syncWorldPresentation = vi.fn();
     const refreshStatus = vi.fn();

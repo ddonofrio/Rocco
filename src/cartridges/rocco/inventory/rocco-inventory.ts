@@ -38,7 +38,7 @@ const INVENTORY_SLOT_SIZE = 106;
 const INVENTORY_SLOT_GAP = 8;
 const roccoAbyssalTalismanAssetUrl = new URL('./assets/souvenirs/abyssal-talisman.png', import.meta.url)
   .href;
-const roccoCoralRelicAssetUrl = new URL('./assets/souvenirs/coral-relic.png', import.meta.url)
+export const roccoCoralRelicAssetUrl = new URL('./assets/souvenirs/coral-relic.png', import.meta.url)
   .href;
 const roccoFloatingAmuletAssetUrl = new URL('./assets/souvenirs/floating-amulet.png', import.meta.url)
   .href;
@@ -129,7 +129,7 @@ const DEFAULT_ABYSSAL_TALISMAN_GROUND_SPRITE = createGroundSpriteDefinition(
   1172,
   24,
 );
-const DEFAULT_CORAL_RELIC_GROUND_SPRITE = createGroundSpriteDefinition(
+export const DEFAULT_CORAL_RELIC_GROUND_SPRITE = createGroundSpriteDefinition(
   roccoCoralRelicAssetUrl,
   909,
   1232,

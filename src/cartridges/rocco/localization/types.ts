@@ -192,6 +192,8 @@ export interface RoccoTextCatalog {
     toiletPostWishReplyWhatIfNotLine: string;
     toiletPostWishReplyComeInLine: string;
     toiletPostWishPoliceResponseLine: string;
+    coralRelicLookLine: string;
+    coralRelicRefuseLines: string[];
     toiletDoorOpenLabel: string;
     toiletDoorCloseLabel: string;
     toiletDoorWalkLabel: string;

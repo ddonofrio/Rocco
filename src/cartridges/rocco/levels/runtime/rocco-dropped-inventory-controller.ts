@@ -9,6 +9,8 @@ import {
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
   type RoccoInventoryItem,
 } from '../../inventory';
+import { ROCCO_BAIT_SHOP_TOILET_LEVEL_ID } from '../bait-shop/bait-shop-toilet-level';
+import type { RoccoBaitShopToiletLevel } from '../bait-shop/bait-shop-toilet-level';
 import type { RoccoLocalization } from '../../localization';
 import {
   DEFAULT_SPRITE_IDLE_ACTION_ID,
@@ -17,7 +19,6 @@ import {
   DEFAULT_SPRITE_SCALE,
 } from '../../rocco-default-constants';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
-import { RoccoBaitShopToiletLevel } from '../bait-shop/bait-shop-toilet-level';
 import type { RoccoLevel } from '../rocco-level-types';
 
 interface RoccoDroppedInventoryItemState {
@@ -42,6 +43,7 @@ const DROPPED_INVENTORY_ITEM_SPRITE_INSTANCE_PREFIX = 'rocco-dropped-inventory-s
 const DROPPED_INVENTORY_ITEM_TARGET_PREFIX = 'rocco-dropped-inventory-target';
 const DROPPED_INVENTORY_ITEM_STOP_DISTANCE = 10;
 const DROPPED_CORAL_RELIC_ACTION_MENU_ID = 'rocco-dropped-coral-relic-action-menu';
+const DROPPED_CORAL_RELIC_LOOK_ACTION_ID = 'look';
 const DROPPED_CORAL_RELIC_STEP_ACTION_ID = 'step';
 
 export class RoccoDroppedInventoryController {
@@ -53,6 +55,7 @@ export class RoccoDroppedInventoryController {
   >();
   private readonly activeDroppedInventoryRuntimeIds = new Set<string>();
   private pendingDroppedInventoryPickup: RoccoPendingDroppedInventoryPickup | null = null;
+  private coralRelicRefuseIndex = 0;
 
   constructor(options: RoccoDroppedInventoryControllerOptions) {
     this.options = options;
@@ -148,9 +151,9 @@ export class RoccoDroppedInventoryController {
     activation: RoccoActionMenuActivation,
   ): boolean {
     if (
-      !(activeLevel instanceof RoccoBaitShopToiletLevel) ||
+      activeLevel.id !== ROCCO_BAIT_SHOP_TOILET_LEVEL_ID ||
       activation.definitionId !== DROPPED_CORAL_RELIC_ACTION_MENU_ID ||
-      !activeLevel.isEscapeUrgencyActive()
+      !(activeLevel as RoccoBaitShopToiletLevel).isEscapeUrgencyActive()
     ) {
       return false;
     }
@@ -163,14 +166,26 @@ export class RoccoDroppedInventoryController {
       return false;
     }
 
+    if (activation.actionId === DROPPED_CORAL_RELIC_LOOK_ACTION_ID) {
+      engine.video.messages.think(
+        activation.targetInstanceId,
+        this.localization.text.baitShop.coralRelicLookLine,
+        {
+          ttlMs: 3200,
+        },
+      );
+      engine.video.render(0);
+      return true;
+    }
+
     if (activation.actionId === 'grab') {
-      this.startDroppedInventoryPickup(engine, activeLevel, droppedItem);
+      this.showCoralRelicRefusal(engine, activation.targetInstanceId);
       return true;
     }
 
     if (activation.actionId === DROPPED_CORAL_RELIC_STEP_ACTION_ID) {
       const activeLevelId = activeLevel.id;
-      activeLevel.openCoralRelicWishMenu(droppedItem.groundPoint, () => {
+      (activeLevel as RoccoBaitShopToiletLevel).openCoralRelicWishMenu(droppedItem.groundPoint, () => {
         this.removeDroppedInventoryItem(activeLevelId, ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID);
         this.syncActiveLevelPresentation(engine, activeLevel);
       });
@@ -178,6 +193,20 @@ export class RoccoDroppedInventoryController {
     }
 
     return false;
+  }
+
+  private showCoralRelicRefusal(engine: RoccoEngine, targetInstanceId: string): void {
+    const refusalLines = this.localization.text.baitShop.coralRelicRefuseLines;
+    if (refusalLines.length === 0) {
+      return;
+    }
+
+    const line = refusalLines[this.coralRelicRefuseIndex % refusalLines.length];
+    this.coralRelicRefuseIndex += 1;
+    engine.video.messages.think(targetInstanceId, line, {
+      ttlMs: 3200,
+    });
+    engine.video.render(0);
   }
 
   updatePendingPickup(engine: RoccoEngine, activeLevel: RoccoLevel | null): void {
@@ -447,8 +476,8 @@ export class RoccoDroppedInventoryController {
   private shouldOpenDroppedCoralRelicMenu(activeLevel: RoccoLevel, itemId: string): boolean {
     return (
       itemId === ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID &&
-      activeLevel instanceof RoccoBaitShopToiletLevel &&
-      activeLevel.isEscapeUrgencyActive()
+      activeLevel.id === ROCCO_BAIT_SHOP_TOILET_LEVEL_ID &&
+      (activeLevel as RoccoBaitShopToiletLevel).isEscapeUrgencyActive()
     );
   }
 
@@ -458,8 +487,8 @@ export class RoccoDroppedInventoryController {
   ): void {
     engine.video.actionMenus.unregisterMenu(DROPPED_CORAL_RELIC_ACTION_MENU_ID);
     if (
-      !(activeLevel instanceof RoccoBaitShopToiletLevel) ||
-      !activeLevel.isEscapeUrgencyActive()
+      activeLevel.id !== ROCCO_BAIT_SHOP_TOILET_LEVEL_ID ||
+      !(activeLevel as RoccoBaitShopToiletLevel).isEscapeUrgencyActive()
     ) {
       return;
     }
@@ -486,16 +515,22 @@ export class RoccoDroppedInventoryController {
       circleStrokeWidth: 2,
       items: [
         {
+          id: DROPPED_CORAL_RELIC_LOOK_ACTION_ID,
+          actionId: DROPPED_CORAL_RELIC_LOOK_ACTION_ID,
+          label: this.localization.text.actions.look,
+          imageUri: roccoDefaultActionMenuAssetUrls.look,
+        },
+        {
+          id: DROPPED_CORAL_RELIC_STEP_ACTION_ID,
+          actionId: DROPPED_CORAL_RELIC_STEP_ACTION_ID,
+          label: this.localization.text.baitShop.coralRelicStepLabel,
+          imageUri: roccoDefaultActionMenuAssetUrls.kick,
+        },
+        {
           id: 'grab',
           actionId: 'grab',
           label: this.localization.text.actions.grab,
           imageUri: roccoDefaultActionMenuAssetUrls.grab,
-        },
-        {
-          id: 'step',
-          actionId: DROPPED_CORAL_RELIC_STEP_ACTION_ID,
-          label: this.localization.text.baitShop.coralRelicStepLabel,
-          imageUri: roccoDefaultActionMenuAssetUrls.kick,
         },
       ],
     });

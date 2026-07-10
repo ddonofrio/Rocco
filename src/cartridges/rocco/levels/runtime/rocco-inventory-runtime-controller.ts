@@ -48,7 +48,7 @@ export interface RoccoInventoryRuntimeControllerOptions {
   storeDroppedInventoryItem?: (
     levelId: string,
     droppedItem: RoccoStoredDroppedInventoryItem,
-  ) => void;
+  ) => boolean;
   syncWorldPresentation?: () => void;
   refreshStatus?: () => void;
 }
@@ -367,13 +367,17 @@ export class RoccoInventoryRuntimeController {
     }
 
     this.inventory.removeItem(inventoryItem.id);
-    this.options.storeDroppedInventoryItem?.(activeLevelId, {
+    const handled = this.options.storeDroppedInventoryItem?.(activeLevelId, {
       item: {
         ...inventoryItem,
         slotIndex: carriedItem.slotIndex ?? inventoryItem.slotIndex,
       },
       groundPoint,
     });
+    if (handled) {
+      return;
+    }
+
     engine.video.gridMenus.clearCarriedItem();
     engine.video.gridMenus.openMenu(this.inventory.createGridMenuDefinition(this.localization));
     this.options.syncWorldPresentation?.();

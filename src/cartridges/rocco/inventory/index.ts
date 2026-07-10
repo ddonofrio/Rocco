@@ -8,6 +8,7 @@ export {
   createRoccoBataInventoryItem,
   createRoccoCoralRelicInventoryItem,
   createRoccoFloatingAmuletInventoryItem,
+  DEFAULT_CORAL_RELIC_GROUND_SPRITE,
   planRoccoCoralRelicAssembly,
   resolveRoccoInventoryItemLabel,
   ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
@@ -28,6 +29,7 @@ export {
   ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
   ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
   ROCCO_INVENTORY_BATA_ITEM_ID,
+  roccoCoralRelicAssetUrl,
 } from './rocco-inventory';
 export { RoccoInventoryStorage } from './inventory-storage';
 export { RoccoInventoryTransferSession } from './inventory-transfer-session';

@@ -60,6 +60,13 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
   toiletPostWishReplyWhatIfNotLine: 'Y si no salgo \u00bfqu\u00e9 pasa?',
   toiletPostWishReplyComeInLine: 'Entra t\u00fa, si eres tan valiente',
   toiletPostWishPoliceResponseLine: 'No complique m\u00e1s las cosas y \u00a1salga ya!',
+  coralRelicLookLine: 'Una reliquia coralina. Brilla como si supiera lo que viene.',
+  coralRelicRefuseLines: [
+    'No, se supone que debo romperla ya.',
+    'No necesito coger eso, necesito romperlo.',
+    'Ya le\u00edste en la revista: hay que romperla, no recogerla.',
+    'D\u00e9jala ah\u00ed, tiene que estrellarse contra el suelo.',
+  ],
   toiletDoorOpenLabel: 'Abrir',
   toiletDoorCloseLabel: 'Cerrar',
   toiletDoorWalkLabel: 'Caminar',

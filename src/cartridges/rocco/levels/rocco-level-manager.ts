@@ -786,8 +786,22 @@ export class RoccoLevelManager {
   private storeDroppedInventoryItem(
     levelId: string,
     droppedItem: { item: RoccoInventoryItem; groundPoint: RoccoPoint },
-  ): void {
+  ): boolean {
+    const activeLevel = this.activeLevel;
+    if (
+      activeLevel?.id === ROCCO_BAIT_SHOP_TOILET_LEVEL_ID &&
+      droppedItem.item.id === ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID &&
+      (activeLevel as RoccoBaitShopToiletLevel).isEscapeUrgencyActive()
+    ) {
+      (activeLevel as RoccoBaitShopToiletLevel).startThrowCoralRelicSequence(droppedItem.item, (groundPoint) => {
+        this.droppedInventory.dropItem(levelId, droppedItem.item, groundPoint);
+        this.syncActiveLevelDroppedInventoryPresentation();
+      });
+      return true;
+    }
+
     this.droppedInventory.dropItem(levelId, droppedItem.item, droppedItem.groundPoint);
+    return false;
   }
 
   private updateDroppedInventoryPickup(): void {

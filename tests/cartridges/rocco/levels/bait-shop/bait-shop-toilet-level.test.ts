@@ -14,8 +14,10 @@ import { createRoccoLocalization, type RoccoLocalization } from '../../../../../
 import {
   DEFAULT_SPRITE_IDLE_ACTION_ID,
   DEFAULT_SPRITE_INSTANCE_ID,
+  DEFAULT_SPRITE_PICK_UP_ACTION_ID,
   DEFAULT_WALK_MAP_ID,
 } from '../../../../../src/cartridges/rocco/rocco-default-constants';
+import { createRoccoCoralRelicInventoryItem } from '../../../../../src/cartridges/rocco/inventory';
 import { ROCCO_PLAYER_ACTION_MENU_ID } from '../../../../../src/cartridges/rocco/rocco-player-action-menu';
 import { BAIT_SHOP_TOILET_SCENE_ID, RoccoBaitShopToiletLevel } from '../../../../../src/cartridges/rocco/levels/bait-shop/bait-shop-toilet-level';
 
@@ -647,5 +649,127 @@ describe('RoccoBaitShopToiletLevel', () => {
 
     expect(level.isEscapeUrgencyActive()).toBe(true);
     expect(state.registeredActionMenuIds).toContain(TOILET_ACTION_MENU_ID);
+  });
+
+  it('throws the coral relic with the scripted sequence when urgency is active', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = createState();
+    const engine = createEngineMock(state);
+    const level = new RoccoBaitShopToiletLevel(localization, {
+      hasMagazine: () => true,
+      hasCoralRelic: () => true,
+    });
+
+    await level.mount(engine);
+
+    finishSitSequence(level, state);
+    advanceCoralRelicReadingToStanding(level, state, localization);
+
+    expect(level.isEscapeUrgencyActive()).toBe(true);
+
+    const player = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+    expect(player).toBeDefined();
+    if (player) {
+      player.transform.scaleX = 1;
+      player.transform.scaleY = 1;
+      player.transform.x = 0;
+      player.transform.y = 0;
+    }
+
+    const onComplete = vi.fn();
+    const relicItem = createRoccoCoralRelicInventoryItem(localization);
+
+    level.startThrowCoralRelicSequence(relicItem, onComplete);
+
+    expect(state.inputEnabled).toBe(false);
+    state.isSpriteMovingValue = false;
+    level.update(16);
+
+    state.isSpriteMovingValue = false;
+    level.update(16);
+
+    expect(state.playedSpriteActions).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_PICK_UP_ACTION_ID}:down`,
+    );
+    expect(state.createdSprites.some((sprite) => sprite.id === 'rocco-bait-shop-toilet-throw-relic-instance')).toBe(true);
+
+    level.update(250);
+
+    expect(state.playedSpriteActions).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:down`,
+    );
+
+    level.update(300);
+
+    expect(onComplete).toHaveBeenCalledOnce();
+    expect(state.inputEnabled).toBe(true);
+    expect(state.removedSpriteIds).toContain('rocco-bait-shop-toilet-throw-relic-instance');
+  });
+
+  it('does not start the throw sequence without urgency or when already running', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = createState();
+    const engine = createEngineMock(state);
+    const level = new RoccoBaitShopToiletLevel(localization, {
+      hasMagazine: () => true,
+      hasCoralRelic: () => true,
+    });
+
+    await level.mount(engine);
+
+    const onComplete = vi.fn();
+    const relicItem = createRoccoCoralRelicInventoryItem(localization);
+
+    level.startThrowCoralRelicSequence(relicItem, onComplete);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+
+    level.isEscapeUrgencyActive = () => true;
+    level.startThrowCoralRelicSequence(relicItem, onComplete);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+
+    level.startThrowCoralRelicSequence(relicItem, onComplete);
+    expect(onComplete).toHaveBeenCalledTimes(2);
+  });
+
+  it('blocks interaction during the throw sequence', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = createState();
+    const engine = createEngineMock(state);
+    const level = new RoccoBaitShopToiletLevel(localization, {
+      hasMagazine: () => true,
+      hasCoralRelic: () => true,
+    });
+
+    await level.mount(engine);
+
+    finishSitSequence(level, state);
+    advanceCoralRelicReadingToStanding(level, state, localization);
+
+    const player = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+    expect(player).toBeDefined();
+    if (player) {
+      player.transform.scaleX = 1;
+      player.transform.scaleY = 1;
+      player.transform.x = 0;
+      player.transform.y = 0;
+    }
+
+    const onComplete = vi.fn();
+    const relicItem = createRoccoCoralRelicInventoryItem(localization);
+    level.startThrowCoralRelicSequence(relicItem, onComplete);
+
+    expect(
+      level.handleAction({
+        definitionId: ROCCO_PLAYER_ACTION_MENU_ID,
+        targetInstanceId: TOILET_INSTANCE_ID,
+        targetDefinitionId: 'rocco-bait-shop-toilet',
+        itemId: 'talk',
+        actionId: 'talk',
+      }),
+    ).toBeUndefined();
+
+    expect(level.handleSceneClick({ kind: 'scene-click', sceneX: 0, sceneY: 0 })).toEqual({
+      suppressDefaultPlayerMove: true,
+    });
   });
 });

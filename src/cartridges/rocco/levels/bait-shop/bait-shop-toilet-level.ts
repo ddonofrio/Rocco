@@ -14,9 +14,12 @@ import {
 } from '../../../../engine/video/sprites';
 import { createRoccoDialogueChoiceMenu, roccoCartridgeMessageRuntime } from '../../dialogue';
 import {
+  DEFAULT_CORAL_RELIC_GROUND_SPRITE,
   resolveRoccoInventoryItemLabel,
+  roccoCoralRelicAssetUrl,
   type RoccoCoralRelicAssemblyPlan,
   type RoccoInventoryFusionStep,
+  type RoccoInventoryItem,
 } from '../../inventory';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
@@ -41,6 +44,7 @@ import {
   DEFAULT_SPRITE_GROUND_ANCHOR_Y,
   DEFAULT_SPRITE_IDLE_ACTION_ID,
   DEFAULT_SPRITE_INSTANCE_ID,
+  DEFAULT_SPRITE_PICK_UP_ACTION_ID,
   DEFAULT_SPRITE_RUN_ACTION_ID,
   DEFAULT_SPRITE_SCALE,
 } from '../../rocco-default-constants';
@@ -127,6 +131,23 @@ interface BaitShopToiletWishSequence {
   smokeFrameIndex: number;
   effectApplied: boolean;
   policeReplyShown: boolean;
+}
+
+type BaitShopToiletThrowPhase =
+  | 'walking-to-center'
+  | 'walking-to-back'
+  | 'pickup-hold'
+  | 'falling';
+
+interface BaitShopToiletThrowSequence {
+  phase: BaitShopToiletThrowPhase;
+  elapsedMs: number;
+  relicItem: RoccoInventoryItem;
+  relicScale: number;
+  startPoint: RoccoPoint;
+  endPoint: RoccoPoint;
+  groundPoint: RoccoPoint;
+  onComplete: (groundPoint: RoccoPoint) => void;
 }
 
 const BAIT_SHOP_TOILET_RETURN_CONNECTOR_ID = 'south';
@@ -276,6 +297,19 @@ const BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST = {
   farScale: 0.8,
   nearScale: 1,
 } as const;
+
+const BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_DEFINITION_ID =
+  'rocco-bait-shop-toilet-throw-relic';
+const BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID =
+  'rocco-bait-shop-toilet-throw-relic-instance';
+const BAIT_SHOP_TOILET_THROW_RELIC_IMAGE_ID = 'rocco-bait-shop-toilet-throw-relic-image';
+const BAIT_SHOP_TOILET_THROW_RELIC_FRAME_ID = 'rocco-bait-shop-toilet-throw-relic-frame';
+const BAIT_SHOP_TOILET_THROW_CENTER_GROUND_X = DEFAULT_DESIGN_WIDTH / 2;
+const BAIT_SHOP_TOILET_THROW_BACK_GROUND_Y = 0;
+const BAIT_SHOP_TOILET_THROW_FACE_FRONT_WAIT_MS = 250;
+const BAIT_SHOP_TOILET_THROW_RELIC_START_OFFSET_X = 50;
+const BAIT_SHOP_TOILET_THROW_RELIC_FALL_OFFSET_Y = 50;
+const BAIT_SHOP_TOILET_THROW_RELIC_FALL_DURATION_MS = 300;
 
 const BAIT_SHOP_TOILET_CONNECTORS: readonly RoccoLevelConnector[] = [
   {
@@ -674,6 +708,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       }
     | null = null;
   private wishSequence: BaitShopToiletWishSequence | null = null;
+  private throwSequence: BaitShopToiletThrowSequence | null = null;
 
   constructor(
     localization: RoccoLocalization = createRoccoLocalization(),
@@ -708,6 +743,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     this.smokeFrameCount = 0;
     this.pendingCoralRelicWish = null;
     this.wishSequence = null;
+    this.throwSequence = null;
     this.portalTransitionRequested = false;
     engine.audio.registerSound({
       id: BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID,
@@ -763,11 +799,13 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       createBaitShopToiletSmokeSpriteDefinition(),
       createBaitShopToiletPortalSpriteDefinition(),
     ]);
+    const throwRelicSprite = this.createThrowRelicSpriteDefinition();
     await engine.video.preloadPlaneScene(scene);
     await Promise.all([
       engine.video.preloadSpriteDefinition(toiletSprite.definition),
       engine.video.preloadSpriteDefinition(smokeSprite.definition),
       engine.video.preloadSpriteDefinition(portalSprite.definition),
+      engine.video.preloadSpriteDefinition(throwRelicSprite),
     ]);
     engine.loadPlaneScene(scene);
     this.clearReadingPresentation();
@@ -775,6 +813,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     engine.video.sprites.loadSpriteDefinition(toiletSprite.definition);
     engine.video.sprites.loadSpriteDefinition(smokeSprite.definition);
     engine.video.sprites.loadSpriteDefinition(portalSprite.definition);
+    engine.video.sprites.loadSpriteDefinition(throwRelicSprite);
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID);
@@ -874,6 +913,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID);
     this.unregisterUrgentToiletTarget();
     this.unregisterPortalTarget();
     uninstallDefaultSprite(engine);
@@ -902,6 +942,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     this.smokeFrameCount = 0;
     this.pendingCoralRelicWish = null;
     this.wishSequence = null;
+    this.throwSequence = null;
     this.portalTransitionRequested = false;
     engine.video.render(0);
   }
@@ -911,6 +952,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     this.updateSequence(deltaMs);
     this.updateReadingSequence(deltaMs);
     this.updatePassiveStanPoliceAlert(deltaMs);
+    this.updateThrowSequence(deltaMs);
     this.updateWishSequence(deltaMs);
     this.updatePortalActivation();
     this.updatePortalTransition();
@@ -984,7 +1026,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
   }
 
   handleAction(activation: RoccoActionMenuActivation): void {
-    if (this.readingSequence || this.wishSequence) {
+    if (this.readingSequence || this.wishSequence || this.throwSequence) {
       return;
     }
 
@@ -1021,6 +1063,10 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
   }
 
   handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
+    if (this.throwSequence) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
     if (this.readingSequence) {
       this.advanceReadingSequence();
       return { suppressDefaultPlayerMove: true };
@@ -1236,6 +1282,314 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       }).gridMenu,
     );
     this.engine.video.render(0);
+  }
+
+  startThrowCoralRelicSequence(
+    relicItem: RoccoInventoryItem,
+    onComplete: (groundPoint: RoccoPoint) => void,
+  ): void {
+    const fallbackGroundPoint: RoccoPoint = {
+      x: BAIT_SHOP_TOILET_THROW_CENTER_GROUND_X,
+      y: BAIT_SHOP_TOILET_TARGET_Y + BAIT_SHOP_TOILET_TARGET_HEIGHT,
+    };
+    const safeComplete = (groundPoint: RoccoPoint): void => {
+      onComplete({ ...groundPoint });
+    };
+
+    if (!this.engine) {
+      safeComplete(fallbackGroundPoint);
+      return;
+    }
+
+    if (this.throwSequence || !this.isEscapeUrgencyActive()) {
+      safeComplete(this.resolvePlayerGroundPoint() ?? fallbackGroundPoint);
+      return;
+    }
+
+    const player = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    if (!player) {
+      safeComplete(this.resolvePlayerGroundPoint() ?? fallbackGroundPoint);
+      return;
+    }
+
+    const currentGround = this.resolvePlayerGroundPoint();
+    const startY = currentGround?.y ?? player.transform.y;
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.gridMenus.clearCarriedItem();
+    this.engine.video.messages.clearMessages();
+    this.engine.setInputEnabled(false);
+    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      BAIT_SHOP_TOILET_THROW_CENTER_GROUND_X,
+      startY,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!started) {
+      this.engine.setInputEnabled(true);
+      safeComplete(currentGround ?? fallbackGroundPoint);
+      return;
+    }
+
+    this.throwSequence = {
+      phase: 'walking-to-center',
+      elapsedMs: 0,
+      relicItem,
+      relicScale: 0,
+      startPoint: { x: 0, y: 0 },
+      endPoint: { x: 0, y: 0 },
+      groundPoint: { x: 0, y: 0 },
+      onComplete,
+    };
+    this.engine.video.render(0);
+  }
+
+  private updateThrowSequence(deltaMs: number): void {
+    if (
+      !this.engine ||
+      !this.throwSequence ||
+      !Number.isFinite(deltaMs) ||
+      deltaMs < 0
+    ) {
+      return;
+    }
+
+    const sequence = this.throwSequence;
+
+    if (sequence.phase === 'walking-to-center') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+        return;
+      }
+
+      const started = this.engine.video.sprites.goTo(
+        DEFAULT_SPRITE_INSTANCE_ID,
+        BAIT_SHOP_TOILET_THROW_CENTER_GROUND_X,
+        BAIT_SHOP_TOILET_THROW_BACK_GROUND_Y,
+        {
+          action: DEFAULT_SPRITE_RUN_ACTION_ID,
+          idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+          stopDistance: 1,
+          idleSettleDelayMs: 0,
+          idleSettleFacing: 'diagonal-from-facing',
+        },
+      );
+      if (!started) {
+        this.finishThrowSequence();
+        return;
+      }
+
+      sequence.phase = 'walking-to-back';
+      sequence.elapsedMs = 0;
+      this.engine.video.render(0);
+      return;
+    }
+
+    if (sequence.phase === 'walking-to-back') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+        return;
+      }
+
+      this.beginPickupHold();
+      return;
+    }
+
+    if (sequence.phase === 'pickup-hold') {
+      sequence.elapsedMs += deltaMs;
+      if (sequence.elapsedMs < BAIT_SHOP_TOILET_THROW_FACE_FRONT_WAIT_MS) {
+        return;
+      }
+
+      this.engine.video.sprites.playAction(
+        DEFAULT_SPRITE_INSTANCE_ID,
+        DEFAULT_SPRITE_IDLE_ACTION_ID,
+        {
+          direction: 'down',
+          restart: true,
+        },
+      );
+      sequence.phase = 'falling';
+      sequence.elapsedMs = 0;
+      this.engine.video.render(0);
+      return;
+    }
+
+    if (sequence.phase === 'falling') {
+      sequence.elapsedMs += deltaMs;
+      const progress = Math.min(
+        1,
+        sequence.elapsedMs / BAIT_SHOP_TOILET_THROW_RELIC_FALL_DURATION_MS,
+      );
+      const eased = 1 - (1 - progress) * (1 - progress);
+      const x = sequence.startPoint.x + (sequence.endPoint.x - sequence.startPoint.x) * eased;
+      const y = sequence.startPoint.y + (sequence.endPoint.y - sequence.startPoint.y) * eased;
+      this.engine.video.sprites.setPosition(
+        BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID,
+        x,
+        y,
+      );
+      this.engine.video.render(0);
+
+      if (progress >= 1) {
+        this.finishThrowSequence();
+      }
+    }
+  }
+
+  private beginPickupHold(): void {
+    if (!this.engine || !this.throwSequence) {
+      this.finishThrowSequence();
+      return;
+    }
+
+    const player = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    if (!player) {
+      this.finishThrowSequence();
+      return;
+    }
+
+    const scaleX = player.transform.scaleX || DEFAULT_SPRITE_SCALE;
+    const scaleY = player.transform.scaleY || DEFAULT_SPRITE_SCALE;
+    const originX = player.transform.x;
+    const originY = player.transform.y;
+    const roccoSpriteWidth = DEFAULT_SPRITE_FRAME_WIDTH * scaleX;
+    const roccoSpriteHeight = DEFAULT_SPRITE_FRAME_HEIGHT * scaleY;
+    const roccoCenterX = originX + roccoSpriteWidth / 2;
+    const roccoSpriteBottomY = originY + roccoSpriteHeight;
+    const relicScale = DEFAULT_CORAL_RELIC_GROUND_SPRITE.scaleRelativeToRoccoBase * scaleY;
+
+    const startPoint: RoccoPoint = {
+      x: originX + BAIT_SHOP_TOILET_THROW_RELIC_START_OFFSET_X,
+      y: originY + roccoSpriteHeight / 2,
+    };
+    const endPoint: RoccoPoint = {
+      x: roccoCenterX,
+      y: roccoSpriteBottomY + BAIT_SHOP_TOILET_THROW_RELIC_FALL_OFFSET_Y,
+    };
+
+    this.throwSequence.relicScale = relicScale;
+    this.throwSequence.startPoint = startPoint;
+    this.throwSequence.endPoint = endPoint;
+    this.throwSequence.groundPoint = { ...endPoint };
+
+    this.engine.video.sprites.playAction(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      DEFAULT_SPRITE_PICK_UP_ACTION_ID,
+      {
+        direction: 'down',
+        restart: true,
+      },
+    );
+
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.createSpriteFromDefinition(
+      BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_DEFINITION_ID,
+      {
+        id: BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID,
+        transform: {
+          x: startPoint.x,
+          y: startPoint.y,
+          scaleX: relicScale,
+          scaleY: relicScale,
+          rotation: 0,
+        },
+        renderLayer: 'world.behind',
+        zIndex: 14,
+        depthMode: 'fixed',
+        interactive: false,
+        collisionEnabled: false,
+        ignoreMessages: true,
+      },
+    );
+    this.engine.video.sprites.stopAnimation(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.setAnimationFrame(
+      BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID,
+      0,
+    );
+
+    this.throwSequence.phase = 'pickup-hold';
+    this.throwSequence.elapsedMs = 0;
+    this.engine.video.render(0);
+  }
+
+  private finishThrowSequence(): void {
+    if (!this.engine) {
+      this.throwSequence = null;
+      return;
+    }
+
+    const sequence = this.throwSequence;
+    this.throwSequence = null;
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID);
+    this.engine.setInputEnabled(true);
+    if (sequence) {
+      const groundPoint =
+        sequence.groundPoint.x !== 0 || sequence.groundPoint.y !== 0
+          ? sequence.groundPoint
+          : this.resolvePlayerGroundPoint() ?? sequence.groundPoint;
+      sequence.onComplete({ ...groundPoint });
+    }
+
+    this.engine.video.render(0);
+  }
+
+  private createThrowRelicSpriteDefinition(): RoccoSpriteDefinition {
+    const width = DEFAULT_CORAL_RELIC_GROUND_SPRITE.width;
+    const height = DEFAULT_CORAL_RELIC_GROUND_SPRITE.height;
+
+    return {
+      id: BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_DEFINITION_ID,
+      name: 'Thrown Coral Relic',
+      images: [
+        {
+          id: BAIT_SHOP_TOILET_THROW_RELIC_IMAGE_ID,
+          uri: roccoCoralRelicAssetUrl,
+          width,
+          height,
+        },
+      ],
+      frames: [
+        {
+          id: BAIT_SHOP_TOILET_THROW_RELIC_FRAME_ID,
+          imageId: BAIT_SHOP_TOILET_THROW_RELIC_IMAGE_ID,
+          durationMs: 1000,
+          pivot: {
+            x: width / 2,
+            y: height,
+          },
+        },
+      ],
+      animations: {
+        idle: {
+          id: 'idle',
+          loop: false,
+          playbackRate: 1,
+          frames: [
+            {
+              frameId: BAIT_SHOP_TOILET_THROW_RELIC_FRAME_ID,
+              durationMs: 1000,
+            },
+          ],
+        },
+      },
+      defaultAnimation: 'idle',
+      render: {
+        renderLayer: 'world.behind',
+        zIndex: 14,
+        depthMode: 'fixed',
+        opacity: 1,
+      },
+      metadata: {
+        purpose: 'thrown-coral-relic',
+      },
+    };
   }
 
   private isSeatedAction(activation: RoccoActionMenuActivation): boolean {

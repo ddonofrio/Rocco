@@ -45,6 +45,7 @@ export interface RoccoPierSideLevelDefinition {
     localization: RoccoLocalization,
     persistentState: RoccoPierBeginningAmbientPersistentState,
     preloader?: RoccoAssetPreloader,
+    entryConnectorId?: string,
   ) => Promise<RoccoPierSideAmbientController | null> | RoccoPierSideAmbientController | null;
 }
 
@@ -100,7 +101,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
         initialPosition: entryConnector?.entryPoint,
         playIntro: false,
       }, preloader),
-      this.mountAmbient?.(engine, this.localization, { stan: { isIdentified: false }, door: { revealed: true } }, preloader) ??
+      this.mountAmbient?.(engine, this.localization, { stan: { isIdentified: false }, door: { revealed: true } }, preloader, options.entryConnectorId) ??
         Promise.resolve(null),
     ]);
 

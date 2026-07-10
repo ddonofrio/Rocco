@@ -59,5 +59,14 @@ export const englishStanText: RoccoTextCatalog['stan'] = {
     'No chance. That is how I get thrown into the sea.',
     'I prefer my fear theoretical, thanks.',
   ],
+  doorWakeThoughtLines: [
+    'How odd, I thought I heard the shop door.',
+    'Strange... I could have sworn I heard the shop door.',
+    'Was that the shop door? How strange.',
+    'I thought I heard the shop open. Weird.',
+    'The shop door... I believe I heard it. Odd.',
+    'Huh, I think I just heard the shop door.',
+    'Curious, I could have sworn the shop door sounded.',
+  ],
   rootChoices: englishStanRootChoices,
 };

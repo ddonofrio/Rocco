@@ -59,5 +59,14 @@ export const spanishStanText: RoccoTextCatalog['stan'] = {
     'Ni hablar. Así es como acabo en el mar.',
     'Prefiero que mi miedo siga siendo teórico.',
   ],
+  doorWakeThoughtLines: [
+    'Qué raro, me pareció escuchar la puerta de la tienda.',
+    'Extraño... juraría que oí la puerta de la tienda.',
+    '¿Esa era la puerta de la tienda? Qué raro.',
+    'Me pareció oír la tienda abrirse. Raro.',
+    'La puerta de la tienda... creí escucharla. Qué extraño.',
+    'Vaya, creo que acabo de oír la puerta de la tienda.',
+    'Qué curioso, juraría que sonó la puerta de la tienda.',
+  ],
   rootChoices: spanishStanRootChoices,
 };

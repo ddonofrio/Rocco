@@ -89,6 +89,7 @@ The bait shop transition reuses the manager-owned cartridge inventory, so the sa
 ## Interaction Logic
 
 - Pier Beginning: Stan starts asleep near the bait shop, wakes through a two-step pose sequence when spoken to or when Rocco lingers behind his chair, keeps awake while Rocco stays there, keeps facing Rocco while awake, opens the first dialogue menu once awake, and can fall asleep again if Rocco leaves the dialogue menu idle.
+- Shop-exit wake reaction: if Rocco re-enters Pier Beginning through the `shop-exit` connector and lingers behind Stan's chair within `STAN_SHOP_EXIT_DOOR_REACTION_WINDOW_MS` (5 seconds), Stan wakes and plays the look-around animation while thinking a localized variant of hearing the shop door (`stan.doorWakeThoughtLines`). After the window expires, proximity wakes use the normal wake sequence.
 - Bait shop door: the overlaid door sprite stays visually present and hoverable from the start, exposes no radial action menu, calls the police if the keys are used while Stan is awake, and otherwise switches to the open-door sprite, plays the door sound, turns Rocco back toward the pier, and then transitions into the bait shop interior level.
 - Bait bucket: normal state offers grab, kick, and look; kicking drops it.
 - Pelikan: normal state offers look, talk, grab, and kick; talking after the bait bucket is dropped starts feeding.

@@ -225,8 +225,14 @@ export class RoccoLevelManager {
     this.levelRegistry = new RoccoLevelRegistry({
       maps: createRoccoDefaultGameMaps({
         localization: this.localization,
-        mountPierBeginningAmbient: (engine) =>
-          installPierBeginningAmbient(engine, this.localization, this.beginningAmbientState),
+        mountPierBeginningAmbient: (engine, _localization, _persistentState, _preloader, entryConnectorId) =>
+          installPierBeginningAmbient(
+            engine,
+            this.localization,
+            this.beginningAmbientState,
+            undefined,
+            entryConnectorId,
+          ),
         isStanIdentified: () => this.beginningAmbientState.stan.isIdentified,
         hasMysteriousKey: () => this.inventory.hasItem(ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID),
         onMysteriousKeyCollected: () =>

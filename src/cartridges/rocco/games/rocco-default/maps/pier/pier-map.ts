@@ -37,8 +37,8 @@ export function createRoccoDefaultPierMap(
 ): RpceMapDefinition<RoccoLevel> {
   const mountAmbient =
     options.mountPierBeginningAmbient ??
-    ((engine, localization, persistentState, preloader) =>
-      installPierBeginningAmbient(engine, localization, persistentState, preloader));
+    ((engine, localization, persistentState, preloader, entryConnectorId) =>
+      installPierBeginningAmbient(engine, localization, persistentState, preloader, entryConnectorId));
 
   return {
     id: ROCCO_DEFAULT_PIER_MAP_ID,

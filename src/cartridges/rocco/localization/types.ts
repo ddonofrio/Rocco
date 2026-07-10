@@ -149,6 +149,7 @@ export interface RoccoTextCatalog {
     lookLines: string[];
     grabLines: string[];
     kickLines: string[];
+    doorWakeThoughtLines: string[];
     rootChoices: readonly RoccoDialogueChoiceNode[];
   };
   middleLevel: {

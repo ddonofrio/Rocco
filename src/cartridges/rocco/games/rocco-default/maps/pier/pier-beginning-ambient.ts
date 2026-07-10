@@ -60,13 +60,22 @@ export async function installPierBeginningAmbient(
   localization: RoccoLocalization,
   persistentState: RoccoPierBeginningAmbientPersistentState,
   preloader?: RoccoAssetPreloader,
+  entryConnectorId?: string,
 ): Promise<RoccoPierSideAmbientController> {
   persistentState.door.revealed = true;
   const door = await installDefaultBaitShopDoor(engine, {
     localization,
     initialState: persistentState.door,
   }, preloader);
-  const stan = await installDefaultStan(engine, localization, persistentState.stan, {}, preloader);
+  const stan = await installDefaultStan(
+    engine,
+    localization,
+    persistentState.stan,
+    {
+      justExitedShop: entryConnectorId === 'shop-exit',
+    },
+    preloader,
+  );
 
   return new RoccoPierBeginningAmbientController(stan, door);
 }

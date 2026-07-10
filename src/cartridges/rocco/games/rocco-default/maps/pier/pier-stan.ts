@@ -53,6 +53,7 @@ const STAN_WAKE_STEP_DURATION_MS = 1000;
 const STAN_LOOK_AROUND_STEP_DURATION_MS = 1000;
 const STAN_DIALOGUE_MENU_Y = 286;
 const STAN_AWAKE_IDLE_TIMEOUT_MS = 12000;
+const STAN_SHOP_EXIT_DOOR_REACTION_WINDOW_MS = 5000;
 const STAN_REAR_ALERT_HALF_WIDTH = 92;
 const STAN_REAR_ALERT_MAX_GROUND_Y = DEFAULT_STAN_Y + 28;
 const STAN_SLEEP_THOUGHT_MESSAGE_ID = 'rocco-stan-sleep-thought';
@@ -83,6 +84,7 @@ export interface RoccoStanPersistentState {
 
 export interface RoccoStanInstallOptions {
   onConversationProgress?: () => void;
+  justExitedShop?: boolean;
 }
 
 async function createDefaultStanSpriteDefinition(
@@ -181,6 +183,8 @@ class RoccoStanController implements RoccoPierSideAmbientController {
   private state: RoccoStanPoseState = 'sleeping';
   private awakeIdleMs = 0;
   private sleepThoughtRemainingMs = STAN_SLEEP_THOUGHT_DELAY_MS;
+  private shopExitElapsedMs = 0;
+  private justExitedShop: boolean;
   private sequence: RoccoStanSequence | undefined;
 
   constructor(
@@ -193,6 +197,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     this.localization = localization;
     this.persistentState = persistentState;
     this.options = options;
+    this.justExitedShop = options.justExitedShop ?? false;
     this.dialogue = new RoccoDialogueSession({
       id: DEFAULT_STAN_DIALOGUE_MENU_ID,
       engine,
@@ -219,6 +224,13 @@ class RoccoStanController implements RoccoPierSideAmbientController {
   update(deltaMs: number): void {
     if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
       return;
+    }
+
+    if (this.justExitedShop) {
+      this.shopExitElapsedMs += deltaMs;
+      if (this.shopExitElapsedMs > STAN_SHOP_EXIT_DOOR_REACTION_WINDOW_MS) {
+        this.justExitedShop = false;
+      }
     }
 
     const roccoBehindStan = this.isRoccoBehindStan();
@@ -383,8 +395,22 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       return;
     }
 
+    if (this.justExitedShop && this.shopExitElapsedMs <= STAN_SHOP_EXIT_DOOR_REACTION_WINDOW_MS) {
+      this.startShopExitDoorReaction();
+      return;
+    }
+
     this.startSequence('wake', () => {
       this.state = 'awake';
+    });
+  }
+
+  private startShopExitDoorReaction(): void {
+    this.justExitedShop = false;
+    this.startSequence('wake', () => {
+      this.state = 'awake';
+      this.showStanDoorThought();
+      this.startSequence('look-around');
     });
   }
 
@@ -598,6 +624,28 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       this.showSleepThought();
       this.sleepThoughtRemainingMs = STAN_SLEEP_THOUGHT_LOOP_DURATION_MS;
     }
+  }
+
+  private showStanDoorThought(): void {
+    const lines = this.localization.text.stan.doorWakeThoughtLines;
+    if (!lines.length) {
+      return;
+    }
+
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      [...lines],
+      {
+        ttlMs: DEFAULT_STAN_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey: 'stan-shop-exit-door-thought',
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
   }
 
   private showSleepThought(): void {

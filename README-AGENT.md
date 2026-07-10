@@ -359,7 +359,7 @@ Supported plane source kinds:
 - `tilemap`
 - `procedural`
 
-`bitmap` and `tileset` remain scene-data shapes in the plane types, but the current Pixi runtime does not render them directly. Treat them as reserved for future renderer support, not as cartridge-ready runtime features.
+`bitmap` and `tileset` are scene-data shapes in the plane types without runtime rendering support. Treat them as reserved data shapes, not as cartridge-ready runtime features.
 
 Image planes can opt into water animation through `metadata.waterColorEffect`.
 

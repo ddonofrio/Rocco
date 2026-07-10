@@ -31,7 +31,7 @@ The current Pixi runtime renders these source kinds directly:
 - `tilemap`
 - `procedural`
 
-`bitmap` and `tileset` remain SDK data shapes for future renderer work. Do not treat them as cartridge-ready runtime features yet.
+`bitmap` and `tileset` are SDK data shapes without runtime rendering support. Treat them as reserved data shapes, not as cartridge-ready runtime features.
 
 ## Cartridge-Facing Usage
 

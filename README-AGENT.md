@@ -212,6 +212,8 @@ engine.beginComposition();
 engine.endComposition();
 ```
 
+`setCompositionText(text)` optionally writes a single line of text inside the composition overlay while it is active. Pass `null` to clear it.
+
 ### Input Blocking
 
 Use input blocking for non-cancelable sequences:

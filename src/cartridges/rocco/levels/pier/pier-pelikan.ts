@@ -3,6 +3,7 @@ import {
   createRoccoSpriteAutoCroppedFrames,
   type RoccoSpriteDefinition,
 } from '../../../../engine/video/sprites';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   roccoDefaultPelikanAssetUrls,
   roccoDefaultPelikanFeedingAssetUrl,
@@ -502,6 +503,7 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
 export async function installDefaultPelikan(
   engine: RoccoEngine,
   options: RoccoDefaultPelikanOptions = {},
+  preloader?: RoccoAssetPreloader,
 ): Promise<RoccoDefaultPelikanController> {
   const definition = await createDefaultPelikanSpriteDefinition(
     options.localization ?? createRoccoLocalization(),
@@ -512,10 +514,10 @@ export async function installDefaultPelikan(
     volume: DEFAULT_PELIKAN_FLIGHT_SOUND_VOLUME,
     loop: false,
   });
-  await engine.audio.preloadSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID).catch(() => {
+  await preloader?.preloadSound(engine, DEFAULT_PELIKAN_FLIGHT_SOUND_ID).catch(() => {
     engine.log('Audio', 'Pelikan flight sound could not be preloaded.');
   });
-  await engine.video.preloadSpriteDefinition(definition);
+  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID);
   engine.audio.stopSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);

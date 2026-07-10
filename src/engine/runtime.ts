@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, type Ticker } from 'pixi.js';
+import { Application, Container, Graphics, Text, type Ticker } from 'pixi.js';
 
 import type { RoccoConsoleFlags, RoccoEngine } from './engine-sdk';
 import {
@@ -53,6 +53,7 @@ export class GameRuntime implements RoccoEngine {
   private activePlayerSpriteId: string | null = null;
   private statusMessage = 'Engine bootstrapping cartridge...';
   private compositionOverlay: Container | null = null;
+  private compositionText: Text | null = null;
   private soundProfile: RoccoSoundProfile = { ...defaultSoundProfile };
   private consoleFlags: RoccoConsoleFlags;
 
@@ -203,6 +204,7 @@ export class GameRuntime implements RoccoEngine {
     this.compositionOverlay = new Container();
     this.compositionOverlay.label = 'composition-overlay';
     this.compositionOverlay.zIndex = 10000;
+    this.compositionOverlay.sortableChildren = true;
     const bg = new Graphics().rect(0, 0, 10000, 10000).fill(0x0d110c);
     this.compositionOverlay.addChild(bg);
     this.app.stage.addChild(this.compositionOverlay);
@@ -216,6 +218,44 @@ export class GameRuntime implements RoccoEngine {
     this.app.stage.removeChild(this.compositionOverlay);
     this.compositionOverlay.destroy({ children: true });
     this.compositionOverlay = null;
+    this.compositionText = null;
+  }
+
+  setCompositionText(text: string | null): void {
+    if (!this.app || !this.compositionOverlay) {
+      return;
+    }
+
+    if (!text) {
+      if (this.compositionText) {
+        this.compositionOverlay.removeChild(this.compositionText);
+        this.compositionText.destroy();
+        this.compositionText = null;
+      }
+      return;
+    }
+
+    if (!this.compositionText) {
+      this.compositionText = new Text({
+        text,
+        style: {
+          fill: '#9ca3af',
+          fontFamily: 'Cascadia Mono, Lucida Console, monospace',
+          fontSize: 18,
+          fontWeight: '700',
+          letterSpacing: 1,
+        },
+      });
+      this.compositionText.x = 480;
+      this.compositionText.y = 270;
+      this.compositionText.anchor.set(0.5);
+      this.compositionText.zIndex = 10001;
+      this.compositionOverlay.addChild(this.compositionText);
+    } else {
+      this.compositionText.text = text;
+    }
+
+    this.app.render();
   }
 
   setStatus(status: string): void {

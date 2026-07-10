@@ -9,6 +9,7 @@ import {
   type RoccoSpriteDefinition,
 } from '../../../../engine/video/sprites';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import { roccoCartridgeMessageRuntime } from '../../dialogue';
 import {
   DEFAULT_DESIGN_HEIGHT,
@@ -247,6 +248,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
   async mount(
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.engine = engine;
     this.spriteController = null;
@@ -263,8 +265,8 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     const walkMapProfile = await createNetherWalkMapProfile(netherResetOfficeSecondAssetUrls.walkPath);
     const printerDefinition = await createResetOfficePrinterSpriteDefinition(this.localization);
 
-    await engine.video.preloadPlaneScene(scene);
-    await engine.video.preloadSpriteDefinition(printerDefinition);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+    await (preloader?.preloadSpriteDefinition(engine, printerDefinition) ?? engine.video.preloadSpriteDefinition(printerDefinition));
     engine.loadPlaneScene(scene);
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
@@ -285,7 +287,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
         nearScale: 1,
         scaleCurve: 'linear',
       },
-    });
+    }, preloader);
     engine.video.sprites.createSpriteFromDefinition(NETHER_RESET_OFFICE_PRINTER_SPRITE_DEFINITION_ID, {
       id: NETHER_RESET_OFFICE_PRINTER_SPRITE_INSTANCE_ID,
       transform: {

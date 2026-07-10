@@ -5,6 +5,7 @@ import {
   type RoccoPoint,
   type RoccoSpriteWalkMap,
 } from '../../../../engine/video/sprites';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
@@ -184,7 +185,9 @@ export function resolveNetherWalkMapDepthRange(walkMap: RoccoSpriteWalkMap): {
 
 export async function createNetherWalkMapProfile(
   walkPathUri: string,
+  preloader?: RoccoAssetPreloader,
 ): Promise<RoccoNetherWalkMapProfile> {
+  preloader?.addWalkMap();
   const image = await loadImage(walkPathUri);
   const canvas = document.createElement('canvas');
   canvas.width = DEFAULT_DESIGN_WIDTH;

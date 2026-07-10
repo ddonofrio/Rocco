@@ -3,6 +3,7 @@ import type { RoccoSceneClickAction } from '../../../../engine/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../engine/video/grid-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   installDefaultCloud,
   uninstallDefaultCloud,
@@ -15,6 +16,8 @@ import type {
   RoccoLevelMountOptions,
 } from '../rocco-level-types';
 import { findRoccoLevelConnector } from '../rocco-level-types';
+import type { RoccoPierBeginningAmbientPersistentState } from './pier-beginning-ambient';
+import type { RoccoLocalization } from '../../localization';
 import { installDefaultWalkMap, uninstallDefaultWalkMap } from './pier-walkmap';
 import {
   installDefaultSprite,
@@ -31,13 +34,17 @@ export interface RoccoPierSideAmbientController {
 }
 
 export interface RoccoPierSideLevelDefinition {
-  id: string;
-  title: string;
-  sceneId: string;
-  backgroundScrollX: number;
-  connectors: readonly RoccoLevelConnector[];
-  mountAmbient?: (
+  readonly id: string;
+  readonly title: string;
+  readonly sceneId: string;
+  readonly backgroundScrollX: number;
+  readonly connectors: readonly RoccoLevelConnector[];
+  readonly localization: RoccoLocalization;
+  readonly mountAmbient?: (
     engine: RoccoEngine,
+    localization: RoccoLocalization,
+    persistentState: RoccoPierBeginningAmbientPersistentState,
+    preloader?: RoccoAssetPreloader,
   ) => Promise<RoccoPierSideAmbientController | null> | RoccoPierSideAmbientController | null;
 }
 
@@ -48,6 +55,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
 
   private readonly sceneId: string;
   private readonly backgroundScrollX: number;
+  private readonly localization: RoccoLocalization;
   private readonly mountAmbient?: RoccoPierSideLevelDefinition['mountAmbient'];
   private spriteController: RoccoDefaultSpriteController | null = null;
   private cloudController: RoccoDefaultCloudController | null = null;
@@ -59,12 +67,14 @@ export class RoccoPierSideLevel implements RoccoLevel {
     this.sceneId = definition.sceneId;
     this.backgroundScrollX = definition.backgroundScrollX;
     this.connectors = definition.connectors;
+    this.localization = definition.localization;
     this.mountAmbient = definition.mountAmbient;
   }
 
   async mount(
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.spriteController = null;
     this.cloudController = null;
@@ -74,23 +84,24 @@ export class RoccoPierSideLevel implements RoccoLevel {
       sceneId: this.sceneId,
       backgroundScrollX: this.backgroundScrollX,
     });
-    await engine.video.preloadPlaneScene(scene);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     engine.loadPlaneScene(scene);
     await installDefaultWalkMap(engine, {
       backgroundScrollX: this.backgroundScrollX,
-    });
+    }, preloader);
 
     const entryConnector =
       findRoccoLevelConnector(this.connectors, options.entryConnectorId) ?? this.connectors[0];
     const [cloudController, spriteController, ambientController] = await Promise.all([
-      installDefaultCloud(engine),
+      installDefaultCloud(engine, preloader),
       installDefaultSprite(engine, {
         appearance: options.roccoAppearance,
         initialFacing: entryConnector?.entryFacing ?? 'down',
         initialPosition: entryConnector?.entryPoint,
         playIntro: false,
-      }),
-      this.mountAmbient?.(engine) ?? Promise.resolve(null),
+      }, preloader),
+      this.mountAmbient?.(engine, this.localization, { stan: { isIdentified: false }, door: { revealed: true } }, preloader) ??
+        Promise.resolve(null),
     ]);
 
     this.cloudController = cloudController;

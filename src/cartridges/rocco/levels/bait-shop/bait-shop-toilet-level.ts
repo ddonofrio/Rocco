@@ -27,6 +27,7 @@ import {
   roccoDefaultActionMenuAssetUrls,
   roccoDefaultYouLoseSoundUrl,
 } from '../../rocco-default-assets';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   createRoccoPlayerActionMenuDefinition,
   ROCCO_PLAYER_ACTION_MENU_ID,
@@ -723,6 +724,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
   async mount(
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.engine = engine;
     this.spriteController = null;
@@ -752,7 +754,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       volume: BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_VOLUME,
       loop: false,
     });
-    await engine.audio.preloadSound(BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID).catch(() => {
+    await preloader?.preloadSound(engine, BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID).catch(() => {
       engine.log('Audio', 'Bait shop toilet reading defeat sound could not be preloaded.');
     });
     engine.audio.stopSound(BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID);
@@ -774,17 +776,27 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       volume: BAIT_SHOP_TOILET_SPELL_SOUND_VOLUME,
       loop: false,
     });
-    await Promise.all([
-      engine.audio.preloadSound(BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID).catch(() => {
-        engine.log('Audio', 'Bait shop toilet medallion step sound could not be preloaded.');
-      }),
-      engine.audio.preloadSound(BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID).catch(() => {
-        engine.log('Audio', 'Bait shop toilet portal loop sound could not be preloaded.');
-      }),
-      engine.audio.preloadSound(BAIT_SHOP_TOILET_SPELL_SOUND_ID).catch(() => {
-        engine.log('Audio', 'Bait shop toilet spell sound could not be preloaded.');
-      }),
-    ]);
+    await (preloader
+      ? preloader.preloadSound(engine, BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet medallion step sound could not be preloaded.');
+        })
+      : engine.audio.preloadSound(BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet medallion step sound could not be preloaded.');
+        }));
+    await (preloader
+      ? preloader.preloadSound(engine, BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet portal loop sound could not be preloaded.');
+        })
+      : engine.audio.preloadSound(BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet portal loop sound could not be preloaded.');
+        }));
+    await (preloader
+      ? preloader.preloadSound(engine, BAIT_SHOP_TOILET_SPELL_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet spell sound could not be preloaded.');
+        })
+      : engine.audio.preloadSound(BAIT_SHOP_TOILET_SPELL_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet spell sound could not be preloaded.');
+        }));
 
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
     const initialPosition = entryConnector
@@ -801,16 +813,16 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       createBaitShopToiletPortalSpriteDefinition(),
     ]);
     const throwRelicSprite = this.createThrowRelicSpriteDefinition();
-    await engine.video.preloadPlaneScene(scene);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     await Promise.all([
-      engine.video.preloadSpriteDefinition(toiletSprite.definition),
-      engine.video.preloadSpriteDefinition(smokeSprite.definition),
-      engine.video.preloadSpriteDefinition(portalSprite.definition),
-      engine.video.preloadSpriteDefinition(throwRelicSprite),
+      (preloader?.preloadSpriteDefinition(engine, toiletSprite.definition) ?? engine.video.preloadSpriteDefinition(toiletSprite.definition)),
+      (preloader?.preloadSpriteDefinition(engine, smokeSprite.definition) ?? engine.video.preloadSpriteDefinition(smokeSprite.definition)),
+      (preloader?.preloadSpriteDefinition(engine, portalSprite.definition) ?? engine.video.preloadSpriteDefinition(portalSprite.definition)),
+      (preloader?.preloadSpriteDefinition(engine, throwRelicSprite) ?? engine.video.preloadSpriteDefinition(throwRelicSprite)),
     ]);
     engine.loadPlaneScene(scene);
     this.clearReadingPresentation();
-    await installBaitShopWalkMap(engine, baitShopToiletAssetUrls.walkMap);
+    await installBaitShopWalkMap(engine, baitShopToiletAssetUrls.walkMap, preloader);
     engine.video.sprites.loadSpriteDefinition(toiletSprite.definition);
     engine.video.sprites.loadSpriteDefinition(smokeSprite.definition);
     engine.video.sprites.loadSpriteDefinition(portalSprite.definition);
@@ -877,7 +889,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       localization: this.localization,
       playIntro: false,
       perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
-    });
+    }, preloader);
     this.unregisterUrgentToiletTarget();
     if (this.toiletRemoved) {
       engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);

@@ -17,6 +17,7 @@ import {
   roccoDefaultActionMenuAssetUrls,
   roccoDefaultMicromaniaClosedAssetUrl,
 } from '../../rocco-default-assets';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
@@ -284,6 +285,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
   async mount(
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.engine = engine;
     this.spriteController = null;
@@ -308,10 +310,10 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     const scene = await loadOrCreateBaitShopScene(engine, BAIT_SHOP_SECOND_SCENE_DEFINITION);
     const magazineDefinition = createBaitShopMagazineSpriteDefinition(this.localization);
     await this.registerToiletDoorSound(engine);
-    await engine.video.preloadPlaneScene(scene);
-    await engine.video.preloadSpriteDefinition(magazineDefinition);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+    await (preloader?.preloadSpriteDefinition(engine, magazineDefinition) ?? engine.video.preloadSpriteDefinition(magazineDefinition));
     engine.loadPlaneScene(scene);
-    await installBaitShopWalkMap(engine, baitShopSecondScreenAssetUrls.walkMap);
+    await installBaitShopWalkMap(engine, baitShopSecondScreenAssetUrls.walkMap, preloader);
     engine.video.sprites.loadSpriteDefinition(magazineDefinition);
     this.spriteController = await installDefaultSprite(engine, {
       appearance: options.roccoAppearance,
@@ -322,7 +324,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       localization: this.localization,
       playIntro: false,
       perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
-    });
+    }, preloader);
     this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, []);
     this.syncToiletDoorPresentation();
     this.syncMagazinePresentation();

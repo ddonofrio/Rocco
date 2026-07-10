@@ -41,6 +41,7 @@ export interface RoccoEngine {
   // Composition control (loading overlay)
   beginComposition(): void;
   endComposition(): void;
+  setCompositionText?(text: string | null): void;
 
   // Logging and status
   setStatus(status: string): void;

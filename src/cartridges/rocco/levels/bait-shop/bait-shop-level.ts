@@ -15,6 +15,7 @@ import { BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID } from '../../inventory';
 import { roccoCartridgeMessageRuntime } from '../../dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
@@ -512,7 +513,9 @@ export async function loadOrCreateBaitShopScene(
 export async function installBaitShopWalkMap(
   engine: RoccoEngine,
   walkMapImageUrl: string,
+  preloader?: RoccoAssetPreloader,
 ): Promise<void> {
+  preloader?.addWalkMap();
   const image = await loadImage(walkMapImageUrl);
   const canvas = document.createElement('canvas');
   canvas.width = DEFAULT_DESIGN_WIDTH;
@@ -629,6 +632,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
   async mount(
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.engine = engine;
     this.spriteController = null;
@@ -650,9 +654,9 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       : { ...BAIT_SHOP_ENTRY_POSITION };
     const initialFacing = entryConnector?.entryFacing ?? 'down-left';
     const scene = await loadOrCreateBaitShopScene(engine, BAIT_SHOP_SCENE_DEFINITION);
-    await engine.video.preloadPlaneScene(scene);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     engine.loadPlaneScene(scene);
-    await installBaitShopWalkMap(engine, BAIT_SHOP_WALK_MAP_IMAGE_URL);
+    await installBaitShopWalkMap(engine, BAIT_SHOP_WALK_MAP_IMAGE_URL, preloader);
     installBaitShopSceneTargets(engine, this.localization);
     this.syncSouvenirCloseupPresentation();
     this.syncHiddenKeysTarget();
@@ -666,7 +670,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       localization: this.localization,
       playIntro: false,
       perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
-    });
+    }, preloader);
     this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, [
       {
         targetInstanceId: BAIT_SHOP_SHELL_CITY_TARGET_INSTANCE_ID,

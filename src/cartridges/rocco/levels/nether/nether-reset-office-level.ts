@@ -1,5 +1,6 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
@@ -98,6 +99,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
   async mount(
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.spriteController = null;
 
@@ -112,7 +114,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     const scene = await loadOrCreateNetherScene(engine, NETHER_RESET_OFFICE_SCENE_DEFINITION);
     const walkMapProfile = await createNetherWalkMapProfile(netherResetOfficeAssetUrls.walkPath);
 
-    await engine.video.preloadPlaneScene(scene);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     engine.loadPlaneScene(scene);
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
@@ -132,7 +134,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
         nearScale: 1,
         scaleCurve: 'linear',
       },
-    });
+    }, preloader);
     engine.video.render(0);
 
     return scene;

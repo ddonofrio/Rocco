@@ -4,6 +4,7 @@ import type {
   RoccoActionMenuDefinition,
 } from '../../../../engine/video/action-menu';
 import type { RoccoSpriteDefinition } from '../../../../engine/video/sprites';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   roccoDefaultActionMenuAssetUrls,
   roccoDefaultBaitBucketAssetUrls,
@@ -447,10 +448,11 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
 export async function installDefaultBaitBucket(
   engine: RoccoEngine,
   options: RoccoDefaultBaitBucketControllerOptions = {},
+  preloader?: RoccoAssetPreloader,
 ): Promise<RoccoDefaultBaitBucketController> {
   const localization = options.localization ?? createRoccoLocalization();
   const definition = createDefaultBaitBucketSpriteDefinition(localization);
-  await engine.video.preloadSpriteDefinition(definition);
+  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID);
 

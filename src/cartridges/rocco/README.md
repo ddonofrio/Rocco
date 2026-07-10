@@ -14,6 +14,7 @@
 - `rocco-player-action-menu.ts` - Rocco self action menu with Talk and Inventory actions.
 - `rocco-developer-mode.ts` - Developer-mode menu definitions, inventory seeding, and event-toggle helpers used by the runtime controller.
 - `scripted-scene-interaction-controller.ts` - Shared walk-then-react controller for scene-target choreography.
+- `levels/rocco-asset-preloader.ts` - Cartridge-owned asset preloader that reports load progress to the composition overlay during `mount()` and level transitions.
 
 ## Subdirectories
 

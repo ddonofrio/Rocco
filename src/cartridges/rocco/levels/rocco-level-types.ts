@@ -6,6 +6,7 @@ import type { RoccoPlaneScene } from '../../../engine/video/planes';
 import type { RoccoFacingDirection, RoccoPoint } from '../../../engine/video/sprites';
 import type { RoccoInventoryItem } from '../inventory';
 import type { RoccoPlayerAppearance } from '../rocco-player-appearance';
+import { RoccoAssetPreloader } from './rocco-asset-preloader';
 
 export interface RoccoLevelRect {
   x: number;
@@ -48,7 +49,11 @@ export interface RoccoLevel {
   readonly title: string;
   readonly connectors: readonly RoccoLevelConnector[];
 
-  mount(engine: RoccoEngine, options?: RoccoLevelMountOptions): Promise<RoccoPlaneScene>;
+  mount(
+    engine: RoccoEngine,
+    options?: RoccoLevelMountOptions,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene>;
   unmount(engine: RoccoEngine): void;
   update(deltaMs: number): void;
   handleAction(activation: RoccoActionMenuActivation): void;

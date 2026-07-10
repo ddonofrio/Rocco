@@ -83,6 +83,7 @@ import {
   RoccoScriptedSequenceController,
 } from './runtime/rocco-scripted-sequence-controller';
 import { RoccoSceneActionRouter } from './runtime/rocco-scene-action-router';
+import { RoccoAssetPreloader } from './rocco-asset-preloader';
 
 export interface RoccoLevelManagerMountResult {
   level: RoccoLevel;
@@ -250,9 +251,9 @@ export class RoccoLevelManager {
     });
   }
 
-  async mount(engine: RoccoEngine): Promise<RoccoLevelManagerMountResult> {
+  async mount(engine: RoccoEngine, preloader?: RoccoAssetPreloader): Promise<RoccoLevelManagerMountResult> {
     this.engine = engine;
-    await this.engine.video.preloadAssetUrls(ROCCO_SHARED_UI_ASSET_URLS).catch(() => {
+    await preloader?.preloadAssetUrls(engine, ROCCO_SHARED_UI_ASSET_URLS).catch(() => {
       this.engine?.log('Assets', 'Some shared Rocco UI assets could not be preloaded.');
     });
     this.engine.audio.registerSound({
@@ -261,7 +262,7 @@ export class RoccoLevelManager {
       volume: 0.45,
       loop: false,
     });
-    await this.engine.audio.preloadSound(ROCCO_STAN_POLICE_DEFEAT_SOUND_ID).catch(() => {
+    await preloader?.preloadSound(engine, ROCCO_STAN_POLICE_DEFEAT_SOUND_ID).catch(() => {
       this.engine?.log('Audio', 'Stan police whistle sound could not be preloaded.');
     });
     this.engine.audio.stopSound(ROCCO_STAN_POLICE_DEFEAT_SOUND_ID);
@@ -274,7 +275,7 @@ export class RoccoLevelManager {
     this.netherEntrySnapshot = null;
     const level = this.levelRegistry.requireLevel(DEFAULT_START_LEVEL_ID);
     this.activeLevel = level;
-    const scene = await level.mount(engine, this.createLevelMountOptions());
+    const scene = await level.mount(engine, this.createLevelMountOptions(), preloader);
     installRoccoPlayerActionMenu(engine, this.localization);
     this.syncActiveLevelDroppedInventoryPresentation();
     this.updateStatus(scene);
@@ -488,12 +489,15 @@ export class RoccoLevelManager {
     this.transitions.clearPendingExitIntent();
     engine.setInputEnabled(false);
     engine.beginComposition();
+    const transitionPreloader = new RoccoAssetPreloader((progress) => {
+      engine.setCompositionText?.(`LOADING ${progress.percent}%`);
+    });
 
     try {
       this.clearActiveLevelDroppedInventoryPresentation();
       currentLevel.unmount(engine);
       this.activeLevel = targetLevel;
-      const scene = await targetLevel.mount(engine, this.createLevelMountOptions());
+      const scene = await targetLevel.mount(engine, this.createLevelMountOptions(), transitionPreloader);
       if (nextNetherEntrySnapshot) {
         this.captureNetherEntrySnapshot(nextNetherEntrySnapshot);
       }
@@ -505,6 +509,7 @@ export class RoccoLevelManager {
       this.activeLevel = currentLevel;
       return false;
     } finally {
+      engine.setCompositionText?.('LOADING 100%');
       engine.endComposition();
       engine.setInputEnabled(true);
       this.transitioning = false;
@@ -531,16 +536,23 @@ export class RoccoLevelManager {
     this.transitions.clearPendingExitIntent();
     engine.setInputEnabled(false);
     engine.beginComposition();
+    const transitionPreloader = new RoccoAssetPreloader((progress) => {
+      engine.setCompositionText?.(`LOADING ${progress.percent}%`);
+    });
 
     try {
       this.clearActiveLevelDroppedInventoryPresentation();
       currentLevel.unmount(engine);
       this.activeLevel = targetLevel;
-      const scene = await targetLevel.mount(engine, {
-        entryConnectorId: transition.targetEndpoint.connectorId,
-        entryPosition,
-        ...this.createLevelMountOptions(),
-      });
+      const scene = await targetLevel.mount(
+        engine,
+        {
+          entryConnectorId: transition.targetEndpoint.connectorId,
+          entryPosition,
+          ...this.createLevelMountOptions(),
+        },
+        transitionPreloader,
+      );
       if (nextNetherEntrySnapshot) {
         this.captureNetherEntrySnapshot(nextNetherEntrySnapshot);
       }
@@ -551,6 +563,7 @@ export class RoccoLevelManager {
       engine.log('System', `Level transition failed: ${String(error)}`);
       this.activeLevel = currentLevel;
     } finally {
+      engine.setCompositionText?.('LOADING 100%');
       engine.endComposition();
       engine.setInputEnabled(true);
       this.transitioning = false;
@@ -691,6 +704,9 @@ export class RoccoLevelManager {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     engine.beginComposition();
+    const transitionPreloader = new RoccoAssetPreloader((progress) => {
+      engine.setCompositionText?.(`LOADING ${progress.percent}%`);
+    });
 
     try {
       this.clearActiveLevelDroppedInventoryPresentation();
@@ -700,19 +716,23 @@ export class RoccoLevelManager {
       }
       const targetLevel = this.levelRegistry.requireLevel(request.levelId);
       this.activeLevel = targetLevel;
-      const scene = await targetLevel.mount(engine, {
-        entryConnectorId: request.entryConnectorId,
-        entryPosition: request.entryPosition,
-        forceArrivalSequence: request.forceArrivalSequence,
-        ...this.createLevelMountOptions(),
-      });
+      const scene = await targetLevel.mount(
+        engine,
+        {
+          entryConnectorId: request.entryConnectorId,
+          entryPosition: request.entryPosition,
+          forceArrivalSequence: request.forceArrivalSequence,
+          ...this.createLevelMountOptions(),
+        },
+        transitionPreloader,
+      );
       this.syncActiveLevelDroppedInventoryPresentation();
       this.updateStatus(scene);
     } catch (error) {
       engine.log('System', `Checkpoint restart failed: ${String(error)}`);
       this.activeLevel = currentLevel;
-      this.options.onRestartRequested?.();
     } finally {
+      engine.setCompositionText?.('LOADING 100%');
       engine.endComposition();
       engine.setInputEnabled(true);
       this.transitioning = false;
@@ -888,18 +908,22 @@ export class RoccoLevelManager {
     this.transitioning = true;
     this.transitions.clearPendingExitIntent();
     engine.beginComposition();
+    const transitionPreloader = new RoccoAssetPreloader((progress) => {
+      engine.setCompositionText?.(`LOADING ${progress.percent}%`);
+    });
 
     try {
       this.clearActiveLevelDroppedInventoryPresentation();
       currentLevel.unmount(engine);
       this.activeLevel = targetLevel;
-      const scene = await targetLevel.mount(engine, this.createLevelMountOptions());
+      const scene = await targetLevel.mount(engine, this.createLevelMountOptions(), transitionPreloader);
       this.syncActiveLevelDroppedInventoryPresentation();
       this.updateStatus(scene);
     } catch (error) {
       engine.log('System', `Bait shop level transition failed: ${String(error)}`);
       this.activeLevel = currentLevel;
     } finally {
+      engine.setCompositionText?.('LOADING 100%');
       engine.endComposition();
       engine.setInputEnabled(true);
       this.transitioning = false;

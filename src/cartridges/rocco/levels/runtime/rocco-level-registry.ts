@@ -14,6 +14,7 @@ import {
 } from '../../rocco-default-constants';
 import type { RoccoLocalization } from '../../localization';
 import { RoccoPierMiddleLevel } from '../pier/pier-level';
+import { installPierBeginningAmbient } from '../pier/pier-beginning-ambient';
 import {
   RoccoPierSideLevel,
   type RoccoPierSideLevelDefinition,
@@ -124,7 +125,9 @@ export class RoccoLevelRegistry {
         sceneId: PIER_START_SCENE_ID,
         backgroundScrollX: PIER_BACKGROUND_SCROLL_RIGHT_X,
         connectors: PIER_START_CONNECTORS,
-        mountAmbient: (engine) => this.options.mountPierBeginningAmbient(engine),
+        localization: this.options.localization,
+        mountAmbient: (engine, localization, persistentState, preloader) =>
+          installPierBeginningAmbient(engine, localization, persistentState, preloader),
       }),
       new RoccoPierSideLevel({
         id: ROCCO_PIER_END_LEVEL_ID,
@@ -132,6 +135,7 @@ export class RoccoLevelRegistry {
         sceneId: PIER_END_SCENE_ID,
         backgroundScrollX: PIER_BACKGROUND_SCROLL_LEFT_X,
         connectors: PIER_END_CONNECTORS,
+        localization: this.options.localization,
       }),
       new RoccoBaitShopLevel(this.options.localization, {
         isStanIdentified: () => this.options.isStanIdentified(),

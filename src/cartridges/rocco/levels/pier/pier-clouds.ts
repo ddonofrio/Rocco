@@ -1,5 +1,6 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoSpriteDefinition } from '../../../../engine/video/sprites';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import { pierCloudAssetUrl } from './pier-assets';
 import {
   DEFAULT_CLOUD_BASE_Y,
@@ -116,9 +117,10 @@ class RoccoFloatingCloudController implements RoccoDefaultCloudController {
 
 export async function installDefaultCloud(
   engine: RoccoEngine,
+  preloader?: RoccoAssetPreloader,
 ): Promise<RoccoDefaultCloudController> {
   const definition = createDefaultCloudSpriteDefinition();
-  await engine.video.preloadSpriteDefinition(definition);
+  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_CLOUD_SPRITE_INSTANCE_ID);
 

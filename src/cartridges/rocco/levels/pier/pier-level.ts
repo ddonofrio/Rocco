@@ -1,6 +1,7 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../engine/video/planes';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
   DEFAULT_FEEDING_LOOK_ACTION_ID,
@@ -149,6 +150,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   async mount(
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.engine = engine;
     this.options = options;
@@ -166,13 +168,13 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
       sceneId: PIER_MIDDLE_SCENE_ID,
       backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X,
     });
-    await engine.video.preloadPlaneScene(scene);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     engine.loadPlaneScene(scene);
     await installDefaultWalkMap(engine, {
       backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X,
-    });
+    }, preloader);
 
-    await engine.video.preloadAssetUrls([
+    await preloader?.preloadAssetUrls(engine, [
       roccoDefaultActionMenuAssetUrls.grab,
       roccoDefaultActionMenuAssetUrls.kick,
       roccoDefaultActionMenuAssetUrls.look,
@@ -198,7 +200,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
       pelikanController,
       spriteController,
     ] = await Promise.all([
-      installDefaultCloud(engine),
+      installDefaultCloud(engine, preloader),
       installDefaultBaitBucket(engine, {
         localization: this.localization,
         initialState: {
@@ -207,7 +209,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
         onDropped: () => {
           this.levelState.baitBucketDropped = true;
         },
-      }),
+      }, preloader),
       installDefaultKeys(engine, {
         localization: this.localization,
         initialState: initialKeysState,
@@ -216,7 +218,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
           this.levelState.keysStatus = 'collected';
           this.options.onKeysCollected?.();
         },
-      }),
+      }, preloader),
       installDefaultPelikan(engine, {
         localization: this.localization,
         initialState: this.levelState.pelikanState,
@@ -226,12 +228,12 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
           this.levelState.keysY = DEFAULT_KEYS_Y;
           this.keysController?.revealAt(DEFAULT_KEYS_X, DEFAULT_KEYS_Y);
         },
-      }),
+      }, preloader),
       installDefaultSprite(engine, {
         ...spriteInstallOptions,
         appearance: options.roccoAppearance,
         localization: this.localization,
-      }),
+      }, preloader),
     ]);
 
     this.cloudController = cloudController;

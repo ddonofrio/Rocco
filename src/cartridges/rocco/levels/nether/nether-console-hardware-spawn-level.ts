@@ -22,6 +22,7 @@ import {
   roccoDefaultActionMenuAssetUrls,
   roccoDefaultYouLoseSoundUrl,
 } from '../../rocco-default-assets';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
@@ -901,6 +902,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
   async mount(
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.engine = engine;
     this.options = options;
@@ -969,16 +971,16 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
     );
     this.pipeSmokeSecondStartFrameIndex = Math.max(0, Math.floor(smokeSprite.frameCount / 2));
 
-    await engine.video.preloadPlaneScene(scene);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     await Promise.all([
-      engine.video.preloadSpriteDefinition(securityCameraDefinition),
-      engine.video.preloadSpriteDefinition(intercomMessageAnchorDefinition),
-      engine.video.preloadSpriteDefinition(pipeSmokeDefinition),
+      (preloader?.preloadSpriteDefinition(engine, securityCameraDefinition) ?? engine.video.preloadSpriteDefinition(securityCameraDefinition)),
+      (preloader?.preloadSpriteDefinition(engine, intercomMessageAnchorDefinition) ?? engine.video.preloadSpriteDefinition(intercomMessageAnchorDefinition)),
+      (preloader?.preloadSpriteDefinition(engine, pipeSmokeDefinition) ?? engine.video.preloadSpriteDefinition(pipeSmokeDefinition)),
       shouldPlayArrivalSequence
-        ? engine.video.preloadSpriteDefinition(smokeSprite.definition)
+        ? (preloader?.preloadSpriteDefinition(engine, smokeSprite.definition) ?? engine.video.preloadSpriteDefinition(smokeSprite.definition))
         : Promise.resolve(),
       portalSprite
-        ? engine.video.preloadSpriteDefinition(portalSprite.definition)
+        ? (preloader?.preloadSpriteDefinition(engine, portalSprite.definition) ?? engine.video.preloadSpriteDefinition(portalSprite.definition))
         : Promise.resolve(),
     ]);
     engine.audio.registerSound({

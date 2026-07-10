@@ -5,6 +5,7 @@ import {
   createRoccoSpriteAutoCroppedFrames,
   type RoccoSpriteDefinition,
 } from '../../../../engine/video/sprites';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import { RoccoDialogueSession, roccoCartridgeMessageRuntime } from '../../dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import { roccoDefaultStanAssetUrl } from '../../rocco-default-assets';
@@ -624,9 +625,10 @@ export async function installDefaultStan(
   localization: RoccoLocalization = createRoccoLocalization(),
   persistentState: RoccoStanPersistentState = { isIdentified: false },
   options: RoccoStanInstallOptions = {},
+  preloader?: RoccoAssetPreloader,
 ): Promise<RoccoPierSideAmbientController> {
   const definition = await createDefaultStanSpriteDefinition(localization, persistentState);
-  await engine.video.preloadSpriteDefinition(definition);
+  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
 

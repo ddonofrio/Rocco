@@ -1,6 +1,7 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import { loadRoccoSpriteWalkMapFromImage } from '../../../../engine/video/sprites';
 import { pierWalkMapAssetUrl } from './pier-assets';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   DEFAULT_CENTERED_BACKGROUND_SCROLL_X,
   DEFAULT_CENTERED_BACKGROUND_SCROLL_Y,
@@ -16,7 +17,9 @@ export interface RoccoPierWalkMapOptions {
 export async function installDefaultWalkMap(
   engine: RoccoEngine,
   options: RoccoPierWalkMapOptions = {},
+  preloader?: RoccoAssetPreloader,
 ): Promise<void> {
+  preloader?.addWalkMap();
   const walkMap = await loadRoccoSpriteWalkMapFromImage({
     id: DEFAULT_WALK_MAP_ID,
     uri: pierWalkMapAssetUrl,

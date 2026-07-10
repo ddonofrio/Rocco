@@ -5,6 +5,7 @@ import type {
   RoccoCartridgeActionResult,
   RoccoCartridgeContext,
 } from '../../engine/cartridges/types';
+import { RoccoAssetPreloader } from './levels/rocco-asset-preloader';
 import { RoccoLevelManager } from './levels/rocco-level-manager';
 import { createRoccoLocalization } from './localization';
 import { roccoDefaultCartridgeManifest } from './rocco-default-manifest';
@@ -27,6 +28,11 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     this.levelManager?.unmount();
     this.levelManager = null;
     context.engine.beginComposition();
+
+    const preloader = new RoccoAssetPreloader((progress) => {
+      const text = `LOADING ${progress.percent}%`;
+      context.engine.setCompositionText?.(text);
+    });
 
     try {
       context.engine.jukebox.registerPlaylist({
@@ -59,13 +65,14 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
           this.restartDefaultDemo();
         },
       });
-      await this.levelManager.mount(context.engine);
+      await this.levelManager.mount(context.engine, preloader);
       await context.engine.jukebox
         .playPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID)
         .catch(() => {
           context.engine.log('System', 'Background music could not start.');
         });
     } finally {
+      context.engine.setCompositionText?.('LOADING 100%');
       context.engine.endComposition();
     }
   }

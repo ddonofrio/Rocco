@@ -12,6 +12,7 @@ import {
 import {
   roccoDefaultActionMenuAssetUrls,
 } from '../../rocco-default-assets';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import {
   DEFAULT_DESIGN_HEIGHT,
   DEFAULT_DESIGN_WIDTH,
@@ -219,6 +220,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
   async mount(
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.engine = engine;
     this.spriteController = null;
@@ -242,14 +244,14 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     const scene = await loadOrCreateNetherScene(engine, NETHER_END_OF_HALLWAY_SCENE_DEFINITION);
     const walkMapProfile = await createNetherWalkMapProfile(netherEndOfHallwayDoorAssetUrls.walkPath);
 
-    await engine.video.preloadPlaneScene(scene);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     engine.audio.registerSound({
       id: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID,
       uri: netherAmbientSteamMachineAssetUrl,
       volume: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_VOLUME,
       loop: true,
     });
-    await engine.audio.preloadSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID).catch(() => {
+    await preloader?.preloadSound(engine, NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID).catch(() => {
       engine.log('Audio', 'Nether ambient steam machine sound could not be preloaded.');
     });
     engine.loadPlaneScene(scene);
@@ -288,7 +290,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
         nearScale: 1,
         scaleCurve: 'linear',
       },
-    });
+    }, preloader);
     engine.video.render(0);
     this.sceneReady = true;
 

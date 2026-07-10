@@ -1,6 +1,7 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoActionMenuDefinition } from '../../../../engine/video/action-menu';
 import type { RoccoSpriteDefinition } from '../../../../engine/video/sprites';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import {
@@ -216,6 +217,7 @@ class RoccoBaitShopDoorControllerImpl implements RoccoBaitShopDoorController {
 export async function installDefaultBaitShopDoor(
   engine: RoccoEngine,
   options: RoccoBaitShopDoorInstallOptions = {},
+  preloader?: RoccoAssetPreloader,
 ): Promise<RoccoBaitShopDoorController> {
   const localization = options.localization ?? createRoccoLocalization();
   const initialState = options.initialState ?? { revealed: true };
@@ -230,7 +232,7 @@ export async function installDefaultBaitShopDoor(
   await engine.audio.preloadSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID).catch(() => {
     engine.log('Audio', 'Bait shop door opening sound could not be preloaded.');
   });
-  await engine.video.preloadSpriteDefinition(definition);
+  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
   engine.video.actionMenus.unregisterMenu(BAIT_SHOP_DOOR_ACTION_MENU_ID);

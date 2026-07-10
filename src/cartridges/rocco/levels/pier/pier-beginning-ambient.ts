@@ -2,7 +2,9 @@ import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoSceneClickAction } from '../../../../engine/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../engine/video/grid-menu';
-import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
+import type { RoccoPierSideAmbientController } from './pier-side-level';
+import type { RoccoLocalization } from '../../localization';
 import {
   installDefaultBaitShopDoor,
   type RoccoBaitShopDoorController,
@@ -12,7 +14,6 @@ import {
   installDefaultStan,
   type RoccoStanPersistentState,
 } from './pier-stan';
-import type { RoccoPierSideAmbientController } from './pier-side-level';
 
 export interface RoccoPierBeginningAmbientPersistentState {
   stan: RoccoStanPersistentState;
@@ -56,18 +57,16 @@ class RoccoPierBeginningAmbientController implements RoccoPierSideAmbientControl
 
 export async function installPierBeginningAmbient(
   engine: RoccoEngine,
-  localization: RoccoLocalization = createRoccoLocalization(),
-  persistentState: RoccoPierBeginningAmbientPersistentState = {
-    stan: { isIdentified: false },
-    door: { revealed: true },
-  },
+  localization: RoccoLocalization,
+  persistentState: RoccoPierBeginningAmbientPersistentState,
+  preloader?: RoccoAssetPreloader,
 ): Promise<RoccoPierSideAmbientController> {
   persistentState.door.revealed = true;
   const door = await installDefaultBaitShopDoor(engine, {
     localization,
     initialState: persistentState.door,
-  });
-  const stan = await installDefaultStan(engine, localization, persistentState.stan);
+  }, preloader);
+  const stan = await installDefaultStan(engine, localization, persistentState.stan, {}, preloader);
 
   return new RoccoPierBeginningAmbientController(stan, door);
 }

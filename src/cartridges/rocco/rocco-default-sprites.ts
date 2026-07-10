@@ -1,6 +1,7 @@
 import type { RoccoEngine } from '../../engine/engine-sdk';
 import type { RoccoSpriteAutoAdjustPerspectiveByY, RoccoSpriteDefinition } from '../../engine/video/sprites';
 import type { RoccoFacingDirection, RoccoPoint } from '../../engine/video/sprites';
+import { RoccoAssetPreloader } from './levels/rocco-asset-preloader';
 import {
   DEFAULT_SPRITE_DEFINITION_ID,
   DEFAULT_SPRITE_GROUND_ANCHOR_X,
@@ -245,10 +246,11 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
 export async function installDefaultSprite(
   engine: RoccoEngine,
   options: RoccoDefaultSpriteInstallOptions = {},
+  preloader?: RoccoAssetPreloader,
 ): Promise<RoccoDefaultSpriteController> {
   const localization = options.localization ?? createRoccoLocalization();
   const definition = createInstalledSpriteDefinition(localization, options);
-  await engine.video.preloadSpriteDefinition(definition);
+  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
   const scale = options.scale ?? DEFAULT_SPRITE_SCALE;

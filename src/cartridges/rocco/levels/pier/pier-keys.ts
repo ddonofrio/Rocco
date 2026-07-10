@@ -1,5 +1,6 @@
 import type { RoccoEngine } from '../../../../engine/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
+import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import { roccoDefaultKeysSoundUrl } from '../../rocco-default-assets';
 import { roccoCartridgeMessageRuntime } from '../../dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
@@ -375,6 +376,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
 export async function installDefaultKeys(
   engine: RoccoEngine,
   options?: RoccoDefaultKeysControllerOptions,
+  preloader?: RoccoAssetPreloader,
 ): Promise<RoccoDefaultKeysController> {
   const localization = options?.localization ?? createRoccoLocalization();
   const definition = createDefaultKeysSpriteDefinition(localization);
@@ -384,10 +386,10 @@ export async function installDefaultKeys(
     volume: KEYS_SOUND_VOLUME,
     loop: false,
   });
-  await engine.audio.preloadSound(KEYS_SOUND_ID).catch(() => {
+  await preloader?.preloadSound(engine, KEYS_SOUND_ID).catch(() => {
     engine.log('Audio', 'Keys sound could not be preloaded.');
   });
-  await engine.video.preloadSpriteDefinition(definition);
+  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
   engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);

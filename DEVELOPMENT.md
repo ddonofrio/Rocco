@@ -149,7 +149,7 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 
 ## Project Structure
 
-- `src/engine/` contains the console runtime and generic systems.
+- `src/console/` contains the console runtime and generic systems.
 - `src/cartridges/` contains built-in cartridge implementations.
 - `scripts/` contains local development scripts.
 - `public/` contains static browser assets.
@@ -159,7 +159,8 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 ## Rocco Pier Notes
 
 - The active Rocco cartridge is `rocco-default`.
-- Pier exterior code lives in `src/cartridges/rocco/levels/pier`.
+- Current Pier implementation code lives in `src/cartridges/rocco/games/rocco-default/maps/pier`.
+- `src/cartridges/rocco/levels/pier` remains the compatibility path for older imports.
 - The Pier map has three levels: `pier-start`, `pier-middle`, and `pier-end`.
 - `RoccoLevelManager` owns level registration, transitions, entry placement, status text, and per-level state retention across Rocco screens.
 - Pier Middle east and west exits are available without an inventory gate.
@@ -172,8 +173,8 @@ The Pier water effect selects water-colored pixels, animates those pixels with a
 
 Relevant files:
 
-- `src/engine/video/post-processing/water-color-effect.ts`
-- `src/engine/video/planes/pixi-renderer.ts`
+- `src/console/video/post-processing/water-color-effect.ts`
+- `src/console/video/planes/pixi-renderer.ts`
 - `src/cartridges/rocco/levels/pier/pier-video-effects.ts`
 - `src/cartridges/rocco/rocco-default-constants.ts`
 

@@ -25,8 +25,8 @@ After reading docs, inspect the closest implementation and nearby tests before c
 - Scene targets, hover captions, or action menus:
   - `src/cartridges/rocco/levels/README.md`
   - The target level README
-  - `src/engine/video/scene-targets/README.md`
-  - `src/engine/video/action-menu/README.md`
+  - `src/console/video/scene-targets/README.md`
+  - `src/console/video/action-menu/README.md`
 - Localization:
   - `src/cartridges/rocco/localization/README.md`
   - `src/cartridges/rocco/localization/types.ts`

@@ -1,4 +1,4 @@
-import type { RoccoDialogueChoiceNode, RoccoDialogueLine } from '../dialogue';
+﻿import type { RoccoDialogueChoiceNode, RoccoDialogueLine } from '../rpce/dialogue';
 
 export function dialogueLeaf(
   id: string,

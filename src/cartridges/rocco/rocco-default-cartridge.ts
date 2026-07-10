@@ -1,13 +1,18 @@
-import type { RoccoEngine } from '../../engine/engine-sdk';
-import type {
+﻿import type {
   RoccoCartridge,
   RoccoCartridgeAction,
   RoccoCartridgeActionResult,
   RoccoCartridgeContext,
-} from '../../engine/cartridges/types';
-import { RoccoAssetPreloader } from './levels/rocco-asset-preloader';
-import { RoccoLevelManager } from './levels/rocco-level-manager';
-import { createRoccoLocalization } from './localization';
+} from '../../console/cartridges/types';
+import {
+  createRoccoDefaultGameDefinition,
+  createRoccoLocalization,
+} from './games/rocco-default';
+import type {
+  RoccoLevelManagerMountResult,
+  RoccoLevelManagerOptions,
+} from './levels/rocco-level-manager';
+import { RpceAssetPreloader, RpceGameRuntime } from './rpce/core';
 import { roccoDefaultCartridgeManifest } from './rocco-default-manifest';
 
 const roccoDefaultGameMusicTrackUrls = [
@@ -17,19 +22,21 @@ const roccoDefaultGameMusicTrackUrls = [
 
 export class RoccoDefaultCartridge implements RoccoCartridge {
   readonly manifest = roccoDefaultCartridgeManifest;
-  private levelManager: RoccoLevelManager | null = null;
-  private engine: RoccoEngine | null = null;
+  private gameRuntime: RpceGameRuntime<
+    RoccoLevelManagerOptions,
+    RoccoLevelManagerMountResult
+  > | null = null;
   private mountContext: RoccoCartridgeContext | null = null;
   private static readonly GAME_MUSIC_PLAYLIST_ID = 'rocco-game-music';
 
   async mount(context: RoccoCartridgeContext): Promise<void> {
-    this.engine = context.engine;
     this.mountContext = { ...context };
-    this.levelManager?.unmount();
-    this.levelManager = null;
+    this.gameRuntime?.unmount();
+    this.gameRuntime = null;
     context.engine.beginComposition();
 
-    const preloader = new RoccoAssetPreloader((progress) => {
+    const localization = createRoccoLocalization(context.locale);
+    const preloader = new RpceAssetPreloader((progress) => {
       const text = `LOADING ${progress.percent}%`;
       context.engine.setCompositionText?.(text);
     });
@@ -58,14 +65,21 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
         globalVolume: 0.2,
       });
 
-      this.levelManager = new RoccoLevelManager({
-        cartridgeTitle: this.manifest.title,
-        localization: createRoccoLocalization(context.locale),
-        onRestartRequested: () => {
-          this.restartDefaultDemo();
+      const gameRuntime = new RpceGameRuntime<
+        RoccoLevelManagerOptions,
+        RoccoLevelManagerMountResult
+      >({
+        game: createRoccoDefaultGameDefinition(localization),
+        controllerOptions: {
+          cartridgeTitle: this.manifest.title,
+          localization,
+          onRestartRequested: () => {
+            this.restartDefaultDemo();
+          },
         },
       });
-      await this.levelManager.mount(context.engine, preloader);
+      this.gameRuntime = gameRuntime;
+      await gameRuntime.mount(context.engine, preloader);
       await context.engine.jukebox
         .playPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID)
         .catch(() => {
@@ -78,30 +92,29 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
   }
 
   update(deltaMs: number): void {
-    this.levelManager?.update(deltaMs);
+    this.gameRuntime?.update(deltaMs);
   }
 
   handleAction(activation: RoccoCartridgeAction): RoccoCartridgeActionResult | void {
-    return this.levelManager?.handleAction(activation);
+    return this.gameRuntime?.handleAction(activation);
   }
 
   stop(): void {
-    this.engine?.jukebox.unregisterPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
-    this.levelManager?.unmount();
-    this.levelManager = null;
-    this.engine = null;
+    this.mountContext?.engine.jukebox.unregisterPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
+    this.gameRuntime?.unmount();
+    this.gameRuntime = null;
     this.mountContext = null;
   }
 
   private restartDefaultDemo(): void {
-    if (!this.engine || !this.mountContext) {
+    if (!this.mountContext) {
       return;
     }
 
-    const engine = this.engine;
+    const engine = this.mountContext.engine;
     const mountContext = { ...this.mountContext };
-    this.levelManager?.unmount();
-    this.levelManager = null;
+    this.gameRuntime?.unmount();
+    this.gameRuntime = null;
     void this.mount(mountContext).catch(() => {
       engine.log('System', 'Default cartridge restart failed.');
     });

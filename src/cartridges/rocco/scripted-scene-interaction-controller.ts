@@ -1,6 +1,6 @@
-import type { RoccoSceneClickAction } from '../../engine/cartridges';
-import type { RoccoEngine } from '../../engine/engine-sdk';
-import type { RoccoFacingDirection, RoccoPoint } from '../../engine/video/sprites';
+import type { RoccoSceneClickAction } from '../../console/cartridges';
+import type { RoccoEngine } from '../../console/engine-sdk';
+import type { RoccoFacingDirection, RoccoPoint } from '../../console/video/sprites';
 import {
   DEFAULT_SPRITE_IDLE_ACTION_ID,
   DEFAULT_SPRITE_INSTANCE_ID,

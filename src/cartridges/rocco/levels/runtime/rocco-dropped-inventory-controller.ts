@@ -1,10 +1,10 @@
-import type {
+﻿import type {
   RoccoCartridgeActionResult,
   RoccoSceneClickAction,
-} from '../../../../engine/cartridges';
-import type { RoccoEngine } from '../../../../engine/engine-sdk';
-import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
-import type { RoccoPoint } from '../../../../engine/video/sprites';
+} from '../../../../console/cartridges';
+import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { RoccoActionMenuActivation } from '../../../../console/video/action-menu';
+import type { RoccoPoint } from '../../../../console/video/sprites';
 import {
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
   type RoccoInventoryItem,

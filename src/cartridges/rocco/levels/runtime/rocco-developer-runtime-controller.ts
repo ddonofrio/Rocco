@@ -1,17 +1,17 @@
 import type {
   RoccoCartridgeActionResult,
   RoccoSceneClickAction,
-} from '../../../../engine/cartridges';
-import type { RoccoEngine } from '../../../../engine/engine-sdk';
-import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
-import type { RoccoCursorAttachment } from '../../../../engine/video/cursor';
-import type { RoccoGridMenuActivation } from '../../../../engine/video/grid-menu';
+} from '../../../../console/cartridges';
+import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { RoccoActionMenuActivation } from '../../../../console/video/action-menu';
+import type { RoccoCursorAttachment } from '../../../../console/video/cursor';
+import type { RoccoGridMenuActivation } from '../../../../console/video/grid-menu';
 import type {
   RoccoPoint,
   RoccoSpriteDefinition,
   RoccoSpriteFrame,
   RoccoSpriteInstance,
-} from '../../../../engine/video/sprites';
+} from '../../../../console/video/sprites';
 import type { RoccoInventory } from '../../inventory';
 import type { RoccoLocalization } from '../../localization';
 import {
@@ -52,9 +52,12 @@ import { isRoccoPlayerDeveloperAction } from '../../rocco-player-action-menu';
 import { ROCCO_BAIT_SHOP_LEVEL_ID } from '../bait-shop/bait-shop-level';
 import { ROCCO_BAIT_SHOP_SECOND_LEVEL_ID } from '../bait-shop/bait-shop-second-level';
 import { ROCCO_BAIT_SHOP_TOILET_LEVEL_ID } from '../bait-shop/bait-shop-toilet-level';
-import { ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID } from '../nether/nether-console-hardware-spawn-level';
-import { ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID } from '../nether/nether-end-of-hallway-door-level';
-import { ROCCO_NETHER_RESET_OFFICE_LEVEL_ID } from '../nether/nether-reset-office-level';
+import {
+  ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+  ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
+  ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+  ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
+} from '../../games/rocco-default/maps/nether';
 
 interface RoccoDeveloperEventState {
   allowToiletReuseDuringUrgency: boolean;
@@ -479,6 +482,7 @@ export class RoccoDeveloperRuntimeController {
     const resolveLevelTitle = this.options.resolveLevelTitle;
     const baitShopTitle = resolveLevelTitle(ROCCO_BAIT_SHOP_LEVEL_ID);
     const netherTitle = resolveLevelTitle(ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID);
+    const resetOfficeTitle = resolveLevelTitle(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID);
 
     return [
       {
@@ -537,16 +541,15 @@ export class RoccoDeveloperRuntimeController {
             title: `${netherTitle} 2`,
             targetLevelId: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
           },
-        ],
-      },
-      {
-        id: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
-        title: resolveLevelTitle(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID),
-        screens: [
           {
             id: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
-            title: resolveLevelTitle(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID),
+            title: `${resetOfficeTitle} 1`,
             targetLevelId: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+          },
+          {
+            id: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
+            title: `${resetOfficeTitle} 2`,
+            targetLevelId: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
           },
         ],
       },

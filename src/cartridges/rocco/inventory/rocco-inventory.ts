@@ -1,4 +1,4 @@
-import type { RoccoGridMenuDefinition } from '../../../engine/video/grid-menu';
+﻿import type { RoccoGridMenuDefinition } from '../../../console/video/grid-menu';
 import { DEFAULT_SPRITE_SCALE } from '../rocco-default-constants';
 import {
   roccoDefaultKeysAssetUrl,

@@ -1,8 +1,8 @@
-﻿import {
+import {
   ROCCO_SPRITE_DIRECTIONS,
   type RoccoSpriteDefinition,
   type RoccoSpriteDirectionalAnimations,
-} from '../../engine/video/sprites';
+} from '../../console/video/sprites';
 import {
   DEFAULT_SPRITE_DEFINITION_ID,
   DEFAULT_SPRITE_IDLE_ACTION_ID,

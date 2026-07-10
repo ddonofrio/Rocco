@@ -1,15 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RoccoEngine } from '../../../../../src/engine/engine-sdk';
-import type { RoccoActionMenuDefinition } from '../../../../../src/engine/video/action-menu';
-import type { RoccoGridMenuDefinition } from '../../../../../src/engine/video/grid-menu';
-import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../../../src/engine/video/planes';
+import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
+import type { RoccoActionMenuDefinition } from '../../../../../src/console/video/action-menu';
+import type { RoccoGridMenuDefinition } from '../../../../../src/console/video/grid-menu';
+import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../../../src/console/video/planes';
 import type {
   RoccoSpriteDefinition,
   RoccoSpriteInstance,
   RoccoSpriteNavigationBinding,
   RoccoSpriteWalkMap,
-} from '../../../../../src/engine/video/sprites';
+} from '../../../../../src/console/video/sprites';
 import { createRoccoLocalization, type RoccoLocalization } from '../../../../../src/cartridges/rocco/localization';
 import {
   DEFAULT_SPRITE_IDLE_ACTION_ID,
@@ -30,8 +30,8 @@ const WISH_ROOT_CHOICE_ID = 'wish-root';
 const POST_WISH_RESPONSE_MENU_ID = 'rocco-bait-shop-toilet-post-wish-response-menu';
 const POST_WISH_REPLY_MOMENT_PLEASE_CHOICE_ID = 'post-wish-reply-moment-please';
 
-vi.mock('../../../../../src/engine/video/sprites', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../../src/engine/video/sprites')>();
+vi.mock('../../../../../src/console/video/sprites', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../../src/console/video/sprites')>();
   return {
     ...actual,
     createRoccoSpriteWalkMapFromImageData: vi.fn(

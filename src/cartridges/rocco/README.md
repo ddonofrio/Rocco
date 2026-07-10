@@ -1,10 +1,10 @@
 # Default Cartridge: `rocco-default`
 
-`rocco-default` is the main built-in cartridge for the ROCCO console. It implements the Pier exterior, the bait shop interior, connected Nether screens, the developer-only Reset Office screens, and the cartridge-owned inventory systems that tie those spaces together.
+`rocco-default` is the main built-in cartridge for the ROCCO console. The cartridge now reads as `cartridge bootstrap -> RPCE -> rocco-default game`. It implements the Pier exterior, the bait shop interior, the Nether path including the Reset Office branch, and the cartridge-owned inventory systems that tie those spaces together.
 
 ## Files
 
-- `rocco-default-cartridge.ts` - `RoccoDefaultCartridge`, which mounts the Pier level manager and delegates runtime actions.
+- `rocco-default-cartridge.ts` - `RoccoDefaultCartridge`, which mounts the RPCE runtime and delegates gameplay actions into the current game.
 - `rocco-default-manifest.ts` - Cartridge identity and localized menu metadata.
 - `rocco-default-constants.ts` - Shared design, scene, level, scroll, color, and sprite IDs.
 - `rocco-default-assets.ts` - Shared cartridge asset URIs.
@@ -14,27 +14,31 @@
 - `rocco-player-action-menu.ts` - Rocco self action menu with Talk and Inventory actions.
 - `rocco-developer-mode.ts` - Developer-mode menu definitions, inventory seeding, and event-toggle helpers used by the runtime controller.
 - `scripted-scene-interaction-controller.ts` - Shared walk-then-react controller for scene-target choreography.
-- `levels/rocco-asset-preloader.ts` - Cartridge-owned asset preloader that reports load progress to the composition overlay during `mount()` and level transitions.
+- `rpce/` - Cartridge-local point-and-click runtime, reusable dialogue helpers, inventory primitives, and RPCE contracts.
+- `games/rocco-default/` - Current game definition and map-first ownership for Pier, Shop, and Nether.
+- `levels/rocco-asset-preloader.ts` - Compatibility path for the RPCE asset preloader during migration.
 
 ## Subdirectories
 
 | Directory       | Contents                                                          |
 | --------------- | ----------------------------------------------------------------- |
 | `assets/`       | Shared cartridge assets for characters, props, sounds, and icons  |
-| `dialogue/`     | Reusable cartridge dialogue helpers and branching conversation runtime |
+| `rpce/`         | Cartridge-local point-and-click runtime, reusable dialogue helpers, and generic inventory primitives |
+| `games/`        | Game definitions, shared game-owned barrels, and map-first ownership |
+| `dialogue/`     | Compatibility path for RPCE dialogue helpers                      |
 | `inventory/`    | Rocco cartridge inventory state, souvenir assets, fusion recipes, prop storages, and grid-menu projection |
-| `levels/runtime/` | Cartridge runtime helpers for registration, transitions, action routing, inventory runtime, dropped-item runtime, scripted sequences, and developer mode |
-| `levels/pier/`  | Pier exterior levels, transitions, assets, effects, and interactions |
-| `levels/bait-shop/` | Bait shop interior levels, scene assets, walk maps, and per-level Rocco setup |
-| `levels/nether/` | Nether and Reset Office levels, arrival effects, walk maps, and per-level Rocco setup |
+| `levels/runtime/` | Compatibility-path runtime helpers backed by the RPCE/game split |
+| `levels/pier/`  | Compatibility exports for the game-owned Pier implementation |
+| `levels/bait-shop/` | Compatibility exports for the game-owned Shop implementation |
+| `levels/nether/` | Compatibility exports for the game-owned Nether implementation, including Reset Office |
 | `localization/` | English and Spanish text catalogs for the cartridge                |
 
 ## World Structure
 
-The cartridge starts in Pier Middle and currently spans four level families.
+The cartridge starts in Pier Middle and currently spans three maps.
 
-| Family | Level | ID | Scene ID | Notes |
-| ------ | ----- | -- | -------- | ----- |
+| Map | Level | ID | Scene ID | Notes |
+| --- | ----- | -- | -------- | ----- |
 | Pier exterior | Pier Beginning | `pier-start` | `rocco-pier-start-scene` | Right panorama window |
 | Pier exterior | Pier Middle | `pier-middle` | `rocco-pier-middle-scene` | Center panorama window and default start |
 | Pier exterior | Pier End | `pier-end` | `rocco-pier-end-scene` | Left panorama window |
@@ -43,10 +47,10 @@ The cartridge starts in Pier Middle and currently spans four level families.
 | Bait shop | Toilet room | `bait-shop-toilet` | `rocco-bait-shop-toilet-scene` | Magazine sequence, ritual branch, and portal trigger |
 | Nether | Console hardware spawn | `nether-console-hardware-spawn` | `rocco-nether-console-hardware-spawn-scene` | First Nether screen after the portal arrival |
 | Nether | End of hallway door | `nether-end-of-hallway-door` | `rocco-nether-end-of-hallway-door-scene` | Second Nether screen with mounted scene-target interactions |
-| Reset Office | Reset Office 1 | `nether-reset-office` | `rocco-nether-reset-office-scene` | Developer-only branch |
-| Reset Office | Reset Office 2 | `nether-reset-office-second` | `rocco-nether-reset-office-second-scene` | Developer-only branch with the printer prop |
+| Nether | Reset Office 1 | `nether-reset-office` | `rocco-nether-reset-office-scene` | Developer-only branch inside the Nether map |
+| Nether | Reset Office 2 | `nether-reset-office-second` | `rocco-nether-reset-office-second-scene` | Developer-only branch with the printer prop |
 
-Rocco transitions through edge connectors on connected screens. Cartridge runtime controllers resolve the connector graph, exit intent, action-routing priority, inventory runtime, dropped-item flow, scripted sequences, and developer-mode state, while `RoccoLevelManager` mounts the connected level, places Rocco on the matching entry point, and coordinates the active high-level flow. Using the keys on the bait shop door while Stan sleeps opens a separate transition into the bait shop interior. The bait-shop toilet portal then leads into `nether-console-hardware-spawn`, which connects onward to `nether-end-of-hallway-door`. Developer mode also exposes the separate two-screen Reset Office branch, which stays outside the normal level graph.
+Rocco transitions through edge connectors on connected screens. The cartridge bootstrap mounts RPCE, RPCE mounts the current `rocco-default` game, and the game owns Pier, Shop, and Nether map definitions plus the current concrete implementations under `games/rocco-default/maps/*`. The legacy `levels/**` folders remain compatibility wrappers so older imports can keep resolving while the game-layer paths act as the source of truth.
 
 ## Interactions
 
@@ -70,7 +74,7 @@ Rocco transitions through edge connectors on connected screens. Cartridge runtim
 - Pier Middle exits are available without an inventory gate.
 - The toilet-room portal opens a first-time arrival sequence in Nether and then hands off to a connected second Nether screen.
 - Developer mode also exposes an `Alter events` path for runtime-only test overrides such as allowing the bait-shop toilet to be reused after the magazine warning.
-- Developer mode also exposes a two-screen Reset Office branch, and the second screen includes an office printer prop with `look`, `grab`, and `kick` actions.
+- Developer mode also exposes the two-screen Reset Office branch inside the Nether map through the Nether screen picker, and the second screen includes an office printer prop with `look`, `grab`, and `kick` actions.
 
 ## Localization
 
@@ -122,7 +126,8 @@ inventory/
 - Asset URIs use Vite-compatible `import ... as string` patterns.
 - Shared Rocco sprite logic lives in `rocco-default-sprites.ts` and `rocco-default-sprite-definition.ts`.
 - Inventory-owned souvenir and crafted-item art lives under `inventory/assets/souvenirs`.
-- Pier-specific state, transitions, sprites, and controllers live inside `levels/pier`.
-- Bait shop interior scene state, planes, and assets live inside `levels/bait-shop`.
-- Nether scene state, perspective helpers, arrival effects, and assets live inside `levels/nether`.
-- Localized dialogue trees stay in `localization/`; the reusable turn sequencing stays in `dialogue/`.
+- Map definitions live under `games/rocco-default/maps/*`.
+- Shared game-owned barrels live under `games/rocco-default/{constants,inventory,localization,player,sprites}`.
+- Map folders under `games/rocco-default/maps/*` own the level list, connection graph, current concrete implementations, and local assets.
+- `src/cartridges/rocco/levels/pier`, `levels/bait-shop`, and `levels/nether` are compatibility wrappers over those game-owned paths.
+- Localized dialogue trees stay in `localization/`; reusable turn sequencing now lives under `rpce/dialogue` with compatibility exports in `dialogue/`.

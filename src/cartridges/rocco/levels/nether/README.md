@@ -1,6 +1,10 @@
 # Nether Levels
 
-This directory contains the Nether level family for the `rocco-default` cartridge.
+This directory is the legacy compatibility path for the Nether level family of the
+`rocco-default` cartridge.
+
+The current concrete implementation and assets live in
+`src/cartridges/rocco/games/rocco-default/maps/nether/**`.
 
 ## Files
 
@@ -11,7 +15,7 @@ This directory contains the Nether level family for the `rocco-default` cartridg
 - `nether-level-support.ts` - Shared scene loading, walk-map projection, and ground-point helpers for Nether screens.
 - `nether-arrival-effects.ts` - Shared portal and smoke sprite definitions reused by the Nether arrival sequence.
 - `nether-assets.ts` - Local asset URIs for the Nether backgrounds and walk maps.
-- `assets/` - The Nether background, walk-map, and prop assets used by these screens.
+- `assets/` - Legacy asset path kept only for migration context; the current asset ownership now lives under the game-owned Nether map folder.
 
 ## Runtime Notes
 
@@ -26,6 +30,7 @@ This directory contains the Nether level family for the `rocco-default` cartridg
 - The first screen mounts animated pipe-smoke decoration behind Rocco plus an interactive security camera that can trigger a local checkpoint restart back to the entry sequence.
 - The second screen runs its own lighting plane plus ambient machine loop, uses a softer perspective scale response than Nether 1, mounts scene targets for the doorbell, door handle, ascending pipes, and wheel valve, registers radial action menus for the doorbell, door handle, and wheel valve, and returns to Nether 1 through its bottom `south` exit connector.
 - The Reset Office pair is intentionally disconnected from the normal Nether graph and currently loads only through developer mode.
+- Developer mode groups the Reset Office pair under the Nether screen picker rather than treating it as a separate map.
 - The Reset Office first screen uses a fixed developer entry at `371,138` facing down, while both office screens enter from each other at the bottom edge with mirrored horizontal placement.
 - The Reset Office second screen mounts a printer sprite prop at the left side of the room with `look`, `grab`, and `kick` actions.
-- All Nether assets live under this cartridge directory. The runtime does not depend on workspace-only generated content.
+- The legacy files in this directory now re-export from the game-owned Nether map folder so older imports keep resolving during the refactor.

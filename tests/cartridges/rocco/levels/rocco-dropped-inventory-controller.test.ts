@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+﻿import { describe, expect, it, vi } from 'vitest';
 
 import { createRoccoLocalization } from '../../../../src/cartridges/rocco/localization';
 import {
@@ -8,7 +8,7 @@ import {
 } from '../../../../src/cartridges/rocco/inventory';
 import { RoccoDroppedInventoryController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-dropped-inventory-controller';
 import type { RoccoLevel } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
-import type { RoccoEngine } from '../../../../src/engine/engine-sdk';
+import type { RoccoEngine } from '../../../../src/console/engine-sdk';
 import { DEFAULT_SPRITE_INSTANCE_ID } from '../../../../src/cartridges/rocco/rocco-default-constants';
 
 interface DroppedEngineState {

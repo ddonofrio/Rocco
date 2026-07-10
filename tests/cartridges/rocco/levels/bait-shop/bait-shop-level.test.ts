@@ -1,13 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RoccoEngine } from '../../../../../src/engine/engine-sdk';
-import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../../../src/engine/video/planes';
+import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
+import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../../../src/console/video/planes';
 import type {
   RoccoSpriteDefinition,
   RoccoSpriteInstance,
   RoccoSpriteNavigationBinding,
   RoccoSpriteWalkMap,
-} from '../../../../../src/engine/video/sprites';
+} from '../../../../../src/console/video/sprites';
 import { BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID } from '../../../../../src/cartridges/rocco/inventory';
 import { createRoccoLocalization } from '../../../../../src/cartridges/rocco/localization';
 import {
@@ -27,8 +27,8 @@ const BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID = 'rocco-bait-shop-hidden-keys-ta
 const BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID = 'rocco-bait-shop-souvenir-closeup-target';
 const BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID = 'rocco-bait-shop-souvenir-table-target';
 
-vi.mock('../../../../../src/engine/video/sprites', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../../src/engine/video/sprites')>();
+vi.mock('../../../../../src/console/video/sprites', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../../src/console/video/sprites')>();
   return {
     ...actual,
     createRoccoSpriteWalkMapFromImageData: vi.fn(

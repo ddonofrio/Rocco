@@ -1,8 +1,8 @@
 import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
-} from '../../engine/video/action-menu';
-import type { RoccoEngine } from '../../engine/engine-sdk';
+} from '../../console/video/action-menu';
+import type { RoccoEngine } from '../../console/engine-sdk';
 import { roccoDefaultActionMenuAssetUrls } from './rocco-default-assets';
 import { DEFAULT_SPRITE_INSTANCE_ID } from './rocco-default-constants';
 import {

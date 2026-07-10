@@ -1,6 +1,10 @@
 # Bait Shop Level
 
-This directory contains the bait shop interior levels for the `rocco-default` cartridge.
+This directory is the legacy compatibility path for the bait shop interior levels of the
+`rocco-default` cartridge.
+
+The current concrete implementation and assets live in
+`src/cartridges/rocco/games/rocco-default/maps/shop/**`.
 
 ## Files
 
@@ -8,7 +12,7 @@ This directory contains the bait shop interior levels for the `rocco-default` ca
 - `bait-shop-second-level.ts` - `RoccoBaitShopSecondLevel`, the second interior screen with the magazine, toilet door interaction, and south connector.
 - `bait-shop-toilet-level.ts` - `RoccoBaitShopToiletLevel`, the toilet room screen behind the second-screen toilet door, including the seated magazine sequence, the coral-relic survival branch, the post-toilet police exchange, and the portal trigger.
 - `bait-shop-assets.ts` - Local asset URIs for the bait shop background, foreground, and walk map.
-- `assets/` - The bait shop background, foreground, toilet, door, sprite sheet, smoke, portal, sound, and walk-map assets used by the levels.
+- `assets/` - Legacy asset path kept only for migration context; the current asset ownership now lives under the game-owned Shop map folder.
 
 ## Runtime Notes
 
@@ -23,4 +27,4 @@ This directory contains the bait shop interior levels for the `rocco-default` ca
 - The magazine can also guide any craftable Coral Relic path that is already accessible inside the toilet room, including the final instruction to drop the relic on the floor, make a wish, and break it.
 - Developer mode can override toilet-room event flags through `Alter events -> Bait Shop -> Bathroom`, including a toggle that allows the toilet to be reused during the urgency state for manual testing.
 - The toilet-room portal is a scripted connector transition. The level keeps the portal pending until Rocco no longer overlaps the portal zone, then moves to the first Nether screen on contact.
-- All bait shop assets live under this cartridge directory. The runtime does not depend on workspace-only generated content.
+- The legacy files in this directory now re-export from the game-owned Shop map folder so older imports keep resolving during the refactor.

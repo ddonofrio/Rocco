@@ -1,11 +1,11 @@
-import type {
+﻿import type {
   RoccoCartridgeAction,
   RoccoCartridgeActionResult,
   RoccoSceneClickAction,
-} from '../../../../engine/cartridges';
-import type { RoccoEngine } from '../../../../engine/engine-sdk';
-import type { RoccoActionMenuActivation } from '../../../../engine/video/action-menu';
-import type { RoccoGridMenuCarriedItem } from '../../../../engine/video/grid-menu';
+} from '../../../../console/cartridges';
+import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { RoccoActionMenuActivation } from '../../../../console/video/action-menu';
+import type { RoccoGridMenuCarriedItem } from '../../../../console/video/grid-menu';
 import { applyDefaultSpriteAppearance } from '../../rocco-default-sprites';
 import {
   RoccoInventory,
@@ -21,7 +21,7 @@ import {
   DEFAULT_STAN_SPRITE_INSTANCE_ID,
   ROCCO_PIER_START_LEVEL_ID,
 } from '../../rocco-default-constants';
-import { roccoCartridgeMessageRuntime } from '../../dialogue';
+import { roccoCartridgeMessageRuntime } from '../../rpce/dialogue';
 import { resolveKeyLockedDoorLines } from '../key-locked-door-lines';
 import { isRoccoPlayerInventoryAction, ROCCO_PLAYER_TALK_ACTION_ID } from '../../rocco-player-action-menu';
 import {

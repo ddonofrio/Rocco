@@ -4,6 +4,8 @@ import { createRoccoLocalization } from '../../../../src/cartridges/rocco/locali
 import { RoccoInventory } from '../../../../src/cartridges/rocco/inventory';
 import {
   ROCCO_DEVELOPER_CYCLE_SPRITE_CHOICE_ID,
+  ROCCO_DEVELOPER_JUMP_CHOICE_ID,
+  ROCCO_DEVELOPER_LEVEL_MENU_ID,
   ROCCO_DEVELOPER_ROOT_MENU_ID,
   ROCCO_DEVELOPER_SCREEN_MENU_ID,
 } from '../../../../src/cartridges/rocco/rocco-developer-mode';
@@ -11,19 +13,27 @@ import {
   ROCCO_PLAYER_ACTION_MENU_ID,
   ROCCO_PLAYER_DEVELOPER_ACTION_ID,
 } from '../../../../src/cartridges/rocco/rocco-player-action-menu';
+import {
+  ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+  ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
+  ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+  ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
+} from '../../../../src/cartridges/rocco/games/rocco-default/maps/nether';
+import { ROCCO_BAIT_SHOP_LEVEL_ID } from '../../../../src/cartridges/rocco/games/rocco-default/maps/shop';
 import { RoccoDeveloperRuntimeController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-developer-runtime-controller';
-import { ROCCO_NETHER_RESET_OFFICE_LEVEL_ID } from '../../../../src/cartridges/rocco/levels/nether/nether-reset-office-level';
 import { DEFAULT_SPRITE_INSTANCE_ID } from '../../../../src/cartridges/rocco/rocco-default-constants';
-import type { RoccoEngine } from '../../../../src/engine/engine-sdk';
+import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import type { RoccoGridMenuDefinition } from '../../../../src/console/video/grid-menu';
 import type {
   RoccoSpriteDefinition,
   RoccoSpriteInstance,
-} from '../../../../src/engine/video/sprites';
+} from '../../../../src/console/video/sprites';
 
 interface DeveloperEngineState {
   cursorAttachment: { imageUri: string } | undefined;
   inputEnabledChanges: boolean[];
   openedGridMenuIds: string[];
+  openedGridMenus: RoccoGridMenuDefinition[];
   closedGridMenuCount: number;
   renderCalls: number;
   titleRemovals: string[];
@@ -128,6 +138,7 @@ function createDeveloperEngine(
     cursorAttachment: { imageUri: 'cursor-before-cycle.png' },
     inputEnabledChanges: [],
     openedGridMenuIds: [],
+    openedGridMenus: [],
     closedGridMenuCount: 0,
     renderCalls: 0,
     titleRemovals: [],
@@ -142,8 +153,9 @@ function createDeveloperEngine(
         closeMenu: () => {},
       },
       gridMenus: {
-        openMenu: (definitionArg: { id: string }) => {
+        openMenu: (definitionArg: RoccoGridMenuDefinition) => {
           state.openedGridMenuIds.push(definitionArg.id);
+          state.openedGridMenus.push(definitionArg);
         },
         closeMenu: () => {
           state.closedGridMenuCount += 1;
@@ -269,6 +281,49 @@ describe('RoccoDeveloperRuntimeController', () => {
 
     expect(handled).toBe(true);
     expect(state.openedGridMenuIds).toEqual([ROCCO_DEVELOPER_ROOT_MENU_ID]);
+  });
+
+  it('groups Reset Office screens under Nether in the developer jump menu', () => {
+    const controller = createController();
+    const { engine, state } = createDeveloperEngine();
+
+    const handled = controller.handleGridMenuAction(engine, {
+      kind: 'grid-menu',
+      definitionId: ROCCO_DEVELOPER_ROOT_MENU_ID,
+      interaction: 'activate',
+      itemId: ROCCO_DEVELOPER_JUMP_CHOICE_ID,
+      items: [],
+    });
+
+    expect(handled).toBe(true);
+
+    const levelMenu = state.openedGridMenus.at(-1);
+    expect(levelMenu?.id).toBe(ROCCO_DEVELOPER_LEVEL_MENU_ID);
+    expect(levelMenu?.items.map((item) => item.id)).toEqual([
+      'pier',
+      ROCCO_BAIT_SHOP_LEVEL_ID,
+      ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+    ]);
+    expect(levelMenu?.items.map((item) => item.id)).not.toContain(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID);
+
+    const screenHandled = controller.handleGridMenuAction(engine, {
+      kind: 'grid-menu',
+      definitionId: ROCCO_DEVELOPER_LEVEL_MENU_ID,
+      interaction: 'activate',
+      itemId: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+      items: [],
+    });
+
+    expect(screenHandled).toBe(true);
+
+    const netherScreenMenu = state.openedGridMenus.at(-1);
+    expect(netherScreenMenu?.id).toBe(ROCCO_DEVELOPER_SCREEN_MENU_ID);
+    expect(netherScreenMenu?.items.map((item) => item.id)).toEqual([
+      ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+      ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
+      ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+      ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
+    ]);
   });
 
   it('keeps jump placement pending after switching to Reset Office', async () => {

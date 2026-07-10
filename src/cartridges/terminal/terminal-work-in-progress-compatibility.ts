@@ -1,4 +1,4 @@
-﻿import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../engine/video/planes';
+import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../console/video/planes';
 import { DEFAULT_STARS_HEIGHT, DEFAULT_STARS_PLANE_ID, DEFAULT_STARS_WIDTH } from './terminal-work-in-progress-constants';
 
 export function normalizeDefaultScene(scene: RoccoPlaneScene): { scene: RoccoPlaneScene; changed: boolean } {

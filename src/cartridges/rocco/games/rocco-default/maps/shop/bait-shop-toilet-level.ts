@@ -1,0 +1,3447 @@
+import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../../../console/cartridges';
+import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type {
+  RoccoActionMenuActivation,
+  RoccoActionMenuDefinition,
+} from '../../../../../../console/video/action-menu';
+import type { RoccoGridMenuCarriedItem, RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
+import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../../../../../console/video/planes';
+import {
+  createRoccoSpriteAutoCroppedFrames,
+  type RoccoPoint,
+  type RoccoSpriteDefinition,
+  type RoccoSpriteInstance,
+} from '../../../../../../console/video/sprites';
+import { createRoccoDialogueChoiceMenu, roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
+import {
+  DEFAULT_CORAL_RELIC_GROUND_SPRITE,
+  ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
+  resolveRoccoInventoryItemLabel,
+  roccoCoralRelicAssetUrl,
+  type RoccoCoralRelicAssemblyPlan,
+  type RoccoInventoryFusionStep,
+  type RoccoInventoryItem,
+} from '../../inventory';
+import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
+import {
+  roccoDefaultActionMenuAssetUrls,
+  roccoDefaultYouLoseSoundUrl,
+} from '../../sprites';
+import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
+import {
+  createRoccoPlayerActionMenuDefinition,
+  ROCCO_PLAYER_ACTION_MENU_ID,
+  ROCCO_PLAYER_DEVELOPER_ACTION_ID,
+  ROCCO_PLAYER_INVENTORY_ACTION_ID,
+  ROCCO_PLAYER_TALK_ACTION_ID,
+} from '../../player';
+import { isRoccoDeveloperModeEnabled } from '../../../../rocco-developer-mode';
+import {
+  DEFAULT_DESIGN_HEIGHT,
+  DEFAULT_DESIGN_WIDTH,
+  DEFAULT_ROCCO_GREEN_BLACK,
+  DEFAULT_SPRITE_FRAME_HEIGHT,
+  DEFAULT_SPRITE_FRAME_WIDTH,
+  DEFAULT_SPRITE_GROUND_ANCHOR_X,
+  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
+  DEFAULT_SPRITE_IDLE_ACTION_ID,
+  DEFAULT_SPRITE_INSTANCE_ID,
+  DEFAULT_SPRITE_PICK_UP_ACTION_ID,
+  DEFAULT_SPRITE_RUN_ACTION_ID,
+  DEFAULT_SPRITE_SCALE,
+} from '../../constants';
+import {
+  installDefaultSprite,
+  uninstallDefaultSprite,
+  type RoccoDefaultSpriteController,
+} from '../../sprites';
+import { DEFAULT_STAN_DIALOGUE_TEXT_COLOR } from '../../../../levels/pier/pier-stan';
+import {
+  findRoccoLevelConnector,
+  type RoccoLevel,
+  type RoccoLevelConnector,
+  type RoccoLevelMountOptions,
+} from '../../../../levels/rocco-level-types';
+import { baitShopToiletAssetUrls } from './bait-shop-assets';
+import {
+  installBaitShopWalkMap,
+  loadOrCreateBaitShopScene,
+  uninstallBaitShopWalkMap,
+  type RoccoBaitShopSceneDefinition,
+} from './bait-shop-level';
+
+export const ROCCO_BAIT_SHOP_TOILET_LEVEL_ID = 'bait-shop-toilet';
+export const BAIT_SHOP_TOILET_SCENE_ID = 'rocco-bait-shop-toilet-scene';
+
+export interface RoccoBaitShopToiletLevelOptions {
+  hasMagazine?: () => boolean;
+  hasCoralRelic?: () => boolean;
+  getCoralRelicAssemblyPlan?: () => RoccoCoralRelicAssemblyPlan;
+  allowReuseDuringUrgency?: () => boolean;
+  isStanIdentified?: () => boolean;
+}
+
+type BaitShopToiletSequencePhase =
+  | 'walking-to-approach-vertical'
+  | 'walking-to-approach-horizontal'
+  | 'waiting-before-frame-one'
+  | 'waiting-before-seat-walk'
+  | 'walking-to-seat'
+  | 'waiting-before-frame-two'
+  | 'standing-before-walk'
+  | 'standing-walking-to-approach'
+  | 'standing-before-frame-zero';
+
+interface BaitShopToiletSequence {
+  phase: BaitShopToiletSequencePhase;
+  elapsedMs: number;
+}
+
+type BaitShopToiletReadingPhase =
+  | 'lines'
+  | 'stan-alert'
+  | 'fading'
+  | 'title'
+  | 'restarting';
+
+interface BaitShopToiletReadingSequence {
+  phase: BaitShopToiletReadingPhase;
+  lineIndex: number;
+  lines: readonly string[];
+  elapsedMs: number;
+}
+
+type BaitShopToiletWishSequencePhase =
+  | 'walking-to-relic'
+  | 'smoke'
+  | 'post-toilet-police-warning'
+  | 'awaiting-police-response'
+  | 'police-response'
+  | 'direct-defeat';
+
+type BaitShopToiletWishOutcome =
+  | 'toilet-disappears'
+  | 'rocco-disappears'
+  | 'direct-defeat';
+
+interface BaitShopToiletWishSequence {
+  phase: BaitShopToiletWishSequencePhase;
+  outcome: BaitShopToiletWishOutcome;
+  groundPoint: RoccoPoint;
+  consumeRelic: () => void;
+  elapsedMs: number;
+  smokeFrameIndex: number;
+  effectApplied: boolean;
+  policeReplyShown: boolean;
+}
+
+type BaitShopToiletThrowPhase =
+  | 'walking-to-center'
+  | 'walking-to-back'
+  | 'pickup-hold'
+  | 'falling';
+
+interface BaitShopToiletThrowSequence {
+  phase: BaitShopToiletThrowPhase;
+  elapsedMs: number;
+  relicItem: RoccoInventoryItem;
+  relicScale: number;
+  startPoint: RoccoPoint;
+  endPoint: RoccoPoint;
+  groundPoint: RoccoPoint;
+  onComplete: (groundPoint: RoccoPoint) => void;
+}
+
+const BAIT_SHOP_TOILET_RETURN_CONNECTOR_ID = 'south';
+const BAIT_SHOP_TOILET_PORTAL_CONNECTOR_ID = 'portal';
+const BAIT_SHOP_TOILET_RETURN_EXIT_TRIGGER_HEIGHT = 30;
+const BAIT_SHOP_TOILET_SPRITE_DEFINITION_ID = 'rocco-bait-shop-toilet-sprite';
+const BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID = 'rocco-bait-shop-toilet-main';
+const BAIT_SHOP_TOILET_ACTION_MENU_ID = 'rocco-bait-shop-toilet-action-menu';
+const BAIT_SHOP_TOILET_LOOK_HISTORY_KEY = 'bait-shop-toilet-look';
+const BAIT_SHOP_TOILET_SELF_TALK_HISTORY_KEY = 'bait-shop-toilet-self-talk';
+const BAIT_SHOP_TOILET_STAY_SEATED_HISTORY_KEY = 'bait-shop-toilet-stay-seated';
+const BAIT_SHOP_TOILET_READ_ACTION_ID = 'read';
+const BAIT_SHOP_TOILET_SHEET_IMAGE_ID = 'rocco-bait-shop-toilet-sheet';
+const BAIT_SHOP_TOILET_IDLE_ANIMATION_ID = 'bait-shop-toilet-idle';
+const BAIT_SHOP_TOILET_FRAME_DURATION_MS = 1000;
+const BAIT_SHOP_TOILET_SHEET_ALPHA_THRESHOLD = 8;
+const BAIT_SHOP_TOILET_SHEET_PADDING = 8;
+const BAIT_SHOP_TOILET_SHEET_MIN_OPAQUE_PIXELS = 4000;
+const BAIT_SHOP_TOILET_TARGET_X = 284;
+const BAIT_SHOP_TOILET_TARGET_Y = 208;
+const BAIT_SHOP_TOILET_TARGET_HEIGHT = 259.2;
+const BAIT_SHOP_INTERIOR_ROCCO_SCALE = DEFAULT_SPRITE_SCALE * 1.2;
+const BAIT_SHOP_TOILET_ROCCO_SCALE = BAIT_SHOP_INTERIOR_ROCCO_SCALE * 1.8;
+const BAIT_SHOP_TOILET_BASE_ENTRY_POSITION = {
+  x: 412,
+  y: 228,
+} as const;
+const BAIT_SHOP_TOILET_ENTRY_GROUND_POINT = {
+  x: Math.round(
+    BAIT_SHOP_TOILET_BASE_ENTRY_POSITION.x +
+      DEFAULT_SPRITE_GROUND_ANCHOR_X * BAIT_SHOP_INTERIOR_ROCCO_SCALE,
+  ),
+  y: Math.round(
+    BAIT_SHOP_TOILET_BASE_ENTRY_POSITION.y +
+      DEFAULT_SPRITE_GROUND_ANCHOR_Y * BAIT_SHOP_INTERIOR_ROCCO_SCALE,
+  ),
+} as const;
+const BAIT_SHOP_TOILET_ENTRY_POSITION = {
+  x: Math.round(
+    BAIT_SHOP_TOILET_ENTRY_GROUND_POINT.x -
+      DEFAULT_SPRITE_GROUND_ANCHOR_X * BAIT_SHOP_TOILET_ROCCO_SCALE,
+  ),
+  y: Math.round(
+    BAIT_SHOP_TOILET_ENTRY_GROUND_POINT.y -
+      DEFAULT_SPRITE_GROUND_ANCHOR_Y * BAIT_SHOP_TOILET_ROCCO_SCALE,
+  ),
+} as const;
+const BAIT_SHOP_TOILET_SIT_APPROACH_POINT = {
+  x: 336,
+  y: 472,
+} as const;
+const BAIT_SHOP_TOILET_SIT_SEAT_POINT = {
+  x: 309,
+  y: 473,
+} as const;
+const BAIT_SHOP_TOILET_SIT_WAIT_MS = 500;
+const BAIT_SHOP_ROCCO_TINT = '#cccccc';
+const BAIT_SHOP_LOOK_MESSAGE_TTL_MS = 10400;
+const BAIT_SHOP_TOILET_READING_BACKDROP_PLANE_ID = 'rocco-bait-shop-toilet-reading-backdrop';
+const BAIT_SHOP_TOILET_READING_IMAGE_PLANE_ID = 'rocco-bait-shop-toilet-reading-magazine';
+const BAIT_SHOP_TOILET_READING_IMAGE_HEIGHT = DEFAULT_DESIGN_HEIGHT;
+const BAIT_SHOP_TOILET_READING_IMAGE_WIDTH = DEFAULT_DESIGN_WIDTH;
+const BAIT_SHOP_TOILET_READING_IMAGE_X = 0;
+const BAIT_SHOP_TOILET_READING_MESSAGE_ID = 'rocco-bait-shop-toilet-reading-message';
+const BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID = 'rocco-bait-shop-toilet-stan-alert-message';
+const BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID =
+  'rocco-bait-shop-toilet-stan-alert-anchor';
+const BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID =
+  'rocco-bait-shop-toilet-reading-anchor';
+const BAIT_SHOP_TOILET_READING_MESSAGE_TTL_MS = 10 * 60 * 1000;
+const BAIT_SHOP_TOILET_READING_LINE_DURATION_MS = 12800;
+const BAIT_SHOP_TOILET_READING_MESSAGE_SCALE = 0.8;
+const BAIT_SHOP_TOILET_READING_MESSAGE_MAX_WIDTH = Math.round(
+  Math.min(
+    DEFAULT_DESIGN_WIDTH - 44,
+    330 * BAIT_SHOP_TOILET_READING_MESSAGE_SCALE * 4,
+  ),
+);
+const BAIT_SHOP_TOILET_READING_MESSAGE_FONT_SIZE =
+  18 * BAIT_SHOP_TOILET_READING_MESSAGE_SCALE * 2;
+const BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_X = DEFAULT_DESIGN_WIDTH / 2;
+const BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_Y = DEFAULT_DESIGN_HEIGHT / 2 + 60;
+const BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SCALE = 0.08;
+const BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID = 'rocco-bait-shop-toilet-reading-defeat-sound';
+const BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_VOLUME = 0.25;
+const BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS = 4800;
+const BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_TTL_MS = BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS + 600;
+const BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_MAX_WIDTH = 260;
+const BAIT_SHOP_TOILET_STAN_ALERT_SCALE = 0.08;
+const BAIT_SHOP_TOILET_STAN_ALERT_START_X = DEFAULT_DESIGN_WIDTH + 146;
+const BAIT_SHOP_TOILET_STAN_ALERT_END_X = DEFAULT_DESIGN_WIDTH + 58;
+const BAIT_SHOP_TOILET_STAN_ALERT_BASE_Y = 124;
+const BAIT_SHOP_TOILET_READING_DEFEAT_FADE_PRIMITIVE_ID =
+  'rocco-bait-shop-toilet-reading-defeat-fade';
+const BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_ID =
+  'rocco-bait-shop-toilet-reading-defeat-title';
+const BAIT_SHOP_TOILET_READING_DEFEAT_FADE_DURATION_MS = 1300;
+const BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_DURATION_MS = 3600;
+const BAIT_SHOP_TOILET_ALLOW_STAND_WALK_CANCEL = false;
+const BAIT_SHOP_TOILET_URGENT_TARGET_INSTANCE_ID = 'rocco-bait-shop-toilet-urgent-target';
+const BAIT_SHOP_TOILET_WISH_MENU_ID = 'rocco-bait-shop-toilet-wish-menu';
+const BAIT_SHOP_TOILET_WISH_NEVER_EXISTED_CHOICE_ID = 'wish-never-existed';
+const BAIT_SHOP_TOILET_WISH_ROOT_CHOICE_ID = 'wish-root';
+const BAIT_SHOP_TOILET_WISH_STAN_DISAPPEAR_CHOICE_ID = 'wish-stan-disappear';
+const BAIT_SHOP_TOILET_WISH_ESCAPE_CHOICE_ID = 'wish-escape';
+const BAIT_SHOP_TOILET_POST_WISH_RESPONSE_MENU_ID =
+  'rocco-bait-shop-toilet-post-wish-response-menu';
+const BAIT_SHOP_TOILET_POST_WISH_REPLY_MOMENT_PLEASE_CHOICE_ID =
+  'post-wish-reply-moment-please';
+const BAIT_SHOP_TOILET_POST_WISH_REPLY_NO_HIT_CHOICE_ID = 'post-wish-reply-no-hit';
+const BAIT_SHOP_TOILET_POST_WISH_REPLY_WHAT_IF_NOT_CHOICE_ID = 'post-wish-reply-what-if-not';
+const BAIT_SHOP_TOILET_POST_WISH_REPLY_COME_IN_CHOICE_ID = 'post-wish-reply-come-in';
+const BAIT_SHOP_TOILET_SMOKE_SPRITE_DEFINITION_ID = 'rocco-bait-shop-toilet-smoke';
+const BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID = 'rocco-bait-shop-toilet-smoke-instance';
+const BAIT_SHOP_TOILET_SMOKE_ANIMATION_ID = 'bait-shop-toilet-smoke';
+const BAIT_SHOP_TOILET_SMOKE_FRAME_DURATION_MS = 120;
+const BAIT_SHOP_TOILET_SMOKE_IMAGE_ID_PREFIX = 'rocco-bait-shop-toilet-smoke-image';
+const BAIT_SHOP_TOILET_SMOKE_FRAME_ID_PREFIX = 'rocco-bait-shop-toilet-smoke-frame';
+const BAIT_SHOP_TOILET_SMOKE_TARGET_HEIGHT = 125;
+const BAIT_SHOP_TOILET_SMOKE_REMOVE_TOILET_FRAME_INDEX = 4;
+const BAIT_SHOP_TOILET_PORTAL_SPRITE_DEFINITION_ID = 'rocco-bait-shop-toilet-portal';
+const BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID = 'rocco-bait-shop-toilet-portal-instance';
+const BAIT_SHOP_TOILET_PORTAL_OPEN_ANIMATION_ID = 'bait-shop-toilet-portal-open';
+const BAIT_SHOP_TOILET_PORTAL_LOOP_ANIMATION_ID = 'bait-shop-toilet-portal-loop';
+const BAIT_SHOP_TOILET_PORTAL_FRAME_DURATION_MS = 120;
+const BAIT_SHOP_TOILET_PORTAL_IMAGE_ID_PREFIX = 'rocco-bait-shop-toilet-portal-image';
+const BAIT_SHOP_TOILET_PORTAL_FRAME_ID_PREFIX = 'rocco-bait-shop-toilet-portal-frame';
+const BAIT_SHOP_TOILET_PORTAL_TARGET_HEIGHT = BAIT_SHOP_TOILET_TARGET_HEIGHT * 0.25;
+const BAIT_SHOP_TOILET_PORTAL_OFFSET_Y = -100;
+const BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID = 'rocco-bait-shop-toilet-medallion-step-sound';
+const BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_VOLUME = 0.45;
+const BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID = 'rocco-bait-shop-toilet-portal-loop-sound';
+const BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_VOLUME = 0.5;
+const BAIT_SHOP_TOILET_SPELL_SOUND_ID = 'rocco-bait-shop-toilet-spell-sound';
+const BAIT_SHOP_TOILET_SPELL_SOUND_VOLUME = 0.42;
+const BAIT_SHOP_TOILET_WISH_LINE_TTL_MS = 2800;
+const BAIT_SHOP_TOILET_DIRECT_DEFEAT_DELAY_MS = BAIT_SHOP_TOILET_WISH_LINE_TTL_MS;
+const BAIT_SHOP_TOILET_POST_WISH_POLICE_WARNING_DELAY_MS = 1000;
+const BAIT_SHOP_TOILET_POST_WISH_POLICE_WARNING_TTL_MS = 10 * 60 * 1000;
+const BAIT_SHOP_TOILET_POST_WISH_PLAYER_REPLY_TTL_MS = 2600;
+const BAIT_SHOP_TOILET_POST_WISH_POLICE_REPLY_TTL_MS = 3200;
+const BAIT_SHOP_TOILET_POLICE_DIALOGUE_TEXT_COLOR = '#1b4ea1';
+const BAIT_SHOP_TOILET_POLICE_DIALOGUE_BUBBLE_FILL = '#e6eefb';
+const BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST = {
+  farY: 280,
+  nearY: 530,
+  farScale: 0.8,
+  nearScale: 1,
+} as const;
+
+const BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_DEFINITION_ID =
+  'rocco-bait-shop-toilet-throw-relic';
+const BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID =
+  'rocco-bait-shop-toilet-throw-relic-instance';
+const BAIT_SHOP_TOILET_THROW_RELIC_IMAGE_ID = 'rocco-bait-shop-toilet-throw-relic-image';
+const BAIT_SHOP_TOILET_THROW_RELIC_FRAME_ID = 'rocco-bait-shop-toilet-throw-relic-frame';
+const BAIT_SHOP_TOILET_THROW_CENTER_GROUND_X = DEFAULT_DESIGN_WIDTH / 2;
+const BAIT_SHOP_TOILET_THROW_BACK_GROUND_Y = 0;
+const BAIT_SHOP_TOILET_THROW_FACE_FRONT_WAIT_MS = 250;
+const BAIT_SHOP_TOILET_THROW_RELIC_START_OFFSET_X = 50;
+const BAIT_SHOP_TOILET_THROW_RELIC_FALL_OFFSET_Y = 50;
+const BAIT_SHOP_TOILET_THROW_RELIC_FALL_DURATION_MS = 300;
+
+const BAIT_SHOP_TOILET_CONNECTORS: readonly RoccoLevelConnector[] = [
+  {
+    id: BAIT_SHOP_TOILET_RETURN_CONNECTOR_ID,
+    exitArea: {
+      x: 0,
+      y: DEFAULT_DESIGN_HEIGHT - BAIT_SHOP_TOILET_RETURN_EXIT_TRIGGER_HEIGHT,
+      width: DEFAULT_DESIGN_WIDTH,
+      height: BAIT_SHOP_TOILET_RETURN_EXIT_TRIGGER_HEIGHT,
+    },
+    entryPoint: {
+      ...BAIT_SHOP_TOILET_ENTRY_POSITION,
+    },
+    entryFacing: 'up',
+  },
+  {
+    id: BAIT_SHOP_TOILET_PORTAL_CONNECTOR_ID,
+    entryPoint: {
+      x: DEFAULT_DESIGN_WIDTH / 2,
+      y: DEFAULT_DESIGN_HEIGHT / 2,
+    },
+    entryFacing: 'up',
+  },
+];
+
+const BAIT_SHOP_TOILET_READING_BACKDROP_PLANE: RoccoGraphicPlane = {
+  id: BAIT_SHOP_TOILET_READING_BACKDROP_PLANE_ID,
+  name: 'Bait Shop Toilet Reading Backdrop',
+  enabled: true,
+  source: {
+    kind: 'solid',
+    color: DEFAULT_ROCCO_GREEN_BLACK,
+  },
+  colorModel: { kind: 'native' },
+  transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+  scroll: { x: 0, y: 0 },
+  wrap: { x: false, y: false },
+  opacity: 0.98,
+  priority: 100,
+  renderLayer: 'foreground',
+  visible: false,
+};
+
+const BAIT_SHOP_TOILET_READING_IMAGE_PLANE: RoccoGraphicPlane = {
+  id: BAIT_SHOP_TOILET_READING_IMAGE_PLANE_ID,
+  name: 'Bait Shop Toilet Rocco Reading Magazine',
+  enabled: true,
+  source: {
+    kind: 'image',
+    uri: baitShopToiletAssetUrls.readingMagazine,
+    width: BAIT_SHOP_TOILET_READING_IMAGE_WIDTH,
+    height: BAIT_SHOP_TOILET_READING_IMAGE_HEIGHT,
+  },
+  colorModel: { kind: 'native' },
+  transform: {
+    x: BAIT_SHOP_TOILET_READING_IMAGE_X,
+    y: 0,
+    scaleX: 1,
+    scaleY: 1,
+    rotation: 0,
+  },
+  scroll: { x: 0, y: 0 },
+  wrap: { x: false, y: false },
+  opacity: 1,
+  priority: 101,
+  renderLayer: 'foreground',
+  visible: false,
+};
+
+const BAIT_SHOP_TOILET_SCENE_DEFINITION: RoccoBaitShopSceneDefinition = {
+  sceneId: BAIT_SHOP_TOILET_SCENE_ID,
+  planeIds: {
+    backplate: 'rocco-bait-shop-toilet-backplate',
+    background: 'rocco-bait-shop-toilet-background',
+  },
+  backgroundUri: baitShopToiletAssetUrls.background,
+  backgroundName: 'Bait Shop Toilet Background',
+  extraPlanes: [
+    BAIT_SHOP_TOILET_READING_BACKDROP_PLANE,
+    BAIT_SHOP_TOILET_READING_IMAGE_PLANE,
+  ],
+};
+
+function makeBaitShopToiletActionMenuBase(): Omit<RoccoActionMenuDefinition, 'id' | 'items'> {
+  return {
+    targetInstanceIds: [BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID],
+    renderLayer: 'ui.action-menu',
+    itemSize: 92,
+    orbitRadius: 88,
+    orbitSpeedRadiansPerSecond: 0.08,
+    hoverScale: 1.16,
+    circleFill: '#0f1610',
+    circleStroke: '#d7e6c5',
+    circleStrokeWidth: 2,
+  };
+}
+
+function toOriginFromGroundPoint(
+  groundPoint: RoccoPoint,
+  scaleX: number,
+  scaleY: number,
+): RoccoPoint {
+  return {
+    x: groundPoint.x - DEFAULT_SPRITE_GROUND_ANCHOR_X * scaleX,
+    y: groundPoint.y - DEFAULT_SPRITE_GROUND_ANCHOR_Y * scaleY,
+  };
+}
+
+async function createBaitShopToiletSpriteDefinition(): Promise<{
+  definition: RoccoSpriteDefinition;
+  frameCount: number;
+  initialFrameWidth: number;
+  initialFrameHeight: number;
+}> {
+  const crop = await createRoccoSpriteAutoCroppedFrames({
+    mode: 'sheet-components',
+    sources: [
+      {
+        id: BAIT_SHOP_TOILET_SHEET_IMAGE_ID,
+        uri: baitShopToiletAssetUrls.sheet,
+      },
+    ],
+    frameIdPrefix: 'bait-shop-toilet-pose',
+    durationMs: BAIT_SHOP_TOILET_FRAME_DURATION_MS,
+    alphaThreshold: BAIT_SHOP_TOILET_SHEET_ALPHA_THRESHOLD,
+    padding: BAIT_SHOP_TOILET_SHEET_PADDING,
+    minOpaquePixels: BAIT_SHOP_TOILET_SHEET_MIN_OPAQUE_PIXELS,
+    pivot: { mode: 'bottom-center' },
+  });
+
+  const frameIds = crop.frameIds.length > 0 ? crop.frameIds : ['bait-shop-toilet-pose-1'];
+  const initialFrame =
+    crop.frames.find((frame) => frame.id === frameIds[0]) ??
+    crop.frames[0] ?? {
+      id: 'fallback',
+      imageId: BAIT_SHOP_TOILET_SHEET_IMAGE_ID,
+      rect: {
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+      },
+      durationMs: BAIT_SHOP_TOILET_FRAME_DURATION_MS,
+      pivot: {
+        x: 0,
+        y: 0,
+      },
+    };
+  const initialFrameRect = initialFrame.rect ?? {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+  };
+
+  return {
+    frameCount: frameIds.length,
+    initialFrameWidth: initialFrameRect.width,
+    initialFrameHeight: initialFrameRect.height,
+    definition: {
+      id: BAIT_SHOP_TOILET_SPRITE_DEFINITION_ID,
+      name: 'Bait Shop Toilet',
+      images: crop.images,
+      frames: crop.frames,
+      animations: {
+        [BAIT_SHOP_TOILET_IDLE_ANIMATION_ID]: {
+          id: BAIT_SHOP_TOILET_IDLE_ANIMATION_ID,
+          loop: false,
+          playbackRate: 1,
+          frames: frameIds.map((frameId) => ({
+            frameId,
+            durationMs: BAIT_SHOP_TOILET_FRAME_DURATION_MS,
+          })),
+        },
+      },
+      defaultAnimation: BAIT_SHOP_TOILET_IDLE_ANIMATION_ID,
+      render: {
+        renderLayer: 'world.behind',
+        zIndex: 10,
+        depthMode: 'fixed',
+        opacity: 1,
+      },
+      metadata: {
+        purpose: 'bait-shop-toilet',
+      },
+    },
+  };
+}
+
+async function createBaitShopToiletSmokeSpriteDefinition(): Promise<{
+  definition: RoccoSpriteDefinition;
+  frameCount: number;
+  initialFrameHeight: number;
+}> {
+  const crop = await createRoccoSpriteAutoCroppedFrames({
+    mode: 'image-list',
+    sources: baitShopToiletAssetUrls.smokeFrames.map((uri, index) => ({
+      id: `${BAIT_SHOP_TOILET_SMOKE_IMAGE_ID_PREFIX}-${index + 1}`,
+      uri,
+    })),
+    frameIdPrefix: BAIT_SHOP_TOILET_SMOKE_FRAME_ID_PREFIX,
+    durationMs: BAIT_SHOP_TOILET_SMOKE_FRAME_DURATION_MS,
+    alphaThreshold: 1,
+    padding: 0,
+    pivot: { mode: 'bottom-center' },
+    hitbox: 'none',
+  });
+
+  const frameIds = crop.frameIds.length > 0 ? crop.frameIds : [`${BAIT_SHOP_TOILET_SMOKE_FRAME_ID_PREFIX}-1`];
+  const initialFrame = crop.frames.find((frame) => frame.id === frameIds[0]) ?? crop.frames[0];
+  const initialFrameHeight = initialFrame?.rect?.height ?? 1;
+
+  return {
+    frameCount: frameIds.length,
+    initialFrameHeight,
+    definition: {
+      id: BAIT_SHOP_TOILET_SMOKE_SPRITE_DEFINITION_ID,
+      name: 'Bait Shop Toilet Smoke',
+      images: crop.images,
+      frames: crop.frames,
+      animations: {
+        [BAIT_SHOP_TOILET_SMOKE_ANIMATION_ID]: {
+          id: BAIT_SHOP_TOILET_SMOKE_ANIMATION_ID,
+          loop: false,
+          playbackRate: 1,
+          frames: frameIds.map((frameId) => ({
+            frameId,
+            durationMs: BAIT_SHOP_TOILET_SMOKE_FRAME_DURATION_MS,
+          })),
+        },
+      },
+      defaultAnimation: BAIT_SHOP_TOILET_SMOKE_ANIMATION_ID,
+      render: {
+        renderLayer: 'world.front',
+        zIndex: 22,
+        depthMode: 'fixed',
+        opacity: 1,
+      },
+      metadata: {
+        purpose: 'bait-shop-toilet-smoke',
+      },
+      ignoreMessages: true,
+    },
+  };
+}
+
+async function createBaitShopToiletPortalSpriteDefinition(): Promise<{
+  definition: RoccoSpriteDefinition;
+  initialFrameWidth: number;
+  initialFrameHeight: number;
+}> {
+  const crop = await createRoccoSpriteAutoCroppedFrames({
+    mode: 'image-list',
+    sources: baitShopToiletAssetUrls.portalFrames.map((uri, index) => ({
+      id: `${BAIT_SHOP_TOILET_PORTAL_IMAGE_ID_PREFIX}-${index + 1}`,
+      uri,
+    })),
+    frameIdPrefix: BAIT_SHOP_TOILET_PORTAL_FRAME_ID_PREFIX,
+    durationMs: BAIT_SHOP_TOILET_PORTAL_FRAME_DURATION_MS,
+    alphaThreshold: 1,
+    padding: 0,
+    pivot: { mode: 'bottom-center' },
+    hitbox: 'none',
+  });
+
+  const frameIds =
+    crop.frameIds.length > 0 ? crop.frameIds : [`${BAIT_SHOP_TOILET_PORTAL_FRAME_ID_PREFIX}-1`];
+  const initialFrame = crop.frames.find((frame) => frame.id === frameIds[0]) ?? crop.frames[0];
+  const initialFrameWidth = initialFrame?.rect?.width ?? 1;
+  const initialFrameHeight = initialFrame?.rect?.height ?? 1;
+  const openingFrameIds = frameIds.slice(0, 8);
+  const loopFrameIds = frameIds.slice(4, 8);
+
+  return {
+    initialFrameWidth,
+    initialFrameHeight,
+    definition: {
+      id: BAIT_SHOP_TOILET_PORTAL_SPRITE_DEFINITION_ID,
+      name: 'Bait Shop Toilet Portal',
+      images: crop.images,
+      frames: crop.frames,
+      animations: {
+        [BAIT_SHOP_TOILET_PORTAL_OPEN_ANIMATION_ID]: {
+          id: BAIT_SHOP_TOILET_PORTAL_OPEN_ANIMATION_ID,
+          loop: false,
+          next: BAIT_SHOP_TOILET_PORTAL_LOOP_ANIMATION_ID,
+          playbackRate: 1,
+          frames: openingFrameIds.map((frameId) => ({
+            frameId,
+            durationMs: BAIT_SHOP_TOILET_PORTAL_FRAME_DURATION_MS,
+          })),
+        },
+        [BAIT_SHOP_TOILET_PORTAL_LOOP_ANIMATION_ID]: {
+          id: BAIT_SHOP_TOILET_PORTAL_LOOP_ANIMATION_ID,
+          loop: true,
+          playbackRate: 1,
+          frames: loopFrameIds.map((frameId) => ({
+            frameId,
+            durationMs: BAIT_SHOP_TOILET_PORTAL_FRAME_DURATION_MS,
+          })),
+        },
+      },
+      defaultAnimation: BAIT_SHOP_TOILET_PORTAL_OPEN_ANIMATION_ID,
+      render: {
+        renderLayer: 'world.front',
+        zIndex: 21,
+        depthMode: 'fixed',
+        opacity: 1,
+      },
+      metadata: {
+        purpose: 'bait-shop-toilet-portal',
+      },
+      ignoreMessages: true,
+    },
+  };
+}
+
+function createSeatedRoccoActionMenuDefinition(
+  localization: RoccoLocalization,
+  developerModeEnabled: boolean,
+): RoccoActionMenuDefinition {
+  const base = createRoccoPlayerActionMenuDefinition(localization, developerModeEnabled);
+  const items: RoccoActionMenuDefinition['items'] = [
+    {
+      id: 'talk',
+      actionId: ROCCO_PLAYER_TALK_ACTION_ID,
+      label: localization.text.actions.talk,
+      imageUri: roccoDefaultActionMenuAssetUrls.talk,
+    },
+    {
+      id: 'inventory',
+      actionId: ROCCO_PLAYER_INVENTORY_ACTION_ID,
+      label: localization.text.actions.inventory,
+      imageUri: roccoDefaultActionMenuAssetUrls.inventory,
+    },
+  ];
+
+  if (developerModeEnabled) {
+    items.push({
+      id: 'developer-mode',
+      actionId: ROCCO_PLAYER_DEVELOPER_ACTION_ID,
+      label: localization.text.developer.actionLabel,
+      imageUri: roccoDefaultActionMenuAssetUrls.developerMode,
+    });
+  }
+
+  items.push({
+    id: 'read',
+    actionId: BAIT_SHOP_TOILET_READ_ACTION_ID,
+    label: localization.text.baitShop.toiletReadLabel,
+    imageUri: roccoDefaultActionMenuAssetUrls.look,
+  });
+
+  return {
+    ...base,
+    id: ROCCO_PLAYER_ACTION_MENU_ID,
+    targetInstanceIds: [BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID],
+    items,
+  };
+}
+
+export class RoccoBaitShopToiletLevel implements RoccoLevel {
+  readonly id = ROCCO_BAIT_SHOP_TOILET_LEVEL_ID;
+  readonly title: string;
+  readonly connectors = BAIT_SHOP_TOILET_CONNECTORS;
+
+  private readonly localization: RoccoLocalization;
+  private readonly options: RoccoBaitShopToiletLevelOptions;
+  private engine: RoccoEngine | null = null;
+  private spriteController: RoccoDefaultSpriteController | null = null;
+  private onConnectorTransitionRequested: ((connectorId: string) => boolean) | null = null;
+  private toiletFrameCount = 0;
+  private sequence: BaitShopToiletSequence | null = null;
+  private readingSequence: BaitShopToiletReadingSequence | null = null;
+  private roccoSeated = false;
+  private roccoSatOnToilet = false;
+  private queuedWalkDestination: RoccoPoint | null = null;
+  private onRestartRequested: (() => void) | null = null;
+  private pendingPostStandStanAlert = false;
+  private passiveStanPoliceAlertElapsedMs: number | null = null;
+  private activePoliceVoiceTtlMs = BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_TTL_MS;
+  private escapeUrgencyActive = false;
+  private portalPendingActivation = false;
+  private toiletRemoved = false;
+  private portalActive = false;
+  private portalTransitionRequested = false;
+  private toiletTargetRect: { x: number; y: number; width: number; height: number } | null = null;
+  private portalTargetRect: { x: number; y: number; width: number; height: number } | null = null;
+  private smokeScale = 1;
+  private portalScale = 1;
+  private smokeFrameCount = 0;
+  private pendingCoralRelicWish:
+    | {
+        groundPoint: RoccoPoint;
+        consumeRelic: () => void;
+      }
+    | null = null;
+  private wishSequence: BaitShopToiletWishSequence | null = null;
+  private throwSequence: BaitShopToiletThrowSequence | null = null;
+
+  constructor(
+    localization: RoccoLocalization = createRoccoLocalization(),
+    options: RoccoBaitShopToiletLevelOptions = {},
+  ) {
+    this.localization = localization;
+    this.options = options;
+    this.title = localization.text.levels.baitShopToiletTitle;
+  }
+
+  async mount(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
+    this.engine = engine;
+    this.spriteController = null;
+    this.toiletFrameCount = 0;
+    this.sequence = null;
+    this.readingSequence = null;
+    this.roccoSeated = false;
+    this.queuedWalkDestination = null;
+    this.onRestartRequested = options.onRestartRequested ?? null;
+    this.onConnectorTransitionRequested = options.onConnectorTransitionRequested ?? null;
+    this.pendingPostStandStanAlert = false;
+    this.passiveStanPoliceAlertElapsedMs = null;
+    this.activePoliceVoiceTtlMs = BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_TTL_MS;
+    this.portalPendingActivation = false;
+    this.toiletTargetRect = null;
+    this.portalTargetRect = null;
+    this.smokeScale = 1;
+    this.portalScale = 1;
+    this.smokeFrameCount = 0;
+    this.pendingCoralRelicWish = null;
+    this.wishSequence = null;
+    this.throwSequence = null;
+    this.portalTransitionRequested = false;
+    engine.audio.registerSound({
+      id: BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID,
+      uri: roccoDefaultYouLoseSoundUrl,
+      volume: BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_VOLUME,
+      loop: false,
+    });
+    await preloader?.preloadSound(engine, BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID).catch(() => {
+      engine.log('Audio', 'Bait shop toilet reading defeat sound could not be preloaded.');
+    });
+    engine.audio.stopSound(BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID);
+    engine.audio.registerSound({
+      id: BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID,
+      uri: baitShopToiletAssetUrls.medallionStepSound,
+      volume: BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_VOLUME,
+      loop: false,
+    });
+    engine.audio.registerSound({
+      id: BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID,
+      uri: baitShopToiletAssetUrls.portalLoopSound,
+      volume: BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_VOLUME,
+      loop: true,
+    });
+    engine.audio.registerSound({
+      id: BAIT_SHOP_TOILET_SPELL_SOUND_ID,
+      uri: baitShopToiletAssetUrls.spellSound,
+      volume: BAIT_SHOP_TOILET_SPELL_SOUND_VOLUME,
+      loop: false,
+    });
+    await (preloader
+      ? preloader.preloadSound(engine, BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet medallion step sound could not be preloaded.');
+        })
+      : engine.audio.preloadSound(BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet medallion step sound could not be preloaded.');
+        }));
+    await (preloader
+      ? preloader.preloadSound(engine, BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet portal loop sound could not be preloaded.');
+        })
+      : engine.audio.preloadSound(BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet portal loop sound could not be preloaded.');
+        }));
+    await (preloader
+      ? preloader.preloadSound(engine, BAIT_SHOP_TOILET_SPELL_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet spell sound could not be preloaded.');
+        })
+      : engine.audio.preloadSound(BAIT_SHOP_TOILET_SPELL_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet spell sound could not be preloaded.');
+        }));
+
+    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
+    const initialPosition = entryConnector
+      ? {
+          x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
+          y: entryConnector.entryPoint.y,
+        }
+      : { ...BAIT_SHOP_TOILET_ENTRY_POSITION };
+    const initialFacing = entryConnector?.entryFacing ?? 'up';
+    const scene = await loadOrCreateBaitShopScene(engine, BAIT_SHOP_TOILET_SCENE_DEFINITION);
+    const [toiletSprite, smokeSprite, portalSprite] = await Promise.all([
+      createBaitShopToiletSpriteDefinition(),
+      createBaitShopToiletSmokeSpriteDefinition(),
+      createBaitShopToiletPortalSpriteDefinition(),
+    ]);
+    const throwRelicSprite = this.createThrowRelicSpriteDefinition();
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+    await Promise.all([
+      (preloader?.preloadSpriteDefinition(engine, toiletSprite.definition) ?? engine.video.preloadSpriteDefinition(toiletSprite.definition)),
+      (preloader?.preloadSpriteDefinition(engine, smokeSprite.definition) ?? engine.video.preloadSpriteDefinition(smokeSprite.definition)),
+      (preloader?.preloadSpriteDefinition(engine, portalSprite.definition) ?? engine.video.preloadSpriteDefinition(portalSprite.definition)),
+      (preloader?.preloadSpriteDefinition(engine, throwRelicSprite) ?? engine.video.preloadSpriteDefinition(throwRelicSprite)),
+    ]);
+    engine.loadPlaneScene(scene);
+    this.clearReadingPresentation();
+    await installBaitShopWalkMap(engine, baitShopToiletAssetUrls.walkMap, preloader);
+    engine.video.sprites.loadSpriteDefinition(toiletSprite.definition);
+    engine.video.sprites.loadSpriteDefinition(smokeSprite.definition);
+    engine.video.sprites.loadSpriteDefinition(portalSprite.definition);
+    engine.video.sprites.loadSpriteDefinition(throwRelicSprite);
+    engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID);
+    const toiletScale = BAIT_SHOP_TOILET_TARGET_HEIGHT / toiletSprite.initialFrameHeight;
+    const toiletRenderedWidth = toiletSprite.initialFrameWidth * toiletScale;
+    this.toiletTargetRect = {
+      x: BAIT_SHOP_TOILET_TARGET_X,
+      y: BAIT_SHOP_TOILET_TARGET_Y,
+      width: toiletRenderedWidth,
+      height: BAIT_SHOP_TOILET_TARGET_HEIGHT,
+    };
+    this.smokeScale = Math.max(
+      0.01,
+      BAIT_SHOP_TOILET_SMOKE_TARGET_HEIGHT / Math.max(1, smokeSprite.initialFrameHeight),
+    );
+    this.portalScale = Math.max(
+      0.01,
+      BAIT_SHOP_TOILET_PORTAL_TARGET_HEIGHT / Math.max(1, portalSprite.initialFrameHeight),
+    );
+    const portalRenderedWidth = portalSprite.initialFrameWidth * this.portalScale;
+    const portalBasePoint = this.resolvePortalBasePoint();
+    this.portalTargetRect = {
+      x: portalBasePoint.x - portalRenderedWidth / 2,
+      y: portalBasePoint.y - BAIT_SHOP_TOILET_PORTAL_TARGET_HEIGHT,
+      width: portalRenderedWidth,
+      height: BAIT_SHOP_TOILET_PORTAL_TARGET_HEIGHT,
+    };
+    this.smokeFrameCount = smokeSprite.frameCount;
+    engine.video.sprites.createSpriteFromDefinition(BAIT_SHOP_TOILET_SPRITE_DEFINITION_ID, {
+      id: BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID,
+      transform: {
+        x: BAIT_SHOP_TOILET_TARGET_X + toiletRenderedWidth / 2,
+        y: BAIT_SHOP_TOILET_TARGET_Y + BAIT_SHOP_TOILET_TARGET_HEIGHT,
+        scaleX: toiletScale,
+        scaleY: toiletScale,
+        rotation: 0,
+      },
+      renderLayer: 'world.behind',
+      zIndex: 10,
+      depthMode: 'fixed',
+      interactive: true,
+      collisionEnabled: false,
+      tint: BAIT_SHOP_ROCCO_TINT,
+      visibleDescription: {
+        enabled: true,
+        text: this.localization.text.descriptions.toilet,
+      },
+    });
+    engine.video.sprites.stopAnimation(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
+    engine.video.sprites.setAnimationFrame(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID, 0);
+    this.toiletFrameCount = toiletSprite.frameCount;
+    this.restoreDefaultActionMenus();
+    this.installToiletActionMenu();
+    this.spriteController = await installDefaultSprite(engine, {
+      appearance: options.roccoAppearance,
+      initialFacing,
+      initialPosition: { ...initialPosition },
+      scale: BAIT_SHOP_TOILET_ROCCO_SCALE,
+      tint: BAIT_SHOP_ROCCO_TINT,
+      localization: this.localization,
+      playIntro: false,
+      perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
+    }, preloader);
+    this.unregisterUrgentToiletTarget();
+    if (this.toiletRemoved) {
+      engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
+      engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
+    } else if (this.escapeUrgencyActive) {
+      this.syncToiletUrgencyPresentation();
+    }
+    if (this.portalActive) {
+      this.ensurePortalPresentation(false);
+      this.startPortalLoopSound();
+      this.registerPortalTarget();
+    }
+
+    return scene;
+  }
+
+  unmount(engine: RoccoEngine): void {
+    const wasReading = this.readingSequence !== null;
+    engine.video.actionMenus.closeMenu();
+    engine.video.messages.clearMessages();
+    this.clearReadingPresentation();
+    if (wasReading) {
+      engine.setInputEnabled(true);
+    }
+    engine.video.gridMenus.closeMenu();
+    engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
+    engine.video.actionMenus.unregisterMenu(ROCCO_PLAYER_ACTION_MENU_ID);
+    engine.video.actionMenus.registerMenu(
+      createRoccoPlayerActionMenuDefinition(
+        this.localization,
+        isRoccoDeveloperModeEnabled(engine),
+      ),
+    );
+    engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID);
+    this.unregisterUrgentToiletTarget();
+    this.unregisterPortalTarget();
+    uninstallDefaultSprite(engine);
+    uninstallBaitShopWalkMap(engine);
+    engine.audio.unregisterSound(BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID);
+    engine.audio.unregisterSound(BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID);
+    engine.audio.unregisterSound(BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID);
+    engine.audio.unregisterSound(BAIT_SHOP_TOILET_SPELL_SOUND_ID);
+    this.engine = null;
+    this.spriteController = null;
+    this.toiletFrameCount = 0;
+    this.sequence = null;
+    this.readingSequence = null;
+    this.roccoSeated = false;
+    this.queuedWalkDestination = null;
+    this.onRestartRequested = null;
+    this.onConnectorTransitionRequested = null;
+    this.pendingPostStandStanAlert = false;
+    this.passiveStanPoliceAlertElapsedMs = null;
+    this.activePoliceVoiceTtlMs = BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_TTL_MS;
+    this.portalPendingActivation = false;
+    this.toiletTargetRect = null;
+    this.portalTargetRect = null;
+    this.smokeScale = 1;
+    this.portalScale = 1;
+    this.smokeFrameCount = 0;
+    this.pendingCoralRelicWish = null;
+    this.wishSequence = null;
+    this.throwSequence = null;
+    this.portalTransitionRequested = false;
+    engine.video.render(0);
+  }
+
+  update(deltaMs: number): void {
+    this.spriteController?.update(deltaMs);
+    this.updateSequence(deltaMs);
+    this.updateReadingSequence(deltaMs);
+    this.updatePassiveStanPoliceAlert(deltaMs);
+    this.updateThrowSequence(deltaMs);
+    this.updateWishSequence(deltaMs);
+    this.updatePortalActivation();
+    this.updatePortalTransition();
+  }
+
+  handleGridMenu(activation: RoccoGridMenuActivation): void {
+    if (activation.definitionId === BAIT_SHOP_TOILET_WISH_MENU_ID) {
+      if (activation.interaction === 'close') {
+        this.pendingCoralRelicWish = null;
+        return;
+      }
+
+      if (activation.interaction !== 'activate') {
+        return;
+      }
+
+      if (!this.resolveWishChoiceLine(activation.itemId) || !this.engine) {
+        return;
+      }
+
+      if (activation.itemId === BAIT_SHOP_TOILET_WISH_NEVER_EXISTED_CHOICE_ID) {
+        this.startWishSequence('rocco-disappears');
+        return;
+      }
+
+      if (
+        activation.itemId === BAIT_SHOP_TOILET_WISH_ROOT_CHOICE_ID ||
+        activation.itemId === BAIT_SHOP_TOILET_WISH_ESCAPE_CHOICE_ID
+      ) {
+        this.startWishSequence('toilet-disappears');
+        return;
+      }
+
+      if (activation.itemId === BAIT_SHOP_TOILET_WISH_STAN_DISAPPEAR_CHOICE_ID) {
+        this.startDirectWishDefeat();
+        return;
+      }
+
+      if (
+        activation.itemId !== BAIT_SHOP_TOILET_WISH_ROOT_CHOICE_ID &&
+        activation.itemId !== BAIT_SHOP_TOILET_WISH_ESCAPE_CHOICE_ID
+      ) {
+        this.pendingCoralRelicWish = null;
+        return;
+      }
+      return;
+    }
+
+    if (activation.definitionId !== BAIT_SHOP_TOILET_POST_WISH_RESPONSE_MENU_ID) {
+      return;
+    }
+
+    if (
+      !this.engine ||
+      !this.wishSequence ||
+      this.wishSequence.phase !== 'awaiting-police-response'
+    ) {
+      return;
+    }
+
+    if (activation.interaction === 'close') {
+      this.openPostWishPoliceResponseMenu();
+      return;
+    }
+
+    if (activation.interaction !== 'activate') {
+      return;
+    }
+
+    this.startPostWishPoliceResponse(activation.itemId);
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (this.readingSequence || this.wishSequence || this.throwSequence) {
+      return;
+    }
+
+    if (this.isSeatedAction(activation)) {
+      this.handleSeatedAction(activation);
+      return;
+    }
+
+    if (
+      activation.targetInstanceId !== BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID ||
+      this.sequence
+    ) {
+      return;
+    }
+
+    if (activation.actionId === 'look') {
+      this.showRoccoThoughtLines(
+        this.localization.text.baitShop.toiletLookLines,
+        BAIT_SHOP_TOILET_LOOK_HISTORY_KEY,
+      );
+      return;
+    }
+
+    if (activation.actionId !== 'use') {
+      return;
+    }
+
+    if (!this.hasMagazine()) {
+      this.showRoccoThoughtLine(this.localization.text.baitShop.toiletNeedMagazineLine);
+      return;
+    }
+
+    this.startSitSequence();
+  }
+
+  handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
+    if (this.throwSequence) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (this.readingSequence) {
+      this.advanceReadingSequence();
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (this.closePostWishPoliceWarningOnClick()) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (this.advancePostWishPoliceResponseOnClick()) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (activation.targetInstanceId === BAIT_SHOP_TOILET_URGENT_TARGET_INSTANCE_ID) {
+      this.showRoccoThoughtLine(this.localization.text.baitShop.toiletUrgentLine);
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (this.handlePortalSceneClick(activation)) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (!this.roccoSeated || this.sequence) {
+      return;
+    }
+
+    if (activation.targetInstanceId === BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (BAIT_SHOP_TOILET_ALLOW_STAND_WALK_CANCEL && !activation.targetInstanceId) {
+      this.startStandSequence({
+        x: activation.sceneX,
+        y: activation.sceneY,
+      });
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    this.showToiletThoughtLines(
+      this.localization.text.baitShop.toiletStaySeatedLines,
+      BAIT_SHOP_TOILET_STAY_SEATED_HISTORY_KEY,
+    );
+    return { suppressDefaultPlayerMove: true };
+  }
+
+  handleInventorySceneClick(
+    activation: RoccoSceneClickAction,
+    carriedItem: RoccoGridMenuCarriedItem,
+  ): boolean {
+    if (this.sequence || this.readingSequence || this.wishSequence || this.throwSequence) {
+      return false;
+    }
+
+    if (this.roccoSeated) {
+      return false;
+    }
+
+    if (
+      carriedItem.item.id !== ROCCO_INVENTORY_MAGAZINE_ITEM_ID ||
+      activation.targetInstanceId !== BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID
+    ) {
+      return false;
+    }
+
+    if (!this.hasMagazine()) {
+      return false;
+    }
+
+    this.startSitSequence();
+
+    if (this.engine) {
+      this.engine.video.gridMenus.clearCarriedItem();
+      this.engine.video.render(0);
+    }
+
+    return true;
+  }
+
+  private handlePortalSceneClick(activation: RoccoSceneClickAction): boolean {
+    if (
+      !this.engine ||
+      !this.portalActive ||
+      activation.targetInstanceId !== BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID
+    ) {
+      return false;
+    }
+
+    if (this.isPlayerOverPortalZone()) {
+      this.updatePortalTransition();
+      return true;
+    }
+
+    const portalBasePoint = this.resolvePortalBasePoint();
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      portalBasePoint.x,
+      portalBasePoint.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+
+    if (started) {
+      this.engine.video.render(0);
+    }
+
+    return started;
+  }
+
+  private hasMagazine(): boolean {
+    return this.options.hasMagazine?.() ?? false;
+  }
+
+  private hasCoralRelic(): boolean {
+    return this.options.hasCoralRelic?.() ?? false;
+  }
+
+  private isToiletReuseDuringUrgencyEnabled(): boolean {
+    return this.options.allowReuseDuringUrgency?.() ?? false;
+  }
+
+  private resolveCoralRelicAssemblyPlan(): RoccoCoralRelicAssemblyPlan {
+    const plannedAssembly = this.options.getCoralRelicAssemblyPlan?.();
+    if (plannedAssembly) {
+      return plannedAssembly;
+    }
+
+    if (this.hasCoralRelic()) {
+      return {
+        status: 'ready',
+        steps: [],
+      };
+    }
+
+    return {
+      status: 'missing',
+      steps: [],
+    };
+  }
+
+  private createCraftableCoralRelicReadingLines(
+    steps: readonly RoccoInventoryFusionStep[],
+  ): readonly string[] {
+    return [
+      this.localization.text.baitShop.toiletMagazineReadingCraftableRelicIntroLine,
+      ...steps.map((step) => this.createCraftableCoralRelicStepLine(step)),
+      this.localization.text.baitShop.toiletMagazineReadingCraftableRelicOutroLine,
+    ].filter((line) => line.trim().length > 0);
+  }
+
+  private createCraftableCoralRelicStepLine(step: RoccoInventoryFusionStep): string {
+    const [firstItemId, secondItemId] = step.ingredientIds;
+    return this.formatTemplateLine(this.localization.text.baitShop.toiletMagazineReadingCraftStepLine, {
+      first: resolveRoccoInventoryItemLabel(firstItemId, this.localization) ?? firstItemId,
+      second: resolveRoccoInventoryItemLabel(secondItemId, this.localization) ?? secondItemId,
+      result: resolveRoccoInventoryItemLabel(step.resultItemId, this.localization) ?? step.resultItemId,
+    });
+  }
+
+  private formatTemplateLine(
+    template: string,
+    replacements: Record<string, string>,
+  ): string {
+    let formatted = template;
+    for (const [key, value] of Object.entries(replacements)) {
+      formatted = formatted.replaceAll(`{${key}}`, value);
+    }
+
+    return formatted;
+  }
+
+  isEscapeUrgencyActive(): boolean {
+    return this.escapeUrgencyActive && !this.toiletRemoved;
+  }
+
+  refreshDeveloperEventPresentation(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.syncToiletUrgencyPresentation();
+    this.engine.video.render(0);
+  }
+
+  shouldLoseOnExit(connectorId: string): boolean {
+    return connectorId === BAIT_SHOP_TOILET_RETURN_CONNECTOR_ID && this.roccoSatOnToilet;
+  }
+
+  beginExitDefeat(): void {
+    if (!this.engine || this.readingSequence || this.wishSequence) {
+      return;
+    }
+
+    this.beginDefeatSequence();
+  }
+
+  private beginDefeatSequence(): void {
+    if (!this.engine || this.readingSequence) {
+      return;
+    }
+
+    this.pendingCoralRelicWish = null;
+    this.wishSequence = null;
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.gridMenus.clearCarriedItem();
+    this.engine.video.messages.clearMessages();
+    this.clearPassiveStanPoliceAlert();
+    this.removeReadingMessageAnchorSprite();
+    this.engine.setInputEnabled(false);
+    this.readingSequence = {
+      phase: 'fading',
+      lineIndex: 0,
+      lines: [],
+      elapsedMs: 0,
+    };
+    this.engine.audio.playSound(BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID, {
+      restart: true,
+      volume: BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_VOLUME,
+    });
+    this.addReadingDefeatFadePrimitive(0);
+    this.engine.video.render(0);
+  }
+
+  openCoralRelicWishMenu(
+    groundPoint: RoccoPoint,
+    consumeRelic: () => void,
+  ): void {
+    if (!this.engine || !this.isEscapeUrgencyActive() || this.wishSequence) {
+      return;
+    }
+
+    this.pendingCoralRelicWish = {
+      groundPoint: { ...groundPoint },
+      consumeRelic,
+    };
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.gridMenus.openMenu(
+      createRoccoDialogueChoiceMenu({
+        id: BAIT_SHOP_TOILET_WISH_MENU_ID,
+        choices: this.createWishChoices(),
+      }).gridMenu,
+    );
+    this.engine.video.render(0);
+  }
+
+  startThrowCoralRelicSequence(
+    relicItem: RoccoInventoryItem,
+    onComplete: (groundPoint: RoccoPoint) => void,
+  ): void {
+    const fallbackGroundPoint: RoccoPoint = {
+      x: BAIT_SHOP_TOILET_THROW_CENTER_GROUND_X,
+      y: BAIT_SHOP_TOILET_TARGET_Y + BAIT_SHOP_TOILET_TARGET_HEIGHT,
+    };
+    const safeComplete = (groundPoint: RoccoPoint): void => {
+      onComplete({ ...groundPoint });
+    };
+
+    if (!this.engine) {
+      safeComplete(fallbackGroundPoint);
+      return;
+    }
+
+    if (this.throwSequence || !this.isEscapeUrgencyActive()) {
+      safeComplete(this.resolvePlayerGroundPoint() ?? fallbackGroundPoint);
+      return;
+    }
+
+    const player = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    if (!player) {
+      safeComplete(this.resolvePlayerGroundPoint() ?? fallbackGroundPoint);
+      return;
+    }
+
+    const currentGround = this.resolvePlayerGroundPoint();
+    const startY = currentGround?.y ?? player.transform.y;
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.gridMenus.clearCarriedItem();
+    this.engine.video.messages.clearMessages();
+    this.engine.setInputEnabled(false);
+    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      BAIT_SHOP_TOILET_THROW_CENTER_GROUND_X,
+      startY,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!started) {
+      this.engine.setInputEnabled(true);
+      safeComplete(currentGround ?? fallbackGroundPoint);
+      return;
+    }
+
+    this.throwSequence = {
+      phase: 'walking-to-center',
+      elapsedMs: 0,
+      relicItem,
+      relicScale: 0,
+      startPoint: { x: 0, y: 0 },
+      endPoint: { x: 0, y: 0 },
+      groundPoint: { x: 0, y: 0 },
+      onComplete,
+    };
+    this.engine.video.render(0);
+  }
+
+  private updateThrowSequence(deltaMs: number): void {
+    if (
+      !this.engine ||
+      !this.throwSequence ||
+      !Number.isFinite(deltaMs) ||
+      deltaMs < 0
+    ) {
+      return;
+    }
+
+    const sequence = this.throwSequence;
+
+    if (sequence.phase === 'walking-to-center') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+        return;
+      }
+
+      const started = this.engine.video.sprites.goTo(
+        DEFAULT_SPRITE_INSTANCE_ID,
+        BAIT_SHOP_TOILET_THROW_CENTER_GROUND_X,
+        BAIT_SHOP_TOILET_THROW_BACK_GROUND_Y,
+        {
+          action: DEFAULT_SPRITE_RUN_ACTION_ID,
+          idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+          stopDistance: 1,
+          idleSettleDelayMs: 0,
+          idleSettleFacing: 'diagonal-from-facing',
+        },
+      );
+      if (!started) {
+        this.finishThrowSequence();
+        return;
+      }
+
+      sequence.phase = 'walking-to-back';
+      sequence.elapsedMs = 0;
+      this.engine.video.render(0);
+      return;
+    }
+
+    if (sequence.phase === 'walking-to-back') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+        return;
+      }
+
+      this.beginPickupHold();
+      return;
+    }
+
+    if (sequence.phase === 'pickup-hold') {
+      sequence.elapsedMs += deltaMs;
+      if (sequence.elapsedMs < BAIT_SHOP_TOILET_THROW_FACE_FRONT_WAIT_MS) {
+        return;
+      }
+
+      this.engine.video.sprites.playAction(
+        DEFAULT_SPRITE_INSTANCE_ID,
+        DEFAULT_SPRITE_IDLE_ACTION_ID,
+        {
+          direction: 'down',
+          restart: true,
+        },
+      );
+      sequence.phase = 'falling';
+      sequence.elapsedMs = 0;
+      this.engine.video.render(0);
+      return;
+    }
+
+    if (sequence.phase === 'falling') {
+      sequence.elapsedMs += deltaMs;
+      const progress = Math.min(
+        1,
+        sequence.elapsedMs / BAIT_SHOP_TOILET_THROW_RELIC_FALL_DURATION_MS,
+      );
+      const eased = 1 - (1 - progress) * (1 - progress);
+      const x = sequence.startPoint.x + (sequence.endPoint.x - sequence.startPoint.x) * eased;
+      const y = sequence.startPoint.y + (sequence.endPoint.y - sequence.startPoint.y) * eased;
+      this.engine.video.sprites.setPosition(
+        BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID,
+        x,
+        y,
+      );
+      this.engine.video.render(0);
+
+      if (progress >= 1) {
+        this.finishThrowSequence();
+      }
+    }
+  }
+
+  private beginPickupHold(): void {
+    if (!this.engine || !this.throwSequence) {
+      this.finishThrowSequence();
+      return;
+    }
+
+    const player = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    if (!player) {
+      this.finishThrowSequence();
+      return;
+    }
+
+    const scaleX = player.transform.scaleX || DEFAULT_SPRITE_SCALE;
+    const scaleY = player.transform.scaleY || DEFAULT_SPRITE_SCALE;
+    const originX = player.transform.x;
+    const originY = player.transform.y;
+    const roccoSpriteWidth = DEFAULT_SPRITE_FRAME_WIDTH * scaleX;
+    const roccoSpriteHeight = DEFAULT_SPRITE_FRAME_HEIGHT * scaleY;
+    const roccoCenterX = originX + roccoSpriteWidth / 2;
+    const roccoSpriteBottomY = originY + roccoSpriteHeight;
+    const relicScale = DEFAULT_CORAL_RELIC_GROUND_SPRITE.scaleRelativeToRoccoBase * scaleY;
+
+    const startPoint: RoccoPoint = {
+      x: originX + BAIT_SHOP_TOILET_THROW_RELIC_START_OFFSET_X,
+      y: originY + roccoSpriteHeight / 2,
+    };
+    const endPoint: RoccoPoint = {
+      x: roccoCenterX,
+      y: roccoSpriteBottomY + BAIT_SHOP_TOILET_THROW_RELIC_FALL_OFFSET_Y,
+    };
+
+    this.throwSequence.relicScale = relicScale;
+    this.throwSequence.startPoint = startPoint;
+    this.throwSequence.endPoint = endPoint;
+    this.throwSequence.groundPoint = { ...endPoint };
+
+    this.engine.video.sprites.playAction(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      DEFAULT_SPRITE_PICK_UP_ACTION_ID,
+      {
+        direction: 'down',
+        restart: true,
+      },
+    );
+
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.createSpriteFromDefinition(
+      BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_DEFINITION_ID,
+      {
+        id: BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID,
+        transform: {
+          x: startPoint.x,
+          y: startPoint.y,
+          scaleX: relicScale,
+          scaleY: relicScale,
+          rotation: 0,
+        },
+        renderLayer: 'world.behind',
+        zIndex: 14,
+        depthMode: 'fixed',
+        interactive: false,
+        collisionEnabled: false,
+        ignoreMessages: true,
+      },
+    );
+    this.engine.video.sprites.stopAnimation(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.setAnimationFrame(
+      BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID,
+      0,
+    );
+
+    this.throwSequence.phase = 'pickup-hold';
+    this.throwSequence.elapsedMs = 0;
+    this.engine.video.render(0);
+  }
+
+  private finishThrowSequence(): void {
+    if (!this.engine) {
+      this.throwSequence = null;
+      return;
+    }
+
+    const sequence = this.throwSequence;
+    this.throwSequence = null;
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID);
+    this.engine.setInputEnabled(true);
+    if (sequence) {
+      const groundPoint =
+        sequence.groundPoint.x !== 0 || sequence.groundPoint.y !== 0
+          ? sequence.groundPoint
+          : this.resolvePlayerGroundPoint() ?? sequence.groundPoint;
+      sequence.onComplete({ ...groundPoint });
+    }
+
+    this.engine.video.render(0);
+  }
+
+  private createThrowRelicSpriteDefinition(): RoccoSpriteDefinition {
+    const width = DEFAULT_CORAL_RELIC_GROUND_SPRITE.width;
+    const height = DEFAULT_CORAL_RELIC_GROUND_SPRITE.height;
+
+    return {
+      id: BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_DEFINITION_ID,
+      name: 'Thrown Coral Relic',
+      images: [
+        {
+          id: BAIT_SHOP_TOILET_THROW_RELIC_IMAGE_ID,
+          uri: roccoCoralRelicAssetUrl,
+          width,
+          height,
+        },
+      ],
+      frames: [
+        {
+          id: BAIT_SHOP_TOILET_THROW_RELIC_FRAME_ID,
+          imageId: BAIT_SHOP_TOILET_THROW_RELIC_IMAGE_ID,
+          durationMs: 1000,
+          pivot: {
+            x: width / 2,
+            y: height,
+          },
+        },
+      ],
+      animations: {
+        idle: {
+          id: 'idle',
+          loop: false,
+          playbackRate: 1,
+          frames: [
+            {
+              frameId: BAIT_SHOP_TOILET_THROW_RELIC_FRAME_ID,
+              durationMs: 1000,
+            },
+          ],
+        },
+      },
+      defaultAnimation: 'idle',
+      render: {
+        renderLayer: 'world.behind',
+        zIndex: 14,
+        depthMode: 'fixed',
+        opacity: 1,
+      },
+      metadata: {
+        purpose: 'thrown-coral-relic',
+      },
+    };
+  }
+
+  private isSeatedAction(activation: RoccoActionMenuActivation): boolean {
+    return (
+      this.roccoSeated &&
+      activation.definitionId === ROCCO_PLAYER_ACTION_MENU_ID &&
+      activation.targetInstanceId === BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID
+    );
+  }
+
+  private handleSeatedAction(activation: RoccoActionMenuActivation): void {
+    if (activation.actionId === ROCCO_PLAYER_TALK_ACTION_ID) {
+      this.showToiletThoughtLines(
+        this.localization.text.rocco.selfTalkLines,
+        BAIT_SHOP_TOILET_SELF_TALK_HISTORY_KEY,
+      );
+      return;
+    }
+
+    if (activation.actionId === BAIT_SHOP_TOILET_READ_ACTION_ID) {
+      this.startMagazineReadingSequence();
+    }
+  }
+
+  private startMagazineReadingSequence(): void {
+    if (!this.engine || this.readingSequence) {
+      return;
+    }
+
+    const lines = this.createMagazineReadingLines();
+    if (lines.length === 0) {
+      return;
+    }
+
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.gridMenus.clearCarriedItem();
+    this.engine.video.messages.clearMessages();
+    this.clearPassiveStanPoliceAlert();
+    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    this.engine.setInputEnabled(false);
+    this.setReadingOverlayVisible(true);
+    this.readingSequence = {
+      phase: 'lines',
+      lineIndex: 0,
+      lines,
+      elapsedMs: 0,
+    };
+    this.showCurrentMagazineReadingLine();
+    this.engine.video.render(0);
+  }
+
+  private advanceReadingSequence(): void {
+    if (!this.engine || !this.readingSequence || this.readingSequence.phase !== 'lines') {
+      return;
+    }
+
+    if (this.readingSequence.lineIndex < this.readingSequence.lines.length - 1) {
+      this.readingSequence = {
+        ...this.readingSequence,
+        lineIndex: this.readingSequence.lineIndex + 1,
+        elapsedMs: 0,
+      };
+      this.showCurrentMagazineReadingLine();
+      return;
+    }
+
+    if (this.resolveCoralRelicAssemblyPlan().status !== 'missing') {
+      this.beginEscapeStandSequence();
+      return;
+    }
+
+    this.beginStanPoliceAlert();
+  }
+
+  private updateReadingSequence(deltaMs: number): void {
+    if (
+      !this.engine ||
+      !this.readingSequence ||
+      this.readingSequence.phase === 'restarting' ||
+      !Number.isFinite(deltaMs) ||
+      deltaMs <= 0
+    ) {
+      return;
+    }
+
+    if (this.readingSequence.phase === 'lines') {
+      const elapsedMs = this.readingSequence.elapsedMs + deltaMs;
+      if (elapsedMs < BAIT_SHOP_TOILET_READING_LINE_DURATION_MS) {
+        this.readingSequence = {
+          ...this.readingSequence,
+          elapsedMs,
+        };
+        return;
+      }
+
+      this.advanceReadingSequence();
+      return;
+    }
+
+    if (this.readingSequence.phase === 'stan-alert') {
+      const nextElapsedMs = this.readingSequence.elapsedMs + deltaMs;
+      const clampedElapsedMs = Math.min(BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS, nextElapsedMs);
+      this.readingSequence = {
+        ...this.readingSequence,
+        elapsedMs: clampedElapsedMs,
+      };
+      this.updateStanPoliceAlertAnchor(clampedElapsedMs);
+
+      if (nextElapsedMs < BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS) {
+        return;
+      }
+
+      const overflowMs = nextElapsedMs - BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS;
+      this.beginReadingDefeatFade();
+      this.updateReadingSequence(overflowMs);
+      return;
+    }
+
+    if (this.readingSequence.phase === 'fading') {
+      const elapsedMs = Math.min(
+        BAIT_SHOP_TOILET_READING_DEFEAT_FADE_DURATION_MS,
+        this.readingSequence.elapsedMs + deltaMs,
+      );
+      this.readingSequence = {
+        ...this.readingSequence,
+        elapsedMs,
+      };
+      this.addReadingDefeatFadePrimitive(
+        elapsedMs / BAIT_SHOP_TOILET_READING_DEFEAT_FADE_DURATION_MS,
+      );
+
+      if (elapsedMs >= BAIT_SHOP_TOILET_READING_DEFEAT_FADE_DURATION_MS) {
+        this.showReadingDefeatTitle();
+      }
+      return;
+    }
+
+    const elapsedMs = this.readingSequence.elapsedMs + deltaMs;
+    if (elapsedMs < BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_DURATION_MS) {
+      this.readingSequence = {
+        ...this.readingSequence,
+        elapsedMs,
+      };
+      return;
+    }
+
+    this.finishReadingDefeat();
+  }
+
+  private createMagazineReadingLines(): readonly string[] {
+    const introLines = this.localization.text.baitShop.toiletMagazineReadingIntroLines;
+    const coralRelicAssemblyPlan = this.resolveCoralRelicAssemblyPlan();
+    const branchLines =
+      coralRelicAssemblyPlan.status === 'ready'
+        ? this.localization.text.baitShop.toiletMagazineReadingCoralRelicLines
+        : coralRelicAssemblyPlan.status === 'craftable'
+          ? this.createCraftableCoralRelicReadingLines(coralRelicAssemblyPlan.steps)
+          : this.localization.text.baitShop.toiletMagazineReadingMissingRelicLines;
+    return [
+      ...introLines.slice(0, 2),
+      this.isStanIdentified()
+        ? this.localization.text.baitShop.toiletMagazineKnownStanLine
+        : this.localization.text.baitShop.toiletMagazineUnknownStanLine,
+      ...introLines.slice(2),
+      ...branchLines,
+    ].filter((line) => line.trim().length > 0);
+  }
+
+  private isStanIdentified(): boolean {
+    return this.options.isStanIdentified?.() ?? false;
+  }
+
+  private showCurrentMagazineReadingLine(): void {
+    if (!this.engine || !this.readingSequence) {
+      return;
+    }
+
+    const line = this.readingSequence.lines[this.readingSequence.lineIndex];
+    if (!line) {
+      return;
+    }
+
+    this.ensureReadingMessageAnchorSprite();
+    this.engine.video.messages.think(BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID, line, {
+      id: BAIT_SHOP_TOILET_READING_MESSAGE_ID,
+      ttlMs: BAIT_SHOP_TOILET_READING_MESSAGE_TTL_MS,
+      side: 'above',
+      maxWidth: BAIT_SHOP_TOILET_READING_MESSAGE_MAX_WIDTH,
+      zIndex: 5000,
+      style: {
+        fill: '#101810',
+        fontSize: BAIT_SHOP_TOILET_READING_MESSAGE_FONT_SIZE,
+        fontWeight: '700',
+        bubbleFill: '#e8ecd9',
+        bubbleStroke: '#263326',
+        bubbleStrokeWidth: 2,
+        showThoughtTrail: false,
+      },
+    });
+    this.engine.video.render(0);
+  }
+
+  private ensureReadingMessageAnchorSprite(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.createSpriteFromDefinition(BAIT_SHOP_TOILET_SPRITE_DEFINITION_ID, {
+      id: BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID,
+      transform: {
+        x: BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_X,
+        y: BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_Y,
+        scaleX: BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SCALE,
+        scaleY: BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SCALE,
+        rotation: 0,
+      },
+      renderLayer: 'world.behind',
+      zIndex: 0,
+      interactive: false,
+      collisionEnabled: false,
+      opacity: 0.01,
+      ignoreMessages: true,
+    });
+  }
+
+  private removeReadingMessageAnchorSprite(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID);
+  }
+
+  private beginEscapeStandSequence(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.readingSequence = null;
+    this.engine.video.messages.clearMessages();
+    this.removeReadingMessageAnchorSprite();
+    this.setReadingOverlayVisible(false);
+    this.escapeUrgencyActive = true;
+    this.pendingPostStandStanAlert = true;
+    this.startStandSequence();
+    if (!this.sequence) {
+      this.pendingPostStandStanAlert = false;
+      this.startPassiveStanPoliceAlert();
+      this.syncToiletUrgencyPresentation();
+    }
+    this.engine.video.render(0);
+  }
+
+  private beginReadingDefeatFade(): void {
+    if (!this.engine || !this.readingSequence) {
+      return;
+    }
+
+    this.readingSequence = {
+      ...this.readingSequence,
+      phase: 'fading',
+      elapsedMs: 0,
+    };
+    this.engine.video.messages.clearMessages();
+    this.removeStanPoliceAlertAnchorSprite();
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.gridMenus.clearCarriedItem();
+    this.engine.audio.playSound(BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID, {
+      restart: true,
+      volume: BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_VOLUME,
+    });
+    this.addReadingDefeatFadePrimitive(0);
+    this.engine.video.render(0);
+  }
+
+  private beginStanPoliceAlert(): void {
+    if (!this.engine || !this.readingSequence) {
+      return;
+    }
+
+    this.readingSequence = {
+      ...this.readingSequence,
+      phase: 'stan-alert',
+      elapsedMs: 0,
+    };
+    this.engine.video.messages.clearMessages();
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.gridMenus.clearCarriedItem();
+    this.removeReadingMessageAnchorSprite();
+    this.setReadingOverlayVisible(false);
+    this.ensureStanPoliceAlertAnchorSprite();
+    this.showPoliceVoiceMessage(
+      this.localization.text.baitShop.toiletPoliceAlertLine,
+      BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_TTL_MS,
+    );
+    this.engine.video.render(0);
+  }
+
+  private showReadingDefeatTitle(): void {
+    if (!this.engine || !this.readingSequence) {
+      return;
+    }
+
+    this.readingSequence = {
+      ...this.readingSequence,
+      phase: 'title',
+      elapsedMs: 0,
+    };
+    this.engine.video.titles.addTitle({
+      id: BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_ID,
+      text: this.localization.text.keys.defeatTitle,
+      renderLayer: 'overlay.titles',
+      zIndex: 5000,
+      x: DEFAULT_DESIGN_WIDTH / 2,
+      y: DEFAULT_DESIGN_HEIGHT / 2,
+      anchor: { x: 0.5, y: 0.5 },
+      style: {
+        fill: '#cbd6c0',
+        fontFamily: 'Cascadia Mono, Lucida Console, monospace',
+        fontSize: 42,
+        fontWeight: '700',
+        align: 'center',
+        stroke: {
+          color: '#1f2a20',
+          width: 6,
+          alpha: 0.95,
+        },
+      },
+      visible: true,
+    });
+    this.engine.video.render(0);
+  }
+
+  private finishReadingDefeat(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const onRestartRequested = this.onRestartRequested;
+    this.readingSequence = {
+      phase: 'restarting',
+      lineIndex: 0,
+      lines: [],
+      elapsedMs: 0,
+    };
+    this.clearReadingPresentation();
+    this.engine.setInputEnabled(true);
+    onRestartRequested?.();
+  }
+
+  private addReadingDefeatFadePrimitive(alpha: number): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.primitives.addPrimitive({
+      id: BAIT_SHOP_TOILET_READING_DEFEAT_FADE_PRIMITIVE_ID,
+      kind: 'rect',
+      renderLayer: 'overlay.primitives',
+      zIndex: 5000,
+      color: DEFAULT_ROCCO_GREEN_BLACK,
+      alpha,
+      visible: true,
+      x: 0,
+      y: 0,
+      width: DEFAULT_DESIGN_WIDTH,
+      height: DEFAULT_DESIGN_HEIGHT,
+      fill: true,
+    });
+    this.engine.video.render(0);
+  }
+
+  private clearReadingPresentation(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.readingSequence = null;
+    this.engine.audio.stopSound(BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID);
+    this.engine.video.messages.removeMessage(BAIT_SHOP_TOILET_READING_MESSAGE_ID);
+    this.engine.video.messages.removeMessage(BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID);
+    this.engine.video.titles.removeTitle(BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_ID);
+    this.engine.video.primitives.removePrimitive(BAIT_SHOP_TOILET_READING_DEFEAT_FADE_PRIMITIVE_ID);
+    this.pendingPostStandStanAlert = false;
+    this.passiveStanPoliceAlertElapsedMs = null;
+    this.pendingCoralRelicWish = null;
+    this.wishSequence = null;
+    this.removeReadingMessageAnchorSprite();
+    this.removeStanPoliceAlertAnchorSprite();
+    this.setReadingOverlayVisible(false);
+    this.engine.video.render(0);
+  }
+
+  private setReadingOverlayVisible(visible: boolean): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.planes.updatePlane(
+      BAIT_SHOP_TOILET_SCENE_ID,
+      BAIT_SHOP_TOILET_READING_BACKDROP_PLANE_ID,
+      { visible },
+    );
+    this.engine.video.planes.updatePlane(
+      BAIT_SHOP_TOILET_SCENE_ID,
+      BAIT_SHOP_TOILET_READING_IMAGE_PLANE_ID,
+      { visible },
+    );
+  }
+
+  private installToiletActionMenu(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    if (
+      this.toiletRemoved ||
+      (this.escapeUrgencyActive && !this.isToiletReuseDuringUrgencyEnabled())
+    ) {
+      this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
+      this.engine.video.render(0);
+      return;
+    }
+
+    this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
+    this.engine.video.actionMenus.registerMenu(this.createToiletActionMenuDefinition());
+    this.engine.video.render(0);
+  }
+
+  private installSeatedRoccoActionMenu(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
+    this.engine.video.actionMenus.unregisterMenu(ROCCO_PLAYER_ACTION_MENU_ID);
+    this.engine.video.actionMenus.registerMenu(
+      createSeatedRoccoActionMenuDefinition(
+        this.localization,
+        isRoccoDeveloperModeEnabled(this.engine),
+      ),
+    );
+    this.engine.video.render(0);
+  }
+
+  private restoreDefaultActionMenus(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.actionMenus.unregisterMenu(ROCCO_PLAYER_ACTION_MENU_ID);
+    this.engine.video.actionMenus.registerMenu(
+      createRoccoPlayerActionMenuDefinition(
+        this.localization,
+        isRoccoDeveloperModeEnabled(this.engine),
+      ),
+    );
+    this.engine.video.render(0);
+  }
+
+  private createToiletActionMenuDefinition(): RoccoActionMenuDefinition {
+    return {
+      ...makeBaitShopToiletActionMenuBase(),
+      id: BAIT_SHOP_TOILET_ACTION_MENU_ID,
+      items: [
+        {
+          id: 'look',
+          actionId: 'look',
+          label: this.localization.text.actions.look,
+          imageUri: roccoDefaultActionMenuAssetUrls.look,
+        },
+        {
+          id: 'use',
+          actionId: 'use',
+          label: this.localization.text.baitShop.toiletUseLabel,
+          imageUri: roccoDefaultActionMenuAssetUrls.useWc,
+        },
+      ],
+    };
+  }
+
+  private startSitSequence(): void {
+    if (!this.engine || this.sequence) {
+      return;
+    }
+
+    if (!this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
+      return;
+    }
+
+    const currentGroundPoint = this.resolvePlayerGroundPoint();
+    if (!currentGroundPoint) {
+      return;
+    }
+
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.messages.clearMessages();
+    this.engine.setInputEnabled(false);
+    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+
+    const needsVerticalApproach =
+      Math.abs(currentGroundPoint.y - BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y) > 1;
+    const needsHorizontalApproach =
+      Math.abs(currentGroundPoint.x - BAIT_SHOP_TOILET_SIT_APPROACH_POINT.x) > 1;
+
+    if (!needsVerticalApproach && !needsHorizontalApproach) {
+      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
+        direction: 'up-left',
+        restart: true,
+      });
+      this.sequence = {
+        phase: 'waiting-before-frame-one',
+        elapsedMs: 0,
+      };
+      this.engine.video.render(0);
+      return;
+    }
+
+    const firstTarget = needsVerticalApproach
+      ? {
+          x: currentGroundPoint.x,
+          y: BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y,
+        }
+      : BAIT_SHOP_TOILET_SIT_APPROACH_POINT;
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      firstTarget.x,
+      firstTarget.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!started) {
+      this.engine.setInputEnabled(true);
+      return;
+    }
+
+    this.sequence = {
+      phase: needsVerticalApproach
+        ? 'walking-to-approach-vertical'
+        : 'walking-to-approach-horizontal',
+      elapsedMs: 0,
+    };
+    this.engine.video.render(0);
+  }
+
+  private startStandSequence(destination?: RoccoPoint): void {
+    if (!this.engine || !this.roccoSeated || this.sequence) {
+      return;
+    }
+
+    this.queuedWalkDestination = destination ? { ...destination } : null;
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.messages.clearMessages();
+    this.engine.setInputEnabled(false);
+    this.setToiletFrame(1);
+    this.showHiddenRoccoAtSeatPoint();
+    this.sequence = {
+      phase: 'standing-before-walk',
+      elapsedMs: 0,
+    };
+    this.engine.video.render(0);
+  }
+
+  private updateSequence(deltaMs: number): void {
+    if (!this.engine || !this.sequence || !Number.isFinite(deltaMs) || deltaMs < 0) {
+      return;
+    }
+
+    if (this.sequence.phase === 'walking-to-approach-vertical') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+        return;
+      }
+
+      this.startSitApproachHorizontalWalk();
+      return;
+    }
+
+    if (this.sequence.phase === 'walking-to-approach-horizontal') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+        return;
+      }
+
+      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
+        direction: 'up-left',
+        restart: true,
+      });
+      this.sequence = {
+        phase: 'waiting-before-frame-one',
+        elapsedMs: 0,
+      };
+      this.engine.video.render(0);
+      return;
+    }
+
+    if (this.sequence.phase === 'walking-to-seat') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+        return;
+      }
+
+      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
+        direction: 'down',
+        restart: true,
+      });
+      this.sequence = {
+        phase: 'waiting-before-frame-two',
+        elapsedMs: 0,
+      };
+      this.engine.video.render(0);
+      return;
+    }
+
+    if (this.sequence.phase === 'standing-walking-to-approach') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+        return;
+      }
+
+      this.sequence = {
+        phase: 'standing-before-frame-zero',
+        elapsedMs: 0,
+      };
+      this.engine.video.render(0);
+      return;
+    }
+
+    this.sequence.elapsedMs += deltaMs;
+    if (this.sequence.elapsedMs < BAIT_SHOP_TOILET_SIT_WAIT_MS) {
+      return;
+    }
+
+    if (this.sequence.phase === 'waiting-before-frame-one') {
+      this.setToiletFrame(1);
+      this.sequence = {
+        phase: 'waiting-before-seat-walk',
+        elapsedMs: 0,
+      };
+      return;
+    }
+
+    if (this.sequence.phase === 'waiting-before-seat-walk') {
+      this.startSeatWalk();
+      return;
+    }
+
+    if (this.sequence.phase === 'waiting-before-frame-two') {
+      this.finishSitSequence();
+      return;
+    }
+
+    if (this.sequence.phase === 'standing-before-walk') {
+      this.startStandWalk();
+      return;
+    }
+
+    if (this.sequence.phase === 'standing-before-frame-zero') {
+      this.finishStandSequence();
+    }
+  }
+
+  private startSitApproachHorizontalWalk(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.x,
+      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!started) {
+      this.sequence = null;
+      this.engine.setInputEnabled(true);
+      return;
+    }
+
+    this.sequence = {
+      phase: 'walking-to-approach-horizontal',
+      elapsedMs: 0,
+    };
+    this.engine.video.render(0);
+  }
+
+  private startSeatWalk(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      BAIT_SHOP_TOILET_SIT_SEAT_POINT.x,
+      BAIT_SHOP_TOILET_SIT_SEAT_POINT.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        constrainToWalkMap: false,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!started) {
+      this.sequence = null;
+      this.engine.setInputEnabled(true);
+      return;
+    }
+
+    this.sequence = {
+      phase: 'walking-to-seat',
+      elapsedMs: 0,
+    };
+    this.engine.video.render(0);
+  }
+
+  private startStandWalk(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.x,
+      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        constrainToWalkMap: false,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!started) {
+      this.sequence = null;
+      this.engine.setInputEnabled(true);
+      return;
+    }
+
+    this.sequence = {
+      phase: 'standing-walking-to-approach',
+      elapsedMs: 0,
+    };
+    this.engine.video.render(0);
+  }
+
+  private finishSitSequence(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.setToiletFrame(2);
+    this.hideRoccoAtSeatPoint();
+    this.roccoSeated = true;
+    this.roccoSatOnToilet = true;
+    this.sequence = null;
+    this.setToiletVisibleDescription(this.localization.text.descriptions.seatedRocco);
+    this.installSeatedRoccoActionMenu();
+    this.engine.setInputEnabled(true);
+    this.engine.video.render(0);
+  }
+
+  private finishStandSequence(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.setToiletFrame(0);
+    this.roccoSeated = false;
+    this.sequence = null;
+    this.setToiletVisibleDescription(this.localization.text.descriptions.toilet);
+    this.restoreDefaultActionMenus();
+    this.syncToiletUrgencyPresentation();
+    this.engine.setInputEnabled(true);
+
+    const destination = this.queuedWalkDestination;
+    this.queuedWalkDestination = null;
+    if (destination) {
+      this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, destination.x, destination.y, {
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      });
+    }
+
+    if (this.pendingPostStandStanAlert) {
+      this.pendingPostStandStanAlert = false;
+      this.startPassiveStanPoliceAlert();
+    }
+
+    this.engine.video.render(0);
+  }
+
+  private hideRoccoAtSeatPoint(): void {
+    const sprite = this.getPlayerSpriteClone();
+    if (!sprite || !this.engine) {
+      return;
+    }
+
+    const scaleX = sprite.transform.scaleX || BAIT_SHOP_TOILET_ROCCO_SCALE;
+    const scaleY = sprite.transform.scaleY || BAIT_SHOP_TOILET_ROCCO_SCALE;
+    const origin = toOriginFromGroundPoint(BAIT_SHOP_TOILET_SIT_SEAT_POINT, scaleX, scaleY);
+    sprite.transform.x = origin.x;
+    sprite.transform.y = origin.y;
+    sprite.visible = false;
+    sprite.enabled = true;
+    sprite.interactive = false;
+    sprite.collisionEnabled = false;
+    this.recreatePlayerSprite(sprite);
+  }
+
+  private showHiddenRoccoAtSeatPoint(): void {
+    const sprite = this.getPlayerSpriteClone();
+    if (!sprite || !this.engine) {
+      return;
+    }
+
+    const scaleX = sprite.transform.scaleX || BAIT_SHOP_TOILET_ROCCO_SCALE;
+    const scaleY = sprite.transform.scaleY || BAIT_SHOP_TOILET_ROCCO_SCALE;
+    const origin = toOriginFromGroundPoint(BAIT_SHOP_TOILET_SIT_SEAT_POINT, scaleX, scaleY);
+    sprite.transform.x = origin.x;
+    sprite.transform.y = origin.y;
+    sprite.visible = true;
+    sprite.enabled = true;
+    sprite.interactive = true;
+    sprite.collisionEnabled = true;
+    this.recreatePlayerSprite(sprite);
+    this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
+      direction: 'down',
+      restart: true,
+    });
+    this.engine.video.render(0);
+  }
+
+  private getPlayerSpriteClone(): RoccoSpriteInstance | undefined {
+    return this.engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+  }
+
+  private recreatePlayerSprite(sprite: RoccoSpriteInstance): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.createSprite(sprite);
+  }
+
+  private setToiletFrame(frameIndex: number): void {
+    if (!this.engine || this.toiletFrameCount <= 0) {
+      return;
+    }
+
+    const clampedIndex = Math.max(0, Math.min(this.toiletFrameCount - 1, frameIndex));
+    this.engine.video.sprites.setAnimationFrame(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID, clampedIndex);
+    this.engine.video.render(0);
+  }
+
+  private showRoccoThoughtLines(lines: string[], historyKey: string): void {
+    if (!this.engine) {
+      return;
+    }
+
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      lines,
+      {
+        ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
+  }
+
+  private showRoccoThoughtLine(line: string): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, line, {
+      ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+    });
+    this.engine.video.render(0);
+  }
+
+  private showToiletThoughtLines(lines: string[], historyKey: string): void {
+    if (!this.engine) {
+      return;
+    }
+
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID,
+      lines,
+      {
+        ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+      },
+      {
+        count: 1,
+        historyKey,
+        avoidImmediateRepeat: true,
+      },
+    );
+    this.engine.video.render(0);
+  }
+
+  private ensureStanPoliceAlertAnchorSprite(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const position = this.resolveStanPoliceAlertAnchorPosition(0);
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.createSpriteFromDefinition(BAIT_SHOP_TOILET_SPRITE_DEFINITION_ID, {
+      id: BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID,
+      transform: {
+        x: position.x,
+        y: position.y,
+        scaleX: BAIT_SHOP_TOILET_STAN_ALERT_SCALE,
+        scaleY: BAIT_SHOP_TOILET_STAN_ALERT_SCALE,
+        rotation: 0,
+      },
+      renderLayer: 'world.behind',
+      zIndex: 0,
+      interactive: false,
+      collisionEnabled: false,
+      opacity: 0.01,
+      ignoreMessages: true,
+    });
+  }
+
+  private startPassiveStanPoliceAlert(): void {
+    this.startPoliceVoice(
+      this.localization.text.baitShop.toiletPoliceAlertLine,
+      BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_TTL_MS,
+    );
+  }
+
+  private updatePassiveStanPoliceAlert(deltaMs: number): void {
+    if (
+      !this.engine ||
+      this.passiveStanPoliceAlertElapsedMs === null ||
+      !Number.isFinite(deltaMs) ||
+      deltaMs <= 0
+    ) {
+      return;
+    }
+
+    const nextElapsedMs = this.passiveStanPoliceAlertElapsedMs + deltaMs;
+    const clampedAlertElapsedMs = Math.min(BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS, nextElapsedMs);
+    this.passiveStanPoliceAlertElapsedMs = nextElapsedMs;
+    this.updateStanPoliceAlertAnchor(clampedAlertElapsedMs);
+
+    if (nextElapsedMs >= this.activePoliceVoiceTtlMs) {
+      this.clearPassiveStanPoliceAlert();
+    }
+  }
+
+  private startPoliceVoice(
+    line: string,
+    ttlMs: number,
+    speaker: 'caller' | 'police' = 'caller',
+  ): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.activePoliceVoiceTtlMs = ttlMs;
+    this.passiveStanPoliceAlertElapsedMs = 0;
+    this.ensureStanPoliceAlertAnchorSprite();
+    this.showPoliceVoiceMessage(line, ttlMs, speaker);
+    this.engine.video.render(0);
+  }
+
+  private showPoliceVoiceMessage(
+    line: string,
+    ttlMs: number,
+    speaker: 'caller' | 'police' = 'caller',
+  ): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const fill =
+      speaker === 'police'
+        ? BAIT_SHOP_TOILET_POLICE_DIALOGUE_TEXT_COLOR
+        : DEFAULT_STAN_DIALOGUE_TEXT_COLOR;
+    const bubbleFill =
+      speaker === 'police' ? BAIT_SHOP_TOILET_POLICE_DIALOGUE_BUBBLE_FILL : '#f1e7fa';
+
+    this.engine.video.messages.say(
+      BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID,
+      line,
+      {
+        id: BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID,
+        ttlMs,
+        side: 'left',
+        maxWidth: BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_MAX_WIDTH,
+        zIndex: 5000,
+        style: {
+          fill,
+          bubbleFill,
+          bubbleStroke: fill,
+          bubbleStrokeWidth: 2,
+        },
+      },
+    );
+  }
+
+  private updateStanPoliceAlertAnchor(elapsedMs: number): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const position = this.resolveStanPoliceAlertAnchorPosition(elapsedMs);
+    this.engine.video.sprites.setPosition(
+      BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID,
+      position.x,
+      position.y,
+    );
+    this.engine.video.render(0);
+  }
+
+  private resolveStanPoliceAlertAnchorPosition(elapsedMs: number): RoccoPoint {
+    const progress = Math.max(
+      0,
+      Math.min(1, elapsedMs / BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS),
+    );
+    const easedProgress = 1 - (1 - progress) * (1 - progress);
+    const baseX =
+      BAIT_SHOP_TOILET_STAN_ALERT_START_X +
+      (BAIT_SHOP_TOILET_STAN_ALERT_END_X - BAIT_SHOP_TOILET_STAN_ALERT_START_X) *
+        easedProgress;
+    const jitterX = Math.sin(elapsedMs / 190) * 14 + Math.sin(elapsedMs / 86) * 6;
+    const jitterY = Math.sin(elapsedMs / 176) * 11 + Math.sin(elapsedMs / 62) * 4;
+
+    return {
+      x: baseX + jitterX,
+      y: BAIT_SHOP_TOILET_STAN_ALERT_BASE_Y + jitterY,
+    };
+  }
+
+  private removeStanPoliceAlertAnchorSprite(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID);
+  }
+
+  private clearPassiveStanPoliceAlert(): void {
+    this.passiveStanPoliceAlertElapsedMs = null;
+    this.activePoliceVoiceTtlMs = BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_TTL_MS;
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.messages.removeMessage(BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID);
+    this.removeStanPoliceAlertAnchorSprite();
+  }
+
+  private createWishChoices() {
+    return [
+      {
+        id: BAIT_SHOP_TOILET_WISH_NEVER_EXISTED_CHOICE_ID,
+        text: this.localization.text.baitShop.coralRelicWishExistLine,
+      },
+      {
+        id: BAIT_SHOP_TOILET_WISH_ROOT_CHOICE_ID,
+        text: this.localization.text.baitShop.coralRelicWishRootLine,
+      },
+      {
+        id: BAIT_SHOP_TOILET_WISH_STAN_DISAPPEAR_CHOICE_ID,
+        text: this.isStanIdentified()
+          ? this.localization.text.baitShop.coralRelicWishKnownStanDisappearLine
+          : this.localization.text.baitShop.coralRelicWishUnknownStanDisappearLine,
+      },
+      {
+        id: BAIT_SHOP_TOILET_WISH_ESCAPE_CHOICE_ID,
+        text: this.localization.text.baitShop.coralRelicWishEscapeLine,
+      },
+    ] as const;
+  }
+
+  private resolveWishChoiceLine(itemId: string | undefined): string | undefined {
+    return this.createWishChoices().find((choice) => choice.id === itemId)?.text;
+  }
+
+  private createPostWishPoliceResponseChoices() {
+    return [
+      {
+        id: BAIT_SHOP_TOILET_POST_WISH_REPLY_MOMENT_PLEASE_CHOICE_ID,
+        text: this.localization.text.baitShop.toiletPostWishReplyMomentPleaseLine,
+      },
+      {
+        id: BAIT_SHOP_TOILET_POST_WISH_REPLY_NO_HIT_CHOICE_ID,
+        text: this.localization.text.baitShop.toiletPostWishReplyNoHitLine,
+      },
+      {
+        id: BAIT_SHOP_TOILET_POST_WISH_REPLY_WHAT_IF_NOT_CHOICE_ID,
+        text: this.localization.text.baitShop.toiletPostWishReplyWhatIfNotLine,
+      },
+      {
+        id: BAIT_SHOP_TOILET_POST_WISH_REPLY_COME_IN_CHOICE_ID,
+        text: this.localization.text.baitShop.toiletPostWishReplyComeInLine,
+      },
+    ] as const;
+  }
+
+  private resolvePostWishPoliceResponseLine(itemId: string | undefined): string | undefined {
+    return this.createPostWishPoliceResponseChoices().find((choice) => choice.id === itemId)?.text;
+  }
+
+  private openPostWishPoliceResponseMenu(): void {
+    if (!this.engine || !this.wishSequence) {
+      return;
+    }
+
+    this.engine.video.gridMenus.openMenu(
+      createRoccoDialogueChoiceMenu({
+        id: BAIT_SHOP_TOILET_POST_WISH_RESPONSE_MENU_ID,
+        choices: this.createPostWishPoliceResponseChoices(),
+      }).gridMenu,
+    );
+    this.engine.setInputEnabled(true);
+    this.engine.video.render(0);
+  }
+
+  private startPostWishPoliceResponse(itemId: string | undefined): void {
+    if (
+      !this.engine ||
+      !this.wishSequence ||
+      this.wishSequence.phase !== 'awaiting-police-response'
+    ) {
+      return;
+    }
+
+    const selected = this.resolvePostWishPoliceResponseLine(itemId);
+    if (!selected) {
+      return;
+    }
+
+    this.engine.video.messages.removeMessage(BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID);
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.setInputEnabled(false);
+    this.engine.video.messages.say(DEFAULT_SPRITE_INSTANCE_ID, selected, {
+      ttlMs: BAIT_SHOP_TOILET_POST_WISH_PLAYER_REPLY_TTL_MS,
+    });
+    this.wishSequence = {
+      ...this.wishSequence,
+      phase: 'police-response',
+      elapsedMs: 0,
+      policeReplyShown: false,
+    };
+    this.engine.video.render(0);
+  }
+
+  private advanceToPostWishPoliceResponseMenu(): void {
+    if (!this.wishSequence) {
+      return;
+    }
+
+    this.wishSequence = {
+      ...this.wishSequence,
+      phase: 'awaiting-police-response',
+      elapsedMs: 0,
+      policeReplyShown: false,
+    };
+    this.openPostWishPoliceResponseMenu();
+  }
+
+  private closePostWishPoliceWarningOnClick(): boolean {
+    if (
+      !this.wishSequence ||
+      this.wishSequence.phase !== 'post-toilet-police-warning' ||
+      !this.wishSequence.policeReplyShown ||
+      this.passiveStanPoliceAlertElapsedMs === null
+    ) {
+      return false;
+    }
+
+    this.clearPassiveStanPoliceAlert();
+    this.advanceToPostWishPoliceResponseMenu();
+    return true;
+  }
+
+  private advancePostWishPoliceResponseOnClick(): boolean {
+    if (
+      !this.engine ||
+      !this.wishSequence ||
+      this.wishSequence.phase !== 'police-response'
+    ) {
+      return false;
+    }
+
+    if (!this.wishSequence.policeReplyShown) {
+      this.engine.video.messages.removeMessage(`${DEFAULT_SPRITE_INSTANCE_ID}:active-message`);
+      this.startPoliceVoice(
+        this.localization.text.baitShop.toiletPostWishPoliceResponseLine,
+        BAIT_SHOP_TOILET_POST_WISH_POLICE_REPLY_TTL_MS,
+        'police',
+      );
+      this.wishSequence = {
+        ...this.wishSequence,
+        elapsedMs: BAIT_SHOP_TOILET_POST_WISH_PLAYER_REPLY_TTL_MS,
+        policeReplyShown: true,
+      };
+      this.engine.video.render(0);
+      return true;
+    }
+
+    this.clearPassiveStanPoliceAlert();
+    this.requestPortalActivation();
+    this.engine.setInputEnabled(true);
+    this.wishSequence = null;
+    this.engine.video.render(0);
+    return true;
+  }
+
+  private startDirectWishDefeat(): void {
+    if (!this.engine || !this.pendingCoralRelicWish || this.wishSequence) {
+      return;
+    }
+
+    this.pendingCoralRelicWish = null;
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.setInputEnabled(false);
+    this.wishSequence = {
+      phase: 'direct-defeat',
+      outcome: 'direct-defeat',
+      groundPoint: { x: 0, y: 0 },
+      consumeRelic: () => {},
+      elapsedMs: 0,
+      smokeFrameIndex: 0,
+      effectApplied: false,
+      policeReplyShown: false,
+    };
+    this.engine.video.render(0);
+  }
+
+  private startWishSequence(outcome: BaitShopToiletWishOutcome): void {
+    if (!this.engine || !this.pendingCoralRelicWish || this.wishSequence) {
+      return;
+    }
+
+    const pendingWish = this.pendingCoralRelicWish;
+    this.pendingCoralRelicWish = null;
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.setInputEnabled(false);
+    const started = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      pendingWish.groundPoint.x,
+      pendingWish.groundPoint.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 6,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!started) {
+      this.engine.setInputEnabled(true);
+      return;
+    }
+
+    this.wishSequence = {
+      phase: 'walking-to-relic',
+      outcome,
+      groundPoint: { ...pendingWish.groundPoint },
+      consumeRelic: pendingWish.consumeRelic,
+      elapsedMs: 0,
+      smokeFrameIndex: 0,
+      effectApplied: false,
+      policeReplyShown: false,
+    };
+    this.engine.video.render(0);
+  }
+
+  private updateWishSequence(deltaMs: number): void {
+    if (!this.engine || !this.wishSequence || !Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return;
+    }
+
+    if (this.wishSequence.phase === 'direct-defeat') {
+      const nextElapsedMs = this.wishSequence.elapsedMs + deltaMs;
+      this.wishSequence = {
+        ...this.wishSequence,
+        elapsedMs: nextElapsedMs,
+      };
+      if (nextElapsedMs < BAIT_SHOP_TOILET_DIRECT_DEFEAT_DELAY_MS) {
+        return;
+      }
+
+      this.beginDefeatSequence();
+      return;
+    }
+
+    if (this.wishSequence.phase === 'post-toilet-police-warning') {
+      const nextElapsedMs = this.wishSequence.elapsedMs + deltaMs;
+      let policeReplyShown = this.wishSequence.policeReplyShown;
+
+      if (
+        !policeReplyShown &&
+        nextElapsedMs >= BAIT_SHOP_TOILET_POST_WISH_POLICE_WARNING_DELAY_MS
+      ) {
+        this.startPoliceVoice(
+          this.localization.text.baitShop.toiletPostWishPoliceWarningLine,
+          BAIT_SHOP_TOILET_POST_WISH_POLICE_WARNING_TTL_MS,
+          'police',
+        );
+        policeReplyShown = true;
+      }
+
+      this.wishSequence = {
+        ...this.wishSequence,
+        elapsedMs: nextElapsedMs,
+        policeReplyShown,
+      };
+
+      if (policeReplyShown && this.passiveStanPoliceAlertElapsedMs === null) {
+        this.advanceToPostWishPoliceResponseMenu();
+      }
+      return;
+    }
+
+    if (this.wishSequence.phase === 'walking-to-relic') {
+      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+        return;
+      }
+
+      const player = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+      const direction = player?.facing ?? player?.action?.direction ?? 'down';
+      this.engine.audio.playSound(BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID, {
+        restart: true,
+        volume: BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_VOLUME,
+      });
+      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_RUN_ACTION_ID, {
+        direction,
+        restart: true,
+        playbackRate: 0,
+      });
+      this.wishSequence.consumeRelic();
+      this.engine.audio.playSound(BAIT_SHOP_TOILET_SPELL_SOUND_ID, {
+        restart: true,
+        volume: BAIT_SHOP_TOILET_SPELL_SOUND_VOLUME,
+      });
+      if (this.wishSequence.outcome === 'rocco-disappears') {
+        this.spawnSmokeSpriteAt(this.resolvePlayerSmokeGroundPoint());
+      } else {
+        this.spawnSmokeSpriteAt(this.resolveToiletSmokeGroundPoint());
+      }
+      this.wishSequence = {
+        ...this.wishSequence,
+        phase: 'smoke',
+        elapsedMs: 0,
+        smokeFrameIndex: 0,
+      };
+      return;
+    }
+
+    if (this.wishSequence.phase === 'awaiting-police-response') {
+      return;
+    }
+
+    if (this.wishSequence.phase === 'police-response') {
+      const nextElapsedMs = this.wishSequence.elapsedMs + deltaMs;
+      let policeReplyShown = this.wishSequence.policeReplyShown;
+
+      if (!policeReplyShown && nextElapsedMs >= BAIT_SHOP_TOILET_POST_WISH_PLAYER_REPLY_TTL_MS) {
+        this.startPoliceVoice(
+          this.localization.text.baitShop.toiletPostWishPoliceResponseLine,
+          BAIT_SHOP_TOILET_POST_WISH_POLICE_REPLY_TTL_MS,
+          'police',
+        );
+        policeReplyShown = true;
+      }
+
+      this.wishSequence = {
+        ...this.wishSequence,
+        elapsedMs: nextElapsedMs,
+        policeReplyShown,
+      };
+
+      if (
+        nextElapsedMs <
+        BAIT_SHOP_TOILET_POST_WISH_PLAYER_REPLY_TTL_MS +
+          BAIT_SHOP_TOILET_POST_WISH_POLICE_REPLY_TTL_MS
+      ) {
+        return;
+      }
+
+      this.clearPassiveStanPoliceAlert();
+      this.requestPortalActivation();
+      this.engine.setInputEnabled(true);
+      this.wishSequence = null;
+      this.engine.video.render(0);
+      return;
+    }
+
+    const nextElapsedMs = this.wishSequence.elapsedMs + deltaMs;
+    const nextFrameIndex = Math.min(
+      Math.max(0, this.smokeFrameCount - 1),
+      Math.floor(nextElapsedMs / BAIT_SHOP_TOILET_SMOKE_FRAME_DURATION_MS),
+    );
+    if (nextFrameIndex !== this.wishSequence.smokeFrameIndex) {
+      this.engine.video.sprites.setAnimationFrame(
+        BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID,
+        nextFrameIndex,
+      );
+    }
+    this.wishSequence = {
+      ...this.wishSequence,
+      elapsedMs: nextElapsedMs,
+      smokeFrameIndex: nextFrameIndex,
+    };
+
+    if (nextFrameIndex >= BAIT_SHOP_TOILET_SMOKE_REMOVE_TOILET_FRAME_INDEX && !this.wishSequence.effectApplied) {
+      if (this.wishSequence.outcome === 'rocco-disappears') {
+        this.hideRoccoForWishDefeat();
+      } else {
+        this.hideToiletForSpell();
+      }
+      this.wishSequence = {
+        ...this.wishSequence,
+        effectApplied: true,
+      };
+    }
+
+    if (nextElapsedMs < this.smokeFrameCount * BAIT_SHOP_TOILET_SMOKE_FRAME_DURATION_MS) {
+      return;
+    }
+
+    const player = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const direction = player?.facing ?? player?.action?.direction ?? 'down';
+    if (player) {
+      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
+        direction,
+        restart: true,
+      });
+    }
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
+    if (this.wishSequence.outcome === 'rocco-disappears') {
+      this.beginDefeatSequence();
+      return;
+    }
+
+    const elapsedSinceToiletDisappeared = Math.max(
+      0,
+      nextElapsedMs -
+        BAIT_SHOP_TOILET_SMOKE_REMOVE_TOILET_FRAME_INDEX * BAIT_SHOP_TOILET_SMOKE_FRAME_DURATION_MS,
+    );
+    this.wishSequence = {
+      ...this.wishSequence,
+      phase: 'post-toilet-police-warning',
+      elapsedMs: elapsedSinceToiletDisappeared,
+      policeReplyShown: false,
+    };
+    this.engine.video.render(0);
+  }
+
+  private spawnSmokeSpriteAt(position: RoccoPoint): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.createSpriteFromDefinition(BAIT_SHOP_TOILET_SMOKE_SPRITE_DEFINITION_ID, {
+      id: BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID,
+      transform: {
+        x: position.x,
+        y: position.y,
+        scaleX: this.smokeScale,
+        scaleY: this.smokeScale,
+        rotation: 0,
+      },
+      renderLayer: 'world.front',
+      zIndex: 22,
+      depthMode: 'fixed',
+      interactive: false,
+      collisionEnabled: false,
+      ignoreMessages: true,
+    });
+    this.engine.video.sprites.stopAnimation(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.setAnimationFrame(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID, 0);
+    this.engine.video.render(0);
+  }
+
+  private resolveToiletSmokeGroundPoint(): RoccoPoint {
+    const toiletSprite = this.engine?.video.sprites.getSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
+    return {
+      x: toiletSprite?.transform.x ?? BAIT_SHOP_TOILET_TARGET_X,
+      y: toiletSprite?.transform.y ?? BAIT_SHOP_TOILET_TARGET_Y + BAIT_SHOP_TOILET_TARGET_HEIGHT,
+    };
+  }
+
+  private resolvePlayerSmokeGroundPoint(): RoccoPoint {
+    const player = this.engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    if (!player) {
+      return this.resolvePlayerGroundPointForWish() ?? this.resolveToiletSmokeGroundPoint();
+    }
+
+    return {
+      x: player.transform.x + DEFAULT_SPRITE_GROUND_ANCHOR_X * (player.transform.scaleX || 1),
+      y: player.transform.y + DEFAULT_SPRITE_GROUND_ANCHOR_Y * (player.transform.scaleY || 1),
+    };
+  }
+
+  private resolvePlayerGroundPointForWish(): RoccoPoint | undefined {
+    const player = this.engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    if (!player) {
+      return undefined;
+    }
+
+    return {
+      x: player.transform.x + DEFAULT_SPRITE_GROUND_ANCHOR_X * (player.transform.scaleX || 1),
+      y: player.transform.y + DEFAULT_SPRITE_GROUND_ANCHOR_Y * (player.transform.scaleY || 1),
+    };
+  }
+
+  private resolvePlayerGroundPoint(): RoccoPoint | undefined {
+    return this.resolvePlayerGroundPointForWish();
+  }
+
+  private requestPortalActivation(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.portalPendingActivation = true;
+    this.updatePortalActivation();
+  }
+
+  private updatePortalActivation(): void {
+    if (!this.engine || !this.portalPendingActivation || this.portalActive) {
+      return;
+    }
+
+    if (this.isPlayerOverPortalZone()) {
+      return;
+    }
+
+    this.portalPendingActivation = false;
+    this.portalActive = true;
+    this.ensurePortalPresentation(true);
+    this.startPortalLoopSound();
+    this.registerPortalTarget();
+  }
+
+  private updatePortalTransition(): void {
+    if (
+      !this.portalActive ||
+      this.portalTransitionRequested ||
+      !this.onConnectorTransitionRequested ||
+      !this.isPlayerOverPortalZone()
+    ) {
+      return;
+    }
+
+    this.portalTransitionRequested = true;
+    const transitioned =
+      this.onConnectorTransitionRequested(BAIT_SHOP_TOILET_PORTAL_CONNECTOR_ID) ?? false;
+    if (!transitioned) {
+      this.portalTransitionRequested = false;
+    }
+  }
+
+  private isPlayerOverPortalZone(): boolean {
+    const playerRect = this.resolvePlayerVisualRect();
+    if (!playerRect || !this.portalTargetRect) {
+      return false;
+    }
+
+    return (
+      playerRect.x < this.portalTargetRect.x + this.portalTargetRect.width &&
+      playerRect.x + playerRect.width > this.portalTargetRect.x &&
+      playerRect.y < this.portalTargetRect.y + this.portalTargetRect.height &&
+      playerRect.y + playerRect.height > this.portalTargetRect.y
+    );
+  }
+
+  private resolvePlayerVisualRect():
+    | { x: number; y: number; width: number; height: number }
+    | undefined {
+    const player = this.engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    if (!player) {
+      return undefined;
+    }
+
+    return {
+      x: player.transform.x,
+      y: player.transform.y,
+      width: Math.max(1, DEFAULT_SPRITE_FRAME_WIDTH * Math.abs(player.transform.scaleX || 1)),
+      height: Math.max(1, DEFAULT_SPRITE_FRAME_HEIGHT * Math.abs(player.transform.scaleY || 1)),
+    };
+  }
+
+  private ensurePortalPresentation(playOpening: boolean): void {
+    if (!this.engine || !this.portalActive) {
+      return;
+    }
+
+    const position = this.resolvePortalBasePoint();
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.createSpriteFromDefinition(BAIT_SHOP_TOILET_PORTAL_SPRITE_DEFINITION_ID, {
+      id: BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID,
+      transform: {
+        x: position.x,
+        y: position.y,
+        scaleX: this.portalScale,
+        scaleY: this.portalScale,
+        rotation: 0,
+      },
+      renderLayer: 'world.front',
+      zIndex: 21,
+      depthMode: 'fixed',
+      interactive: true,
+      collisionEnabled: false,
+      visibleDescription: {
+        enabled: true,
+        text: this.resolvePortalDescription(),
+      },
+      ignoreMessages: true,
+    });
+    this.engine.video.sprites.playAnimation(
+      BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID,
+      playOpening
+        ? BAIT_SHOP_TOILET_PORTAL_OPEN_ANIMATION_ID
+        : BAIT_SHOP_TOILET_PORTAL_LOOP_ANIMATION_ID,
+      {
+        restart: true,
+      },
+    );
+    this.engine.video.render(0);
+  }
+
+  private registerPortalTarget(): void {
+    if (!this.engine || !this.portalActive || !this.portalTargetRect) {
+      return;
+    }
+
+    this.engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID);
+    this.engine.video.sceneTargets?.registerTarget({
+      instanceId: BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID,
+      definitionId: 'rocco-bait-shop-toilet-portal-target',
+      shape: {
+        kind: 'rect',
+        x: this.portalTargetRect.x,
+        y: this.portalTargetRect.y,
+        width: this.portalTargetRect.width,
+        height: this.portalTargetRect.height,
+      },
+      priority: 26,
+      renderLayer: 'world.front',
+      visibleDescription: {
+        enabled: true,
+        text: this.resolvePortalDescription(),
+      },
+    });
+  }
+
+  private unregisterPortalTarget(): void {
+    this.engine?.video.sceneTargets?.unregisterTarget(BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID);
+  }
+
+  private resolvePortalBasePoint(): RoccoPoint {
+    return {
+      x: (this.toiletTargetRect?.x ?? BAIT_SHOP_TOILET_TARGET_X) + (this.toiletTargetRect?.width ?? 96) / 2,
+      y:
+        (this.toiletTargetRect?.y ?? BAIT_SHOP_TOILET_TARGET_Y) +
+        BAIT_SHOP_TOILET_TARGET_HEIGHT +
+        BAIT_SHOP_TOILET_PORTAL_OFFSET_Y,
+    };
+  }
+
+  private resolvePortalDescription(): string {
+    return this.localization.text.baitShop.portalDescription;
+  }
+
+  private startPortalLoopSound(): void {
+    if (!this.engine || !this.portalActive) {
+      return;
+    }
+
+    this.engine.audio.playSound(BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID, {
+      restart: true,
+      volume: BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_VOLUME,
+    });
+  }
+
+  private hideToiletForSpell(): void {
+    if (!this.engine || this.toiletRemoved) {
+      return;
+    }
+
+    this.toiletRemoved = true;
+    this.unregisterUrgentToiletTarget();
+    this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
+    this.engine.video.render(0);
+  }
+
+  private hideRoccoForWishDefeat(): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    this.engine.video.render(0);
+  }
+
+  private syncToiletUrgencyPresentation(): void {
+    if (!this.engine || this.toiletRemoved || this.roccoSeated) {
+      return;
+    }
+
+    if (this.escapeUrgencyActive) {
+      if (this.isToiletReuseDuringUrgencyEnabled()) {
+        this.unregisterUrgentToiletTarget();
+        this.setToiletInteractive(true);
+        this.installToiletActionMenu();
+        return;
+      }
+
+      this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
+      this.setToiletInteractive(false);
+      this.registerUrgentToiletTarget();
+      this.engine.video.render(0);
+      return;
+    }
+
+    this.unregisterUrgentToiletTarget();
+    this.setToiletInteractive(true);
+    this.installToiletActionMenu();
+  }
+
+  private setToiletInteractive(interactive: boolean): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const sprite = this.engine.video.sprites.getSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
+    if (!sprite || sprite.interactive === interactive) {
+      return;
+    }
+
+    sprite.interactive = interactive;
+    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.createSprite(sprite);
+  }
+
+  private registerUrgentToiletTarget(): void {
+    if (!this.engine || !this.toiletTargetRect) {
+      return;
+    }
+
+    this.engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_TOILET_URGENT_TARGET_INSTANCE_ID);
+    this.engine.video.sceneTargets?.registerTarget({
+      instanceId: BAIT_SHOP_TOILET_URGENT_TARGET_INSTANCE_ID,
+      definitionId: 'rocco-bait-shop-toilet-urgent',
+      shape: {
+        kind: 'rect',
+        x: this.toiletTargetRect.x,
+        y: this.toiletTargetRect.y,
+        width: this.toiletTargetRect.width,
+        height: this.toiletTargetRect.height,
+      },
+      priority: 28,
+      renderLayer: 'world.behind',
+      visibleDescription: {
+        enabled: true,
+        text: this.localization.text.descriptions.toilet,
+      },
+    });
+  }
+
+  private unregisterUrgentToiletTarget(): void {
+    this.engine?.video.sceneTargets?.unregisterTarget(BAIT_SHOP_TOILET_URGENT_TARGET_INSTANCE_ID);
+  }
+
+  private setToiletVisibleDescription(text: string): void {
+    if (!this.engine) {
+      return;
+    }
+
+    this.engine.video.sprites.setVisibleDescription(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID, {
+      enabled: true,
+      text,
+    });
+  }
+}

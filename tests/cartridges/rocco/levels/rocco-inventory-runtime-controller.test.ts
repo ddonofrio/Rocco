@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+﻿import { describe, expect, it, vi } from 'vitest';
 
 import { createRoccoLocalization } from '../../../../src/cartridges/rocco/localization';
 import {
@@ -10,7 +10,7 @@ import {
 import {
   RoccoInventoryRuntimeController,
 } from '../../../../src/cartridges/rocco/levels/runtime/rocco-inventory-runtime-controller';
-import type { RoccoEngine } from '../../../../src/engine/engine-sdk';
+import type { RoccoEngine } from '../../../../src/console/engine-sdk';
 
 interface InventoryEngineState {
   carriedItem:

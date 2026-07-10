@@ -1,18 +1,18 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 
-import type { RoccoEngine } from '../../../../src/engine/engine-sdk';
+import type { RoccoEngine } from '../../../../src/console/engine-sdk';
 import type {
   RoccoGridMenuActivation,
   RoccoGridMenuCarriedItem,
   RoccoGridMenuDefinition,
   RoccoGridMenuItem,
-} from '../../../../src/engine/video/grid-menu';
+} from '../../../../src/console/video/grid-menu';
 import type {
   RoccoSpriteMessageRequest,
   RoccoSpriteMessageText,
-} from '../../../../src/engine/video/messages';
-import { RoccoDialogueSession } from '../../../../src/cartridges/rocco/dialogue/runtime';
-import type { RoccoDialogueChoiceNode } from '../../../../src/cartridges/rocco/dialogue/types';
+} from '../../../../src/console/video/messages';
+import { RoccoDialogueSession } from '../../../../src/cartridges/rocco/rpce/dialogue/runtime';
+import type { RoccoDialogueChoiceNode } from '../../../../src/cartridges/rocco/rpce/dialogue/types';
 
 interface DialogueEngineMockState {
   inputEnabled: boolean;

@@ -1,6 +1,6 @@
-import type { RoccoEngine } from '../../engine/engine-sdk';
-import type { RoccoGridMenuDefinition } from '../../engine/video/grid-menu';
-import { createRoccoDialogueChoiceMenu } from './dialogue';
+﻿import type { RoccoEngine } from '../../console/engine-sdk';
+import type { RoccoGridMenuDefinition } from '../../console/video/grid-menu';
+import { createRoccoDialogueChoiceMenu } from './rpce/dialogue';
 import type { RoccoLocalization } from './localization';
 import {
   createRoccoCoralRelicInventoryItem,

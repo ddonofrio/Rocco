@@ -1,4 +1,4 @@
-import type { RoccoCartridge, RoccoCartridgeContext } from '../../engine/cartridges/types';
+import type { RoccoCartridge, RoccoCartridgeContext } from '../../console/cartridges/types';
 import { installDefaultStarsEffect } from './terminal-work-in-progress-effects';
 import { installDefaultSprite } from './terminal-work-in-progress-sprites';
 import { terminalWorkInProgressCartridgeManifest } from './terminal-work-in-progress-manifest';

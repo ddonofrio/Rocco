@@ -1,17 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
+﻿import { describe, expect, it, vi } from 'vitest';
 
-import type { RoccoCartridgeAction } from '../../../src/engine/cartridges';
-import type { RoccoEngine, RoccoEnginePersistence } from '../../../src/engine/engine-sdk';
-import type { RoccoAudioSystem } from '../../../src/engine/audio';
-import type { RoccoJukeboxSystem } from '../../../src/engine/audio/jukebox';
-import type { RoccoEffect, RoccoEffectManager } from '../../../src/engine/effects';
-import type { RoccoActionMenuSystem } from '../../../src/engine/video/action-menu';
-import type { RoccoVideoDisplayModule, RoccoVideoPlaneModule, RoccoVideoSystem } from '../../../src/engine/video';
-import type { RoccoGridMenuSystem } from '../../../src/engine/video/grid-menu';
-import type { RoccoSpriteMessageSystem, RoccoSpriteMessageText } from '../../../src/engine/video/messages';
-import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../src/engine/video/planes';
-import type { RoccoPrimitiveSystem } from '../../../src/engine/video/primitives';
-import type { RoccoRenderLayer } from '../../../src/engine/video/render-layers';
+import type { RoccoCartridgeAction } from '../../../src/console/cartridges';
+import type { RoccoEngine, RoccoEnginePersistence } from '../../../src/console/engine-sdk';
+import type { RoccoAudioSystem } from '../../../src/console/audio';
+import type { RoccoJukeboxSystem } from '../../../src/console/audio/jukebox';
+import type { RoccoEffect, RoccoEffectManager } from '../../../src/console/effects';
+import type { RoccoActionMenuSystem } from '../../../src/console/video/action-menu';
+import type { RoccoVideoDisplayModule, RoccoVideoPlaneModule, RoccoVideoSystem } from '../../../src/console/video';
+import type { RoccoGridMenuSystem } from '../../../src/console/video/grid-menu';
+import type { RoccoSpriteMessageSystem, RoccoSpriteMessageText } from '../../../src/console/video/messages';
+import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../src/console/video/planes';
+import type { RoccoPrimitiveSystem } from '../../../src/console/video/primitives';
+import type { RoccoRenderLayer } from '../../../src/console/video/render-layers';
 import type {
   RoccoSpriteInstance,
   RoccoSpriteDefinition,
@@ -22,22 +22,22 @@ import type {
   RoccoSpriteNavigationBinding,
   RoccoSpritePresentationTransform,
   RoccoDepthMode,
-} from '../../../src/engine/video/sprites';
-import type { RoccoTitleSystem } from '../../../src/engine/video/titles';
-import type { RoccoSpriteMessageRequest } from '../../../src/engine/video/messages';
+} from '../../../src/console/video/sprites';
+import type { RoccoTitleSystem } from '../../../src/console/video/titles';
+import type { RoccoSpriteMessageRequest } from '../../../src/console/video/messages';
 import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
-} from '../../../src/engine/video/action-menu';
+} from '../../../src/console/video/action-menu';
 import type {
   RoccoGridMenuCarriedItem,
   RoccoGridMenuDefinition,
-} from '../../../src/engine/video/grid-menu';
-import type { RoccoPrimitive } from '../../../src/engine/video/primitives';
-import type { RoccoTitleMessage } from '../../../src/engine/video/titles';
-import type { RoccoDisplayProfile } from '../../../src/engine/video/display';
-import type { RoccoSoundDefinition } from '../../../src/engine/audio/types';
-import { defaultDisplayProfile } from '../../../src/engine/video/display';
+} from '../../../src/console/video/grid-menu';
+import type { RoccoPrimitive } from '../../../src/console/video/primitives';
+import type { RoccoTitleMessage } from '../../../src/console/video/titles';
+import type { RoccoDisplayProfile } from '../../../src/console/video/display';
+import type { RoccoSoundDefinition } from '../../../src/console/audio/types';
+import { defaultDisplayProfile } from '../../../src/console/video/display';
 import {
   DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID,
   DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
@@ -134,7 +134,7 @@ import {
 import { BAIT_SHOP_DOOR_OPENING_SOUND_ID } from '../../../src/cartridges/rocco/levels/pier/pier-bait-shop-door';
 import { DEFAULT_STAN_ACTION_MENU_ID } from '../../../src/cartridges/rocco/levels/pier/pier-stan-action-menu';
 import { DEFAULT_STAN_DIALOGUE_MENU_ID } from '../../../src/cartridges/rocco/levels/pier/pier-stan';
-import type { RoccoDialogueChoiceNode, RoccoDialogueLine } from '../../../src/cartridges/rocco/dialogue';
+import type { RoccoDialogueChoiceNode, RoccoDialogueLine } from '../../../src/cartridges/rocco/rpce/dialogue';
 import { createRoccoLocalization } from '../../../src/cartridges/rocco/localization';
 import { createDefaultSpriteDefinition } from '../../../src/cartridges/rocco/rocco-default-sprite-definition';
 import { makeDefaultWaterColorEffect } from '../../../src/cartridges/rocco/levels/pier/pier-video-effects';
@@ -161,8 +161,8 @@ vi.mock('pixi.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../src/engine/video/sprites', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../src/engine/video/sprites')>();
+vi.mock('../../../src/console/video/sprites', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/console/video/sprites')>();
   return {
     ...actual,
     loadRoccoSpriteWalkMapFromImage: vi.fn(

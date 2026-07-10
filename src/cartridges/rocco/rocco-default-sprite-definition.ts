@@ -2,7 +2,7 @@
   type RoccoFacingDirection,
   type RoccoSpriteDefinition,
   type RoccoSpriteDirectionalAnimations,
-} from '../../engine/video/sprites';
+} from '../../console/video/sprites';
 import {
   DEFAULT_SPRITE_BASELINE,
   DEFAULT_SPRITE_DEFINITION_ID,

@@ -1,6 +1,7 @@
 # Rocco Level Development Guide
 
-This directory contains the level systems and level implementations for the `rocco-default` cartridge.
+This directory contains the legacy level compatibility surface plus the shared runtime systems for
+the `rocco-default` cartridge.
 
 Use this file as the reference manual for creating, mounting, extending, and connecting screens inside the cartridge.
 
@@ -14,7 +15,10 @@ The current cartridge uses three level families:
 - `bait-shop/` for full-screen interior rooms with their own background and walk map.
 - `nether/` for full-screen interior rooms with their own background and walk map plus local perspective adjustments for the player sprite.
 
-The same runtime supports both base patterns plus level-specific variants, so new screens can follow either model.
+The same runtime supports both base patterns plus level-specific variants, so new screens can
+follow either model. Current concrete implementations live under
+`src/cartridges/rocco/games/rocco-default/maps/*`, while this `levels/` tree keeps compatibility
+exports and runtime glue.
 
 ## Core Model
 
@@ -89,12 +93,14 @@ levels/
   rocco-level-manager.ts  Shared active-level orchestration for Rocco screens
   rocco-level-types.ts    Shared level, connector, rectangle, and mount option types
   runtime/                Cartridge runtime helpers for registration, transitions, action routing, inventory, dropped items, scripted sequences, and developer mode
-  pier/                   Exterior level graph, shared panorama scene, shared walk map
-  bait-shop/              Interior levels, dedicated room scenes, dedicated walk maps
-  nether/                 Nether levels, arrival effects, dedicated room scenes, and perspective helpers
+  pier/                   Compatibility exports for the game-owned Pier map implementation
+  bait-shop/              Compatibility exports for the game-owned Shop map implementation
+  nether/                 Compatibility exports for the game-owned Nether map implementation
 ```
 
-Use one folder per location family when several screens share assets, state, or behavior.
+Use one game-owned map folder under `src/cartridges/rocco/games/rocco-default/maps/*` per
+location family when several screens share assets, state, or behavior. Keep this `levels/` tree
+only as the compatibility import surface while migrations are still in flight.
 
 ## Scripted Connector Transitions
 

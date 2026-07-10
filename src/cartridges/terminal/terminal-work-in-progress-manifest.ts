@@ -1,4 +1,4 @@
-import type { RoccoCartridgeManifest } from '../../engine/cartridges/types';
+import type { RoccoCartridgeManifest } from '../../console/cartridges/types';
 
 export const terminalWorkInProgressCartridgeManifest: RoccoCartridgeManifest = {
   id: 'terminal-work-in-progress',

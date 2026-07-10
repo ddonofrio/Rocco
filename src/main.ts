@@ -1,8 +1,8 @@
 import './style.css';
 
 import { registerSW } from 'virtual:pwa-register';
-import { GameRuntime } from './engine/runtime';
-import { viewport } from './engine/video';
+import { GameRuntime } from './console/runtime';
+import { viewport } from './console/video';
 
 registerSW({ immediate: true });
 

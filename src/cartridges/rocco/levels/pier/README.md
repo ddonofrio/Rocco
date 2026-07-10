@@ -1,6 +1,10 @@
 # Pier Levels
 
-This directory contains the Pier exterior levels for the `rocco-default` cartridge.
+This directory is the legacy compatibility path for the Pier exterior levels of the
+`rocco-default` cartridge.
+
+The current concrete implementation and assets live in
+`src/cartridges/rocco/games/rocco-default/maps/pier/**`.
 
 ## Files
 
@@ -92,7 +96,12 @@ The bait shop transition reuses the manager-owned cartridge inventory, so the sa
 - Inventory item use: `RoccoLevelManager` reads the generic carried grid payload during `scene-click` handling so carried keys and the 20 EUR bill can be attempted on Pier targets. Most targets return localized failed-use lines, while giving the keys to Stan triggers a defeat restart sequence and using the keys on the bait shop door branches on Stan's awake state.
 - Stan dialogue: the controller owns wake and look-around animations, while the cartridge dialogue runtime owns turn sequencing and nested menus.
 
-## Assets
+## Compatibility Note
+
+Each file in this directory re-exports from the game-owned Pier map folder so older imports keep
+working during the refactor.
+
+## Legacy Assets Layout
 
 ```text
 assets/

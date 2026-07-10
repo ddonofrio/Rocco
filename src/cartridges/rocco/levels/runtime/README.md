@@ -2,12 +2,12 @@
 
 This directory contains cartridge-specific runtime helpers that sit between `RoccoLevelManager` and the concrete level classes.
 
-These files are not generic engine systems. They coordinate the `rocco-default` level graph and keep cartridge runtime responsibilities grouped by concern.
+These files are not generic console systems. They are the legacy compatibility path over the newer `rpce/` plus `games/rocco-default/` split. They still coordinate the `rocco-default` runtime graph, but level registration and connection ownership now originate from the game map definitions under `src/cartridges/rocco/games/rocco-default/maps/*`.
 
 ## Files
 
-- `rocco-level-registry.ts` - Creates and stores the level instances used by the cartridge, including Nether-level re-creation for checkpoint restores.
-- `rocco-level-transition-controller.ts` - Owns the shared level-connection graph, pending exit intent, connector hit resolution, scripted connector resolution, and transition cooldown state.
+- `rocco-level-registry.ts` - Creates and stores the level instances used by the cartridge from the game-owned map definitions, including Nether-map re-creation for checkpoint restores.
+- `rocco-level-transition-controller.ts` - Uses the game-owned connection graph while keeping pending exit intent, connector hit resolution, scripted connector resolution, and transition cooldown state in one compatibility controller.
 - `rocco-scene-action-router.ts` - Owns action-routing priority across developer mode, dropped items, carried inventory use, grid menus, self actions, and level-specific action handling.
 - `rocco-inventory-runtime-controller.ts` - Owns player inventory storage, storage-transfer sessions, carried-item routing, item fusion coordination, and world-drop handoff.
 - `rocco-dropped-inventory-controller.ts` - Owns per-level dropped-item state, dropped-item presentation, and pickup flow.
@@ -18,7 +18,8 @@ These files are not generic engine systems. They coordinate the `rocco-default` 
 
 - `RoccoLevelManager` owns active-level lifecycle, shared cartridge state, and high-level delegation.
 - `runtime/` helpers own reusable cartridge runtime concerns that do not belong inside one concrete level class.
-- `levels/pier`, `levels/bait-shop`, and `levels/nether` own screen-local behavior and presentation.
+- `games/rocco-default/maps/*` owns the concrete screen-local behavior and presentation.
+- `levels/pier`, `levels/bait-shop`, and `levels/nether` remain compatibility wrappers over those map folders.
 
 ## Current Scope
 

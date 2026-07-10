@@ -1,4 +1,4 @@
-import type { RoccoCartridgeRegistration } from '../engine/cartridges';
+import type { RoccoCartridgeRegistration } from '../console/cartridges';
 import { roccoDefaultCartridgeManifest } from './rocco/rocco-default-manifest';
 import { RoccoDefaultCartridge } from './rocco/rocco-default-cartridge';
 import { terminalWorkInProgressCartridgeManifest } from './terminal/terminal-work-in-progress-manifest';

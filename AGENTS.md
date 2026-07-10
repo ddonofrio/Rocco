@@ -34,11 +34,11 @@ If the available context window is large, prefer reading all project-owned docum
 
 ## Efficient Reading Routes
 
-- For cartridge behavior, read `README-AGENT.md`, `src/engine/cartridges/README.md`, the cartridge README, and any level README involved.
-- For the Rocco Pier map, read `src/cartridges/rocco/README.md` and `src/cartridges/rocco/levels/pier/README.md`.
-- For localization, read `src/engine/cartridges/README.md`, `src/engine/cartridge-menu/README.md`, `src/cartridges/rocco/README.md`, and `src/cartridges/rocco/localization/README.md`.
-- For water, planes, or rendering artifacts, read `src/engine/video/README.md`, `src/engine/video/planes/README.md`, `src/engine/video/post-processing/README.md`, and the relevant cartridge/level README.
-- For sprites, action menus, motion, walk maps, or interaction sequences, read `src/engine/video/sprites/README.md` and the relevant cartridge README.
+- For cartridge behavior, read `README-AGENT.md`, `src/console/cartridges/README.md`, the cartridge README, and any level README involved.
+- For the Rocco Pier map, read `src/cartridges/rocco/README.md`, `src/cartridges/rocco/games/rocco-default/README.md`, and `src/cartridges/rocco/games/rocco-default/maps/pier/README.md`. Read `src/cartridges/rocco/levels/pier/README.md` when you need the compatibility path details.
+- For localization, read `src/console/cartridges/README.md`, `src/console/cartridge-menu/README.md`, `src/cartridges/rocco/README.md`, and `src/cartridges/rocco/localization/README.md`.
+- For water, planes, or rendering artifacts, read `src/console/video/README.md`, `src/console/video/planes/README.md`, `src/console/video/post-processing/README.md`, and the relevant cartridge/level README.
+- For sprites, action menus, motion, walk maps, or interaction sequences, read `src/console/video/sprites/README.md` and the relevant cartridge README.
 - For commands, tests, Windows quirks, or local workflow, read `DEVELOPMENT.md`.
 
 After reading docs, inspect the closest existing implementation and its tests before writing new code. Good first searches are `rg "<concept>" src` and `rg "<id-or-file-name>" src`.
@@ -46,9 +46,9 @@ After reading docs, inspect the closest existing implementation and its tests be
 ## Documentation Shape
 
 - `README.md` is the human overview.
-- `README-AGENT.md` is the technical architecture and engine SDK reference.
+- `README-AGENT.md` is the technical architecture and console SDK reference.
 - `DEVELOPMENT.md` is the local workflow and command guide.
-- `src/engine/**/README.md` files document engine systems.
+- `src/console/**/README.md` files document console systems.
 - `src/cartridges/**/README.md` files document cartridge content, rules, and state.
 
 Keep repeated concepts at increasing depth. For example, the root README may say that Rocco has connected Pier levels; the cartridge README should name those levels; the Pier README should define connectors, state, and transition rules.
@@ -72,14 +72,14 @@ Avoid direct `.\scripts\run-npm.ps1` calls without `-ExecutionPolicy Bypass`, an
 ## Rocco Cartridge Notes
 
 - The default cartridge is the Pier map.
-- Pier exterior code lives in `src/cartridges/rocco/levels/pier`.
+- Current Pier implementation code lives in `src/cartridges/rocco/games/rocco-default/maps/pier`. `src/cartridges/rocco/levels/pier` remains the compatibility path.
 - `RoccoLevelManager` lives in `src/cartridges/rocco/levels/rocco-level-manager.ts` and owns map transitions, per-level state retention, and inventory-based exit gates across Rocco screens.
 - Pier Middle east and west exits are available without an inventory gate.
 - `rocco-default` is localized in English and Spanish through `src/cartridges/rocco/localization`.
 - `rocco-default` uses `engine.video.gridMenus` as generic console UI for its cartridge inventory.
 - The console owns cursor rendering. Cartridges pass generic grid item payloads; cartridge folders decide what item use means.
 - The boot menu language radio buttons are only shown for manifests with `localizations`.
-- The water animation is clipped to its original alpha mask to avoid sliding over pier posts. Read `src/engine/video/post-processing/README.md` before changing water constants or plane composition.
+- The water animation is clipped to its original alpha mask to avoid sliding over pier posts. Read `src/console/video/post-processing/README.md` before changing water constants or plane composition.
 
 ## Validation
 

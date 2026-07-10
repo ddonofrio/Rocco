@@ -1,5 +1,5 @@
-import type { RoccoEngine } from '../../../../engine/engine-sdk';
-import type { RoccoPoint } from '../../../../engine/video/sprites';
+﻿import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { RoccoPoint } from '../../../../console/video/sprites';
 import {
   DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
   DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
@@ -11,7 +11,7 @@ import {
   DEFAULT_SPRITE_RUN_ACTION_ID,
   DEFAULT_STAN_SPRITE_INSTANCE_ID,
 } from '../../rocco-default-constants';
-import { roccoCartridgeMessageRuntime } from '../../dialogue';
+import { roccoCartridgeMessageRuntime } from '../../rpce/dialogue';
 import { type RoccoLocalization } from '../../localization';
 import { DEFAULT_STAN_DIALOGUE_TEXT_COLOR, DEFAULT_STAN_LOOK_RIGHT_ANIMATION_ID } from '../pier/pier-stan';
 import { BAIT_SHOP_DOOR_OPENING_SOUND_ID } from '../pier/pier-bait-shop-door';

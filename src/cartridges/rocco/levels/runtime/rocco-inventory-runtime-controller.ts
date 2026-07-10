@@ -1,15 +1,15 @@
-import type {
+﻿import type {
   RoccoCartridgeActionResult,
   RoccoSceneClickAction,
-} from '../../../../engine/cartridges';
-import type { RoccoEngine } from '../../../../engine/engine-sdk';
+} from '../../../../console/cartridges';
+import type { RoccoEngine } from '../../../../console/engine-sdk';
 import type {
   RoccoGridMenuActivation,
   RoccoGridMenuCarriedItem,
   RoccoGridMenuItem,
-} from '../../../../engine/video/grid-menu';
-import type { RoccoPoint } from '../../../../engine/video/sprites';
-import { roccoCartridgeMessageRuntime } from '../../dialogue';
+} from '../../../../console/video/grid-menu';
+import type { RoccoPoint } from '../../../../console/video/sprites';
+import { roccoCartridgeMessageRuntime } from '../../rpce/dialogue';
 import {
   BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID,
   createBaitShopSouvenirTableStorage,

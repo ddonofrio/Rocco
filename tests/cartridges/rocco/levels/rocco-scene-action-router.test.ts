@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+﻿import { describe, expect, it, vi } from 'vitest';
 
 import { createRoccoLocalization } from '../../../../src/cartridges/rocco/localization';
 import {
@@ -8,7 +8,7 @@ import {
 import { RoccoSceneActionRouter } from '../../../../src/cartridges/rocco/levels/runtime/rocco-scene-action-router';
 import type { RoccoLevel } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
 import { DEFAULT_ROCCO_PLAYER_APPEARANCE } from '../../../../src/cartridges/rocco/rocco-player-appearance';
-import type { RoccoEngine } from '../../../../src/engine/engine-sdk';
+import type { RoccoEngine } from '../../../../src/console/engine-sdk';
 
 function createLevel(overrides: Partial<RoccoLevel> = {}): RoccoLevel {
   return {

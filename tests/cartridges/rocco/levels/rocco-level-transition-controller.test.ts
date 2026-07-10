@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 
 import { RoccoLevelTransitionController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-level-transition-controller';
 import type { RoccoLevel, RoccoLevelConnector } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
-import type { RoccoPoint } from '../../../../src/engine/video/sprites';
+import type { RoccoPoint } from '../../../../src/console/video/sprites';
 
 function createLevel(levelId: string, connectors: readonly RoccoLevelConnector[]): RoccoLevel {
   return {
@@ -130,6 +130,29 @@ describe('RoccoLevelTransitionController', () => {
       targetEndpoint: {
         levelId: 'bait-shop-toilet',
         connectorId: 'south',
+      },
+    });
+  });
+
+  it('resolves the bait-shop toilet portal into the Nether entry connector', () => {
+    const controller = new RoccoLevelTransitionController({
+      canTraverseConnector: () => true,
+      resolvePlayerGroundPoint: () => undefined,
+    });
+    const level = createLevel('bait-shop-toilet', [
+      {
+        id: 'portal',
+        entryPoint: { x: 480, y: 240 },
+        entryFacing: 'down',
+      },
+    ]);
+
+    expect(controller.resolveScriptedTransition(level, 'portal')).toMatchObject({
+      fromLevelId: 'bait-shop-toilet',
+      connector: { id: 'portal' },
+      targetEndpoint: {
+        levelId: 'nether-console-hardware-spawn',
+        connectorId: 'entry',
       },
     });
   });

@@ -9,15 +9,15 @@ The console is called ROCCO, the main demo cartridge is called ROCCO, and the pl
 Start with these files before editing:
 
 - `AGENTS.md` for repository rules and reading routes.
-- `README-AGENT.md` for architecture, the engine SDK surface, subsystem SDKs, and cartridge conventions.
+- `README-AGENT.md` for architecture, the console SDK surface, subsystem SDKs, and cartridge conventions.
 - `DEVELOPMENT.md` for local commands and Windows workflow notes.
-- The README files inside the engine or cartridge folders related to the requested change.
+- The README files inside the console or cartridge folders related to the requested change.
 
 ## For Humans
 
-ROCCO is a cartridge-oriented console runtime. Its engine layer provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the cartridge content and interact with the runtime through a stable TypeScript SDK surface plus subsystem SDKs.
+ROCCO is a cartridge-oriented console runtime. Its console layer provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the cartridge content and interact with the runtime through a stable TypeScript SDK surface plus subsystem SDKs.
 
-ROCCO works well with AI-powered coding tools because the codebase is organized around documented concepts: engine systems, cartridge infrastructure, built-in cartridges, levels, sprites, effects, and localized text catalogs.
+ROCCO works well with AI-powered coding tools because the codebase is organized around documented concepts: console systems, cartridge infrastructure, built-in cartridges, levels, sprites, effects, and localized text catalogs.
 
 ## Tech Stack
 
@@ -46,7 +46,7 @@ ROCCO works well with AI-powered coding tools because the codebase is organized 
 ```text
 src/
   main.ts                  Entry point
-  engine/                  Core console runtime systems
+  console/                 Console runtime implementation and SDK surface
     audio/                 Sound and jukebox systems
     cartridges/            Cartridge interfaces, loader, and providers
     cartridge-menu/        Boot-time cartridge selection UI
@@ -54,7 +54,9 @@ src/
     persistence/           IndexedDB persistence adapter
     video/                 Rendering systems and visual subsystems
   cartridges/              Built-in cartridge implementations
-    rocco/                 Main demo cartridge with Pier, bait shop, Nether, and developer screens
+    rocco/                 Cartridge bootstrap, RPCE runtime, and the rocco-default game
+      rpce/                Cartridge-local point-and-click runtime
+      games/rocco-default/ Current game content organized by maps
     terminal/              Archived reference demo cartridge
 public/                    Static browser assets
 scripts/                   Windows-friendly development scripts
@@ -106,8 +108,8 @@ The GitHub Actions workflow publishes these downloadable artifacts:
 `rocco-default` is the main demo cartridge.
 
 - Three connected Pier exterior levels with shared panorama artwork and edge connectors.
-- Separate bait shop interior screens, a toilet-room branch, and a connected Nether screen pair.
-- Developer-only Reset Office screens that stay outside the normal level graph.
+- Separate bait shop interior screens, a toilet-room branch, and a Nether path that also includes the Reset Office branch.
+- Reset Office currently remains developer-only in gameplay flow, but it is modeled as part of Nether ownership.
 - Per-level state retention across Pier, bait shop, Nether, and developer screens.
 - Opening beat where Rocco arrives at the pier, asks the player for help, and can be skipped with a scene click.
 - Click-to-walk pathfinding through walk maps.
@@ -130,10 +132,11 @@ The GitHub Actions workflow publishes these downloadable artifacts:
 
 ROCCO uses a console/cartridge architecture:
 
-1. The engine is the console runtime.
+1. The console is the generic host runtime.
 2. Cartridges are self-contained software cartridges.
-3. Cartridges mount through `RoccoCartridge` and receive a `RoccoEngine` context with subsystem SDKs such as `engine.video`, `engine.audio`, and `engine.persistence`.
-4. Cartridges can contribute boot-time setup and settings modules before a cartridge is mounted.
-5. The console runtime stays generic; cartridge logic stays inside cartridge folders.
+3. The Rocco cartridge now layers `RPCE` between the cartridge bootstrap and the `rocco-default` game, so the structure reads `console -> cartridge -> RPCE -> game -> maps -> levels`.
+4. Cartridges mount through `RoccoCartridge` and receive a `RoccoEngine` context with subsystem SDKs such as `engine.video`, `engine.audio`, and `engine.persistence`.
+5. Cartridges can contribute boot-time setup and settings modules before a cartridge is mounted.
+6. The console runtime stays generic; cartridge logic stays inside cartridge folders.
 
 For implementation details, read `README-AGENT.md`.

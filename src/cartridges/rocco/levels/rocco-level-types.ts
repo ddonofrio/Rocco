@@ -1,9 +1,9 @@
-import type { RoccoEngine } from '../../../engine/engine-sdk';
-import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../engine/cartridges';
-import type { RoccoActionMenuActivation } from '../../../engine/video/action-menu';
-import type { RoccoGridMenuActivation } from '../../../engine/video/grid-menu';
-import type { RoccoPlaneScene } from '../../../engine/video/planes';
-import type { RoccoFacingDirection, RoccoPoint } from '../../../engine/video/sprites';
+﻿import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../console/cartridges';
+import type { RoccoEngine } from '../../../console/engine-sdk';
+import type { RoccoActionMenuActivation } from '../../../console/video/action-menu';
+import type { RoccoGridMenuActivation } from '../../../console/video/grid-menu';
+import type { RoccoPlaneScene } from '../../../console/video/planes';
+import type { RoccoFacingDirection, RoccoPoint } from '../../../console/video/sprites';
 import type { RoccoInventoryItem } from '../inventory';
 import type { RoccoPlayerAppearance } from '../rocco-player-appearance';
 import { RoccoAssetPreloader } from './rocco-asset-preloader';

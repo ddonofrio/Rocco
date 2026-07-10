@@ -1,6 +1,6 @@
-import type { RoccoEngine } from '../../engine/engine-sdk';
-import type { RoccoSpriteAutoAdjustPerspectiveByY, RoccoSpriteDefinition } from '../../engine/video/sprites';
-import type { RoccoFacingDirection, RoccoPoint } from '../../engine/video/sprites';
+﻿import type { RoccoEngine } from '../../console/engine-sdk';
+import type { RoccoSpriteAutoAdjustPerspectiveByY, RoccoSpriteDefinition } from '../../console/video/sprites';
+import type { RoccoFacingDirection, RoccoPoint } from '../../console/video/sprites';
 import { RoccoAssetPreloader } from './levels/rocco-asset-preloader';
 import {
   DEFAULT_SPRITE_DEFINITION_ID,

@@ -1,6 +1,6 @@
 # ROCCO Agent Reference
 
-This document is written for AI coding agents. It explains the ROCCO console architecture, the cartridge model, the engine SDK surface, the subsystem SDK surfaces, and the documentation workflow expected in this repository.
+This document is written for AI coding agents. It explains the ROCCO console architecture, the cartridge model, the console SDK surface, the subsystem SDK surfaces, and the documentation workflow expected in this repository.
 
 ## Operating Rules
 
@@ -19,32 +19,32 @@ Use documentation in layers:
 
 1. `README.md` gives the human overview.
 2. `AGENTS.md` gives repository rules and reading routes.
-3. `README-AGENT.md` gives architecture, engine SDK, and subsystem SDK concepts.
+3. `README-AGENT.md` gives architecture, console SDK, and subsystem SDK concepts.
 4. `DEVELOPMENT.md` gives commands, validation, and Windows workflow notes.
-5. `src/engine/**/README.md` files explain engine systems.
-6. `src/cartridges/**/README.md` files explain cartridge content and cartridge rules.
+5. `src/console/**/README.md` files document the current console subsystems.
+6. `src/cartridges/**/README.md` files explain cartridge content and cartridge rules, with `games/rocco-default/maps/*` as the structural ownership point for the current Rocco maps.
 
 Useful routes:
 
-- Cartridge behavior: `src/engine/cartridges/README.md`, then the target cartridge README.
-- Rocco cartridge behavior: `src/cartridges/rocco/README.md`, then `src/cartridges/rocco/levels/pier/README.md`, `src/cartridges/rocco/levels/bait-shop/README.md`, `src/cartridges/rocco/levels/nether/README.md`, and `src/cartridges/rocco/inventory/README.md` as needed.
-- Localization: `src/engine/cartridges/README.md`, `src/engine/cartridge-menu/README.md`, and `src/cartridges/rocco/localization/README.md`.
-- Rendering and water effects: `src/engine/video/README.md`, `src/engine/video/planes/README.md`, and `src/engine/video/post-processing/README.md`.
-- Sprites, walk maps, or actions: `src/engine/video/sprites/README.md` and the relevant cartridge README.
+- Cartridge behavior: `src/console/cartridges/README.md`, then the target cartridge README.
+- Rocco cartridge behavior: `src/cartridges/rocco/README.md`, then `src/cartridges/rocco/games/rocco-default/README.md`, then the relevant map README under `src/cartridges/rocco/games/rocco-default/maps/*`. Read the matching `src/cartridges/rocco/levels/*/README.md` when you need the compatibility wrappers.
+- Localization: `src/console/cartridges/README.md`, `src/console/cartridge-menu/README.md`, and `src/cartridges/rocco/localization/README.md`.
+- Rendering and water effects: `src/console/video/README.md`, `src/console/video/planes/README.md`, and `src/console/video/post-processing/README.md`.
+- Sprites, walk maps, or actions: `src/console/video/sprites/README.md` and the relevant cartridge README.
 
 After reading, inspect the closest existing implementation and tests. Prefer `rg "<concept>" src` over broad manual browsing.
 
 ## Project Overview
 
-ROCCO is a browser-based retro console runtime built with TypeScript, PixiJS, and Vite. It runs cartridges: self-contained cartridge modules that plug into a stable engine SDK surface and subsystem SDKs.
+ROCCO is a browser-based retro console runtime built with TypeScript, PixiJS, and Vite. It runs cartridges: self-contained cartridge modules that plug into a stable console SDK surface and subsystem SDKs.
 
 The key metaphor is:
 
-- The engine is the console runtime.
+- The console is the generic host runtime.
 - Cartridges are the software cartridges that plug into the runtime.
-- The `RoccoEngine` SDK surface and subsystem SDKs are the slot between them.
+- The `RoccoEngine` SDK surface and subsystem SDKs are the slot between them. The type name still says `Engine`, but it is the console-facing SDK.
 
-The engine provides capabilities such as rendering, audio, input, effects, persistence, and lifecycle management. Cartridges provide content and cartridge logic.
+The console provides capabilities such as rendering, audio, input, effects, persistence, and lifecycle management. Cartridges provide content and cartridge logic.
 
 ## Directory Map
 
@@ -52,12 +52,12 @@ The engine provides capabilities such as rendering, audio, input, effects, persi
 src/
   main.ts                         Entry point
   style.css                       Global page style
-  engine/
+  console/                        Console runtime implementation and SDK surface
     engine-sdk.ts                 RoccoEngine SDK surface
     runtime.ts                    GameRuntime implementation
     input-handler.ts              Input routing and blocking
     cartridge-manager.ts          Cartridge selection and lifecycle
-    persistence-adapter.ts        Engine-facing persistence adapter
+    persistence-adapter.ts        Console-facing persistence adapter
     audio/                        Web Audio and jukebox systems
     cartridges/                   Cartridge interfaces, loader, providers
     cartridge-menu/               Boot-time cartridge selection UI
@@ -65,7 +65,9 @@ src/
     persistence/                  Dexie and IndexedDB records
     video/                        Rendering systems and visual subsystems
   cartridges/
-    rocco/                        rocco-default cartridge with Pier, bait shop, Nether, and developer screens
+    rocco/                        Cartridge bootstrap plus RPCE and rocco-default game content
+      rpce/                       Cartridge-local point-and-click runtime
+      games/rocco-default/        Current game content organized by maps
     terminal/                     Archived reference cartridge
 ```
 
@@ -182,7 +184,7 @@ When `suppressDefaultPlayerMove` is `true`, the runtime skips the default click-
 
 ## RoccoEngine SDK Surface
 
-The full interface lives in `src/engine/engine-sdk.ts`.
+The full interface lives in `src/console/engine-sdk.ts`.
 
 `RoccoEngine` is the cartridge entry point. It exposes:
 

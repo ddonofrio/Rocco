@@ -1,10 +1,10 @@
-import type { RoccoEngine } from '../../../engine/engine-sdk';
+﻿import type { RoccoEngine } from '../../../console/engine-sdk';
 import type {
   RoccoCartridgeAction,
   RoccoCartridgeActionResult,
-} from '../../../engine/cartridges';
-import type { RoccoPlaneScene } from '../../../engine/video/planes';
-import type { RoccoPoint } from '../../../engine/video/sprites';
+} from '../../../console/cartridges';
+import type { RoccoPlaneScene } from '../../../console/video/planes';
+import type { RoccoPoint } from '../../../console/video/sprites';
 import {
   DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
   DEFAULT_BAIT_SHOP_DOOR_PIVOT_X,
@@ -24,13 +24,13 @@ import {
   DEFAULT_STAN_SPRITE_INSTANCE_ID,
   PIER_LEVEL_TRANSITION_COOLDOWN_MS,
   ROCCO_PIER_MIDDLE_LEVEL_ID,
-} from '../rocco-default-constants';
+} from '../games/rocco-default/constants';
 import {
   roccoDefaultDeveloperSpriteCycleCursorAssetUrl,
   roccoDefaultActionMenuAssetUrls,
   roccoDefaultPoliceWhistleSoundUrl,
-} from '../rocco-default-assets';
-import { createRoccoLocalization, type RoccoLocalization } from '../localization';
+} from '../games/rocco-default/sprites';
+import { createRoccoLocalization, type RoccoLocalization } from '../games/rocco-default/localization';
 import {
   createRoccoKeysInventoryItem,
   createRoccoMagazineInventoryItem,
@@ -43,18 +43,18 @@ import {
   ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
   ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID,
   type RoccoInventoryItem,
-} from '../inventory';
-import { createRoccoAppearanceSpriteDefinition } from '../rocco-default-sprites';
+} from '../games/rocco-default/inventory';
+import { createRoccoAppearanceSpriteDefinition } from '../games/rocco-default/sprites';
 import {
   installRoccoPlayerActionMenu,
   uninstallRoccoPlayerActionMenu,
-} from '../rocco-player-action-menu';
+} from '../games/rocco-default/player';
 import {
   DEFAULT_ROCCO_PLAYER_APPEARANCE,
   ROCCO_LAB_COAT_PLAYER_APPEARANCE,
   type RoccoPlayerAppearance,
-} from '../rocco-player-appearance';
-import { roccoCartridgeMessageRuntime } from '../dialogue';
+} from '../games/rocco-default/player';
+import { roccoCartridgeMessageRuntime } from '../rpce/dialogue';
 import {
   type RoccoLevel,
   type RoccoLevelRestartRequest,
@@ -62,12 +62,12 @@ import {
 import {
   installPierBeginningAmbient,
   type RoccoPierBeginningAmbientPersistentState,
-} from './pier/pier-beginning-ambient';
-import { ROCCO_BAIT_SHOP_LEVEL_ID } from './bait-shop/bait-shop-level';
+} from '../games/rocco-default/maps/pier';
 import {
   RoccoBaitShopToiletLevel,
+  ROCCO_BAIT_SHOP_LEVEL_ID,
   ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
-} from './bait-shop/bait-shop-toilet-level';
+} from '../games/rocco-default/maps/shop';
 import { RoccoDeveloperRuntimeController } from './runtime/rocco-developer-runtime-controller';
 import { RoccoLevelRegistry } from './runtime/rocco-level-registry';
 import {
@@ -84,6 +84,7 @@ import {
 } from './runtime/rocco-scripted-sequence-controller';
 import { RoccoSceneActionRouter } from './runtime/rocco-scene-action-router';
 import { RoccoAssetPreloader } from './rocco-asset-preloader';
+import { createRoccoDefaultGameMaps } from '../games/rocco-default';
 
 export interface RoccoLevelManagerMountResult {
   level: RoccoLevel;
@@ -221,33 +222,35 @@ export class RoccoLevelManager {
       isStanAwake: () => this.isStanAwake(),
     });
     this.levelRegistry = new RoccoLevelRegistry({
-      localization: this.localization,
-      mountPierBeginningAmbient: (engine) =>
-        installPierBeginningAmbient(engine, this.localization, this.beginningAmbientState),
-      isStanIdentified: () => this.beginningAmbientState.stan.isIdentified,
-      hasMysteriousKey: () => this.inventory.hasItem(ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID),
-      onMysteriousKeyCollected: () =>
-        this.tryAddItemToInventory(createRoccoMysteriousKeyInventoryItem(this.localization)),
-      hasMagazine: () => this.inventory.hasItem(ROCCO_INVENTORY_MAGAZINE_ITEM_ID),
-      onMagazineCollected: (known) =>
-        this.tryAddItemToInventory(createRoccoMagazineInventoryItem(this.localization, known)),
-      hasCoralRelic: () =>
-        this.hasAccessibleInventoryItem(
-          ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
-          ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
-        ),
-      getCoralRelicAssemblyPlan: () =>
-        planRoccoCoralRelicAssembly(
-          this.listAccessibleInventoryItemIds(ROCCO_BAIT_SHOP_TOILET_LEVEL_ID),
-        ),
-      allowToiletReuseDuringUrgency: () =>
-        this.developerRuntime.isToiletReuseAllowedDuringUrgency(),
-      openStorageInventory: (storageId, onInventoryClosed) => {
-        this.openInventoryTransferMenu(storageId, onInventoryClosed);
-      },
-      closeStorageInventory: (storageId) => {
-        this.closeInventoryTransferMenu(storageId);
-      },
+      maps: createRoccoDefaultGameMaps({
+        localization: this.localization,
+        mountPierBeginningAmbient: (engine) =>
+          installPierBeginningAmbient(engine, this.localization, this.beginningAmbientState),
+        isStanIdentified: () => this.beginningAmbientState.stan.isIdentified,
+        hasMysteriousKey: () => this.inventory.hasItem(ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID),
+        onMysteriousKeyCollected: () =>
+          this.tryAddItemToInventory(createRoccoMysteriousKeyInventoryItem(this.localization)),
+        hasMagazine: () => this.inventory.hasItem(ROCCO_INVENTORY_MAGAZINE_ITEM_ID),
+        onMagazineCollected: (known) =>
+          this.tryAddItemToInventory(createRoccoMagazineInventoryItem(this.localization, known)),
+        hasCoralRelic: () =>
+          this.hasAccessibleInventoryItem(
+            ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
+            ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
+          ),
+        getCoralRelicAssemblyPlan: () =>
+          planRoccoCoralRelicAssembly(
+            this.listAccessibleInventoryItemIds(ROCCO_BAIT_SHOP_TOILET_LEVEL_ID),
+          ),
+        allowToiletReuseDuringUrgency: () =>
+          this.developerRuntime.isToiletReuseAllowedDuringUrgency(),
+        openStorageInventory: (storageId, onInventoryClosed) => {
+          this.openInventoryTransferMenu(storageId, onInventoryClosed);
+        },
+        closeStorageInventory: (storageId) => {
+          this.closeInventoryTransferMenu(storageId);
+        },
+      }),
     });
   }
 

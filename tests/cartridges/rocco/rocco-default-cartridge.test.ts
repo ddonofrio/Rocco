@@ -119,7 +119,7 @@ import {
 } from '../../../src/cartridges/rocco/rocco-default-assets';
 import { pierBackgroundAssetUrls } from '../../../src/cartridges/rocco/levels/pier/pier-assets';
 import { DEFAULT_FEEDING_LOOK_ACTION_MENU_ID } from '../../../src/cartridges/rocco/levels/pier/pier-feeding-interactions';
-import { DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS } from '../../../src/cartridges/rocco/levels/pier/pier-level';
+import { DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS } from '../../../src/cartridges/rocco/levels/pier/pier-middle-level';
 import {
   createDefaultActionMenuDefinition,
   DEFAULT_ACTION_MENU_ID,

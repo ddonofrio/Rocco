@@ -150,7 +150,8 @@ The current pier implementation shows the full pattern:
 
 - `pier-scene.ts` builds the default planes.
 - `pier-walkmap.ts` loads the shared walk map.
-- `pier-level.ts` and `pier-side-level.ts` mount specific windows.
+- `pier-middle-level.ts` mounts Pier Middle.
+- `pier-start-level.ts` and `pier-end-level.ts` mount the side windows.
 - `rocco-level-manager.ts` connects the screens.
 
 Key idea:

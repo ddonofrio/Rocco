@@ -12,8 +12,10 @@ The current concrete implementation and assets live in
 - `../rocco-level-types.ts` - Shared level, connector, rectangle, and mount option types.
 - `pier-level-manager.ts` - Compatibility export for the shared level manager.
 - `pier-level-types.ts` - Compatibility export for the shared level types.
-- `pier-level.ts` - `RoccoPierMiddleLevel`, the main interactive Pier level.
-- `pier-side-level.ts` - `RoccoPierSideLevel`, used by Pier Beginning and Pier End.
+- `pier-start-level.ts` - `RoccoPierStartLevel`, used by Pier Beginning.
+- `pier-middle-level.ts` - `RoccoPierMiddleLevel`, the main interactive Pier level.
+- `pier-end-level.ts` - `RoccoPierEndLevel`, used by Pier End.
+- `pier-side-level.ts` - `RoccoPierSideLevel`, shared base class for Pier Beginning and Pier End.
 - `pier-scene.ts` - Scene creation and persistence for each Pier level window.
 - `pier-walkmap.ts` - Walk-map loading and scroll-window alignment.
 - `pier-assets.ts` - Pier-specific asset URIs.

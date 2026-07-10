@@ -55,6 +55,7 @@ export interface RoccoTextCatalog {
     doorHandle: string;
     ascendingPipes: string;
     wheelValve: string;
+    shopExitDoorDescription: string;
   };
   levels: {
     beginning: string;
@@ -206,6 +207,8 @@ export interface RoccoTextCatalog {
     shellCityLookLines: string[];
     shellCityKnownStanLine: string;
     shellCityUnknownStanLine: string;
+    shopExitDoorLookLines: string[];
+    shopExitDoorOpenLine: string;
     benchLookLines: string[];
     benchKnownStanWaitLine: string;
     benchUnknownStanWaitLine: string;

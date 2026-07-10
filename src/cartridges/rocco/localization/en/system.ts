@@ -49,6 +49,7 @@ export const englishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   doorHandle: 'Door handle',
   ascendingPipes: 'Ascending pipes',
   wheelValve: 'Wheel valve',
+  shopExitDoorDescription: 'Exit door',
 };
 
 export const englishLevelsText: RoccoTextCatalog['levels'] = {

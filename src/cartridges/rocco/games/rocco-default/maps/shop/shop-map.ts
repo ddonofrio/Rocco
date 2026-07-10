@@ -27,6 +27,7 @@ export interface RoccoDefaultShopMapOptions {
   allowToiletReuseDuringUrgency: () => boolean;
   openStorageInventory: (storageId: string, onInventoryClosed?: () => void) => void;
   closeStorageInventory: (storageId: string) => void;
+  onExitShopRequested?: () => void;
 }
 
 export const ROCCO_DEFAULT_SHOP_CONNECTIONS: readonly RpceLevelConnection[] = [
@@ -61,6 +62,7 @@ export function createRoccoDefaultShopMap(
             onCloseStorageInventoryRequested: (storageId) => {
               options.closeStorageInventory(storageId);
             },
+            onExitShopRequested: options.onExitShopRequested,
           }),
       },
       {

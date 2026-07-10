@@ -24,6 +24,7 @@ import {
   DEFAULT_STAN_SPRITE_INSTANCE_ID,
   PIER_LEVEL_TRANSITION_COOLDOWN_MS,
   ROCCO_PIER_MIDDLE_LEVEL_ID,
+  ROCCO_PIER_START_LEVEL_ID,
 } from '../games/rocco-default/constants';
 import {
   roccoDefaultDeveloperSpriteCycleCursorAssetUrl,
@@ -250,6 +251,9 @@ export class RoccoLevelManager {
         closeStorageInventory: (storageId) => {
           this.closeInventoryTransferMenu(storageId);
         },
+        onExitShopRequested: () => {
+          void this.switchToLevel(ROCCO_PIER_START_LEVEL_ID, 'shop-exit');
+        },
       }),
     });
   }
@@ -472,7 +476,7 @@ export class RoccoLevelManager {
     };
   }
 
-  private async switchToLevel(levelId: string): Promise<boolean> {
+  private async switchToLevel(levelId: string, entryConnectorId?: string): Promise<boolean> {
     if (!this.engine || !this.activeLevel) {
       return false;
     }
@@ -500,7 +504,14 @@ export class RoccoLevelManager {
       this.clearActiveLevelDroppedInventoryPresentation();
       currentLevel.unmount(engine);
       this.activeLevel = targetLevel;
-      const scene = await targetLevel.mount(engine, this.createLevelMountOptions(), transitionPreloader);
+      const scene = await targetLevel.mount(
+        engine,
+        {
+          ...this.createLevelMountOptions(),
+          entryConnectorId,
+        },
+        transitionPreloader,
+      );
       if (nextNetherEntrySnapshot) {
         this.captureNetherEntrySnapshot(nextNetherEntrySnapshot);
       }

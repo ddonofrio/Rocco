@@ -178,4 +178,9 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'A barrel, a cask.',
     'What a shame I do not have a car or a house, or I would take it with me.',
   ],
+  shopExitDoorLookLines: [
+    'It is a door. Looks like the way out.',
+    'A wooden door. The shop exit.',
+  ],
+  shopExitDoorOpenLine: 'Time to go back to the pier.',
 };

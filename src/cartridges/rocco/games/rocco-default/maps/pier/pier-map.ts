@@ -47,6 +47,20 @@ const PIER_START_CONNECTORS: readonly RoccoLevelConnector[] = [
     },
     entryFacing: 'right',
   },
+  {
+    id: 'shop-exit',
+    exitArea: {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    },
+    entryPoint: {
+      x: 850,
+      y: DEFAULT_ENTRY_Y - 30,
+    },
+    entryFacing: 'down',
+  },
 ] as const;
 
 const PIER_END_CONNECTORS: readonly RoccoLevelConnector[] = [

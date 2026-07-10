@@ -181,4 +181,9 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'Un barril, un tonel.',
     'Qu\u00e9 l\u00e1stima no tener coche ni casa; si no, me lo llevaba.',
   ],
+  shopExitDoorLookLines: [
+    'Es una puerta. Parece la salida.',
+    'Una puerta de madera. La salida de la tienda.',
+  ],
+  shopExitDoorOpenLine: 'Voy a volver al muelle.',
 };

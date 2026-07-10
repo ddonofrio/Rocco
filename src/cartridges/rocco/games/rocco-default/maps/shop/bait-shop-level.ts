@@ -71,6 +71,7 @@ export interface RoccoBaitShopLevelOptions {
     onInventoryClosed: () => void,
   ) => void;
   onCloseStorageInventoryRequested?: (storageId: string) => void;
+  onExitShopRequested?: () => void;
 }
 
 const BAIT_SHOP_ENTRY_POSITION = {
@@ -85,6 +86,8 @@ const BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID = 'rocco-bait-shop-hidden-keys-ta
 const BAIT_SHOP_CASH_REGISTER_TARGET_INSTANCE_ID = 'rocco-bait-shop-cash-register-target';
 const BAIT_SHOP_WINDOW_TARGET_INSTANCE_ID = 'rocco-bait-shop-window-target';
 const BAIT_SHOP_LEFT_BARREL_TARGET_INSTANCE_ID = 'rocco-bait-shop-left-barrel-target';
+const BAIT_SHOP_EXIT_DOOR_TARGET_INSTANCE_ID = 'rocco-bait-shop-exit-door-target';
+const BAIT_SHOP_EXIT_DOOR_ACTION_MENU_ID = 'rocco-bait-shop-exit-door-action-menu';
 const BAIT_SHOP_BENCH_ACTION_MENU_ID = 'rocco-bait-shop-bench-action-menu';
 const BAIT_SHOP_POSTCARD_RACK_ACTION_MENU_ID = 'rocco-bait-shop-postcard-rack-action-menu';
 const BAIT_SHOP_SOUVENIR_TABLE_ACTION_MENU_ID = 'rocco-bait-shop-souvenir-table-action-menu';
@@ -352,6 +355,14 @@ const BAIT_SHOP_SCENE_TARGETS: readonly BaitShopSceneTargetSpec[] = [
     priority: 19,
     suppressDefaultPlayerMove: true,
   },
+  {
+    instanceId: BAIT_SHOP_EXIT_DOOR_TARGET_INSTANCE_ID,
+    definitionId: 'rocco-bait-shop-exit-door',
+    descriptionKey: 'shopExitDoorDescription',
+    shape: rect(774, 109, 33, 155),
+    priority: 20,
+    suppressDefaultPlayerMove: true,
+  },
 ];
 
 function makeFullscreenPlaneBase(): Pick<
@@ -570,6 +581,7 @@ function uninstallBaitShopSceneTargets(engine: RoccoEngine): void {
   }
   engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID);
   engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID);
+  engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_EXIT_DOOR_TARGET_INSTANCE_ID);
 }
 
 function makeBaitShopActionMenuBase(
@@ -779,6 +791,11 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     }
 
     if (activation.targetInstanceId !== BAIT_SHOP_CASH_REGISTER_TARGET_INSTANCE_ID) {
+      if (activation.targetInstanceId === BAIT_SHOP_EXIT_DOOR_TARGET_INSTANCE_ID) {
+        this.handleExitDoorAction(activation);
+        return;
+      }
+
       return;
     }
 
@@ -912,6 +929,22 @@ export class RoccoBaitShopLevel implements RoccoLevel {
           this.openSouvenirCloseup();
         },
       });
+      return;
+    }
+  }
+
+  private handleExitDoorAction(activation: RoccoActionMenuActivation): void {
+    if (activation.actionId === 'look') {
+      this.showBaitShopLines(
+        this.localization.text.baitShop.shopExitDoorLookLines,
+        'bait-shop-exit-door-look',
+      );
+      return;
+    }
+
+    if (activation.actionId === 'open') {
+      this.showSingleBaitShopLine(this.localization.text.baitShop.shopExitDoorOpenLine);
+      this.options.onExitShopRequested?.();
       return;
     }
   }
@@ -1165,10 +1198,12 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_POSTCARD_RACK_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_SOUVENIR_TABLE_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_CASH_REGISTER_ACTION_MENU_ID);
+    engine.video.actionMenus.unregisterMenu(BAIT_SHOP_EXIT_DOOR_ACTION_MENU_ID);
     engine.video.actionMenus.registerMenu(this.createBenchActionMenuDefinition());
     engine.video.actionMenus.registerMenu(this.createPostcardRackActionMenuDefinition());
     engine.video.actionMenus.registerMenu(this.createSouvenirTableActionMenuDefinition());
     engine.video.actionMenus.registerMenu(this.createCashRegisterActionMenuDefinition());
+    engine.video.actionMenus.registerMenu(this.createExitDoorActionMenuDefinition());
     engine.video.render(0);
   }
 
@@ -1177,6 +1212,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_POSTCARD_RACK_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_SOUVENIR_TABLE_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_CASH_REGISTER_ACTION_MENU_ID);
+    engine.video.actionMenus.unregisterMenu(BAIT_SHOP_EXIT_DOOR_ACTION_MENU_ID);
     engine.video.render(0);
   }
 
@@ -1290,6 +1326,29 @@ export class RoccoBaitShopLevel implements RoccoLevel {
           id: 'grab',
           actionId: 'grab',
           label: this.localization.text.actions.grab,
+          imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        },
+      ],
+    };
+  }
+
+  private createExitDoorActionMenuDefinition(): RoccoActionMenuDefinition {
+    return {
+      ...makeBaitShopActionMenuBase(
+        BAIT_SHOP_EXIT_DOOR_ACTION_MENU_ID,
+        BAIT_SHOP_EXIT_DOOR_TARGET_INSTANCE_ID,
+      ),
+      items: [
+        {
+          id: 'look',
+          actionId: 'look',
+          label: this.localization.text.actions.look,
+          imageUri: roccoDefaultActionMenuAssetUrls.look,
+        },
+        {
+          id: 'open',
+          actionId: 'open',
+          label: this.localization.text.baitShop.toiletDoorOpenLabel,
           imageUri: roccoDefaultActionMenuAssetUrls.grab,
         },
       ],

@@ -38,15 +38,27 @@ function createRoot(): HTMLElement {
   return root;
 }
 
-function dispatchPointer(target: HTMLElement, type: string, clientX: number, clientY: number, button = 0): void {
-  target.dispatchEvent(
-    new MouseEvent(type, {
-      bubbles: true,
-      clientX,
-      clientY,
-      button,
-    }),
-  );
+function dispatchPointer(
+  target: HTMLElement,
+  type: string,
+  clientX: number,
+  clientY: number,
+  button = 0,
+  pointerType?: string,
+): void {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    clientX,
+    clientY,
+    button,
+  });
+  if (pointerType) {
+    Object.defineProperty(event, 'pointerType', {
+      configurable: true,
+      value: pointerType,
+    });
+  }
+  target.dispatchEvent(event);
 }
 
 afterEach(() => {
@@ -126,6 +138,21 @@ describe('RoccoCursorHost', () => {
       sceneY: 48,
     });
     expect(onLeave).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not emit leave events for touch pointers', () => {
+    const root = createRoot();
+    const onLeave = vi.fn();
+    const cursorHost = new RoccoCursorHost({ rootElement: root, onLeave });
+    cursorHost.mount();
+    cursorHost.applyMetrics(makeMetrics());
+
+    dispatchPointer(root, 'pointermove', 170, 102, 0, 'touch');
+    dispatchPointer(root, 'pointermove', 30, 102, 0, 'touch');
+    dispatchPointer(root, 'pointerleave', 30, 102, 0, 'touch');
+
+    expect(onLeave).not.toHaveBeenCalled();
+    expect(cursorHost.getCursorElement().style.display).toBe('none');
   });
 
   it('shows an image attachment instead of cursor lines', () => {

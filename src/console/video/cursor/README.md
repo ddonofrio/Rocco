@@ -14,6 +14,7 @@ The cursor subsystem owns the console pointer overlay and converts browser point
 - Pointer movement is constrained to the contained game viewport.
 - Cursor actions emit scene coordinates for engine input routing.
 - A cursor attachment can replace the line cursor with a generic image payload.
+- Touch pointers hide the cursor overlay when contact ends, but they do not emit cursor-leave callbacks that would dismiss hover-driven UI between taps.
 
 ## Boundary
 

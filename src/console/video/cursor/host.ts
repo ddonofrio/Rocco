@@ -59,6 +59,10 @@ export const defaultRoccoCursorProfile: RoccoCursorProfile = {
   opacity: 0.95,
 };
 
+function shouldNotifyLeave(event: PointerEvent): boolean {
+  return event.pointerType !== 'touch';
+}
+
 export class RoccoCursorHost {
   private readonly rootElement: HTMLElement;
   private readonly cursorElement: HTMLDivElement;
@@ -265,7 +269,9 @@ export class RoccoCursorHost {
     const point = this.resolveCursorPoint(event.clientX, event.clientY);
     if (!point) {
       this.setVisible(false);
-      this.leaveHandler?.();
+      if (shouldNotifyLeave(event)) {
+        this.leaveHandler?.();
+      }
       return;
     }
 
@@ -277,10 +283,12 @@ export class RoccoCursorHost {
     });
   };
 
-  private readonly onPointerLeave = (): void => {
+  private readonly onPointerLeave = (event: PointerEvent): void => {
     this.lastClientPoint = null;
     this.setVisible(false);
-    this.leaveHandler?.();
+    if (shouldNotifyLeave(event)) {
+      this.leaveHandler?.();
+    }
   };
 
   private readonly onPointerDown = (event: PointerEvent): void => {

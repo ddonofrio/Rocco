@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
-import type { RoccoPlaneScene } from '../../../../../src/console/video/planes';
-import type { RoccoSpriteInstance } from '../../../../../src/console/video/sprites';
+import type { RoccoSpriteInstance, RoccoSpriteWalkMap } from '../../../../../src/console/video/sprites';
 import { createRoccoLocalization } from '../../../../../src/cartridges/rocco/localization';
 import {
   PIER_PLAYER_LEFT_ENTRY_X,
   PIER_PLAYER_RIGHT_ENTRY_X,
+  DEFAULT_SPRITE_INSTANCE_ID,
   DEFAULT_SPRITE_SCALE,
   DEFAULT_SPRITE_Y_VALUES,
 } from '../../../../../src/cartridges/rocco/rocco-default-constants';
@@ -30,13 +30,13 @@ vi.mock('../../../../../src/console/video/sprites', async (importOriginal) => {
           origin: { x: 0, y: 0 },
           alphaThreshold: options.alphaThreshold ?? 1,
           columns: [],
-        }) as any,
+        }) satisfies RoccoSpriteWalkMap,
     ),
   };
 });
 
 vi.mock('../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-scene', () => ({
-  loadOrCreatePierScene: vi.fn(async () => ({ id: 'mocked-scene', planes: [] } as RoccoPlaneScene)),
+  loadOrCreatePierScene: vi.fn(() => ({ id: 'mocked-scene', planes: [] })),
 }));
 
 vi.mock('../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-walkmap', () => ({
@@ -45,13 +45,25 @@ vi.mock('../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-
 }));
 
 vi.mock('../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-clouds', () => ({
-  installDefaultCloud: vi.fn(async () => ({})),
+  installDefaultCloud: vi.fn(() => ({})),
   uninstallDefaultCloud: vi.fn(() => {}),
 }));
 
-function createEngineMock(): RoccoEngine {
-  const createdSprites: RoccoSpriteInstance[] = [];
+interface TestState {
+  createdSprites: RoccoSpriteInstance[];
+}
 
+function createState(): TestState {
+  return {
+    createdSprites: [],
+  };
+}
+
+function findCreatedSprite(state: TestState, instanceId: string): RoccoSpriteInstance | undefined {
+  return state.createdSprites.findLast((sprite) => sprite.id === instanceId);
+}
+
+function createEngineMock(state: TestState): RoccoEngine {
   return {
     video: {
       preloadAssetUrls: () => Promise.resolve(),
@@ -69,13 +81,13 @@ function createEngineMock(): RoccoEngine {
       },
       sceneTargets: {
         registerTarget: () => {},
-      } as any,
+      } as unknown as RoccoEngine['video']['sceneTargets'],
       sprites: {
         registerWalkMap: () => {},
         loadSpriteDefinition: () => {},
         removeSprite: () => {},
-        getSprite: (instanceId: string) => createdSprites.findLast((s) => s.id === instanceId),
-        createSpriteFromDefinition: (definitionId: string, options?: any) => {
+        getSprite: (instanceId: string) => findCreatedSprite(state, instanceId),
+        createSpriteFromDefinition: (definitionId: string, options?: Partial<RoccoSpriteInstance>) => {
           const sprite: RoccoSpriteInstance = {
             id: options?.id ?? definitionId,
             definitionId,
@@ -95,25 +107,22 @@ function createEngineMock(): RoccoEngine {
             zIndex: options?.zIndex ?? 0,
             opacity: options?.opacity ?? 1,
           };
-          createdSprites.push(sprite);
+          state.createdSprites.push(sprite);
           return sprite;
         },
         bindToWalkMap: () => {},
         playAction: () => {},
-      } as any,
-    } as any,
+      } as unknown as RoccoEngine['video']['sprites'],
+    } as unknown as RoccoEngine['video'],
     persistence: {
       loadPlaneSceneRecord: () => Promise.resolve(null),
       savePlaneScene: () => Promise.resolve(),
-    } as any,
+    } as unknown as RoccoEngine['persistence'],
     loadPlaneScene: () => {},
     setInputEnabled: () => {},
     isInputEnabled: () => true,
     setPlayerSprite: () => {},
     log: () => {},
-    get lastCreatedSprite(): RoccoSpriteInstance | undefined {
-      return createdSprites[createdSprites.length - 1];
-    },
   } as unknown as RoccoEngine;
 }
 
@@ -138,23 +147,25 @@ describe('RoccoPierStartLevel', () => {
   });
 
   it('spawns Rocco at the left edge facing right when mounted without an explicit entry connector', async () => {
-    const engine = createEngineMock();
+    const state = createState();
+    const engine = createEngineMock(state);
     const level = new RoccoPierStartLevel({ localization: createRoccoLocalization() });
 
     await level.mount(engine);
 
-    const rocco = (engine as any).lastCreatedSprite;
+    const rocco = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
     expect(rocco?.transform?.x).toBe(PIER_PLAYER_LEFT_ENTRY_X);
     expect(rocco?.transform?.y).toBe(DEFAULT_SPRITE_Y_VALUES[0] ?? 180);
   });
 
   it('uses the shop-exit connector when requested', async () => {
-    const engine = createEngineMock();
+    const state = createState();
+    const engine = createEngineMock(state);
     const level = new RoccoPierStartLevel({ localization: createRoccoLocalization() });
 
     await level.mount(engine, { entryConnectorId: 'shop-exit' });
 
-    const rocco = (engine as any).lastCreatedSprite;
+    const rocco = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
     expect(rocco?.transform?.x).toBe(850);
     expect(rocco?.transform?.y).toBe((DEFAULT_SPRITE_Y_VALUES[0] ?? 180) - 30);
   });
@@ -176,12 +187,13 @@ describe('RoccoPierEndLevel', () => {
   });
 
   it('spawns Rocco at the right edge facing left when mounted without an explicit entry connector', async () => {
-    const engine = createEngineMock();
+    const state = createState();
+    const engine = createEngineMock(state);
     const level = new RoccoPierEndLevel({ localization: createRoccoLocalization() });
 
     await level.mount(engine);
 
-    const rocco = (engine as any).lastCreatedSprite;
+    const rocco = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
     expect(rocco?.transform?.x).toBe(PIER_PLAYER_RIGHT_ENTRY_X);
     expect(rocco?.transform?.y).toBe(DEFAULT_SPRITE_Y_VALUES[0] ?? 180);
   });

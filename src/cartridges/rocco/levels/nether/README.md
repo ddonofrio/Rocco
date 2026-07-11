@@ -11,7 +11,7 @@ The current concrete implementation and assets live in
 - `nether-console-hardware-spawn-level.ts` - `RoccoNetherConsoleHardwareSpawnLevel`, the first Nether screen with the one-time portal arrival sequence, region-aware perspective scaling, security-camera defeat logic, and the forward connector into Nether 2.
 - `nether-end-of-hallway-door-level.ts` - `RoccoNetherEndOfHallwayDoorLevel`, the second Nether screen with a milder perspective setup, mounted doorbell, door-handle, ascending-pipes, and wheel-valve interactions, and the return connector back to Nether 1.
 - `nether-reset-office-level.ts` - `RoccoNetherResetOfficeLevel`, the first Reset Office screen, available through developer mode and connected to its second screen through the same mirrored horizontal handoff used by the bait shop pair.
-- `nether-reset-office-second-level.ts` - `RoccoNetherResetOfficeSecondLevel`, the second Reset Office screen, which mirrors horizontal return placement and includes the office printer prop interaction.
+- `nether-reset-office-second-level.ts` - `RoccoNetherResetOfficeSecondLevel`, the second Reset Office screen, which mirrors horizontal return placement.
 - `nether-level-support.ts` - Shared scene loading, walk-map projection, and ground-point helpers for Nether screens.
 - `nether-arrival-effects.ts` - Shared portal and smoke sprite definitions reused by the Nether arrival sequence.
 - `nether-assets.ts` - Local asset URIs for the Nether backgrounds and walk maps.
@@ -32,5 +32,4 @@ The current concrete implementation and assets live in
 - The Reset Office pair is intentionally disconnected from the normal Nether graph and currently loads only through developer mode.
 - Developer mode groups the Reset Office pair under the Nether screen picker rather than treating it as a separate map.
 - The Reset Office first screen uses a fixed developer entry at `371,138` facing down, while both office screens enter from each other at the bottom edge with mirrored horizontal placement.
-- The Reset Office second screen mounts a printer sprite prop at the left side of the room with `look`, `grab`, and `kick` actions.
 - The legacy files in this directory now re-export from the game-owned Nether map folder so older imports keep resolving during the refactor.

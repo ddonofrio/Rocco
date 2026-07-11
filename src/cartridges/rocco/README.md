@@ -48,7 +48,7 @@ The cartridge starts in Pier Middle and currently spans three maps.
 | Nether | Console hardware spawn | `nether-console-hardware-spawn` | `rocco-nether-console-hardware-spawn-scene` | First Nether screen after the portal arrival |
 | Nether | End of hallway door | `nether-end-of-hallway-door` | `rocco-nether-end-of-hallway-door-scene` | Second Nether screen with mounted scene-target interactions |
 | Nether | Reset Office 1 | `nether-reset-office` | `rocco-nether-reset-office-scene` | Developer-only branch inside the Nether map |
-| Nether | Reset Office 2 | `nether-reset-office-second` | `rocco-nether-reset-office-second-scene` | Developer-only branch with the printer prop |
+| Nether | Reset Office 2 | `nether-reset-office-second` | `rocco-nether-reset-office-second-scene` | Developer-only branch |
 
 Rocco transitions through edge connectors on connected screens. The cartridge bootstrap mounts RPCE, RPCE mounts the current `rocco-default` game, and the game owns Pier, Shop, and Nether map definitions plus the current concrete implementations under `games/rocco-default/maps/*`. The legacy `levels/**` folders remain compatibility wrappers so older imports can keep resolving while the game-layer paths act as the source of truth.
 
@@ -74,7 +74,7 @@ Rocco transitions through edge connectors on connected screens. The cartridge bo
 - Pier Middle exits are available without an inventory gate.
 - The toilet-room portal opens a first-time arrival sequence in Nether and then hands off to a connected second Nether screen.
 - Developer mode also exposes an `Alter events` path for runtime-only test overrides such as allowing the bait-shop toilet to be reused after the magazine warning.
-- Developer mode also exposes the two-screen Reset Office branch inside the Nether map through the Nether screen picker, and the second screen includes an office printer prop with `look`, `grab`, and `kick` actions.
+- Developer mode also exposes the two-screen Reset Office branch inside the Nether map through the Nether screen picker.
 
 ## Localization
 

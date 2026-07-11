@@ -20,7 +20,7 @@ const baseBuiltinCartridgeConfigs: RoccoBuiltinCartridgeConfig[] = [
     manifest: roccoDefaultCartridgeManifest,
     createCartridge: () => new RoccoDefaultCartridge(),
     preferredLocaleStorageKey: 'rocco.default.locale',
-    defaultLocale: 'en',
+    defaultLocale: 'es',
   },
   {
     manifest: terminalWorkInProgressCartridgeManifest,

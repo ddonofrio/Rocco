@@ -25,7 +25,7 @@ Each locale has its own directory. The directory `index.ts` assembles a complete
 
 ## Supported Locales
 
-- `en` - English, default.
+- `es` - Spanish, default.
 - `es` - Spanish.
 
 ## Coverage

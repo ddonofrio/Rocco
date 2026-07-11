@@ -126,8 +126,8 @@ Minimal engine-side usage:
 ```typescript
 const menu = new RoccoCartridgeMenu(app);
 const result = await menu.show(manifests, {
-  initialLocales: {
-    'rocco-default': 'en',
+    initialLocales: {
+    'rocco-default': 'es',
   },
 });
 

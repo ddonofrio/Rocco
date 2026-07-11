@@ -1,6 +1,6 @@
 ﻿import type { RoccoDialogueChoiceNode } from '../rpce/dialogue';
 
-export const ROCCO_DEFAULT_LOCALE = 'en';
+export const ROCCO_DEFAULT_LOCALE = 'es';
 export const ROCCO_SUPPORTED_LOCALES = ['en', 'es'] as const;
 
 export type RoccoLocale = (typeof ROCCO_SUPPORTED_LOCALES)[number];

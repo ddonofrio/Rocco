@@ -283,7 +283,7 @@ function makeActionActivation(
 
 function createInventoryWithKeys(): RoccoInventory {
   const inventory = new RoccoInventory();
-  inventory.addItem(createRoccoKeysInventoryItem(createRoccoLocalization()));
+  inventory.addItem(createRoccoKeysInventoryItem(createRoccoLocalization('en')));
   return inventory;
 }
 
@@ -1534,9 +1534,11 @@ describe('RoccoDefaultCartridge', () => {
   it('opens a 3x3 Rocco inventory grid from Rocco action menu', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
+    const localization = createRoccoLocalization('en');
     const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
+      localization,
     });
 
     await manager.mount(engine);
@@ -1722,9 +1724,11 @@ describe('RoccoDefaultCartridge', () => {
   it('transitions from Pier Middle east to Pier Beginning after Rocco has the keys', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
+    const localization = createRoccoLocalization('en');
     const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
+      localization,
     });
 
     await manager.mount(engine);
@@ -2482,9 +2486,11 @@ describe('RoccoDefaultCartridge', () => {
   it('transitions from Pier Middle west to Pier End after Rocco has the keys', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
+    const localization = createRoccoLocalization('en');
     const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
+      localization,
     });
 
     await manager.mount(engine);

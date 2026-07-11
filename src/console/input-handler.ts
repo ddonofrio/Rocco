@@ -8,6 +8,7 @@ import { RoccoRuntimeDefaultPlayerMovePolicyCoordinator } from './runtime-defaul
 import { RoccoRuntimeInputPresentationCoordinator } from './runtime-input-presentation-coordinator';
 
 const PLAYER_IDLE_SETTLE_DELAY_MS = 650;
+const MIN_MESSAGE_CANCEL_AGE_MS = 250;
 
 type InputHandlerVideoSystem = Pick<RoccoRuntimeVideoSystem, 'render' | 'resolveSceneTargets'> & {
   readonly actionMenus: Pick<
@@ -90,7 +91,19 @@ export class RoccoInputHandler {
 
     // Runtime sequences can still consume clicks as "advance" inputs while normal interaction is disabled.
     if (!this.inputEnabled) {
+      if (this.hasProtectedForegroundMessages()) {
+        this.logFn(
+          'Cursor',
+          `IGNORE advance click at (${x}, ${y}) while dialogue is still protected.`,
+        );
+        return;
+      }
       this.handleDisabledCursorAction(event, x, y);
+      return;
+    }
+
+    if (this.hasProtectedForegroundMessages()) {
+      this.logFn('Cursor', `IGNORE dialogue dismiss at (${x}, ${y}) while dialogue is still protected.`);
       return;
     }
 
@@ -100,8 +113,6 @@ export class RoccoInputHandler {
       this.logFn('Cursor', `DISMISS dialogue at (${x}, ${y}).`);
       return;
     }
-
-    this.clearForegroundMessages();
 
     if (this.handleGridMenuCursorAction(event)) {
       return;
@@ -391,5 +402,24 @@ export class RoccoInputHandler {
     }
 
     return true;
+  }
+
+  private hasProtectedForegroundMessages(): boolean {
+    return this.videoSystem.messages
+      .listMessages()
+      .some(
+        (message) =>
+          message.background !== true &&
+          this.resolveCurrentMessageVisibleAgeMs(message.durationMs, message.ttlMs) <
+            MIN_MESSAGE_CANCEL_AGE_MS,
+      );
+  }
+
+  private resolveCurrentMessageVisibleAgeMs(durationMs: number, ttlMs: number): number {
+    if (!Number.isFinite(durationMs) || !Number.isFinite(ttlMs)) {
+      return MIN_MESSAGE_CANCEL_AGE_MS;
+    }
+
+    return Math.max(0, durationMs - ttlMs);
   }
 }

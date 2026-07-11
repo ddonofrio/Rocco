@@ -138,12 +138,12 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
   souvenirTableLookLines: [
     'A table full of shells, starfish, and other beach souvenirs.',
     'Bits and pieces from the shore, arranged like little treasures.',
-    'Sea things with glued-on eyes and a price tag.',
+    'Things found on the shore of any beach.',
   ],
   souvenirTableKnownStanLine:
-    'Stan finds these on the beach, puts eyes on them, and sells them here.',
+    'Stan finds these on the beach, cleans them, and sells them here.',
   souvenirTableUnknownStanLine:
-    'The old man finds these on the beach, puts eyes on them, and sells them here.',
+    'The old man finds these on the beach, cleans them, and sells them here.',
   souvenirTableKickLines: [
     'No. That would send shells flying everywhere.',
     'Too fragile for a kick.',

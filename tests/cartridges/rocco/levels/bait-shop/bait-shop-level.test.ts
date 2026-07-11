@@ -511,6 +511,59 @@ describe('RoccoBaitShopLevel', () => {
     expect(onMysteriousKeyCollected).not.toHaveBeenCalled();
   });
 
+  it('climbs down from the bench before starting a walk-to-grab souvenir interaction', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = createState();
+    const engine = createEngineMock(state);
+    const onOpenStorageInventoryRequested = vi.fn();
+    const level = new RoccoBaitShopLevel(localization, {
+      onOpenStorageInventoryRequested,
+    });
+
+    await level.mount(engine);
+
+    level.handleAction({
+      definitionId: 'test-bench',
+      targetInstanceId: BAIT_SHOP_BENCH_TARGET_INSTANCE_ID,
+      targetDefinitionId: 'rocco-bait-shop-bench',
+      itemId: 'kick',
+      actionId: 'kick',
+    });
+    state.isSpriteMovingValue = false;
+    level.update(16);
+    level.update(520);
+
+    state.goToSprites = [];
+
+    level.handleAction({
+      definitionId: 'test-souvenir-table',
+      targetInstanceId: BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID,
+      targetDefinitionId: 'rocco-bait-shop-souvenir-table',
+      itemId: 'grab',
+      actionId: 'grab',
+    });
+
+    expect(state.goToSprites).toEqual([]);
+    expect(onOpenStorageInventoryRequested).not.toHaveBeenCalled();
+
+    level.update(520);
+
+    expect(state.goToSprites).toEqual([`${DEFAULT_SPRITE_INSTANCE_ID}:228,365`]);
+    expect(onOpenStorageInventoryRequested).not.toHaveBeenCalled();
+
+    const rocco = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+    expect(rocco?.navigation).toMatchObject({
+      walkMapId: DEFAULT_WALK_MAP_ID,
+      constrainMovement: true,
+      followSurface: true,
+    });
+
+    state.isSpriteMovingValue = false;
+    level.update(16);
+
+    expect(onOpenStorageInventoryRequested).toHaveBeenCalledOnce();
+  });
+
   it('hides the souvenir closeup as soon as the storage inventory reports that it closed', async () => {
     const localization = createRoccoLocalization('es');
     const state = createState();

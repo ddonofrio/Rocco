@@ -144,11 +144,8 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo "SERVER_USER=${{ secrets.SERVER_USER }}" >> $GITHUB_ENV
-          echo "SERVER_HOST=${{ secrets.SERVER_HOST }}" >> $GITHUB_ENV
-          echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> $GITHUB_ENV
-          echo "REMOTE_PATH=${{ secrets.REMOTE_PATH }}" >> $GITHUB_ENV
           echo "SSH key loaded: $(ssh-add -l)"
           ls -la dist/
           ssh-keyscan -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts || true
+          ssh -vvv -o BatchMode=yes -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} echo "SSH OK" || true
           scp -r -o StrictHostKeyChecking=no -P ${{ secrets.SERVER_PORT }} dist/* ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.REMOTE_PATH }}/

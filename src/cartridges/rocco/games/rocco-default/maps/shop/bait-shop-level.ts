@@ -34,7 +34,10 @@ import {
   uninstallDefaultSprite,
   type RoccoDefaultSpriteController,
 } from '../../sprites';
-import { RoccoScriptedSceneInteractionController } from '../../../../scripted-scene-interaction-controller';
+import {
+  RoccoScriptedSceneInteractionController,
+  type RoccoScriptedSceneInteractionDefinition,
+} from '../../../../scripted-scene-interaction-controller';
 import {
   findRoccoLevelConnector,
   type RoccoLevel,
@@ -159,6 +162,11 @@ interface BaitShopBenchJumpSequence {
   startOrigin: RoccoPoint;
   endOrigin: RoccoPoint;
   landingFacing: RoccoFacingDirection;
+  onComplete?: () => void;
+}
+
+interface BaitShopBenchJumpDownOptions {
+  walkTo?: RoccoPoint;
   onComplete?: () => void;
 }
 
@@ -821,7 +829,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       return;
     }
 
-    this.scriptedInteractionController?.run({
+    this.runBenchAwareScriptedInteraction({
       targetInstanceId: BAIT_SHOP_CASH_REGISTER_TARGET_INSTANCE_ID,
       moveTo: { ...BAIT_SHOP_CASH_REGISTER_INTERACTION_POINT },
       facing: 'down-left',
@@ -845,7 +853,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     }
 
     if (activation.actionId === 'kick') {
-      this.scriptedInteractionController?.run({
+      this.runBenchAwareScriptedInteraction({
         targetInstanceId: BAIT_SHOP_BENCH_TARGET_INSTANCE_ID,
         moveTo: { ...BAIT_SHOP_BENCH_KICK_START_POINT },
         constrainToWalkMap: false,
@@ -862,7 +870,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       return;
     }
 
-    this.scriptedInteractionController?.run({
+    this.runBenchAwareScriptedInteraction({
       targetInstanceId: BAIT_SHOP_BENCH_TARGET_INSTANCE_ID,
       moveTo: { ...BAIT_SHOP_BENCH_INTERACTION_POINT },
       facing: 'up-right',
@@ -921,7 +929,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     }
 
     if (activation.actionId === 'grab') {
-      this.scriptedInteractionController?.run({
+      this.runBenchAwareScriptedInteraction({
         targetInstanceId: BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID,
         moveTo: { ...BAIT_SHOP_SOUVENIR_TABLE_INTERACTION_POINT },
         facing: 'up-left',
@@ -965,7 +973,25 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     }
 
     if (this.roccoOnBench && !activation.targetInstanceId) {
-      this.startBenchJumpDownSequence(activation);
+      this.startBenchJumpDownSequence({
+        walkTo: {
+          x: activation.sceneX,
+          y: activation.sceneY,
+        },
+      });
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (
+      this.roccoOnBench &&
+      activation.targetInstanceId &&
+      this.scriptedInteractionController?.hasTarget(activation.targetInstanceId)
+    ) {
+      this.startBenchJumpDownSequence({
+        onComplete: () => {
+          this.scriptedInteractionController?.handleSceneClick(activation);
+        },
+      });
       return { suppressDefaultPlayerMove: true };
     }
 
@@ -1032,7 +1058,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     this.engine.video.render(0);
   }
 
-  private startBenchJumpDownSequence(activation: RoccoSceneClickAction): void {
+  private startBenchJumpDownSequence(options: BaitShopBenchJumpDownOptions = {}): void {
     if (!this.engine) {
       return;
     }
@@ -1070,15 +1096,22 @@ export class RoccoBaitShopLevel implements RoccoLevel {
 
         this.setRoccoWalkConstraint(true);
         this.engine.setInputEnabled(true);
-        this.engine.video.sprites.goTo(
-          DEFAULT_SPRITE_INSTANCE_ID,
-          activation.sceneX,
-          activation.sceneY,
-          {
-            idleSettleDelayMs: BAIT_SHOP_BENCH_DISMOUNT_IDLE_SETTLE_DELAY_MS,
-            idleSettleFacing: 'diagonal-from-facing',
-          },
-        );
+        if (options.onComplete) {
+          options.onComplete();
+          return;
+        }
+
+        if (options.walkTo) {
+          this.engine.video.sprites.goTo(
+            DEFAULT_SPRITE_INSTANCE_ID,
+            options.walkTo.x,
+            options.walkTo.y,
+            {
+              idleSettleDelayMs: BAIT_SHOP_BENCH_DISMOUNT_IDLE_SETTLE_DELAY_MS,
+              idleSettleFacing: 'diagonal-from-facing',
+            },
+          );
+        }
         this.engine.video.render(0);
       },
     };
@@ -1170,6 +1203,21 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       constrainMovement,
       followSurface: true,
     });
+  }
+
+  private runBenchAwareScriptedInteraction(
+    definition: RoccoScriptedSceneInteractionDefinition,
+  ): void {
+    if (this.roccoOnBench) {
+      this.startBenchJumpDownSequence({
+        onComplete: () => {
+          this.scriptedInteractionController?.run(definition);
+        },
+      });
+      return;
+    }
+
+    this.scriptedInteractionController?.run(definition);
   }
 
   private resolveShellCityLookLines(): string[] {

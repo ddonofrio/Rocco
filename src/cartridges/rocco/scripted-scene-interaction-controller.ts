@@ -82,6 +82,14 @@ export class RoccoScriptedSceneInteractionController {
     this.engine.video.render(0);
   }
 
+  hasTarget(targetInstanceId: string | null | undefined): boolean {
+    if (!targetInstanceId) {
+      return false;
+    }
+
+    return this.definitions.has(targetInstanceId);
+  }
+
   cancel(): void {
     if (!this.activeInteraction) {
       return;

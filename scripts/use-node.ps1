@@ -12,7 +12,7 @@ if ($scriptPath.StartsWith('\\?\', [System.StringComparison]::OrdinalIgnoreCase)
 }
 $scriptRoot = [System.IO.Path]::GetDirectoryName($scriptPath)
 
-$nodeVersion = 'v24.16.0'
+$nodeVersion = 'v24.18.0'
 $repoRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($scriptRoot, '..'))
 $workspaceRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($repoRoot, '..'))
 $toolsRoot = [System.IO.Path]::Combine($workspaceRoot, '_tools')

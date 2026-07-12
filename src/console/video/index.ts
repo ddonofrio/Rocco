@@ -21,3 +21,4 @@ export * as display from './display';
 export * as cursor from './cursor';
 export * as viewport from './viewport';
 export * as postProcessing from './post-processing';
+export * as zoom from './zoom';

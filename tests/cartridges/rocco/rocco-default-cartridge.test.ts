@@ -7,6 +7,7 @@ import type { RoccoJukeboxSystem } from '../../../src/console/audio/jukebox';
 import type { RoccoEffect, RoccoEffectManager } from '../../../src/console/effects';
 import type { RoccoActionMenuSystem } from '../../../src/console/video/action-menu';
 import type { RoccoVideoDisplayModule, RoccoVideoPlaneModule, RoccoVideoSystem } from '../../../src/console/video';
+import type { RoccoVideoZoomModule } from '../../../src/console/video/zoom';
 import type { RoccoGridMenuSystem } from '../../../src/console/video/grid-menu';
 import type { RoccoSpriteMessageSystem, RoccoSpriteMessageText } from '../../../src/console/video/messages';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../src/console/video/planes';
@@ -952,6 +953,27 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
   };
 
+  const zoom: RoccoVideoZoomModule = {
+    getTransform() {
+      return { factor: 1, focusX: 0, focusY: 0, anchorX: 0, anchorY: 0 };
+    },
+    setTransform() {
+      // noop
+    },
+    animateTo() {
+      // noop
+    },
+    clear() {
+      // noop
+    },
+    isEnabled() {
+      return false;
+    },
+    isAnimating() {
+      return false;
+    },
+  };
+
   const video: RoccoVideoSystem = {
     sprites,
     messages,
@@ -968,6 +990,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
         return undefined;
       },
     },
+    zoom,
     planes,
     setRenderLayerOrder(_layers: RoccoRenderLayer[]) {
       void _layers;

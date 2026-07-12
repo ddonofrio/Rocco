@@ -137,6 +137,10 @@ const NETHER_ARRIVAL_THOUGHT_TTL_MS = 3600;
 const NETHER_ARRIVAL_PORTAL_LOOP_SOUND_VOLUME = 0.5;
 const NETHER_ARRIVAL_SPELL_SOUND_VOLUME = 0.42;
 const NETHER_ARRIVAL_PORTAL_OPEN_FRAME_COUNT = 8;
+const NETHER_ARRIVAL_ZOOM_HOLD_MS = 2000;
+const NETHER_ARRIVAL_ZOOM_OUT_MS = 1000;
+const NETHER_ARRIVAL_ZOOM_FACTOR = 3;
+const NETHER_ARRIVAL_ZOOM_EASE: 'linear' | 'ease-in-out' = 'ease-in-out';
 const NETHER_LIGHTS_MIN_OPACITY = 0;
 const NETHER_LIGHTS_NOISE_MAX_OPACITY = 0.15;
 const NETHER_LIGHTS_NOISE_STEP_MIN_MS = 70;
@@ -893,6 +897,8 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
   private sceneReady = false;
   private shelfLookedAt = false;
   private shelfTaken = false;
+  private zoomIntroPhase: 'hold' | 'zoom-out' | null = null;
+  private zoomIntroElapsedMs = 0;
 
   constructor(localization: RoccoLocalization) {
     this.localization = localization;
@@ -934,6 +940,8 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
     this.sceneReady = false;
     this.shelfLookedAt = false;
     this.shelfTaken = false;
+    this.zoomIntroPhase = null;
+    this.zoomIntroElapsedMs = 0;
 
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
     const isReturningFromNetherTwo = entryConnector?.id === NETHER_FORWARD_CONNECTOR_ID;
@@ -1079,8 +1087,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
         NETHER_ARRIVAL_PORTAL_TARGET_HEIGHT / Math.max(1, portalSprite.initialFrameHeight),
       );
       this.smokeFrameCount = smokeSprite.frameCount;
-      engine.setInputEnabled(false);
-      this.startArrivalSequence();
+      this.startArrivalZoomIntro(engine);
     } else {
       this.spriteController = await this.installNetherSprite(
         engine,
@@ -1147,12 +1154,20 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
     this.lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;
     this.lightsNoiseTargetRemainingMs = 0;
     this.sceneReady = false;
+    this.zoomIntroPhase = null;
+    this.zoomIntroElapsedMs = 0;
+    engine.video.zoom.clear();
     engine.video.render(0);
   }
 
   update(deltaMs: number): void {
     this.updateLightsOverlay(deltaMs);
     this.updateAmbientSoundVolume();
+
+    if (this.zoomIntroPhase) {
+      this.updateArrivalZoomIntro(deltaMs);
+      return;
+    }
 
     if (this.securityDefeatSequence) {
       this.updateSecurityDefeatSequence(deltaMs);
@@ -2412,11 +2427,65 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
     });
   }
 
+  private startArrivalZoomIntro(engine: RoccoEngine): void {
+    engine.setInputEnabled(false);
+    engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    engine.setPlayerSprite(null);
+    engine.video.zoom.setTransform({
+      factor: NETHER_ARRIVAL_ZOOM_FACTOR,
+      focusX: DEFAULT_DESIGN_WIDTH,
+      focusY: 0,
+      anchorX: DEFAULT_DESIGN_WIDTH,
+      anchorY: 0,
+    });
+    this.zoomIntroPhase = 'hold';
+    this.zoomIntroElapsedMs = 0;
+    engine.video.render(0);
+  }
+
+  private updateArrivalZoomIntro(deltaMs: number): void {
+    if (!this.engine || !Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return;
+    }
+
+    if (this.zoomIntroPhase !== 'hold') {
+      return;
+    }
+
+    this.zoomIntroElapsedMs += deltaMs;
+    if (this.zoomIntroElapsedMs < NETHER_ARRIVAL_ZOOM_HOLD_MS) {
+      return;
+    }
+
+    this.zoomIntroPhase = 'zoom-out';
+    this.engine.video.zoom.animateTo(
+      {
+        factor: 1,
+        focusX: DEFAULT_DESIGN_WIDTH / 2,
+        focusY: DEFAULT_DESIGN_HEIGHT / 2,
+        anchorX: DEFAULT_DESIGN_WIDTH / 2,
+        anchorY: DEFAULT_DESIGN_HEIGHT / 2,
+      },
+      NETHER_ARRIVAL_ZOOM_OUT_MS,
+      {
+        easing: NETHER_ARRIVAL_ZOOM_EASE,
+        onComplete: () => {
+          this.zoomIntroPhase = null;
+          this.zoomIntroElapsedMs = 0;
+          this.engine?.video.zoom.clear();
+          this.startArrivalSequence();
+        },
+      },
+    );
+  }
+
   private startArrivalSequence(): void {
     if (!this.engine) {
       return;
     }
 
+    this.zoomIntroPhase = null;
+    this.zoomIntroElapsedMs = 0;
     this.engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
     this.engine.setPlayerSprite(null);
     this.engine.video.sprites.removeSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);

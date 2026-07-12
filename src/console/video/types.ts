@@ -9,6 +9,7 @@ import type { RoccoTitleSystem } from './titles';
 import type { RoccoDisplayProfile } from './display';
 import type { RoccoSceneTargetSystem } from './scene-targets';
 import type { RoccoViewportHost } from './viewport';
+import type { RoccoVideoZoomModule } from './zoom';
 
 export interface RoccoVideoPlaneModule {
   loadScene(scene: RoccoPlaneScene): void;
@@ -38,6 +39,7 @@ export interface RoccoVideoSystem {
   titles: RoccoTitleSystem;
   display: RoccoVideoDisplayModule;
   viewport: RoccoVideoViewportModule;
+  zoom: RoccoVideoZoomModule;
 
   setRenderLayerOrder(layers: RoccoRenderLayer[]): void;
   getRenderLayerOrder(): RoccoRenderLayer[];

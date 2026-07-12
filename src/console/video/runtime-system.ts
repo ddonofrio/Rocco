@@ -17,6 +17,7 @@ import {
 } from './planes';
 import { PixiRoccoPrimitiveRenderer, RoccoPrimitiveSystemSDK } from './primitives';
 import { defaultRoccoRenderLayers, sortRoccoRenderLayers, type RoccoRenderLayer } from './render-layers';
+import { RoccoVideoZoomController, type RoccoVideoZoomModule } from './zoom';
 import { preloadPlaneAlphaMasks } from './runtime-plane-alpha-mask-loading';
 import { resolveRuntimePlaneScene as resolveRuntimePlaneSceneFromSprites } from './runtime-plane-scene-resolution';
 import { RoccoSceneTargetSystemSDK } from './scene-targets';
@@ -76,6 +77,7 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
   private readonly primitiveRenderer: PixiRoccoPrimitiveRenderer;
   private readonly titleSystem = new RoccoTitleSystemSDK();
   private readonly titleRenderer: PixiRoccoTitleRenderer;
+  private readonly zoomController = new RoccoVideoZoomController();
   private renderLayers: RoccoRenderLayer[];
   private displayProfile: RoccoDisplayProfile = { ...defaultDisplayProfile };
   private viewportHost: RoccoViewportHost | undefined;
@@ -118,6 +120,7 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     },
     getHost: () => this.viewportHost,
   };
+  readonly zoom: RoccoVideoZoomModule = this.zoomController;
 
   private readonly onDisplayProfileChange: ((profile: Partial<RoccoDisplayProfile>) => void) | undefined;
 
@@ -188,6 +191,8 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.messageRenderer.unmount();
     this.primitiveRenderer.unmount();
     this.titleRenderer.unmount();
+    this.zoomController.clear();
+    this.zoomController.apply(this.stage);
     this.stage = null;
   }
 
@@ -306,6 +311,7 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.actionMenuSystem.update(deltaMs);
     this.messageSystem.update(deltaMs);
     this.titleSystem.update(deltaMs);
+    this.zoomController.update(deltaMs);
   }
 
   render(delta: number): void {
@@ -321,6 +327,7 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.syncPrimitives();
     this.syncTitles();
     this.planeRenderer.render(delta);
+    this.zoomController.apply(this.stage);
   }
 
   private ensurePlaneSceneMounted(sceneId: string): void {

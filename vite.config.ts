@@ -1,13 +1,60 @@
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 /// <reference types="vitest" />
 
+function readPackageVersion(): string {
+  const pkgPath = fileURLToPath(new URL('./package.json', import.meta.url));
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: string };
+  return pkg.version ?? '0.0.0';
+}
+
+function resolveCommitCount(): string {
+  const fromEnv = process.env.COMMIT_COUNT;
+  if (fromEnv && fromEnv.trim().length > 0) {
+    return fromEnv.trim();
+  }
+
+  try {
+    const count = execSync('git rev-list --count HEAD', {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
+    if (count.length > 0) {
+      return count;
+    }
+  } catch {
+    // Headless environments without git fall through to the default below.
+  }
+
+  return '0';
+}
+
+function resolvePlaytestStage(mode: string): string {
+  if (mode === 'development') {
+    return 'development';
+  }
+
+  return process.env.PLAYTEST_STAGE?.trim() || 'alpha';
+}
+
 export default defineConfig(({ mode }) => {
   const isDesktopBuild = mode === 'desktop';
+  const version = readPackageVersion();
+  const commitCount = resolveCommitCount();
+  const playtestStage = resolvePlaytestStage(mode);
 
   return {
     base: isDesktopBuild ? './' : '/',
+    define: {
+      __ROCCO_VERSION__: JSON.stringify(version),
+      __ROCCO_COMMIT_COUNT__: JSON.stringify(commitCount),
+      __ROCCO_PLAYTEST_STAGE__: JSON.stringify(playtestStage),
+    },
     build: {
       // Pixi.js and the game runtime are inherently large; Pixi already
       // code-splits its renderers on demand, so raise the warning threshold

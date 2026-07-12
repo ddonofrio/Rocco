@@ -2,6 +2,7 @@ import {
   RoccoDisplayProfileRenderer,
   type RoccoDisplayProfile,
 } from '../display/profile';
+import { RoccoBuildBadgeRenderer } from '../badge';
 import {
   RoccoCursorHost,
   type RoccoCursorActionHandler,
@@ -42,6 +43,7 @@ export class RoccoViewportHost {
   private readonly hostElement: HTMLDivElement;
   private readonly stageElement: HTMLDivElement;
   private readonly displayProfileRenderer: RoccoDisplayProfileRenderer;
+  private readonly buildBadgeRenderer: RoccoBuildBadgeRenderer;
   private readonly cursorHost: RoccoCursorHost;
   private readonly designWidth: number;
   private readonly designHeight: number;
@@ -91,6 +93,7 @@ export class RoccoViewportHost {
       stageElement: this.stageElement,
       profile: options.displayProfile,
     });
+    this.buildBadgeRenderer = new RoccoBuildBadgeRenderer({ hostElement: this.hostElement });
     this.cursorHost = new RoccoCursorHost({
       rootElement: this.hostElement,
       profile: options.cursorProfile === false ? { enabled: false } : options.cursorProfile,
@@ -124,6 +127,7 @@ export class RoccoViewportHost {
     this.applyRootStyles();
     this.hostElement.appendChild(this.stageElement);
     this.displayProfileRenderer.mount();
+    this.buildBadgeRenderer.mount();
     this.cursorHost.mount();
     this.rootElement.appendChild(this.hostElement);
     window.addEventListener('resize', this.onWindowResize);
@@ -140,6 +144,7 @@ export class RoccoViewportHost {
     window.removeEventListener('resize', this.onWindowResize);
     this.cursorHost.unmount();
     this.displayProfileRenderer.unmount();
+    this.buildBadgeRenderer.unmount();
     this.stageElement.remove();
     this.hostElement.remove();
 
@@ -178,6 +183,7 @@ export class RoccoViewportHost {
     };
 
     this.displayProfileRenderer.applyMetrics(this.metrics);
+    this.buildBadgeRenderer.applyMetrics(this.metrics);
     this.cursorHost.applyMetrics(this.metrics);
   }
 

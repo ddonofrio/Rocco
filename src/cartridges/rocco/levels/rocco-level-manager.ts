@@ -220,6 +220,10 @@ export class RoccoLevelManager {
       getRoccoAppearance: () => this.roccoAppearance,
       setRoccoAppearance: (appearance) => {
         this.roccoAppearance = appearance;
+        const activeLevel = this.activeLevel;
+        if (activeLevel && typeof (activeLevel as unknown as Record<string, unknown>).options === 'object') {
+          (activeLevel as unknown as { options: { roccoAppearance?: string } }).options.roccoAppearance = appearance;
+        }
       },
       isStanIdentified: () => this.isStanIdentified(),
       isStanAwake: () => this.isStanAwake(),

@@ -122,11 +122,6 @@ type RoccoCartridgeLocalizedManifest = Partial<
 
 When a localized cartridge is selected, `RoccoCartridgeMenu` returns `selectedLocale` and `RoccoCartridgeManager` passes it to `mount({ engine, locale })`.
 
-## Built-in Cartridges
-
-- `src/cartridges/rocco` contains `rocco-default`, the main demo cartridge spanning Pier, bait shop, Nether, and developer-only Reset Office screens.
-- `src/cartridges/terminal` contains `terminal-work-in-progress`, an archived reference cartridge.
-
 ## Creating a Cartridge
 
 1. Create a folder under `src/cartridges`.

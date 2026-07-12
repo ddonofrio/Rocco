@@ -1,8 +1,6 @@
 import type { RoccoCartridgeRegistration } from '../console/cartridges';
 import { roccoDefaultCartridgeManifest } from './rocco/rocco-default-manifest';
 import { RoccoDefaultCartridge } from './rocco/rocco-default-cartridge';
-import { terminalWorkInProgressCartridgeManifest } from './terminal/terminal-work-in-progress-manifest';
-import { RoccoTerminalWorkInProgressCartridge } from './terminal/terminal-work-in-progress-cartridge';
 
 export interface RoccoBuiltinCartridgeConfig extends RoccoCartridgeRegistration {
   preferredLocaleStorageKey?: string;
@@ -21,10 +19,6 @@ const baseBuiltinCartridgeConfigs: RoccoBuiltinCartridgeConfig[] = [
     createCartridge: () => new RoccoDefaultCartridge(),
     preferredLocaleStorageKey: 'rocco.default.locale',
     defaultLocale: 'es',
-  },
-  {
-    manifest: terminalWorkInProgressCartridgeManifest,
-    createCartridge: () => new RoccoTerminalWorkInProgressCartridge(),
   },
 ];
 

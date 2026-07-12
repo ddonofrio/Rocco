@@ -57,7 +57,6 @@ src/
     rocco/                 Cartridge bootstrap, RPCE runtime, and the rocco-default game
       rpce/                Cartridge-local point-and-click runtime
       games/rocco-default/ Current game content organized by maps
-    terminal/              Archived reference demo cartridge
 public/                    Static browser assets
 scripts/                   Windows-friendly development scripts
 ```
@@ -119,14 +118,6 @@ The GitHub Actions workflow publishes these downloadable artifacts:
 - Inventory fusion chains that craft Floating Amulet, Turritella Razor, Abyssal Talisman, and Coral Relic from compatible souvenir items, with the rules living under `src/cartridges/rocco/inventory`.
 - English and Spanish localization for menu metadata, level titles, actions, descriptions, and dialogue.
 - Water wave post-processing clipped to the original water mask.
-
-### Terminal
-
-`terminal-work-in-progress` is an archived reference cartridge.
-
-- Star-field procedural plane generation.
-- Auto-scroll effect demonstration.
-- Minimal sprite setup.
 
 ## Architecture Overview
 

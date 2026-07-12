@@ -68,7 +68,6 @@ src/
     rocco/                        Cartridge bootstrap plus RPCE and rocco-default game content
       rpce/                       Cartridge-local point-and-click runtime
       games/rocco-default/        Current game content organized by maps
-    terminal/                     Archived reference cartridge
 ```
 
 ## Boot Flow
@@ -437,16 +436,6 @@ The main demo cartridge lives in `src/cartridges/rocco`.
 - Stan wake logic, branching dialogue menus, and the reusable cartridge dialogue runtime.
 - English and Spanish localization.
 - Water wave post-processing clipped to the source water mask.
-
-### `terminal-work-in-progress`
-
-The archived reference cartridge lives in `src/cartridges/terminal`.
-
-- Procedural star-field plane.
-- Auto-scroll effect.
-- Minimal sprite setup.
-
-Do not use Terminal as the template for new cartridges. Use `rocco-default` as the closest working reference.
 
 ## Creating a Cartridge
 

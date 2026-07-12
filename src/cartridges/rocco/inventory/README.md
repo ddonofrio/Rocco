@@ -25,6 +25,7 @@ The inventory belongs to the cartridge. The engine provides generic slot-panel U
 - Story pickups can also add the magazine, the mysterious key, the lab coat, and crafted bait-shop ritual items such as `rocco-floating-amulet`, `rocco-spiral-razor`, `rocco-abyssal-talisman`, and `rocco-coral-relic`.
 - Items keep a slot index so grid reorder operations survive within the live cartridge state for the current run.
 - The inventory projects its current items into a reorderable 3x3 grid menu definition.
+- `RoccoLevelManager.mount` preloads every player-inventory item image (`ROCCO_INVENTORY_ITEM_IMAGE_URLS`) and the bait shop souvenir-table item images (`ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS`) through the shared asset preloader, so the grid menus never fetch those PNGs on demand over a slow connection.
 - Swapping a compatible carried item onto another player-inventory item fuses both ingredients into one result and replaces them in the grid.
 - The current fusion chain is `Japanese Float + Beach Necklace -> Floating Amulet`, `Amber Turritella + Razor Shell -> Turritella Razor`, `Floating Amulet + Turritella Razor -> Abyssal Talisman`, and `Abyssal Talisman + Red Coral -> Coral Relic`.
 - `planRoccoCoralRelicAssembly()` derives whether the accessible inventory can already reach the Coral Relic and returns the ordered fusion steps used by the bait-shop toilet flow.

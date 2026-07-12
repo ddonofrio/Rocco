@@ -41,8 +41,10 @@ import {
   ROCCO_INVENTORY_BATA_ITEM_ID,
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
+  ROCCO_INVENTORY_ITEM_IMAGE_URLS,
   ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
   ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID,
+  ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS,
   type RoccoInventoryItem,
 } from '../games/rocco-default/inventory';
 import { createRoccoAppearanceSpriteDefinition } from '../games/rocco-default/sprites';
@@ -266,9 +268,15 @@ export class RoccoLevelManager {
 
   async mount(engine: RoccoEngine, preloader?: RoccoAssetPreloader): Promise<RoccoLevelManagerMountResult> {
     this.engine = engine;
-    await preloader?.preloadAssetUrls(engine, ROCCO_SHARED_UI_ASSET_URLS).catch(() => {
-      this.engine?.log('Assets', 'Some shared Rocco UI assets could not be preloaded.');
-    });
+    await preloader
+      ?.preloadAssetUrls(engine, [
+        ...ROCCO_SHARED_UI_ASSET_URLS,
+        ...ROCCO_INVENTORY_ITEM_IMAGE_URLS,
+        ...ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS,
+      ])
+      .catch(() => {
+        this.engine?.log('Assets', 'Some shared Rocco UI assets could not be preloaded.');
+      });
     this.engine.audio.registerSound({
       id: ROCCO_STAN_POLICE_DEFEAT_SOUND_ID,
       uri: roccoDefaultPoliceWhistleSoundUrl,

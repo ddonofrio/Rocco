@@ -279,6 +279,10 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
   ];
 
+export const ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS = Object.values(
+  souvenirTableAssetUrls,
+) as string[];
+
 export function createBaitShopSouvenirTableItems(
   localization: RoccoLocalization,
 ): RoccoInventoryItem[] {

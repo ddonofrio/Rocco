@@ -48,6 +48,18 @@ const roccoBataAssetUrl = new URL('../assets/props/lab-coat.png', import.meta.ur
 const roccoBataGroundAssetUrl = new URL('../assets/props/lab-coat-ground.png', import.meta.url)
   .href;
 
+export const ROCCO_INVENTORY_ITEM_IMAGE_URLS = [
+  roccoDefaultTwentyEurosAssetUrl,
+  roccoDefaultKeysAssetUrl,
+  roccoDefaultMysteriousKeyAssetUrl,
+  roccoDefaultMicromaniaInventoryAssetUrl,
+  roccoFloatingAmuletAssetUrl,
+  roccoSpiralRazorAssetUrl,
+  roccoAbyssalTalismanAssetUrl,
+  roccoCoralRelicAssetUrl,
+  roccoBataAssetUrl,
+] as const;
+
 interface RoccoInventoryFusionRecipe {
   resultItemId: string;
   ingredientIds: readonly [string, string];

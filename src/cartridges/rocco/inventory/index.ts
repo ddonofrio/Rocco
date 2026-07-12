@@ -2,7 +2,10 @@ export {
   BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID,
   createBaitShopSouvenirTableStorage,
 } from './souvenir-table-storage';
-export { createBaitShopSouvenirTableItems } from './souvenir-table-items';
+export {
+  createBaitShopSouvenirTableItems,
+  ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS,
+} from './souvenir-table-items';
 export {
   createRoccoAbyssalTalismanInventoryItem,
   createRoccoBataInventoryItem,
@@ -21,6 +24,7 @@ export {
   ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
   ROCCO_INVENTORY_DROP_BUTTON_ID,
+  ROCCO_INVENTORY_ITEM_IMAGE_URLS,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
   ROCCO_INVENTORY_MENU_ID,

@@ -48,7 +48,7 @@ export class RoccoCartridgeManager {
     engine.setConsoleFlags(bootSetup.consoleFlags);
     let selectedId: string;
     let selectedLocale: string | undefined;
-    if (allManifests.length > 1 && !configuredCartridgeId) {
+    if (allManifests.length > 0 && !configuredCartridgeId) {
       const menu = new RoccoCartridgeMenu(app);
       const result = await menu.show(allManifests, {
         initialLocales: this.loadInitialLocales(configById),

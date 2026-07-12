@@ -19,6 +19,11 @@ export default defineConfig(({ mode }) => {
       // Temporary: expose the dev server on the local network for playtests.
       host: '0.0.0.0',
       port: 5174,
+      fs: {
+        // The local workspace directory is gitignored scratch space (.local/).
+        // Block the dev server from ever serving files from it.
+        deny: ['.local/**'],
+      },
     },
     plugins: [
       VitePWA({

@@ -11,7 +11,8 @@
   "scripts": {
     "dev": "vite",
     "check:tracked-content": "node ./scripts/check-tracked-content.mjs",
-    "check": "npm run check:tracked-content && npm run lint && npm run typecheck",
+    "check:asset-references": "node ./scripts/check-rocco-asset-references.mjs",
+    "check": "npm run check:tracked-content && npm run check:asset-references && npm run lint && npm run typecheck",
     "build": "npm run build:web",
     "build:web": "npm run check && vite build",
     "build:desktop": "npm run build:windows",

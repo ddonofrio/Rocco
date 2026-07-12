@@ -30,6 +30,26 @@ const allowlist = [
     ruleId: 'local-only-path',
     matches: (line) => line.includes(localWorkspaceGlob),
   },
+  {
+    filePath: 'vite.config.ts',
+    ruleId: 'local-only-path',
+    matches: (line) => line.includes('(.local/).'),
+  },
+  {
+    filePath: 'vite.config.ts',
+    ruleId: 'local-only-path',
+    matches: (line) => line.includes("deny: ['.local/**']"),
+  },
+  {
+    filePath: 'scripts/check-tracked-content.mjs',
+    ruleId: 'local-only-path',
+    matches: (line) => line.includes('(.local/).'),
+  },
+  {
+    filePath: 'scripts/check-tracked-content.mjs',
+    ruleId: 'local-only-path',
+    matches: (line) => line.includes('.local/**'),
+  },
 ];
 
 const workspacePathCandidates = Array.from(

@@ -1,0 +1,611 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Rocco asset references > keeps an explicit snapshot of the declared cartridge asset paths 1`] = `
+[
+  {
+    "assetPath": "./assets/console-hardware-spawn-background.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/console-hardware-spawn-lights.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/console-hardware-spawn-walkpath.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/end-of-hallway-door-background.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/end-of-hallway-door-lights.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/end-of-hallway-door-walkpath.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/reset-office-1-walkpath.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/reset-office-1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/reset-office-2-walkpath.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/reset-office-2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/steam_machine.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/camera/1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-console-hardware-spawn-level.ts",
+  },
+  {
+    "assetPath": "./assets/camera/2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-console-hardware-spawn-level.ts",
+  },
+  {
+    "assetPath": "./assets/camera/3.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-console-hardware-spawn-level.ts",
+  },
+  {
+    "assetPath": "./assets/camera/4.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-console-hardware-spawn-level.ts",
+  },
+  {
+    "assetPath": "./assets/background-back-mid.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-assets.ts",
+  },
+  {
+    "assetPath": "./assets/background-back.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-assets.ts",
+  },
+  {
+    "assetPath": "./assets/background-front.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-door-closed.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-door-open.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-assets.ts",
+  },
+  {
+    "assetPath": "./assets/cloud.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-assets.ts",
+  },
+  {
+    "assetPath": "./assets/opening-door.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-assets.ts",
+  },
+  {
+    "assetPath": "./assets/walking-path.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-background.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-foreground.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-screen-2-background.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-screen-2-walkmap.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-souvenir-closeup.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-toilet-background.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-toilet-sheet.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-toilet-walkmap.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-walkmap.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/medallion-step.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/portal-loop-sound.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/portal/1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/portal/2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/portal/3.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/portal/4.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/portal/5.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/portal/6.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/portal/7.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/portal/8.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/smoke/1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/smoke/2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/smoke/3.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/smoke/4.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/smoke/5.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/smoke/6.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/smoke/7.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/spell-sound.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "../assets/props/lab-coat-ground.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/rocco-inventory.ts",
+  },
+  {
+    "assetPath": "../assets/props/lab-coat.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/rocco-inventory.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/abyssal-talisman.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/rocco-inventory.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/coral-relic.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/rocco-inventory.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/floating-amulet.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/rocco-inventory.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/spiral-razor.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/rocco-inventory.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/amber-spiral.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/amber-star.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/amber-turritella.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/beach-necklace.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/copper-fan.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/golden-nautilus.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/golden-scallop.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/hollow-urchin.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/horseshoe-crab.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/japanese-float.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/razor-shell.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/red-coral.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/sea-dollar.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/speckled-cowrie.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/spiny-murex.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/striped-clam.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/striped-urchin.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/tiger-cone.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/souvenirs/tower-shell.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/inventory/souvenir-table-items.ts",
+  },
+  {
+    "assetPath": "./assets/actions/developer-mode.svg",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/actions/grab.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/actions/inventory.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/actions/kick.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/actions/look.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/actions/talk.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/actions/use-wc.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/pelikan/feeding.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/pelikan/flight.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/pelikan/flying.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/pelikan/idle-1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/pelikan/idle-2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/pelikan/idle-3.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/pelikan/idle-4.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/run-left-1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/run-left-2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/run-right-1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/run-right-2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/stand-down.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/stand-left.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/stand-right.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/stand-up-left.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/stand-up-right.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/stand-up.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/pick-up.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/run-left-1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/run-left-2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/run-right-1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/run-right-2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/stand-down-left.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/stand-down-right.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/stand-down.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/stand-left.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/stand-right.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/stand-up-left.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/stand-up-right.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/stand-up.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/stan/stan-sheet.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/props/bait-bucket/dropped.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/props/bait-bucket/normal.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/props/keys/keys.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/props/keys/keys.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/sounds/police-whistle.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/sounds/you-lose.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "cartridges/rocco/music/game-music-1.mp3",
+    "resolutionKind": "public-base-url",
+    "sourceFile": "src/cartridges/rocco/rocco-default-cartridge.ts",
+  },
+  {
+    "assetPath": "cartridges/rocco/music/game-music-2.mp3",
+    "resolutionKind": "public-base-url",
+    "sourceFile": "src/cartridges/rocco/rocco-default-cartridge.ts",
+  },
+]
+`;

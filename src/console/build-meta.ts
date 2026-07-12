@@ -10,7 +10,7 @@ export interface RoccoBuildMeta {
 }
 
 function readDefined<T>(value: T | undefined, fallback: T): T {
-  return typeof value !== 'undefined' ? (value as T) : fallback;
+  return typeof value !== 'undefined' ? value : fallback;
 }
 
 function resolveBuildMeta(): RoccoBuildMeta {

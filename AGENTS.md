@@ -2,6 +2,10 @@
 
 This file applies to the entire repository.
 
+## Search Priority
+
+Treat semantic search as a required first step for repository discovery whenever it is available. Use it before any other search method for code discovery, ownership discovery, intent lookup, and related-implementation discovery. This rule is as important as the minimum documentation reading protocol. Use `rg "<concept>" src` and `rg "<id-or-file-name>" src` only for exact string matches, file-name lookups, or when semantic search is unavailable.
+
 ## Core Rules
 
 - Communicate with the user in their language, but write all code and documentation in English.
@@ -41,7 +45,7 @@ If the available context window is large, prefer reading all project-owned docum
 - For sprites, action menus, motion, walk maps, or interaction sequences, read `src/console/video/sprites/README.md` and the relevant cartridge README.
 - For commands, tests, Windows quirks, or local workflow, read `DEVELOPMENT.md`.
 
-After reading docs, inspect the closest existing implementation and its tests before writing new code. If a semantic search tool is available, use it as the default code-discovery path. This repository is indexed, so semantic search usually finds conceptually related code, ownership boundaries, and intent more reliably than literal grep. Use `rg "<concept>" src` and `rg "<id-or-file-name>" src` for exact string matches, file-name lookups, and fallback when semantic search is unavailable.
+After reading docs, inspect the closest existing implementation and its tests before writing new code. If a semantic search tool is available, use it before any other repository search method. This repository is indexed, so semantic search usually finds conceptually related code, ownership boundaries, and intent more reliably than literal grep. Use `rg "<concept>" src` and `rg "<id-or-file-name>" src` for exact string matches, file-name lookups, and fallback when semantic search is unavailable.
 
 ## Documentation Shape
 

@@ -138,10 +138,19 @@ export class RoccoDisplayProfileRenderer {
     this.stageElement.style.filter = this.resolveStageFilter(profile);
 
     this.overlayElement.style.display = shouldDisplay ? 'block' : 'none';
-    this.overlayElement.style.left = `${metrics.offsetX}px`;
-    this.overlayElement.style.top = `${metrics.offsetY}px`;
-    this.overlayElement.style.width = `${metrics.renderWidth}px`;
-    this.overlayElement.style.height = `${metrics.renderHeight}px`;
+
+    if (metrics.scaleMode === 'cover') {
+      this.overlayElement.style.left = '0';
+      this.overlayElement.style.top = '0';
+      this.overlayElement.style.width = `${metrics.viewportWidth}px`;
+      this.overlayElement.style.height = `${metrics.viewportHeight}px`;
+    } else {
+      this.overlayElement.style.left = `${metrics.offsetX}px`;
+      this.overlayElement.style.top = `${metrics.offsetY}px`;
+      this.overlayElement.style.width = `${metrics.renderWidth}px`;
+      this.overlayElement.style.height = `${metrics.renderHeight}px`;
+    }
+
     this.overlayElement.style.borderRadius = borderRadius;
     this.frameElement.style.borderRadius = borderRadius;
     this.meshElement.style.borderRadius = borderRadius;

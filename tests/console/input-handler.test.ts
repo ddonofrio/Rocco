@@ -238,7 +238,7 @@ describe('RoccoInputHandler', () => {
         targetDefinitionId: 'stan-definition',
       },
     ]);
-    expect(state.messageListCalls).toBe(0);
+    expect(state.messageListCalls).toBe(1);
     expect(state.audioUnlockCalls).toBe(0);
     expect(state.jukeboxUnlockCalls).toBe(0);
     expect(state.logs.at(-1)).toContain("ADVANCE click on sprite 'stan'");

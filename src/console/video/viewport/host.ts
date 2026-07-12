@@ -12,7 +12,7 @@ import {
   type RoccoCursorProfile,
 } from '../cursor/host';
 
-export type RoccoViewportScaleMode = 'contain';
+export type RoccoViewportScaleMode = 'contain' | 'cover';
 
 export interface RoccoViewportHostOptions {
   root?: HTMLElement;
@@ -21,6 +21,7 @@ export interface RoccoViewportHostOptions {
   backgroundColor?: string;
   displayProfile?: Partial<RoccoDisplayProfile>;
   cursorProfile?: Partial<RoccoCursorProfile> | false;
+  scaleMode?: RoccoViewportScaleMode;
   onCursorAction?: RoccoCursorActionHandler;
   onCursorMove?: RoccoCursorMoveHandler;
   onCursorLeave?: RoccoCursorLeaveHandler;
@@ -36,6 +37,7 @@ export interface RoccoViewportMetrics {
   renderHeight: number;
   offsetX: number;
   offsetY: number;
+  scaleMode: 'contain' | 'cover';
 }
 
 export class RoccoViewportHost {
@@ -50,6 +52,13 @@ export class RoccoViewportHost {
   private readonly backgroundColor: string;
   private readonly ownsRootElement: boolean;
   private mounted = false;
+  private scaleMode: RoccoViewportScaleMode = 'contain';
+  private readonly explicitScaleMode: RoccoViewportScaleMode | undefined;
+  private panX = 0;
+  private panY = 0;
+  private readonly panThreshold = 5;
+  private panState = { active: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 };
+  private panPointerId: number | null = null;
   private metrics: RoccoViewportMetrics;
 
   constructor(options: RoccoViewportHostOptions) {
@@ -72,10 +81,16 @@ export class RoccoViewportHost {
     this.hostElement.style.left = '0';
     this.hostElement.style.top = '0';
     this.hostElement.style.width = '100vw';
-    this.hostElement.style.height = '100vh';
+    this.hostElement.style.height = '100dvh';
     this.hostElement.style.overflow = 'hidden';
     this.hostElement.style.backgroundColor = this.backgroundColor;
     this.hostElement.style.touchAction = 'none';
+    this.hostElement.style.userSelect = 'none';
+    this.hostElement.addEventListener('pointerdown', this.onPointerDown);
+    this.hostElement.addEventListener('pointermove', this.onPointerMove);
+    this.hostElement.addEventListener('pointerup', this.onPointerUp);
+    this.hostElement.addEventListener('pointercancel', this.onPointerUp);
+    this.hostElement.addEventListener('lostpointercapture', this.onPointerUp);
 
     this.stageElement = document.createElement('div');
     this.stageElement.dataset.roccoViewportStage = 'true';
@@ -112,7 +127,11 @@ export class RoccoViewportHost {
       renderHeight: this.designHeight,
       offsetX: 0,
       offsetY: 0,
+      scaleMode: 'contain',
     };
+
+    this.scaleMode = options.scaleMode ?? 'contain';
+    this.explicitScaleMode = options.scaleMode;
   }
 
   mount(): void {
@@ -146,7 +165,11 @@ export class RoccoViewportHost {
     this.displayProfileRenderer.unmount();
     this.buildBadgeRenderer.unmount();
     this.stageElement.remove();
-    this.hostElement.remove();
+    this.hostElement.removeEventListener('pointerdown', this.onPointerDown);
+    this.hostElement.removeEventListener('pointermove', this.onPointerMove);
+    this.hostElement.removeEventListener('pointerup', this.onPointerUp);
+    this.hostElement.removeEventListener('pointercancel', this.onPointerUp);
+    this.hostElement.removeEventListener('lostpointercapture', this.onPointerUp);
 
     if (this.ownsRootElement) {
       this.rootElement.remove();
@@ -159,11 +182,44 @@ export class RoccoViewportHost {
     const viewportWidth = Math.max(1, this.hostElement.clientWidth || window.innerWidth || 1);
     const viewportHeight = Math.max(1, this.hostElement.clientHeight || window.innerHeight || 1);
 
-    const scale = Math.min(viewportWidth / this.designWidth, viewportHeight / this.designHeight);
-    const renderWidth = this.designWidth * scale;
-    const renderHeight = this.designHeight * scale;
-    const offsetX = (viewportWidth - renderWidth) / 2;
-    const offsetY = (viewportHeight - renderHeight) / 2;
+    const viewportAspect = viewportWidth / viewportHeight;
+    const designAspect = this.designWidth / this.designHeight;
+
+    const autoScaleMode = viewportAspect < designAspect ? 'cover' : 'contain';
+
+    if (this.scaleMode === 'cover' && autoScaleMode === 'contain') {
+      this.panX = 0;
+      this.panY = 0;
+    }
+    this.scaleMode = this.explicitScaleMode ?? autoScaleMode;
+
+    let scale: number;
+    let renderWidth: number;
+    let renderHeight: number;
+    let offsetX: number;
+    let offsetY: number;
+
+    if (this.scaleMode === 'contain') {
+      scale = Math.min(viewportWidth / this.designWidth, viewportHeight / this.designHeight);
+      renderWidth = this.designWidth * scale;
+      renderHeight = this.designHeight * scale;
+      offsetX = (viewportWidth - renderWidth) / 2;
+      offsetY = (viewportHeight - renderHeight) / 2;
+    } else {
+      scale = Math.max(viewportWidth / this.designWidth, viewportHeight / this.designHeight);
+      renderWidth = this.designWidth * scale;
+      renderHeight = this.designHeight * scale;
+
+      const maxPanX = 0;
+      const minPanX = viewportWidth - renderWidth;
+      const maxPanY = 0;
+      const minPanY = viewportHeight - renderHeight;
+      this.panX = Math.max(minPanX, Math.min(maxPanX, this.panX));
+      this.panY = Math.max(minPanY, Math.min(maxPanY, this.panY));
+
+      offsetX = (viewportWidth - renderWidth) / 2 + this.panX;
+      offsetY = (viewportHeight - renderHeight) / 2 + this.panY;
+    }
 
     this.stageElement.style.width = `${this.designWidth}px`;
     this.stageElement.style.height = `${this.designHeight}px`;
@@ -180,6 +236,7 @@ export class RoccoViewportHost {
       renderHeight,
       offsetX,
       offsetY,
+      scaleMode: this.scaleMode,
     };
 
     this.displayProfileRenderer.applyMetrics(this.metrics);
@@ -245,5 +302,55 @@ export class RoccoViewportHost {
 
   private readonly onWindowResize = (): void => {
     this.resize();
+  };
+
+  private readonly onPointerDown = (event: PointerEvent): void => {
+    if (this.scaleMode !== 'cover' || event.button !== 0) {
+      return;
+    }
+
+    this.panState.active = false;
+    this.panState.startX = event.clientX;
+    this.panState.startY = event.clientY;
+    this.panState.startPanX = this.panX;
+    this.panState.startPanY = this.panY;
+    this.panPointerId = event.pointerId;
+    this.hostElement.setPointerCapture(event.pointerId);
+  };
+
+  private readonly onPointerMove = (event: PointerEvent): void => {
+    if (this.scaleMode !== 'cover' || event.pointerId !== this.panPointerId) {
+      return;
+    }
+
+    const dx = event.clientX - this.panState.startX;
+    const dy = event.clientY - this.panState.startY;
+
+    if (!this.panState.active) {
+      if (Math.abs(dx) > this.panThreshold || Math.abs(dy) > this.panThreshold) {
+        this.panState.active = true;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+      return;
+    }
+
+    this.panX = this.panState.startPanX + dx;
+    this.panY = this.panState.startPanY + dy;
+    this.resize();
+  };
+
+  private readonly onPointerUp = (event: PointerEvent): void => {
+    if (this.scaleMode !== 'cover' || event.pointerId !== this.panPointerId) {
+      return;
+    }
+
+    if (this.panState.active) {
+      event.stopImmediatePropagation();
+    }
+
+    this.panState.active = false;
+    this.panPointerId = null;
+    this.hostElement.releasePointerCapture(event.pointerId);
   };
 }

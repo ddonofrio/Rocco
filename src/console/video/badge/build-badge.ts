@@ -55,8 +55,13 @@ export class RoccoBuildBadgeRenderer {
   }
 
   applyMetrics(metrics: RoccoViewportMetrics): void {
-    this.badgeElement.style.left = `${metrics.offsetX + 5}px`;
-    this.badgeElement.style.top = `${metrics.offsetY}px`;
+    if (metrics.scaleMode === 'cover') {
+      this.badgeElement.style.left = '5px';
+      this.badgeElement.style.top = '0px';
+    } else {
+      this.badgeElement.style.left = `${metrics.offsetX + 5}px`;
+      this.badgeElement.style.top = `${metrics.offsetY}px`;
+    }
   }
 
   setLabel(label: string): void {

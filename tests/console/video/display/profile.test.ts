@@ -17,6 +17,7 @@ function makeMetrics(): RoccoViewportMetrics {
     renderHeight: 675,
     offsetX: 40,
     offsetY: 22,
+    scaleMode: 'contain',
   };
 }
 
@@ -89,12 +90,12 @@ describe('RoccoDisplayProfileRenderer', () => {
 describe('RoccoViewportHost display profile integration', () => {
   it('tracks contain metrics and allows toggling the display profile', () => {
     Object.defineProperty(window, 'innerWidth', {
-      value: 1200,
+      value: 1280,
       configurable: true,
       writable: true,
     });
     Object.defineProperty(window, 'innerHeight', {
-      value: 800,
+      value: 720,
       configurable: true,
       writable: true,
     });
@@ -115,12 +116,47 @@ describe('RoccoViewportHost display profile integration', () => {
       .querySelector<HTMLElement>('[data-rocco-display-overlay="true"]');
     expect(overlay).not.toBeNull();
     expect(overlay?.style.left).toBe('0px');
-    expect(overlay?.style.top).toBe('62.5px');
-    expect(overlay?.style.width).toBe('1200px');
-    expect(overlay?.style.height).toBe('675px');
+    expect(overlay?.style.top).toBe('0px');
+    expect(overlay?.style.width).toBe('1280px');
+    expect(overlay?.style.height).toBe('720px');
 
     host.setDisplayProfile({ crtMask: false, edgeVignette: false });
     expect(overlay?.style.display).toBe('none');
+
+    host.unmount();
+  });
+
+  it('uses full viewport overlay in cover mode', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      value: 375,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(window, 'innerHeight', {
+      value: 812,
+      configurable: true,
+      writable: true,
+    });
+
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+
+    const host = new RoccoViewportHost({
+      root,
+      designWidth: 960,
+      designHeight: 540,
+    });
+
+    host.mount();
+
+    const overlay = host
+      .getRootElement()
+      .querySelector<HTMLElement>('[data-rocco-display-overlay="true"]');
+    expect(overlay).not.toBeNull();
+    expect(overlay?.style.left).toBe('0px');
+    expect(overlay?.style.top).toBe('0px');
+    expect(overlay?.style.width).toBe('375px');
+    expect(overlay?.style.height).toBe('812px');
 
     host.unmount();
   });

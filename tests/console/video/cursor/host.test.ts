@@ -16,6 +16,7 @@ function makeMetrics(): RoccoViewportMetrics {
     renderHeight: 675,
     offsetX: 40,
     offsetY: 22,
+    scaleMode: 'contain',
   };
 }
 

@@ -41,7 +41,7 @@ If the available context window is large, prefer reading all project-owned docum
 - For sprites, action menus, motion, walk maps, or interaction sequences, read `src/console/video/sprites/README.md` and the relevant cartridge README.
 - For commands, tests, Windows quirks, or local workflow, read `DEVELOPMENT.md`.
 
-After reading docs, inspect the closest existing implementation and its tests before writing new code. Good first searches are `rg "<concept>" src` and `rg "<id-or-file-name>" src`.
+After reading docs, inspect the closest existing implementation and its tests before writing new code. If a semantic search tool is available, use it as the default code-discovery path. This repository is indexed, so semantic search usually finds conceptually related code, ownership boundaries, and intent more reliably than literal grep. Use `rg "<concept>" src` and `rg "<id-or-file-name>" src` for exact string matches, file-name lookups, and fallback when semantic search is unavailable.
 
 ## Documentation Shape
 

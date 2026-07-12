@@ -32,7 +32,7 @@ Useful routes:
 - Rendering and water effects: `src/console/video/README.md`, `src/console/video/planes/README.md`, and `src/console/video/post-processing/README.md`.
 - Sprites, walk maps, or actions: `src/console/video/sprites/README.md` and the relevant cartridge README.
 
-After reading, inspect the closest existing implementation and tests. Prefer `rg "<concept>" src` over broad manual browsing.
+After reading, inspect the closest existing implementation and tests. If a semantic search tool is available, use it as the default code-discovery path because this repository is indexed and semantic matches usually outperform literal text search for concept-level lookups. Use `rg "<concept>" src` for exact text matches and fallback when semantic search is unavailable.
 
 ## Project Overview
 

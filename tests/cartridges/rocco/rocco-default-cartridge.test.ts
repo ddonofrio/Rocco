@@ -1212,6 +1212,31 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
   };
 }
 
+function createEngineMockWithStrictSoundRegistration(state: EngineMockState): RoccoEngine {
+  const engine = createEngineMock(state);
+  const registeredSoundIds = new Set<string>();
+  const audio = engine.audio;
+
+  return {
+    ...engine,
+    audio: {
+      ...audio,
+      registerSound(definition: RoccoSoundDefinition) {
+        if (registeredSoundIds.has(definition.id)) {
+          throw new Error(`Duplicate sound registration '${definition.id}'.`);
+        }
+
+        registeredSoundIds.add(definition.id);
+        audio.registerSound(definition);
+      },
+      unregisterSound(soundId: string) {
+        registeredSoundIds.delete(soundId);
+        audio.unregisterSound(soundId);
+      },
+    },
+  };
+}
+
 function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState {
   return {
     restoredRecord: null,
@@ -2653,6 +2678,25 @@ describe('RoccoDefaultCartridge', () => {
       },
     );
     expect(state.registeredActionMenus).toContain(DEFAULT_FEEDING_LOOK_ACTION_MENU_ID);
+  });
+
+  it('remounts Pier Middle cleanly after visiting Pier Beginning when audio registrations are strict', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMockWithStrictSoundRegistration(state);
+    const localization = createRoccoLocalization('en');
+    const manager = createLevelManagerForTests({
+      cartridgeTitle: 'ROCCO',
+      inventory: createInventoryWithKeys(),
+      localization,
+    });
+
+    await manager.mount(engine);
+    startPelikanFeeding(manager, state);
+
+    await transitionFromMiddleToStartAndBack(manager, state);
+
+    expect(state.loadedScene?.id).toBe(DEFAULT_SCENE_ID);
+    expect(state.statusMessages.at(-1)).toContain('Pier Middle');
   });
 
   it('plays the full Rocco intro thought and help line when uninterrupted', async () => {

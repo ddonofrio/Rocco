@@ -380,6 +380,7 @@ export async function installDefaultKeys(
 ): Promise<RoccoDefaultKeysController> {
   const localization = options?.localization ?? createRoccoLocalization();
   const definition = createDefaultKeysSpriteDefinition(localization);
+  engine.audio.unregisterSound(KEYS_SOUND_ID);
   engine.audio.registerSound({
     id: KEYS_SOUND_ID,
     uri: roccoDefaultKeysSoundUrl,
@@ -405,5 +406,6 @@ export function uninstallDefaultKeys(engine: RoccoEngine): void {
   engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
   engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
   engine.audio.stopSound(KEYS_SOUND_ID);
+  engine.audio.unregisterSound(KEYS_SOUND_ID);
   engine.video.render(0);
 }

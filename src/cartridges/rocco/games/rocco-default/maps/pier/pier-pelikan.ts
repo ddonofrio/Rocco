@@ -508,6 +508,7 @@ export async function installDefaultPelikan(
   const definition = await createDefaultPelikanSpriteDefinition(
     options.localization ?? createRoccoLocalization(),
   );
+  engine.audio.unregisterSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
   engine.audio.registerSound({
     id: DEFAULT_PELIKAN_FLIGHT_SOUND_ID,
     uri: roccoDefaultPelikanFlyingSoundUrl,
@@ -556,5 +557,6 @@ export function uninstallDefaultPelikan(engine: RoccoEngine): void {
   engine.video.actionMenus.unregisterMenu(DEFAULT_ACTION_MENU_ID);
   engine.video.sprites.removeSprite(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID);
   engine.audio.stopSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
+  engine.audio.unregisterSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
   engine.video.render(0);
 }

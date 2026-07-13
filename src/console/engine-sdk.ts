@@ -5,10 +5,24 @@ import type { RoccoVideoSystem } from './video';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from './video/planes';
 import type { InputMode, InputPolicyLease } from './input/input-policy-stack';
 import type { CompositionSession } from './composition/composition-service';
+import type {
+  CartridgeSaveRepository,
+  CreateSaveRepositoryOptions,
+} from './persistence/types';
 
 export interface RoccoEnginePersistence {
   loadPlaneSceneRecord(cartridgeId: string, sceneId: string): Promise<RoccoPlaneSceneRecord | null>;
   savePlaneScene(cartridgeId: string, scene: RoccoPlaneScene): Promise<void>;
+
+  /**
+   * Opens a versioned, slot/profile-scoped save repository bound to a
+   * cartridge and its `CartridgeSaveProvider` (audit ROCCO-014 / DAT-001).
+   * The returned repository owns transaction, revision guard, migration and
+   * quota handling; the cartridge only supplies domain serialization.
+   */
+  createSaveRepository<TState>(
+    options: CreateSaveRepositoryOptions<TState>,
+  ): CartridgeSaveRepository<TState>;
 }
 
 export interface RoccoConsoleFlags {

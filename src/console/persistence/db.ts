@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 
-import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../video/planes/types';
+import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../video/planes';
+import type { SaveEnvelopeRow } from './types';
 
 export interface RoccoPlaneSceneRecordRow {
   id: string;
@@ -10,9 +11,10 @@ export interface RoccoPlaneSceneRecordRow {
   updatedAt: number;
 }
 
-class RoccoDatabase extends Dexie {
+export class RoccoDatabase extends Dexie {
   scenes!: Table<RoccoPlaneSceneRecordRow, string>;
   scenes_v4!: Table<RoccoPlaneSceneRecordRow, string>;
+  saves!: Table<SaveEnvelopeRow, string>;
 
   constructor() {
     super('rocco_db');
@@ -29,10 +31,34 @@ class RoccoDatabase extends Dexie {
     this.version(4).stores({
       scenes_v4: '[cartridgeId+sceneId], updatedAt',
     });
+    this.version(5).stores({
+      saves: '[cartridgeId+profileId+slotId], [cartridgeId+profileId], updatedAt',
+    });
   }
 }
 
-const db = new RoccoDatabase();
+let database: RoccoDatabase | null = null;
+
+/**
+ * Lazily opens the singleton IndexedDB database. Recreated after
+ * {@link closeRoccoDatabase} so the resource can be released on runtime
+ * dispose and reopened transparently (audit ROCCO-014: resource close).
+ */
+export function getRoccoDatabase(): RoccoDatabase {
+  if (!database) {
+    database = new RoccoDatabase();
+  }
+  return database;
+}
+
+/** Closes the singleton database, releasing the IndexedDB connection. */
+export function closeRoccoDatabase(): void {
+  if (database) {
+    database.close();
+    database = null;
+  }
+  migrationPromise = null;
+}
 
 let migrationPromise: Promise<void> | null = null;
 
@@ -42,6 +68,7 @@ async function migrateLegacyScenes(): Promise<void> {
   }
 
   migrationPromise = (async () => {
+    const db = getRoccoDatabase();
     const hasNewTable = await db.scenes_v4.count();
     if (hasNewTable > 0) {
       return;
@@ -71,6 +98,7 @@ export async function loadPlaneSceneRecord(
   sceneId: string,
 ): Promise<RoccoPlaneSceneRecord | null> {
   await migrateLegacyScenes();
+  const db = getRoccoDatabase();
 
   const id = `${cartridgeId}:${sceneId}`;
   const row = await db.scenes_v4.get(id);
@@ -90,6 +118,7 @@ export async function savePlaneScene(
   scene: RoccoPlaneScene,
 ): Promise<RoccoPlaneSceneRecord> {
   await migrateLegacyScenes();
+  const db = getRoccoDatabase();
 
   const id = `${cartridgeId}:${scene.id}`;
   const record: RoccoPlaneSceneRecordRow = {

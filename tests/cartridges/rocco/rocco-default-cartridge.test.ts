@@ -1088,6 +1088,9 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       state.savedScenes.push(scene);
       return Promise.resolve();
     },
+    createSaveRepository(): never {
+      throw new Error('createSaveRepository is not used by this test');
+    },
   };
 
   const jukebox: RoccoJukeboxSystem = {

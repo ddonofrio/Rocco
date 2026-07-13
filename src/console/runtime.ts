@@ -136,6 +136,7 @@ export class GameRuntime implements RoccoEngine {
     });
     scope.defer(() => this.audio.destroy());
     scope.defer(() => this.jukebox.destroy());
+    scope.defer(() => void this.persistence.dispose());
     scope.defer(() => {
       if (this.app) {
         this.video.destroy();

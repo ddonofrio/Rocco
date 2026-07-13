@@ -1081,11 +1081,12 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
   };
 
   const persistence: RoccoEnginePersistence = {
-    async loadPlaneSceneRecord(_cartridgeId: string, _sceneId: string) {
-      return state.restoredRecord ?? null;
+    loadPlaneSceneRecord(_cartridgeId: string, _sceneId: string) {
+      return Promise.resolve(state.restoredRecord ?? null);
     },
-    async savePlaneScene(_cartridgeId: string, scene: RoccoPlaneScene) {
+    savePlaneScene(_cartridgeId: string, scene: RoccoPlaneScene) {
       state.savedScenes.push(scene);
+      return Promise.resolve();
     },
   };
 

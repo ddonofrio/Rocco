@@ -5,28 +5,29 @@ const TEST_CARTRIDGE_ID = 'test-cartridge';
 class MockTable<T extends { id: string }> {
   private readonly rows = new Map<string, T>();
 
-  async count(): Promise<number> {
-    return this.rows.size;
+  count(): Promise<number> {
+    return Promise.resolve(this.rows.size);
   }
 
-  async toArray(): Promise<T[]> {
-    return [...this.rows.values()].map((row) => structuredClone(row));
+  toArray(): Promise<T[]> {
+    return Promise.resolve([...this.rows.values()].map((row) => structuredClone(row)));
   }
 
-  async get(id: string): Promise<T | undefined> {
+  get(id: string): Promise<T | undefined> {
     const row = this.rows.get(id);
-    return row ? structuredClone(row) : undefined;
+    return Promise.resolve(row ? structuredClone(row) : undefined);
   }
 
-  async put(row: T): Promise<string> {
+  put(row: T): Promise<string> {
     this.rows.set(row.id, structuredClone(row));
-    return row.id;
+    return Promise.resolve(row.id);
   }
 
-  async bulkPut(rows: T[]): Promise<void> {
+  bulkPut(rows: T[]): Promise<void> {
     for (const row of rows) {
       this.rows.set(row.id, structuredClone(row));
     }
+    return Promise.resolve();
   }
 }
 
@@ -89,8 +90,8 @@ describe('persistence namespacing', () => {
 
   it('does not collide between cartridges with the same scene id', async () => {
     const { loadPlaneSceneRecord, savePlaneScene } = await importPersistenceModule();
-    const sceneA = { id: 'scene-1', planes: [{ id: 'plane-a' } as any], palettes: [], colorRegisterSets: [], attributeMaps: [] };
-    const sceneB = { id: 'scene-1', planes: [{ id: 'plane-b' } as any], palettes: [], colorRegisterSets: [], attributeMaps: [] };
+    const sceneA = { id: 'scene-1', planes: [{ id: 'plane-a' }], palettes: [], colorRegisterSets: [], attributeMaps: [] };
+    const sceneB = { id: 'scene-1', planes: [{ id: 'plane-b' }], palettes: [], colorRegisterSets: [], attributeMaps: [] };
 
     await savePlaneScene('cartridge-a', sceneA);
     await savePlaneScene('cartridge-b', sceneB);

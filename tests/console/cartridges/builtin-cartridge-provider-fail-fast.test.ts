@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { RoccoCartridgeManifest, RoccoCartridgeRegistration } from '../../../src/console/cartridges';
+import type { RoccoCartridgeRegistration } from '../../../src/console/cartridges';
 import { RoccoBuiltinCartridgeProvider } from '../../../src/console/cartridges/providers/builtin-cartridge-provider';
 
 function makeRegistration(id: string): RoccoCartridgeRegistration {
@@ -9,9 +9,9 @@ function makeRegistration(id: string): RoccoCartridgeRegistration {
       id,
       title: id,
       version: '0.1.0',
-    } as RoccoCartridgeManifest,
+    },
     createCartridge: () => ({
-      manifest: { id } as RoccoCartridgeManifest,
+      manifest: { id },
       mount: async () => {},
     }),
   };
@@ -28,7 +28,7 @@ describe('RoccoBuiltinCartridgeProvider', () => {
     expect(manifests).toHaveLength(2);
   });
 
-  it('throws on duplicate cartridge id', async () => {
+  it('throws on duplicate cartridge id', () => {
     expect(() =>
       new RoccoBuiltinCartridgeProvider([makeRegistration('alpha'), makeRegistration('alpha')]),
     ).toThrow("Duplicate cartridge registration 'alpha'.");

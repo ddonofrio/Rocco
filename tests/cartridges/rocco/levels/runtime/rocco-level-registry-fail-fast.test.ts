@@ -2,19 +2,19 @@ import { describe, expect, it } from 'vitest';
 
 import { RoccoLevelRegistry } from '../../../../../src/cartridges/rocco/levels/runtime/rocco-level-registry';
 
-function makeLevel(id: string): any {
+function makeLevel(id: string): unknown {
   return {
     id,
     title: id,
     connectors: [],
-    mount: async () => ({ id: `${id}-scene`, planes: [] }),
+    mount: () => Promise.resolve({ id: `${id}-scene`, planes: [] }),
     unmount: () => {},
     update: () => {},
     handleAction: () => {},
   };
 }
 
-function makeMap(id: string, levelIds: string[]): any {
+function makeMap(id: string, levelIds: string[]): unknown {
   return {
     id,
     title: id,

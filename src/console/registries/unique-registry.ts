@@ -18,7 +18,7 @@ export class UniqueRegistry<TId extends string, TValue> {
     if (this.entries.has(id)) {
       const existing = this.entries.get(id)!;
       throw new Error(
-        `Duplicate registry entry '${id}' owned by scope '${existing.value}' (new owner: '${ownerScopeId}'). ` +
+        `Duplicate registry entry '${id}' owned by scope '${String(existing.value)}' (new owner: '${ownerScopeId}'). ` +
           `Use replace() if intentional.`,
       );
     }

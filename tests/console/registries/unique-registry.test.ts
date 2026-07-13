@@ -25,7 +25,7 @@ describe('UniqueRegistry', () => {
   it('unregisters by id', () => {
     const registry = new UniqueRegistry<string, { name: string }>();
     const lease = registry.register('alpha', { name: 'Alpha' }, 'scope-a');
-    lease.dispose();
+    void lease.dispose();
 
     expect(registry.has('alpha')).toBe(false);
     expect(registry.get('alpha')).toBeUndefined();

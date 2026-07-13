@@ -129,6 +129,54 @@ describe('RoccoRuntimeAudioSystem', () => {
     expect(context?.createdSources).toHaveLength(1);
   });
 
+  it('keeps a pending sound playback alive while another sound preloads', async () => {
+    const fetchResolvers = new Map<string, () => void>();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockImplementation((input: RequestInfo | URL) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        return new Promise<Response>((resolve) => {
+          fetchResolvers.set(url, () => {
+            resolve({
+              ok: true,
+              arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+            } as Response);
+          });
+        });
+      }),
+    );
+
+    const system = new RoccoRuntimeAudioSystem();
+    system.registerSound({
+      id: 'ambient-loop',
+      uri: '/sounds/ambient-loop.mp3',
+      volume: 0.2,
+      loop: true,
+    });
+    system.registerSound({
+      id: 'portal-loop',
+      uri: '/sounds/portal-loop.mp3',
+      volume: 0.4,
+      loop: true,
+    });
+
+    system.playSound('ambient-loop', { loop: true });
+    const portalPreload = system.preloadSound('portal-loop');
+
+    fetchResolvers.get('/sounds/ambient-loop.mp3')?.();
+    fetchResolvers.get('/sounds/portal-loop.mp3')?.();
+
+    await portalPreload;
+
+    await vi.waitFor(() => {
+      expect(FakeAudioContext.instances[0]?.createdSources).toHaveLength(1);
+    });
+
+    const context = FakeAudioContext.instances[0];
+    expect(context?.createdSources[0]?.loop).toBe(true);
+  });
+
   it('playSound returns a handle that can stop the sound', async () => {
     vi.stubGlobal(
       'fetch',

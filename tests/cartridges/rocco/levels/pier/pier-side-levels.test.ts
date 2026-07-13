@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
+import type { RoccoSoundDefinition } from '../../../../../src/console/audio/types';
 import type { RoccoSpriteInstance, RoccoSpriteWalkMap } from '../../../../../src/console/video/sprites';
 import { createRoccoLocalization } from '../../../../../src/cartridges/rocco/localization';
 import {
@@ -51,11 +52,13 @@ vi.mock('../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-
 
 interface TestState {
   createdSprites: RoccoSpriteInstance[];
+  registeredSounds: Map<string, RoccoSoundDefinition>;
 }
 
 function createState(): TestState {
   return {
     createdSprites: [],
+    registeredSounds: new Map(),
   };
 }
 
@@ -140,7 +143,9 @@ function createEngineMock(state: TestState): RoccoEngine {
     setPlayerSprite: () => {},
     log: () => {},
     audio: {
-      registerSound: () => {},
+      registerSound: (definition: RoccoSoundDefinition) => {
+        state.registeredSounds.set(definition.id, definition);
+      },
       preloadSound: () => Promise.resolve(),
       playSound: () => {},
       stopSound: () => {},
@@ -191,6 +196,19 @@ describe('RoccoPierStartLevel', () => {
     const rocco = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
     expect(rocco?.transform?.x).toBe(850);
     expect(rocco?.transform?.y).toBe((DEFAULT_SPRITE_Y_VALUES[0] ?? 180) - 30);
+  });
+
+  it('registers the bait shop door closing sound at half of the previous volume', async () => {
+    const state = createState();
+    const engine = createEngineMock(state);
+    const level = new RoccoPierStartLevel({ localization: createRoccoLocalization() });
+
+    await level.mount(engine);
+
+    expect(state.registeredSounds.get('rocco-bait-shop-door-closing-sound')).toMatchObject({
+      volume: 0.21,
+      loop: false,
+    });
   });
 });
 

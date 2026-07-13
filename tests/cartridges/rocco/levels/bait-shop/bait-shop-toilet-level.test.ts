@@ -1,5 +1,6 @@
 ﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { RoccoSoundDefinition, RoccoSoundPlayOptions } from '../../../../../src/console/audio/types';
 import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
 import type { RoccoActionMenuDefinition } from '../../../../../src/console/video/action-menu';
 import type { RoccoGridMenuDefinition } from '../../../../../src/console/video/grid-menu';
@@ -96,7 +97,9 @@ interface TestState {
   playedSpriteActions: string[];
   playedSpriteAnimations: string[];
   playedSoundIds: string[];
+  playedSounds: Array<{ soundId: string; options?: RoccoSoundPlayOptions }>;
   stoppedSoundIds: string[];
+  registeredSounds: Map<string, RoccoSoundDefinition>;
   registeredActionMenuIds: string[];
   openedGridMenuDefinitions: RoccoGridMenuDefinition[];
   closedGridMenuCount: number;
@@ -126,7 +129,9 @@ function createState(overrides: Partial<TestState> = {}): TestState {
     playedSpriteActions: [],
     playedSpriteAnimations: [],
     playedSoundIds: [],
+    playedSounds: [],
     stoppedSoundIds: [],
+    registeredSounds: new Map(),
     registeredActionMenuIds: [],
     openedGridMenuDefinitions: [],
     closedGridMenuCount: 0,
@@ -344,11 +349,21 @@ function createEngineMock(state: TestState): RoccoEngine {
       } as unknown as RoccoEngine['video']['sprites'],
     } as unknown as RoccoEngine['video'],
     audio: {
-      registerSound: () => {},
+      registerSound: (definition: RoccoSoundDefinition) => {
+        state.registeredSounds.set(definition.id, definition);
+      },
       unregisterSound: () => {},
       preloadSound: () => Promise.resolve(),
-      playSound: (soundId: string) => {
+      playSound: (soundId: string, options?: RoccoSoundPlayOptions) => {
         state.playedSoundIds.push(soundId);
+        state.playedSounds.push({ soundId, options });
+        return {
+          stop() {},
+          setVolume() {},
+          get ended() {
+            return Promise.resolve();
+          },
+        };
       },
       stopSound: (soundId: string) => {
         state.stoppedSoundIds.push(soundId);
@@ -646,6 +661,29 @@ describe('RoccoBaitShopToiletLevel', () => {
     expect(state.playedSpriteActions).toContain(
       `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:down`,
     );
+  });
+
+  it('plays the toilet room door closing sound at half of the previous volume when entering from the shop', async () => {
+    const state = createState();
+    const engine = createEngineMock(state);
+    const level = new RoccoBaitShopToiletLevel(createRoccoLocalization('es'));
+
+    await level.mount(engine, {
+      entryConnectorId: 'south',
+    });
+    level.update(16);
+
+    expect(state.registeredSounds.get('rocco-bait-shop-door-closing-sound')).toMatchObject({
+      volume: 0.21,
+      loop: false,
+    });
+    expect(state.playedSounds).toContainEqual({
+      soundId: 'rocco-bait-shop-door-closing-sound',
+      options: {
+        restart: true,
+        volume: 0.21,
+      },
+    });
   });
 
   it('can keep the toilet action menu available during urgency when the developer event is enabled', async () => {

@@ -45,6 +45,19 @@ describe('RoccoLevelRegistry', () => {
     expect(registry.listLevels()).toHaveLength(1);
   });
 
+  it('resetMap replaces a map level with a fresh instance', () => {
+    const registry = new RoccoLevelRegistry({
+      compiledGame: new RpceGameCompiler().compile(compileGame([makeMap('map-a', ['level-1'])])),
+    });
+
+    const firstInstance = registry.requireLevel('level-1');
+
+    registry.resetMap('map-a');
+
+    const secondInstance = registry.requireLevel('level-1');
+    expect(secondInstance).not.toBe(firstInstance);
+  });
+
   it('throws on duplicate map id', () => {
     expect(() =>
       new RoccoLevelRegistry({

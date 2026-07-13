@@ -126,6 +126,8 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     const mountContext = { ...this.mountContext };
     this.gameRuntime?.unmount();
     this.gameRuntime = null;
+    const sdk = mountContext.sdk ?? mountContext.engine;
+    sdk.jukebox.unregisterPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
     void this.mount(mountContext).catch(() => {
       this.mountContext?.engine.log('System', 'Default cartridge restart failed.');
     });

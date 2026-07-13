@@ -1240,6 +1240,31 @@ function createEngineMockWithStrictSoundRegistration(state: EngineMockState): Ro
   };
 }
 
+function createEngineMockWithStrictPlaylistRegistration(state: EngineMockState): RoccoEngine {
+  const engine = createEngineMock(state);
+  const registeredPlaylistIds = new Set<string>();
+  const jukebox = engine.jukebox;
+
+  return {
+    ...engine,
+    jukebox: {
+      ...jukebox,
+      registerPlaylist(playlist) {
+        if (registeredPlaylistIds.has(playlist.id)) {
+          throw new Error(`Duplicate playlist registration '${playlist.id}'.`);
+        }
+
+        registeredPlaylistIds.add(playlist.id);
+        jukebox.registerPlaylist(playlist);
+      },
+      unregisterPlaylist(playlistId: string) {
+        registeredPlaylistIds.delete(playlistId);
+        jukebox.unregisterPlaylist(playlistId);
+      },
+    },
+  };
+}
+
 function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState {
   return {
     restoredRecord: null,
@@ -1429,7 +1454,7 @@ describe('RoccoDefaultCartridge', () => {
 
   it('preserves the selected locale when the cartridge restarts itself', async () => {
     const state = makeEngineState();
-    const engine = createEngineMock(state);
+    const engine = createEngineMockWithStrictPlaylistRegistration(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
     await cartridge.mount({ engine, locale: 'es' });
@@ -1450,6 +1475,8 @@ describe('RoccoDefaultCartridge', () => {
       'Coger',
       'Patear',
     ]);
+    expect(state.unregisteredPlaylistIds).toEqual(['rocco-game-music']);
+    expect(state.playedPlaylistIds).toEqual(['rocco-game-music', 'rocco-game-music']);
   });
 
   it('unregisters the game music playlist on stop', async () => {

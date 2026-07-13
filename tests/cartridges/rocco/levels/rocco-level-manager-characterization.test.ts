@@ -46,6 +46,7 @@ function createMockEngine() {
   const renderCalls = vi.fn();
   const logCalls: string[] = [];
   const statusCalls: string[] = [];
+  const playSoundCalls: Array<{ soundId: string; options?: unknown }> = [];
 
   const engine = {
     acquireInputLease(ownerId: string, mode: 'interactive' | 'advance-only' | 'blocked') {
@@ -134,6 +135,16 @@ function createMockEngine() {
       registerSound: vi.fn(),
       unregisterSound: vi.fn(),
       stopSound: vi.fn(),
+      playSound: vi.fn((soundId: string, options?: unknown) => {
+        playSoundCalls.push({ soundId, options });
+        return {
+          stop() {},
+          setVolume() {},
+          get ended() {
+            return Promise.resolve();
+          },
+        };
+      }),
     },
     log: (channel: string, message: string) => {
       logCalls.push(`${channel}:${message}`);
@@ -157,6 +168,7 @@ function createMockEngine() {
       renderCalls,
       logCalls,
       statusCalls,
+      playSoundCalls,
     },
   };
 }
@@ -188,14 +200,14 @@ function getManager(): ManagerHarness {
 }
 
 function asManager(manager: RoccoLevelManager): {
-  switchToLevel: (levelId: string) => Promise<boolean>;
+  switchToLevel: (levelId: string, entryConnectorId?: string) => Promise<boolean>;
   transitionThrough: (transition: unknown) => Promise<void>;
   restartFromCheckpoint: (request: unknown) => Promise<void>;
   enterBaitShop: () => Promise<void>;
   isTransitioning: boolean;
 } {
   return manager as unknown as {
-    switchToLevel: (levelId: string) => Promise<boolean>;
+    switchToLevel: (levelId: string, entryConnectorId?: string) => Promise<boolean>;
     transitionThrough: (transition: unknown) => Promise<void>;
     restartFromCheckpoint: (request: unknown) => Promise<void>;
     enterBaitShop: () => Promise<void>;
@@ -228,6 +240,56 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
     expect(state.inputLeaseOwners.at(-1)).toBe('level-transition');
     expect(state.releasedInputLeaseOwners).toContain('level-transition');
     expect(state.compositionSessions.at(-1)?.messages).toContain('LOADING 100%');
+  });
+
+  it('plays the bait shop door closing sound at half volume when switching back to Pier Beginning', async () => {
+    const { manager, levelA, levelB, state } = getManager();
+    vi.spyOn(RoccoLevelRegistry.prototype, 'requireLevel').mockImplementation((levelId: string) => {
+      if (levelId === 'level-a') return levelA;
+      if (levelId === 'pier-start') return levelB;
+      if (levelId === 'level-b') return levelB;
+      throw new Error(`Level '${levelId}' is not registered.`);
+    });
+
+    const result = await asManager(manager).switchToLevel('pier-start', 'shop-exit');
+
+    expect(result).toBe(true);
+    expect(state.playSoundCalls).toContainEqual({
+      soundId: 'rocco-bait-shop-door-closing-sound',
+      options: {
+        restart: true,
+        volume: 0.21,
+      },
+    });
+  });
+
+  it('plays the bait shop door closing sound at half volume on a connector return to Pier Beginning', async () => {
+    const { manager, levelA, levelB, state } = getManager();
+    vi.spyOn(RoccoLevelRegistry.prototype, 'requireLevel').mockImplementation((levelId: string) => {
+      if (levelId === 'level-a') return levelA;
+      if (levelId === 'pier-start') return levelB;
+      if (levelId === 'level-b') return levelB;
+      throw new Error(`Level '${levelId}' is not registered.`);
+    });
+
+    await asManager(manager).transitionThrough({
+      connector: {
+        id: 'return',
+        preservePlayerPosition: false,
+      },
+      targetEndpoint: {
+        levelId: 'pier-start',
+        connectorId: 'shop-exit',
+      },
+    });
+
+    expect(state.playSoundCalls).toContainEqual({
+      soundId: 'rocco-bait-shop-door-closing-sound',
+      options: {
+        restart: true,
+        volume: 0.21,
+      },
+    });
   });
 
   it('COR-001: a failed target mount leaves the previous level active and interactive (rollback re-mounts it)', async () => {

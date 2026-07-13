@@ -77,7 +77,6 @@ export class RoccoLevelTransitionService {
     });
 
     try {
-      const targetLevel = plan.resolveTarget();
       const mountOptions = plan.buildMountOptions();
 
       const preloader = new RoccoAssetPreloader((progress) => {
@@ -89,6 +88,7 @@ export class RoccoLevelTransitionService {
       });
 
       plan.preCommit(engine);
+      const targetLevel = plan.resolveTarget();
 
       this.phase = 'committing';
       const currentLevel = activeLevel;

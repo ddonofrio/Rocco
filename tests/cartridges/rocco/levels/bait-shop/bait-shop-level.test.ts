@@ -1,5 +1,6 @@
 ﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { RoccoSoundDefinition, RoccoSoundPlayOptions } from '../../../../../src/console/audio/types';
 import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../../../src/console/video/planes';
 import type {
@@ -68,6 +69,8 @@ interface TestState {
   inputEnabled: boolean;
   inputLeases: string[];
   renderCalls: number;
+  registeredSounds: Map<string, RoccoSoundDefinition>;
+  playedSounds: Array<{ soundId: string; options?: RoccoSoundPlayOptions }>;
 }
 
 function createState(overrides: Partial<TestState> = {}): TestState {
@@ -94,6 +97,8 @@ function createState(overrides: Partial<TestState> = {}): TestState {
     inputEnabled: true,
     inputLeases: [],
     renderCalls: 0,
+    registeredSounds: new Map(),
+    playedSounds: [],
     ...overrides,
   };
 }
@@ -275,9 +280,20 @@ function createEngineMock(state: TestState): RoccoEngine {
     },
     log: () => {},
     audio: {
-      registerSound: () => {},
+      registerSound: (definition: RoccoSoundDefinition) => {
+        state.registeredSounds.set(definition.id, definition);
+      },
       preloadSound: () => Promise.resolve(),
-      playSound: () => {},
+      playSound: (soundId: string, options?: RoccoSoundPlayOptions) => {
+        state.playedSounds.push({ soundId, options });
+        return {
+          stop() {},
+          setVolume() {},
+          get ended() {
+            return Promise.resolve();
+          },
+        };
+      },
       stopSound: () => {},
       unregisterSound: () => {},
     } as unknown as RoccoEngine['audio'],
@@ -382,6 +398,26 @@ describe('RoccoBaitShopLevel', () => {
       },
       constrainMovement: true,
       followSurface: true,
+    });
+  });
+
+  it('plays the bait shop door closing sound at half of the previous volume on entry', async () => {
+    const state = createState();
+    const engine = createEngineMock(state);
+    const level = new RoccoBaitShopLevel(createRoccoLocalization('es'));
+
+    await level.mount(engine);
+
+    expect(state.registeredSounds.get('rocco-bait-shop-door-closing-sound')).toMatchObject({
+      volume: 0.21,
+      loop: false,
+    });
+    expect(state.playedSounds).toContainEqual({
+      soundId: 'rocco-bait-shop-door-closing-sound',
+      options: {
+        restart: true,
+        volume: 0.21,
+      },
     });
   });
 

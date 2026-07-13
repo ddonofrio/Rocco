@@ -37,6 +37,10 @@ export class RoccoLevelRegistry {
       throw new Error(`Map '${mapId}' is not registered.`);
     }
 
+    for (const levelId of map.levelIds) {
+      this.levels.delete(levelId);
+    }
+
     this.registerLevels(this.instantiateMapLevels(map));
   }
 

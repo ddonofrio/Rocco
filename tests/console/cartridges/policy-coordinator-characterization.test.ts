@@ -9,7 +9,7 @@ describe('RoccoRuntimeDefaultPlayerMovePolicyCoordinator characterization', () =
   });
 
   it('COR-002: async handleAction result returning suppressDefaultPlayerMove:true does NOT suppress movement', () => {
-    const asyncResult = Promise.resolve({ suppressDefaultPlayerMove: true });
+    const asyncResult = Promise.resolve();
 
     const result = coordinator.shouldSuppressDefaultPlayerMove({
       target: undefined,
@@ -34,17 +34,18 @@ describe('RoccoRuntimeDefaultPlayerMovePolicyCoordinator characterization', () =
     const sceneTarget: RoccoSceneTargetDefinition = {
       instanceId: 'bait-shop-door',
       definitionId: 'bait-shop-door',
+      shape: { kind: 'rect', x: 0, y: 0, width: 10, height: 10 },
       suppressDefaultPlayerMove: true,
     };
 
-    const asyncResult = Promise.resolve({ suppressDefaultPlayerMove: false });
+    const asyncResult = Promise.resolve();
 
     const coordinatorWithTarget = new RoccoRuntimeDefaultPlayerMovePolicyCoordinator({
       getSceneTarget: () => sceneTarget,
     });
 
     const result = coordinatorWithTarget.shouldSuppressDefaultPlayerMove({
-      target: { kind: 'scene-target', instanceId: 'bait-shop-door' },
+      target: { kind: 'scene-target', instanceId: 'bait-shop-door', definitionId: 'bait-shop-door' },
       cartridgeActionResult: asyncResult,
     });
 

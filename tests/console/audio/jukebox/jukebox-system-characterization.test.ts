@@ -183,7 +183,7 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
       globalVolume: 0.4,
     });
 
-    let resolveFetch: (value: ArrayBuffer) => void;
+    let resolveFetch!: (value: ArrayBuffer) => void;
     const fetchPromise = new Promise<ArrayBuffer>((resolve) => {
       resolveFetch = resolve;
     });
@@ -197,7 +197,7 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
               ok: true,
               arrayBuffer: () => Promise.resolve(arrayBuffer),
             } as Response);
-          });
+          }).catch(() => {});
         }),
       ),
     );

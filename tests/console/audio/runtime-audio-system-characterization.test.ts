@@ -78,10 +78,10 @@ describe('RoccoRuntimeAudioSystem characterization', () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
-    }).mockResolvedValueOnce({
+    } as Response).mockResolvedValueOnce({
       ok: true,
       arrayBuffer: () => Promise.resolve(new ArrayBuffer(16)),
-    });
+    } as Response);
 
     vi.stubGlobal('fetch', fetchMock);
 

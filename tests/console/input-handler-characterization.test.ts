@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { RoccoRuntimeAudioSystem } from '../../src/console/audio';
 import type { RoccoJukeboxSystem } from '../../src/console/audio/jukebox';
@@ -7,17 +7,8 @@ import type {
   RoccoCursorActionEvent,
   RoccoCursorActionHandler,
 } from '../../src/console/video/cursor';
-import type { RoccoViewportHost } from '../../src/console/viewport';
+import type { RoccoViewportHost } from '../../src/console/video/viewport';
 import { RoccoInputHandler } from '../../src/console/input-handler';
-
-interface InputHandlerTestState {
-  actionHandler: RoccoCursorActionHandler | undefined;
-  messageListCalls: number;
-  handledActions: unknown[];
-  audioUnlockCalls: number;
-  jukeboxUnlockCalls: number;
-  logs: string[];
-}
 
 type InputHandlerVideoSystem = ConstructorParameters<typeof RoccoInputHandler>[0]['videoSystem'];
 
@@ -143,7 +134,7 @@ describe('RoccoInputHandler characterization', () => {
       mount() {
         // noop
       },
-      handleAction(action) {
+      handleAction() {
         handleActionCalled = true;
         returnedPromise = Promise.resolve();
         return returnedPromise;
@@ -199,8 +190,8 @@ describe('RoccoInputHandler characterization', () => {
       mount() {
         // noop
       },
-      handleAction(action) {
-        handledActions.push(action);
+      handleAction() {
+        handledActions.push(arguments[0]);
         return { suppressDefaultPlayerMove: true };
       },
     };

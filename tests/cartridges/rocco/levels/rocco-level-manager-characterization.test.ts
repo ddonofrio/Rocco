@@ -9,10 +9,10 @@ function createMockLevel(levelId: string): RoccoLevel {
     id: levelId,
     title: levelId,
     connectors: [],
-    mount: vi.fn<Parameters<RoccoLevel['mount']>, ReturnType<RoccoLevel['mount']>>(),
-    unmount: vi.fn<Parameters<RoccoLevel['unmount']>, ReturnType<RoccoLevel['unmount']>>(),
-    update: vi.fn<Parameters<RoccoLevel['update']>, ReturnType<RoccoLevel['update']>>(),
-    handleAction: vi.fn<Parameters<RoccoLevel['handleAction']>, ReturnType<RoccoLevel['handleAction']>>(),
+    mount: vi.fn(),
+    unmount: vi.fn(),
+    update: vi.fn(),
+    handleAction: vi.fn(),
   } satisfies RoccoLevel;
 }
 
@@ -25,7 +25,7 @@ function createMockEngine() {
   const logCalls: string[] = [];
   const statusCalls: string[] = [];
 
-    const engine = {
+  const engine = {
     setInputEnabled: (enabled: boolean) => {
       setInputEnabledCalls.push(enabled);
     },
@@ -92,7 +92,6 @@ describe('RoccoLevelManager characterization', () => {
   let mockState: ReturnType<typeof createMockEngine>;
   let levelA: RoccoLevel;
   let levelB: RoccoLevel;
-  let requireLevelSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     levelA = createMockLevel('level-a');
@@ -100,7 +99,7 @@ describe('RoccoLevelManager characterization', () => {
     mockState = createMockEngine();
     mockEngine = mockState.engine;
 
-    requireLevelSpy = vi.spyOn(RoccoLevelRegistry.prototype, 'requireLevel').mockImplementation((levelId: string) => {
+    vi.spyOn(RoccoLevelRegistry.prototype, 'requireLevel').mockImplementation((levelId: string) => {
       if (levelId === 'level-a') return levelA;
       if (levelId === 'level-b') return levelB;
       throw new Error(`Level '${levelId}' is not registered.`);
@@ -113,7 +112,6 @@ describe('RoccoLevelManager characterization', () => {
   });
 
   afterEach(() => {
-    requireLevelSpy.mockRestore();
     vi.restoreAllMocks();
   });
 
@@ -131,8 +129,8 @@ describe('RoccoLevelManager characterization', () => {
   });
 
   it('COR-001: composition overlay shows 100% even on failed transition', async () => {
-    vi.mocked(levelA.unmount).mockImplementation(() => {});
-    vi.mocked(levelA.mount).mockRejectedValue(new Error('mount failed'));
+    vi.spyOn(levelA, 'unmount').mockImplementation(() => {});
+    vi.spyOn(levelA, 'mount').mockRejectedValue(new Error('mount failed'));
 
     await (manager as unknown as { switchToLevel: (levelId: string) => Promise<boolean> }).switchToLevel('level-b');
 
@@ -140,8 +138,8 @@ describe('RoccoLevelManager characterization', () => {
   });
 
   it('COR-001: input is re-enabled after a failed transition', async () => {
-    vi.mocked(levelA.unmount).mockImplementation(() => {});
-    vi.mocked(levelA.mount).mockRejectedValue(new Error('mount failed'));
+    vi.spyOn(levelA, 'unmount').mockImplementation(() => {});
+    vi.spyOn(levelA, 'mount').mockRejectedValue(new Error('mount failed'));
 
     await (manager as unknown as { switchToLevel: (levelId: string) => Promise<boolean> }).switchToLevel('level-b');
 
@@ -149,9 +147,9 @@ describe('RoccoLevelManager characterization', () => {
   });
 
   it('COR-001: transitioning flag is reset even on failure, allowing a second transition', async () => {
-    vi.mocked(levelA.unmount).mockImplementation(() => {});
-    vi.mocked(levelA.mount).mockRejectedValue(new Error('mount failed'));
-    vi.mocked(levelB.mount).mockResolvedValue({ id: 'scene-b', planes: [] });
+    vi.spyOn(levelA, 'unmount').mockImplementation(() => {});
+    vi.spyOn(levelA, 'mount').mockRejectedValue(new Error('mount failed'));
+    vi.spyOn(levelB, 'mount').mockResolvedValue({ id: 'scene-b', planes: [] });
 
     await (manager as unknown as { switchToLevel: (levelId: string) => Promise<boolean> }).switchToLevel('level-b');
 

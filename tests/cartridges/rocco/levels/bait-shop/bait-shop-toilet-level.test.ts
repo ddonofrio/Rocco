@@ -369,6 +369,22 @@ function createEngineMock(state: TestState): RoccoEngine {
       state.inputEnabled = enabled;
     },
     isInputEnabled: () => state.inputEnabled,
+    getInputMode: () => (state.inputEnabled ? 'interactive' : 'blocked'),
+    acquireInputLease: () => ({
+      ownerId: 'test',
+      mode: 'blocked' as const,
+      acquiredAt: 0,
+      dispose() {},
+    }),
+    beginCompositionSession: () => ({
+      id: 'test',
+      ownerId: 'test',
+      message: null,
+      status: 'active' as const,
+      report() {},
+      fail() {},
+      dispose() {},
+    }),
     setPlayerSprite: (instanceId: string | null) => {
       state.playerSpriteId = instanceId;
     },

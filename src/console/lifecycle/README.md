@@ -65,6 +65,10 @@ required stop order, so LIFO disposal matches the LIF-001 stop sequence:
 - Every resource is registered under an owner scope (no orphan resources).
 - Cleanup is idempotent and aggregates errors instead of stopping early.
 - Async operations receive cancellation through the scope `AbortSignal`.
+- Input locking and the composition overlay are now composed from leases
+  (`src/console/input`, `src/console/composition`) that live on top of the same
+  `ResourceScope` ownership model, so a released lock or overlay never
+  invalidates another owner's lease.
 
 ## Files
 

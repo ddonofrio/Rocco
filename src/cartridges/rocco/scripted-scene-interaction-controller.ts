@@ -1,5 +1,6 @@
 import type { RoccoSceneClickAction } from '../../console/cartridges';
 import type { RoccoEngine } from '../../console/engine-sdk';
+import type { InputPolicyLease } from '../../console/input/input-policy-stack';
 import type { RoccoFacingDirection, RoccoPoint } from '../../console/video/sprites';
 import {
   DEFAULT_SPRITE_IDLE_ACTION_ID,
@@ -24,6 +25,7 @@ export class RoccoScriptedSceneInteractionController {
   private readonly engine: RoccoEngine;
   private readonly definitions = new Map<string, RoccoScriptedSceneInteractionDefinition>();
   private activeInteraction: RoccoActiveScriptedSceneInteraction | null = null;
+  private inputLease: InputPolicyLease | null = null;
 
   constructor(
     engine: RoccoEngine,
@@ -36,7 +38,7 @@ export class RoccoScriptedSceneInteractionController {
   }
 
   handleSceneClick(activation: RoccoSceneClickAction): boolean {
-    if (!this.engine.isInputEnabled() || this.activeInteraction || !activation.targetInstanceId) {
+    if (this.engine.getInputMode() !== 'interactive' || this.activeInteraction || !activation.targetInstanceId) {
       return false;
     }
 
@@ -75,7 +77,8 @@ export class RoccoScriptedSceneInteractionController {
       definition.onReached();
     } finally {
       if (definition.restoreInputOnComplete !== false) {
-        this.engine.setInputEnabled(true);
+        this.inputLease?.dispose();
+        this.inputLease = null;
       }
       this.activeInteraction = null;
     }
@@ -96,11 +99,12 @@ export class RoccoScriptedSceneInteractionController {
     }
 
     this.activeInteraction = null;
-    this.engine.setInputEnabled(true);
+    this.inputLease?.dispose();
+    this.inputLease = null;
   }
 
   run(definition: RoccoScriptedSceneInteractionDefinition): boolean {
-    if (!this.engine.isInputEnabled() || this.activeInteraction) {
+    if (this.engine.getInputMode() !== 'interactive' || this.activeInteraction) {
       return false;
     }
 
@@ -114,7 +118,7 @@ export class RoccoScriptedSceneInteractionController {
     }
 
     this.activeInteraction = { definition };
-    this.engine.setInputEnabled(false);
+    this.inputLease = this.engine.acquireInputLease('scripted-scene-interaction', 'blocked');
     const started = this.engine.video.sprites.goTo(
       DEFAULT_SPRITE_INSTANCE_ID,
       definition.moveTo.x,
@@ -130,7 +134,8 @@ export class RoccoScriptedSceneInteractionController {
     );
     if (!started) {
       this.activeInteraction = null;
-      this.engine.setInputEnabled(true);
+      this.inputLease.dispose();
+      this.inputLease = null;
     }
     this.engine.video.render(0);
   }

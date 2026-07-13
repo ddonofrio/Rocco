@@ -246,6 +246,22 @@ function createDeveloperEngine(
     setInputEnabled: (enabled: boolean) => {
       state.inputEnabledChanges.push(enabled);
     },
+    getInputMode: () => 'interactive',
+    acquireInputLease: () => ({
+      ownerId: 'test',
+      mode: 'blocked' as const,
+      acquiredAt: 0,
+      dispose() {},
+    }),
+    beginCompositionSession: () => ({
+      id: 'test',
+      ownerId: 'test',
+      message: null,
+      status: 'active' as const,
+      report() {},
+      fail() {},
+      dispose() {},
+    }),
     isDeveloperModeEnabled: () => true,
     log: vi.fn(),
   } as unknown as RoccoEngine;

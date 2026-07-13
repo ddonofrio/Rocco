@@ -39,20 +39,65 @@ function createMockEngine() {
   const compositionTextCalls: string[] = [];
   const beginCompositionCalls = vi.fn();
   const endCompositionCalls = vi.fn();
+  const inputLeaseOwners: string[] = [];
+  const releasedInputLeaseOwners: string[] = [];
+  const beginCompositionSessionCalls = vi.fn();
+  const compositionSessions: { ownerId: string; messages: string[]; disposed: boolean }[] = [];
   const renderCalls = vi.fn();
   const logCalls: string[] = [];
   const statusCalls: string[] = [];
 
   const engine = {
-    setInputEnabled: (enabled: boolean) => {
+    acquireInputLease(ownerId: string, mode: 'interactive' | 'advance-only' | 'blocked') {
+      inputLeaseOwners.push(ownerId);
+      return {
+        ownerId,
+        mode,
+        acquiredAt: 0,
+        dispose() {
+          releasedInputLeaseOwners.push(ownerId);
+        },
+      };
+    },
+    getInputMode: () => (inputEnabled ? 'interactive' : 'blocked'),
+    setInputEnabled(enabled: boolean) {
       inputEnabled = enabled;
       setInputEnabledCalls.push(enabled);
     },
     isInputEnabled: () => inputEnabled,
+    beginCompositionSession(ownerId: string) {
+      beginCompositionSessionCalls(ownerId);
+      const session = { ownerId, messages: [] as string[], disposed: false };
+      compositionSessions.push(session);
+      return {
+        id: `composition-${compositionSessions.length}`,
+        ownerId,
+        get message() {
+          return session.messages.at(-1) ?? null;
+        },
+        get status() {
+          return session.disposed ? 'disposed' : 'active';
+        },
+        report(progress: { completed: number; total: number; message?: string }) {
+          if (progress.message) {
+            session.messages.push(progress.message);
+          }
+        },
+        fail() {
+          session.disposed = true;
+        },
+        dispose() {
+          session.disposed = true;
+        },
+      };
+    },
     beginComposition: beginCompositionCalls,
     endComposition: endCompositionCalls,
-    setCompositionText: (text: string) => {
-      compositionTextCalls.push(text);
+    setCompositionText(text: string | null) {
+      if (text) {
+        compositionTextCalls.push(text);
+        compositionSessions.at(-1)?.messages.push(text);
+      }
     },
     video: {
       render: renderCalls,
@@ -105,6 +150,10 @@ function createMockEngine() {
       compositionTextCalls,
       beginCompositionCalls,
       endCompositionCalls,
+      inputLeaseOwners,
+      releasedInputLeaseOwners,
+      beginCompositionSessionCalls,
+      compositionSessions,
       renderCalls,
       logCalls,
       statusCalls,
@@ -174,9 +223,11 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
 
     expect(result).toBe(true);
     expect(activeLevelId(manager)).toBe('level-b');
-    expect(state.endCompositionCalls).toHaveBeenCalledTimes(1);
-    expect(state.setInputEnabledCalls.at(-1)).toBe(true);
-    expect(state.compositionTextCalls).toContain('LOADING 100%');
+    expect(state.beginCompositionSessionCalls).toHaveBeenCalledTimes(1);
+    expect(state.compositionSessions.at(-1)?.disposed).toBe(true);
+    expect(state.inputLeaseOwners.at(-1)).toBe('level-transition');
+    expect(state.releasedInputLeaseOwners).toContain('level-transition');
+    expect(state.compositionSessions.at(-1)?.messages).toContain('LOADING 100%');
   });
 
   it('COR-001: a failed target mount leaves the previous level active and interactive (rollback re-mounts it)', async () => {
@@ -187,9 +238,10 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
 
     expect(result).toBe(false);
     expect(activeLevelId(manager)).toBe('level-a');
-    expect(state.endCompositionCalls).toHaveBeenCalledTimes(1);
-    expect(state.setInputEnabledCalls.at(-1)).toBe(true);
-    expect(state.compositionTextCalls).not.toContain('LOADING 100%');
+    expect(state.beginCompositionSessionCalls).toHaveBeenCalledTimes(1);
+    expect(state.compositionSessions.at(-1)?.disposed).toBe(true);
+    expect(state.releasedInputLeaseOwners).toContain('level-transition');
+    expect(state.compositionSessions.at(-1)?.messages).not.toContain('LOADING 100%');
   });
 
   it('COR-001: validation failure before asset load keeps the current level untouched', async () => {
@@ -208,21 +260,24 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
   it('COR-001: the overlay only shows 100% after success, not on failure', async () => {
     const ok = getManager();
     await asManager(ok.manager).switchToLevel('level-b');
-    expect(ok.state.compositionTextCalls).toContain('LOADING 100%');
+    expect(ok.state.compositionSessions.at(-1)?.messages).toContain('LOADING 100%');
 
     const fail = getManager();
     vi.spyOn(fail.levelB, 'mount').mockRejectedValue(new Error('mount failed'));
     await asManager(fail.manager).switchToLevel('level-b');
-    expect(fail.state.compositionTextCalls).not.toContain('LOADING 100%');
+    expect(fail.state.compositionSessions.at(-1)?.messages).not.toContain('LOADING 100%');
   });
 
-  it('COR-001: input is restored to its previous state, never forced to true', async () => {
-    const { manager, engine, state } = getManager();
-    vi.spyOn(engine, 'isInputEnabled').mockReturnValue(false);
+  it('COR-001: the transition releases its own lease without forcing input on or off', async () => {
+    const { manager, state } = getManager();
 
     await asManager(manager).switchToLevel('level-b');
 
-    expect(state.setInputEnabledCalls.at(-1)).toBe(false);
+    expect(state.inputLeaseOwners).toContain('level-transition');
+    expect(state.releasedInputLeaseOwners).toContain('level-transition');
+    expect(state.releasedInputLeaseOwners.filter((o) => o === 'level-transition')).toHaveLength(
+      state.inputLeaseOwners.filter((o) => o === 'level-transition').length,
+    );
   });
 
   it('COR-001: a failed target mount cleans up the partial target resources', async () => {
@@ -252,7 +307,7 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
 
     blocked.resolve(mockScene('scene-b'));
     await first;
-    expect(state.setInputEnabledCalls.at(-1)).toBe(true);
+    expect(state.releasedInputLeaseOwners).toContain('level-transition');
   });
 
   it('COR-001: two transition requests in the same frame run only one mount', async () => {

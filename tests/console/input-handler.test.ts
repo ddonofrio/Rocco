@@ -11,6 +11,7 @@ import type {
   RoccoCursorMoveHandler,
 } from '../../src/console/video/cursor';
 import type { RoccoViewportHost } from '../../src/console/video/viewport';
+import type { InputMode } from '../../src/console/input/input-policy-stack';
 import { RoccoInputHandler } from '../../src/console/input-handler';
 
 interface InputHandlerTestState {
@@ -143,7 +144,10 @@ function asViewportHost(mock: unknown): RoccoViewportHost {
   return mock as RoccoViewportHost;
 }
 
-function createInputHandler(state: InputHandlerTestState): RoccoInputHandler {
+function createInputHandler(
+  state: InputHandlerTestState,
+  getInputMode?: () => InputMode,
+): RoccoInputHandler {
   const cartridge: RoccoCartridge = {
     manifest: {
       id: 'test-cartridge',
@@ -207,6 +211,7 @@ function createInputHandler(state: InputHandlerTestState): RoccoInputHandler {
     }),
     getActiveCartridge: () => cartridge,
     getActivePlayerSpriteId: () => 'rocco',
+    getInputMode,
     log: (channel, message) => {
       state.logs.push(`${channel}:${message}`);
     },
@@ -223,9 +228,9 @@ describe('RoccoInputHandler', () => {
       jukeboxUnlockCalls: 0,
       logs: [],
     };
-    const handler = createInputHandler(state);
+    const inputMode: InputMode = 'blocked';
+    const handler = createInputHandler(state, () => inputMode);
     handler.mount();
-    handler.setInputEnabled(false);
 
     state.actionHandler?.(makeClickEvent(320, 180));
 

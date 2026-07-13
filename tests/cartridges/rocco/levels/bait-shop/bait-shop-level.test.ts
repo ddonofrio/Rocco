@@ -66,6 +66,7 @@ interface TestState {
   goToSprites: string[];
   isSpriteMovingValue: boolean;
   inputEnabled: boolean;
+  inputLeases: string[];
   renderCalls: number;
 }
 
@@ -91,6 +92,7 @@ function createState(overrides: Partial<TestState> = {}): TestState {
     goToSprites: [],
     isSpriteMovingValue: false,
     inputEnabled: true,
+    inputLeases: [],
     renderCalls: 0,
     ...overrides,
   };
@@ -244,6 +246,30 @@ function createEngineMock(state: TestState): RoccoEngine {
       state.inputEnabled = enabled;
     },
     isInputEnabled: () => state.inputEnabled,
+    getInputMode: () => (state.inputEnabled ? 'interactive' : 'blocked'),
+    acquireInputLease: (ownerId: string) => {
+      state.inputLeases.push(ownerId);
+      return {
+        ownerId,
+        mode: 'blocked' as const,
+        acquiredAt: 0,
+        dispose() {
+          const index = state.inputLeases.indexOf(ownerId);
+          if (index !== -1) {
+            state.inputLeases.splice(index, 1);
+          }
+        },
+      };
+    },
+    beginCompositionSession: () => ({
+      id: 'test',
+      ownerId: 'test',
+      message: null,
+      status: 'active' as const,
+      report() {},
+      fail() {},
+      dispose() {},
+    }),
     setPlayerSprite: (instanceId: string | null) => {
       state.playerSpriteId = instanceId;
     },
@@ -402,7 +428,7 @@ describe('RoccoBaitShopLevel', () => {
       actionId: 'kick',
     });
 
-    expect(state.inputEnabled).toBe(false);
+    expect(state.inputLeases).toContain('scripted-scene-interaction');
     state.isSpriteMovingValue = false;
     level.update(16);
     level.update(520);

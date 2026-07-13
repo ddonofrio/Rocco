@@ -497,6 +497,8 @@ interface EngineMockState {
   statusMessages: string[];
   isSpriteMovingValue: boolean;
   inputEnabled: boolean;
+  inputLeases: { ownerId: string; mode: 'interactive' | 'advance-only' | 'blocked' }[];
+  compositionSessions: string[];
   spriteSnapshot: RoccoSpriteInstance | undefined;
 }
 
@@ -1158,6 +1160,20 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     isDeveloperModeEnabled() {
       return true;
     },
+    acquireInputLease(ownerId: string, mode: 'interactive' | 'advance-only' | 'blocked') {
+      state.inputLeases.push({ ownerId, mode });
+      return {
+        ownerId,
+        mode,
+        acquiredAt: 0,
+        dispose() {
+          // noop
+        },
+      };
+    },
+    getInputMode() {
+      return state.inputEnabled ? 'interactive' : 'blocked';
+    },
 
     // Logging and status
     setStatus(status: string) {
@@ -1170,6 +1186,24 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     // Composition
     beginComposition() {
       // noop
+    },
+    beginCompositionSession(ownerId: string) {
+      state.compositionSessions.push(ownerId);
+      return {
+        id: `composition-${state.compositionSessions.length}`,
+        ownerId,
+        message: null,
+        status: 'active' as const,
+        report() {
+          // noop
+        },
+        fail() {
+          // noop
+        },
+        dispose() {
+          // noop
+        },
+      };
     },
     endComposition() {
       // noop
@@ -1236,6 +1270,8 @@ function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState 
     statusMessages: [],
     isSpriteMovingValue: false,
     inputEnabled: true,
+    inputLeases: [],
+    compositionSessions: [],
     spriteSnapshot: undefined,
     ...overrides,
   };

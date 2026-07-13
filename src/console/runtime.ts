@@ -21,12 +21,19 @@ import { RoccoRuntimeVideoSystem } from './video';
 import type { RoccoDisplayProfile } from './video/display';
 import type { RoccoViewportHost } from './video/viewport';
 import { RoccoInputHandler } from './input-handler';
+import {
+  InputPolicyStackImpl,
+  type InputMode,
+  type InputPolicyLease,
+} from './input/input-policy-stack';
+import { CompositionServiceImpl, type CompositionSession } from './composition/composition-service';
 import { ActionDispatcher } from './action-dispatcher';
 import { RoccoCartridgeManager } from './cartridge-manager';
 import { RoccoPersistenceAdapter } from './persistence-adapter';
 import {
   createResourceScope,
   LifecycleStateMachine,
+  type Disposer,
   type LifecycleState,
   type ResourceScope,
 } from './lifecycle';
@@ -61,6 +68,12 @@ export class GameRuntime implements RoccoEngine {
   private statusMessage = 'Engine bootstrapping cartridge...';
   private compositionOverlay: Container | null = null;
   private compositionText: Text | null = null;
+  private readonly inputPolicy = new InputPolicyStackImpl();
+  private readonly compositionService = new CompositionServiceImpl();
+  private compositionListener: Disposer | null = null;
+  private legacyInputLockCount = 0;
+  private legacyInputLease: InputPolicyLease | null = null;
+  private legacyCompositionSession: CompositionSession | null = null;
   private soundProfile: RoccoSoundProfile = { ...defaultSoundProfile };
   private consoleFlags: RoccoConsoleFlags;
 
@@ -101,6 +114,7 @@ export class GameRuntime implements RoccoEngine {
     this.effectRegistry.register(roccoAutoScrollRuntime);
     this.applySoundProfile();
     this.createRootScope();
+    this.compositionListener = this.compositionService.onChange(() => this.syncCompositionOverlay());
   }
 
   /**
@@ -176,6 +190,7 @@ export class GameRuntime implements RoccoEngine {
         viewportHost: this.options.viewportHost,
         getActiveCartridge: () => this.cartridgeManager.getActiveCartridge(),
         getActivePlayerSpriteId: () => this.activePlayerSpriteId,
+        getInputMode: () => this.inputPolicy.getEffectiveMode(),
         actionDispatcher: new ActionDispatcher({
           getActiveCartridge: () => this.cartridgeManager.getActiveCartridge(),
           getActiveLevelId: () => this.cartridgeManager.getActiveLevelId(),
@@ -215,6 +230,9 @@ export class GameRuntime implements RoccoEngine {
       throw error;
     }
 
+    void this.compositionListener?.();
+    this.compositionListener = null;
+
     this.inputHandler = null;
     this.activePlaneSceneId = null;
     this.activePlayerSpriteId = null;
@@ -252,12 +270,39 @@ export class GameRuntime implements RoccoEngine {
     return this.activePlayerSpriteId;
   }
 
-  setInputEnabled(enabled: boolean): void {
-    this.inputHandler?.setInputEnabled(enabled);
+  acquireInputLease(ownerId: string, mode: InputMode): InputPolicyLease {
+    return this.inputPolicy.acquire({ ownerId, mode });
   }
 
+  getInputMode(): InputMode {
+    return this.inputPolicy.getEffectiveMode();
+  }
+
+  /**
+   * @deprecated Retained for legacy per-level callers until level decomposition
+   * (audit Phase 4). Backed by a ref-counted `'legacy-input'` lease so it still
+   * composes with `acquireInputLease` callers. Use `acquireInputLease` instead.
+   */
+  setInputEnabled(enabled: boolean): void {
+    if (!enabled) {
+      this.legacyInputLockCount += 1;
+      if (this.legacyInputLockCount === 1 && !this.legacyInputLease) {
+        this.legacyInputLease = this.inputPolicy.acquire({ ownerId: 'legacy-input', mode: 'blocked' });
+      }
+      return;
+    }
+    this.legacyInputLockCount = Math.max(0, this.legacyInputLockCount - 1);
+    if (this.legacyInputLockCount === 0 && this.legacyInputLease) {
+      this.legacyInputLease.dispose();
+      this.legacyInputLease = null;
+    }
+  }
+
+  /**
+   * @deprecated Use `getInputMode() === 'interactive'`.
+   */
   isInputEnabled(): boolean {
-    return this.inputHandler?.isInputEnabled() ?? true;
+    return this.inputPolicy.getEffectiveMode() === 'interactive';
   }
 
   isDeveloperModeEnabled(): boolean {
@@ -275,43 +320,39 @@ export class GameRuntime implements RoccoEngine {
     };
   }
 
-  beginComposition(): void {
-    if (!this.app || this.compositionOverlay) {
-      return;
-    }
-
-    this.compositionOverlay = new Container();
-    this.compositionOverlay.label = 'composition-overlay';
-    this.compositionOverlay.zIndex = 10000;
-    this.compositionOverlay.sortableChildren = true;
-    const bg = new Graphics().rect(0, 0, 10000, 10000).fill(0x0d110c);
-    this.compositionOverlay.addChild(bg);
-    this.app.stage.addChild(this.compositionOverlay);
+  beginCompositionSession(
+    ownerId: string,
+    options: { message?: string } = {},
+  ): CompositionSession {
+    return this.compositionService.begin({ ownerId, message: options.message });
   }
 
-  endComposition(): void {
-    if (!this.app || !this.compositionOverlay) {
+  private syncCompositionOverlay(): void {
+    if (!this.app) {
       return;
     }
-
-    this.app.stage.removeChild(this.compositionOverlay);
-    this.compositionOverlay.destroy({ children: true });
-    this.compositionOverlay = null;
-    this.compositionText = null;
+    const message = this.compositionService.getActiveMessage();
+    if (message === null) {
+      this.hideCompositionOverlay();
+      return;
+    }
+    this.showCompositionOverlay(message);
   }
 
-  setCompositionText(text: string | null): void {
-    if (!this.app || !this.compositionOverlay) {
+  private showCompositionOverlay(text: string): void {
+    if (!this.app) {
       return;
     }
-
-    if (!text) {
-      if (this.compositionText) {
-        this.compositionOverlay.removeChild(this.compositionText);
-        this.compositionText.destroy();
-        this.compositionText = null;
-      }
-      return;
+    if (!this.compositionOverlay) {
+      this.compositionOverlay = new Container();
+      this.compositionOverlay.label = 'composition-overlay';
+      this.compositionOverlay.zIndex = 10000;
+      this.compositionOverlay.sortableChildren = true;
+      const bg = new Graphics()
+        .rect(0, 0, this.app.screen.width, this.app.screen.height)
+        .fill(0x0d110c);
+      this.compositionOverlay.addChild(bg);
+      this.app.stage.addChild(this.compositionOverlay);
     }
 
     if (!this.compositionText) {
@@ -325,8 +366,6 @@ export class GameRuntime implements RoccoEngine {
           letterSpacing: 1,
         },
       });
-      this.compositionText.x = 480;
-      this.compositionText.y = 270;
       this.compositionText.anchor.set(0.5);
       this.compositionText.zIndex = 10001;
       this.compositionOverlay.addChild(this.compositionText);
@@ -334,7 +373,50 @@ export class GameRuntime implements RoccoEngine {
       this.compositionText.text = text;
     }
 
+    this.compositionText.x = this.app.screen.width / 2;
+    this.compositionText.y = this.app.screen.height / 2;
     this.app.render();
+  }
+
+  private hideCompositionOverlay(): void {
+    if (!this.app || !this.compositionOverlay) {
+      return;
+    }
+    this.app.stage.removeChild(this.compositionOverlay);
+    this.compositionOverlay.destroy({ children: true });
+    this.compositionOverlay = null;
+    this.compositionText = null;
+  }
+
+  /**
+   * @deprecated Retained for legacy callers. Use `beginCompositionSession`.
+   */
+  beginComposition(): void {
+    if (this.legacyCompositionSession) {
+      return;
+    }
+    this.legacyCompositionSession = this.compositionService.begin({
+      ownerId: 'legacy-composition',
+      message: 'LOADING 0%',
+    });
+  }
+
+  /**
+   * @deprecated Use `CompositionSession.dispose()`.
+   */
+  endComposition(): void {
+    this.legacyCompositionSession?.dispose();
+    this.legacyCompositionSession = null;
+  }
+
+  /**
+   * @deprecated Use `CompositionSession.report`.
+   */
+  setCompositionText(text: string | null): void {
+    if (!this.legacyCompositionSession) {
+      return;
+    }
+    this.legacyCompositionSession.report({ completed: 0, total: 0, message: text ?? '' });
   }
 
   setStatus(status: string): void {

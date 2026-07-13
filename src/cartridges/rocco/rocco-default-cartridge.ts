@@ -34,12 +34,14 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     this.mountContext = { ...context };
     this.gameRuntime?.unmount();
     this.gameRuntime = null;
-    context.engine.beginComposition();
+    const composition = context.engine.beginCompositionSession('rocco-default-mount', {
+      message: 'LOADING 0%',
+    });
 
     const localization = createRoccoLocalization(context.locale);
     const preloader = new RpceAssetPreloader((progress) => {
       const text = `LOADING ${progress.percent}%`;
-      context.engine.setCompositionText?.(text);
+      composition.report({ completed: progress.percent, total: 100, message: text });
     });
 
     try {
@@ -87,8 +89,8 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
           context.engine.log('System', 'Background music could not start.');
         });
     } finally {
-      context.engine.setCompositionText?.('LOADING 100%');
-      context.engine.endComposition();
+      composition.report({ completed: 100, total: 100, message: 'LOADING 100%' });
+      composition.dispose();
     }
   }
 

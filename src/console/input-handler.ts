@@ -5,6 +5,7 @@ import type { RoccoCartridge, RoccoSceneClickAction } from './cartridges';
 import type { RoccoRuntimeAudioSystem } from './audio';
 import type { RoccoJukeboxSystem } from './audio/jukebox';
 import { ActionDispatcher } from './action-dispatcher';
+import type { InputMode } from './input/input-policy-stack';
 import { RoccoRuntimeDefaultPlayerMovePolicyCoordinator } from './runtime-default-player-move-policy-coordinator';
 import { RoccoRuntimeInputPresentationCoordinator } from './runtime-input-presentation-coordinator';
 
@@ -35,6 +36,12 @@ interface InputHandlerOptions {
   getActivePlayerSpriteId: () => string | null;
   actionDispatcher?: ActionDispatcher;
   log: (channel: string, message: string) => void;
+  /**
+   * Returns the composed effective input mode. When `'interactive'`, full
+   * interaction is allowed; otherwise clicks are routed as advance/disabled
+   * actions. Sourced from the engine's `InputPolicyStack`.
+   */
+  getInputMode?: () => InputMode;
 }
 
 export class RoccoInputHandler {
@@ -47,7 +54,7 @@ export class RoccoInputHandler {
   private readonly logFn: (channel: string, message: string) => void;
   private readonly defaultPlayerMovePolicy: RoccoRuntimeDefaultPlayerMovePolicyCoordinator;
   private readonly inputPresentation: RoccoRuntimeInputPresentationCoordinator;
-  private inputEnabled = true;
+  private readonly getInputMode: () => InputMode;
 
   constructor(options: InputHandlerOptions) {
     this.videoSystem = options.videoSystem;
@@ -61,6 +68,7 @@ export class RoccoInputHandler {
       log: options.log,
     });
     this.logFn = options.log;
+    this.getInputMode = options.getInputMode ?? (() => 'interactive');
     this.defaultPlayerMovePolicy = new RoccoRuntimeDefaultPlayerMovePolicyCoordinator({
       getSceneTarget: (instanceId) => this.videoSystem.sceneTargets.getTarget(instanceId),
     });
@@ -79,17 +87,9 @@ export class RoccoInputHandler {
   unmount(): void {
     this.viewportHost?.setCursorActionHandler(undefined);
     this.viewportHost?.setCursorMoveHandler(undefined);
-    this.viewportHost?.setCursorLeaveHandler(undefined);
+    this.viewportHost?.  setCursorLeaveHandler(undefined);
     this.inputPresentation.unmount();
     this.actionDispatcher.dispose();
-  }
-
-  setInputEnabled(enabled: boolean): void {
-    this.inputEnabled = enabled;
-  }
-
-  isInputEnabled(): boolean {
-    return this.inputEnabled;
   }
 
   private readonly handleCursorAction = (event: RoccoCursorActionEvent): void => {
@@ -97,7 +97,7 @@ export class RoccoInputHandler {
     const y = Math.round(event.sceneY);
 
     // Runtime sequences can still consume clicks as "advance" inputs while normal interaction is disabled.
-    if (!this.inputEnabled) {
+    if (this.getInputMode() !== 'interactive') {
       if (this.hasProtectedForegroundMessages()) {
         this.logFn(
           'Cursor',

@@ -121,6 +121,22 @@ function createEngineMock(state: TestState): RoccoEngine {
     loadPlaneScene: () => {},
     setInputEnabled: () => {},
     isInputEnabled: () => true,
+    getInputMode: () => 'interactive',
+    acquireInputLease: () => ({
+      ownerId: 'test',
+      mode: 'blocked' as const,
+      acquiredAt: 0,
+      dispose() {},
+    }),
+    beginCompositionSession: () => ({
+      id: 'test',
+      ownerId: 'test',
+      message: null,
+      status: 'active' as const,
+      report() {},
+      fail() {},
+      dispose() {},
+    }),
     setPlayerSprite: () => {},
     log: () => {},
   } as unknown as RoccoEngine;

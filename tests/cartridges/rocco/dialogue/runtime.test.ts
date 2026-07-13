@@ -122,6 +122,22 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
     isInputEnabled() {
       return state.inputEnabled;
     },
+    getInputMode: () => (state.inputEnabled ? 'interactive' : 'blocked'),
+    acquireInputLease: () => ({
+      ownerId: 'test',
+      mode: 'blocked' as const,
+      acquiredAt: 0,
+      dispose() {},
+    }),
+    beginCompositionSession: () => ({
+      id: 'test',
+      ownerId: 'test',
+      message: null,
+      status: 'active' as const,
+      report() {},
+      fail() {},
+      dispose() {},
+    }),
   } as unknown as RoccoEngine;
 }
 

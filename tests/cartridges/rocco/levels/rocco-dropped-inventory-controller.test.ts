@@ -88,6 +88,22 @@ function createDroppedInventoryEngine(): { engine: RoccoEngine; state: DroppedEn
       },
     },
     setInputEnabled: () => {},
+    getInputMode: () => 'interactive',
+    acquireInputLease: () => ({
+      ownerId: 'test',
+      mode: 'blocked' as const,
+      acquiredAt: 0,
+      dispose() {},
+    }),
+    beginCompositionSession: () => ({
+      id: 'test',
+      ownerId: 'test',
+      message: null,
+      status: 'active' as const,
+      report() {},
+      fail() {},
+      dispose() {},
+    }),
   } as unknown as RoccoEngine;
 
   return { engine, state };

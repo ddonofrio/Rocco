@@ -269,7 +269,7 @@ export class RoccoSceneActionRouter {
     }
 
     let shouldClearCarriedItem = false;
-    engine.setInputEnabled(false);
+    const inputLease = engine.acquireInputLease('scene-action-router', 'blocked');
 
     try {
       if (this.options.getRoccoAppearance() === ROCCO_LAB_COAT_PLAYER_APPEARANCE) {
@@ -322,7 +322,7 @@ export class RoccoSceneActionRouter {
       if (shouldClearCarriedItem) {
         engine.video.gridMenus.clearCarriedItem();
       }
-      engine.setInputEnabled(true);
+      inputLease.dispose();
       engine.video.render(0);
     }
   }

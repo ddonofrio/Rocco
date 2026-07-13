@@ -71,19 +71,21 @@ export class RoccoLevelTransitionService {
     this.busy = true;
     this.phase = 'preparing-target';
 
-    const wasInputEnabled = engine.isInputEnabled();
-    engine.setInputEnabled(false);
-    let compositionOwned = false;
+    const inputLease = engine.acquireInputLease('level-transition', 'blocked');
+    const composition = engine.beginCompositionSession('level-transition', {
+      message: 'LOADING 0%',
+    });
 
     try {
       const targetLevel = plan.resolveTarget();
       const mountOptions = plan.buildMountOptions();
 
-      engine.beginComposition();
-      compositionOwned = true;
-
       const preloader = new RoccoAssetPreloader((progress) => {
-        engine.setCompositionText?.(`LOADING ${progress.percent}%`);
+        composition.report({
+          completed: progress.percent,
+          total: 100,
+          message: `LOADING ${progress.percent}%`,
+        });
       });
 
       plan.preCommit(engine);
@@ -105,7 +107,7 @@ export class RoccoLevelTransitionService {
 
         plan.onCommitted(engine, scene);
         this.phase = 'active';
-        engine.setCompositionText?.('LOADING 100%');
+        composition.report({ completed: 100, total: 100, message: 'LOADING 100%' });
         return true;
       } catch (mountError) {
         engine.log('System', `Level transition '${plan.id}' failed: ${String(mountError)}`);
@@ -122,11 +124,8 @@ export class RoccoLevelTransitionService {
       this.phase = 'idle';
       return false;
     } finally {
-      if (compositionOwned) {
-        engine.endComposition();
-      }
-
-      engine.setInputEnabled(wasInputEnabled);
+      composition.dispose();
+      inputLease.dispose();
       this.busy = false;
     }
   }

@@ -1,6 +1,7 @@
 import type {
+  CartridgeActionDisposition,
+  CartridgeActionContext,
   RoccoCartridgeAction,
-  RoccoCartridgeActionResult,
 } from '../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../console/engine-sdk';
 import type { RpceAssetPreloader } from './rpce-asset-preloader';
@@ -10,7 +11,8 @@ export interface RpceGameRuntimeController<TMountResult = unknown> {
   mount(engine: RoccoEngine, preloader?: RpceAssetPreloader): Promise<TMountResult>;
   unmount(): void;
   update(deltaMs: number): void;
-  handleAction(action: RoccoCartridgeAction): RoccoCartridgeActionResult | void;
+  handleAction(action: RoccoCartridgeAction, context?: CartridgeActionContext): CartridgeActionDisposition | void;
+  getActiveLevelId?(): string | null;
 }
 
 export interface RpceGameRuntimeOptions<
@@ -52,7 +54,11 @@ export class RpceGameRuntime<TControllerOptions, TMountResult = unknown>
     this.controller.update(deltaMs);
   }
 
-  handleAction(action: RoccoCartridgeAction): RoccoCartridgeActionResult | void {
-    return this.controller.handleAction(action);
+  handleAction(action: RoccoCartridgeAction, context?: CartridgeActionContext): CartridgeActionDisposition | void {
+    return this.controller.handleAction(action, context);
+  }
+
+  getActiveLevelId(): string | null {
+    return this.controller.getActiveLevelId?.() ?? null;
   }
 }

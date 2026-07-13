@@ -661,7 +661,7 @@ describe('RoccoInputHandler', () => {
         },
         handleAction(action) {
           handledActions.push(action);
-          return { suppressDefaultPlayerMove: true };
+          return { consumed: true, defaultPlayerMovement: 'suppress' };
         },
       }),
       getActivePlayerSpriteId: () => 'rocco',

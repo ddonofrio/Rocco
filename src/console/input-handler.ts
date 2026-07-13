@@ -4,6 +4,7 @@ import type { RoccoViewportHost } from './video/viewport';
 import type { RoccoCartridge, RoccoSceneClickAction } from './cartridges';
 import type { RoccoRuntimeAudioSystem } from './audio';
 import type { RoccoJukeboxSystem } from './audio/jukebox';
+import { ActionDispatcher } from './action-dispatcher';
 import { RoccoRuntimeDefaultPlayerMovePolicyCoordinator } from './runtime-default-player-move-policy-coordinator';
 import { RoccoRuntimeInputPresentationCoordinator } from './runtime-input-presentation-coordinator';
 
@@ -32,6 +33,7 @@ interface InputHandlerOptions {
   viewportHost?: RoccoViewportHost;
   getActiveCartridge: () => RoccoCartridge | null;
   getActivePlayerSpriteId: () => string | null;
+  actionDispatcher?: ActionDispatcher;
   log: (channel: string, message: string) => void;
 }
 
@@ -40,8 +42,8 @@ export class RoccoInputHandler {
   private readonly audioSystem: RoccoRuntimeAudioSystem;
   private readonly jukeboxSystem: RoccoJukeboxSystem;
   private readonly viewportHost?: RoccoViewportHost;
-  private readonly getActiveCartridge: () => RoccoCartridge | null;
   private readonly getActivePlayerSpriteId: () => string | null;
+  private readonly actionDispatcher: ActionDispatcher;
   private readonly logFn: (channel: string, message: string) => void;
   private readonly defaultPlayerMovePolicy: RoccoRuntimeDefaultPlayerMovePolicyCoordinator;
   private readonly inputPresentation: RoccoRuntimeInputPresentationCoordinator;
@@ -52,8 +54,12 @@ export class RoccoInputHandler {
     this.audioSystem = options.audioSystem;
     this.jukeboxSystem = options.jukeboxSystem;
     this.viewportHost = options.viewportHost;
-    this.getActiveCartridge = options.getActiveCartridge;
     this.getActivePlayerSpriteId = options.getActivePlayerSpriteId;
+    this.actionDispatcher = options.actionDispatcher ?? new ActionDispatcher({
+      getActiveCartridge: options.getActiveCartridge,
+      getActiveLevelId: () => null,
+      log: options.log,
+    });
     this.logFn = options.log;
     this.defaultPlayerMovePolicy = new RoccoRuntimeDefaultPlayerMovePolicyCoordinator({
       getSceneTarget: (instanceId) => this.videoSystem.sceneTargets.getTarget(instanceId),
@@ -75,6 +81,7 @@ export class RoccoInputHandler {
     this.viewportHost?.setCursorMoveHandler(undefined);
     this.viewportHost?.setCursorLeaveHandler(undefined);
     this.inputPresentation.unmount();
+    this.actionDispatcher.dispose();
   }
 
   setInputEnabled(enabled: boolean): void {
@@ -146,7 +153,7 @@ export class RoccoInputHandler {
       targetDefinitionId: targets.visibleTarget?.definitionId ?? targets.target?.definitionId,
     };
 
-    void this.getActiveCartridge()?.handleAction?.(sceneClickAction);
+    this.actionDispatcher.dispatch(sceneClickAction, { owner: 'disabled-advance' });
 
     if (targets.visibleTarget) {
       this.logFn(
@@ -197,7 +204,7 @@ export class RoccoInputHandler {
     if (this.videoSystem.gridMenus.isOpen()) {
       const activation = this.videoSystem.gridMenus.activateAt(-1, -1);
       if (activation) {
-        void this.getActiveCartridge()?.handleAction?.(activation);
+        this.actionDispatcher.dispatch(activation, { owner: 'grid-menu-leave' });
       }
       this.videoSystem.gridMenus.clearCarriedItem();
       this.inputPresentation.syncCarriedCursorAttachment();
@@ -218,7 +225,7 @@ export class RoccoInputHandler {
     const activation = this.videoSystem.gridMenus.activateAt(event.sceneX, event.sceneY);
     this.inputPresentation.setHoverDescription(undefined);
     if (activation) {
-      void this.getActiveCartridge()?.handleAction?.(activation);
+      this.actionDispatcher.dispatch(activation, { owner: 'grid-menu' });
       if (activation.interaction === 'carry') {
         const carriedItem = this.videoSystem.gridMenus.getCarriedItem();
         const targets = this.videoSystem.resolveSceneTargets(event.sceneX, event.sceneY);
@@ -231,7 +238,7 @@ export class RoccoInputHandler {
             targetInstanceId: actionTarget.instanceId,
             targetDefinitionId: actionTarget.definitionId,
           };
-          void this.getActiveCartridge()?.handleAction?.(sceneClickAction);
+          this.actionDispatcher.dispatch(sceneClickAction, { owner: 'grid-menu-carry-use' });
           this.logFn(
             'GridMenu',
             `USE carried grid item '${carriedItem.item.id}' on ${actionTarget.kind} '${actionTarget.instanceId}' directly from grid menu.`,
@@ -257,7 +264,7 @@ export class RoccoInputHandler {
     this.inputPresentation.setHoverDescription(undefined);
     this.videoSystem.render(0);
     if (activation) {
-      void this.getActiveCartridge()?.handleAction?.(activation);
+      this.actionDispatcher.dispatch(activation, { owner: 'action-menu' });
       this.logFn(
         'ActionMenu',
         `ACTION '${activation.actionId}' on target '${activation.targetInstanceId}'.`,
@@ -288,7 +295,7 @@ export class RoccoInputHandler {
         targetDefinitionId: actionTarget.definitionId,
       };
       this.inputPresentation.setHoverDescription(undefined);
-      void this.getActiveCartridge()?.handleAction?.(activation);
+      this.actionDispatcher.dispatch(activation, { owner: 'carried-item' });
       this.logFn(
         'GridMenu',
         `USE carried grid item '${carriedItem.item.id}' on ${actionTarget.kind} '${actionTarget.instanceId}'.`,
@@ -324,10 +331,12 @@ export class RoccoInputHandler {
       targetDefinitionId: actionTarget?.definitionId,
     };
 
-    const cartridgeActionResult = this.getActiveCartridge()?.handleAction?.(sceneClickAction);
+    const cartridgeActionResult = this.actionDispatcher.dispatch(sceneClickAction, {
+      owner: 'scene-click',
+    });
     const suppressDefaultPlayerMove = this.defaultPlayerMovePolicy.shouldSuppressDefaultPlayerMove({
       target: actionTarget,
-      cartridgeActionResult,
+      cartridgeDisposition: cartridgeActionResult,
     });
 
     if (

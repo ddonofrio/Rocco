@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { RoccoRuntimeAudioSystem } from '../../src/console/audio';
 import type { RoccoJukeboxSystem } from '../../src/console/audio/jukebox';
 import type { RoccoCartridge } from '../../src/console/cartridges';
+import { ActionDispatcher } from '../../src/console/action-dispatcher';
 import type {
   RoccoCursorActionEvent,
   RoccoCursorActionHandler,
@@ -120,26 +121,28 @@ function asViewportHost(mock: unknown): RoccoViewportHost {
   return mock as RoccoViewportHost;
 }
 
-describe('RoccoInputHandler characterization', () => {
-  it('CON-001: handleAction is dispatched synchronously and its promise return value is discarded', () => {
-    let handleActionCalled = false;
-    let returnedPromise: Promise<void> | undefined;
+function makeCartridge(handleAction: RoccoCartridge['handleAction']): RoccoCartridge {
+  return {
+    manifest: {
+      id: 'test-cartridge',
+      title: 'Test Cartridge',
+      version: '1.0.0',
+    },
+    mount() {
+      // noop
+    },
+    handleAction,
+  };
+}
 
-    const cartridge: RoccoCartridge = {
-      manifest: {
-        id: 'test-cartridge',
-        title: 'Test Cartridge',
-        version: '1.0.0',
-      },
-      mount() {
-        // noop
-      },
-      handleAction() {
-        handleActionCalled = true;
-        returnedPromise = Promise.resolve();
-        return returnedPromise;
-      },
-    };
+describe('RoccoInputHandler characterization', () => {
+  it('CON-001: actions are dispatched through the ActionDispatcher and return a synchronous disposition', () => {
+    let handleActionCalled = false;
+
+    const cartridge = makeCartridge((_action, _context) => {
+      handleActionCalled = true;
+      return { consumed: true, defaultPlayerMovement: 'allow' };
+    });
 
     let storedHandler: RoccoCursorActionHandler | undefined;
 
@@ -163,6 +166,11 @@ describe('RoccoInputHandler characterization', () => {
       }),
       getActiveCartridge: () => cartridge,
       getActivePlayerSpriteId: () => null,
+      actionDispatcher: new ActionDispatcher({
+        getActiveCartridge: () => cartridge,
+        getActiveLevelId: () => null,
+        log: () => {},
+      }),
       log: () => {},
     });
 
@@ -175,26 +183,19 @@ describe('RoccoInputHandler characterization', () => {
     storedHandler(makeClickEvent(320, 180));
 
     expect(handleActionCalled).toBe(true);
-    expect(returnedPromise).toBeInstanceOf(Promise);
   });
 
-  it('CON-001: two rapid clicks dispatch both actions without serialization', () => {
+  it('CON-001: a second click is dropped while an exclusive action completion is still in flight', () => {
     const handledActions: unknown[] = [];
+    let resolveCompletion: () => void = () => {};
+    const completion = new Promise<void>((resolve) => {
+      resolveCompletion = resolve;
+    });
 
-    const cartridge: RoccoCartridge = {
-      manifest: {
-        id: 'test-cartridge',
-        title: 'Test Cartridge',
-        version: '1.0.0',
-      },
-      mount() {
-        // noop
-      },
-      handleAction() {
-        handledActions.push(arguments[0]);
-        return { suppressDefaultPlayerMove: true };
-      },
-    };
+    const cartridge = makeCartridge((action) => {
+      handledActions.push(action);
+      return { consumed: true, defaultPlayerMovement: 'allow', completion };
+    });
 
     let storedHandler: RoccoCursorActionHandler | undefined;
 
@@ -218,6 +219,11 @@ describe('RoccoInputHandler characterization', () => {
       }),
       getActiveCartridge: () => cartridge,
       getActivePlayerSpriteId: () => null,
+      actionDispatcher: new ActionDispatcher({
+        getActiveCartridge: () => cartridge,
+        getActiveLevelId: () => null,
+        log: () => {},
+      }),
       log: () => {},
     });
 
@@ -230,6 +236,8 @@ describe('RoccoInputHandler characterization', () => {
     storedHandler(makeClickEvent(320, 180));
     storedHandler(makeClickEvent(340, 190));
 
-    expect(handledActions).toHaveLength(2);
+    expect(handledActions).toHaveLength(1);
+
+    resolveCompletion();
   });
 });

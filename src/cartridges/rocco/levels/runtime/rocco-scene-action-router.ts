@@ -1,4 +1,6 @@
 ﻿import type {
+  CartridgeActionContext,
+  CartridgeActionDisposition,
   RoccoCartridgeAction,
   RoccoCartridgeActionResult,
   RoccoSceneClickAction,
@@ -86,7 +88,10 @@ export class RoccoSceneActionRouter {
     this.developerRuntime = options.developerRuntime;
   }
 
-  handleAction(activation: RoccoCartridgeAction): RoccoCartridgeActionResult | void {
+  handleAction(
+    activation: RoccoCartridgeAction,
+    _context?: CartridgeActionContext,
+  ): CartridgeActionDisposition | void {
     if (this.scriptedSequences.hasBlockingSequence()) {
       return;
     }
@@ -98,7 +103,7 @@ export class RoccoSceneActionRouter {
     }
 
     if (isSceneClickCartridgeAction(activation)) {
-      return this.handleSceneClick(activation, engine, activeLevel);
+      return toActionDisposition(this.handleSceneClick(activation, engine, activeLevel));
     }
 
     if (isGridMenuCartridgeAction(activation)) {
@@ -107,7 +112,7 @@ export class RoccoSceneActionRouter {
     }
 
     if (engine && this.developerRuntime.handlePlayerAction(engine, activation)) {
-      return;
+      return toActionDisposition(true);
     }
 
     if (isRoccoPlayerInventoryAction(activation)) {
@@ -124,11 +129,11 @@ export class RoccoSceneActionRouter {
     }
 
     if (this.handlePierBaitShopDoorAction(activation)) {
-      return;
+      return toActionDisposition(true);
     }
 
     if (engine && activeLevel && this.droppedInventory.handleActionMenu(engine, activeLevel, activation)) {
-      return;
+      return toActionDisposition(true);
     }
 
     activeLevel?.handleAction(activation);
@@ -480,6 +485,27 @@ export class RoccoSceneActionRouter {
       ? this.localization.text.pierDoor.kickSleepingKnownStanLines
       : this.localization.text.pierDoor.kickSleepingUnknownStanLines;
   }
+}
+
+function toActionDisposition(
+  result: boolean | RoccoCartridgeActionResult | CartridgeActionDisposition | void | undefined | null,
+): CartridgeActionDisposition | void {
+  if (result === undefined || result === null) {
+    return;
+  }
+
+  if (typeof result === 'boolean') {
+    return result ? { consumed: true, defaultPlayerMovement: 'allow' } : undefined;
+  }
+
+  if ('defaultPlayerMovement' in result) {
+    return result;
+  }
+
+  return {
+    consumed: true,
+    defaultPlayerMovement: result.suppressDefaultPlayerMove ? 'suppress' : 'allow',
+  };
 }
 
 function isGridMenuCartridgeAction(

@@ -1,36 +1,52 @@
 import { describe, expect, it } from 'vitest';
 
 import { RoccoRuntimeDefaultPlayerMovePolicyCoordinator } from '../../../src/console/runtime-default-player-move-policy-coordinator';
+import type { CartridgeActionDisposition } from '../../../src/console/cartridges';
 import type { RoccoSceneTargetDefinition } from '../../../src/console/video/scene-targets';
 
-describe('RoccoRuntimeDefaultPlayerMovePolicyCoordinator characterization', () => {
+describe('RoccoRuntimeDefaultPlayerMovePolicyCoordinator', () => {
   const coordinator = new RoccoRuntimeDefaultPlayerMovePolicyCoordinator({
     getSceneTarget: () => undefined,
   });
 
-  it('COR-002: async handleAction result returning suppressDefaultPlayerMove:true does NOT suppress movement', () => {
-    const asyncResult = Promise.resolve();
+  it('COR-002: a synchronous disposition with defaultPlayerMovement:suppress suppresses movement', () => {
+    const disposition: CartridgeActionDisposition = {
+      consumed: true,
+      defaultPlayerMovement: 'suppress',
+    };
 
-    const result = coordinator.shouldSuppressDefaultPlayerMove({
-      target: undefined,
-      cartridgeActionResult: asyncResult,
-    });
-
-    expect(result).toBe(false);
+    expect(
+      coordinator.shouldSuppressDefaultPlayerMove({
+        target: undefined,
+        cartridgeDisposition: disposition,
+      }),
+    ).toBe(true);
   });
 
-  it('COR-002: synchronous handleAction result returning suppressDefaultPlayerMove:true DOES suppress movement', () => {
-    const syncResult = { suppressDefaultPlayerMove: true };
+  it('COR-002: a disposition with defaultPlayerMovement:allow does not suppress movement', () => {
+    const disposition: CartridgeActionDisposition = {
+      consumed: true,
+      defaultPlayerMovement: 'allow',
+    };
 
-    const result = coordinator.shouldSuppressDefaultPlayerMove({
-      target: undefined,
-      cartridgeActionResult: syncResult,
-    });
-
-    expect(result).toBe(true);
+    expect(
+      coordinator.shouldSuppressDefaultPlayerMove({
+        target: undefined,
+        cartridgeDisposition: disposition,
+      }),
+    ).toBe(false);
   });
 
-  it('COR-002: scene target suppressDefaultPlayerMove:true suppresses movement even with async cartridge result', () => {
+  it('COR-002: a null cartridge disposition does not suppress movement', () => {
+    expect(
+      coordinator.shouldSuppressDefaultPlayerMove({
+        target: undefined,
+        cartridgeDisposition: null,
+      }),
+    ).toBe(false);
+  });
+
+  it('COR-002: scene-target suppressDefaultPlayerMove:true suppresses movement without a cartridge disposition', () => {
     const sceneTarget: RoccoSceneTargetDefinition = {
       instanceId: 'bait-shop-door',
       definitionId: 'bait-shop-door',
@@ -38,15 +54,13 @@ describe('RoccoRuntimeDefaultPlayerMovePolicyCoordinator characterization', () =
       suppressDefaultPlayerMove: true,
     };
 
-    const asyncResult = Promise.resolve();
-
     const coordinatorWithTarget = new RoccoRuntimeDefaultPlayerMovePolicyCoordinator({
       getSceneTarget: () => sceneTarget,
     });
 
     const result = coordinatorWithTarget.shouldSuppressDefaultPlayerMove({
       target: { kind: 'scene-target', instanceId: 'bait-shop-door', definitionId: 'bait-shop-door' },
-      cartridgeActionResult: asyncResult,
+      cartridgeDisposition: null,
     });
 
     expect(result).toBe(true);

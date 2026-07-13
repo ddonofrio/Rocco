@@ -21,6 +21,7 @@ import { RoccoRuntimeVideoSystem } from './video';
 import type { RoccoDisplayProfile } from './video/display';
 import type { RoccoViewportHost } from './video/viewport';
 import { RoccoInputHandler } from './input-handler';
+import { ActionDispatcher } from './action-dispatcher';
 import { RoccoCartridgeManager } from './cartridge-manager';
 import { RoccoPersistenceAdapter } from './persistence-adapter';
 
@@ -115,6 +116,11 @@ export class GameRuntime implements RoccoEngine {
       viewportHost: this.options.viewportHost,
       getActiveCartridge: () => this.cartridgeManager.getActiveCartridge(),
       getActivePlayerSpriteId: () => this.activePlayerSpriteId,
+      actionDispatcher: new ActionDispatcher({
+        getActiveCartridge: () => this.cartridgeManager.getActiveCartridge(),
+        getActiveLevelId: () => this.cartridgeManager.getActiveLevelId(),
+        log: (channel, message) => this.log(channel, message),
+      }),
       log: (channel, message) => this.log(channel, message),
     });
     this.inputHandler.mount();

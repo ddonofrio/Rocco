@@ -1,7 +1,8 @@
 ﻿import type {
+  CartridgeActionContext,
+  CartridgeActionDisposition,
   RoccoCartridge,
   RoccoCartridgeAction,
-  RoccoCartridgeActionResult,
   RoccoCartridgeContext,
 } from '../../console/cartridges/types';
 import {
@@ -95,8 +96,15 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     this.gameRuntime?.update(deltaMs);
   }
 
-  handleAction(activation: RoccoCartridgeAction): RoccoCartridgeActionResult | void {
-    return this.gameRuntime?.handleAction(activation);
+  handleAction(
+    activation: RoccoCartridgeAction,
+    context?: CartridgeActionContext,
+  ): CartridgeActionDisposition | void {
+    return this.gameRuntime?.handleAction(activation, context);
+  }
+
+  getActiveLevelId(): string | null {
+    return this.gameRuntime?.getActiveLevelId() ?? null;
   }
 
   stop(): void {

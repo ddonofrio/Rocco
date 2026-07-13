@@ -88,6 +88,10 @@ export class RoccoCartridgeManager {
     return this.activeCartridge;
   }
 
+  getActiveLevelId(): string | null {
+    return this.activeCartridge?.getActiveLevelId?.() ?? null;
+  }
+
   async dispose(): Promise<void> {
     if (this.activeCartridge?.stop) {
       await this.activeCartridge.stop();

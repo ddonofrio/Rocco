@@ -1,4 +1,4 @@
-import type { RoccoCartridgeActionResult } from './cartridges';
+import type { CartridgeActionDisposition } from './cartridges';
 import type { RoccoSceneTargetDefinition } from './video/scene-targets';
 import type { RoccoRuntimeResolvedSceneTarget } from './video/runtime-system';
 
@@ -8,13 +8,7 @@ interface RoccoRuntimeDefaultPlayerMovePolicyCoordinatorOptions {
 
 interface ResolveDefaultPlayerMoveSuppressionOptions {
   target: RoccoRuntimeResolvedSceneTarget | undefined;
-  cartridgeActionResult: Promise<void> | RoccoCartridgeActionResult | void;
-}
-
-function isPromiseLike(
-  value: Promise<void> | RoccoCartridgeActionResult | void,
-): value is Promise<void> {
-  return typeof value === 'object' && value !== null && 'then' in value;
+  cartridgeDisposition: CartridgeActionDisposition | null;
 }
 
 export class RoccoRuntimeDefaultPlayerMovePolicyCoordinator {
@@ -29,7 +23,7 @@ export class RoccoRuntimeDefaultPlayerMovePolicyCoordinator {
   ): boolean {
     return (
       this.shouldSuppressFromSceneTarget(options.target) ||
-      this.shouldSuppressFromCartridgeActionResult(options.cartridgeActionResult)
+      this.shouldSuppressFromCartridgeDisposition(options.cartridgeDisposition)
     );
   }
 
@@ -43,13 +37,9 @@ export class RoccoRuntimeDefaultPlayerMovePolicyCoordinator {
     return this.getSceneTarget(target.instanceId)?.suppressDefaultPlayerMove === true;
   }
 
-  private shouldSuppressFromCartridgeActionResult(
-    result: Promise<void> | RoccoCartridgeActionResult | void,
+  private shouldSuppressFromCartridgeDisposition(
+    disposition: CartridgeActionDisposition | null,
   ): boolean {
-    if (isPromiseLike(result)) {
-      return false;
-    }
-
-    return result?.suppressDefaultPlayerMove === true;
+    return disposition?.defaultPlayerMovement === 'suppress';
   }
 }

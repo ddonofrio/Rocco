@@ -1,7 +1,8 @@
 ﻿import type { RoccoEngine } from '../../../console/engine-sdk';
 import type {
+  CartridgeActionContext,
+  CartridgeActionDisposition,
   RoccoCartridgeAction,
-  RoccoCartridgeActionResult,
 } from '../../../console/cartridges';
 import type { RoccoPlaneScene } from '../../../console/video/planes';
 import type { RoccoPoint } from '../../../console/video/sprites';
@@ -389,8 +390,15 @@ export class RoccoLevelManager {
     void this.transitionThrough(transition);
   }
 
-  handleAction(activation: RoccoCartridgeAction): RoccoCartridgeActionResult | void {
-    return this.actionRouter.handleAction(activation);
+  handleAction(
+    activation: RoccoCartridgeAction,
+    context?: CartridgeActionContext,
+  ): CartridgeActionDisposition | void {
+    return this.actionRouter.handleAction(activation, context);
+  }
+
+  getActiveLevelId(): string | null {
+    return this.activeLevel?.id ?? null;
   }
 
   getActiveLevel(): RoccoLevel | null {

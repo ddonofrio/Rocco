@@ -15,6 +15,32 @@ export type RoccoCartridgeAction =
   | RoccoSceneClickAction
   | RoccoGridMenuActivation;
 
+export interface CartridgeActionContext {
+  readonly signal: AbortSignal;
+  readonly actionId: string;
+  readonly correlationId: string;
+  readonly cartridgeId: string;
+  readonly levelId: string | null;
+}
+
+/**
+ * Synchronous decision returned by a cartridge for a single user action.
+ *
+ * The movement decision is resolved synchronously so the current frame never
+ * depends on an `await`. Any asynchronous follow-up work belongs in `completion`,
+ * which the dispatcher monitors, captures errors for, and cancels on unmount.
+ */
+export interface CartridgeActionDisposition {
+  consumed: boolean;
+  defaultPlayerMovement: 'allow' | 'suppress';
+  completion?: Promise<void>;
+}
+
+/**
+ * @deprecated Internal-only helper. Cartridges must return a
+ * `CartridgeActionDisposition` from `handleAction`. Retained for the router and
+ * inventory controllers that still normalise to a disposition internally.
+ */
 export interface RoccoCartridgeActionResult {
   suppressDefaultPlayerMove?: boolean;
 }
@@ -77,8 +103,10 @@ export interface RoccoCartridge {
   start?(): Promise<void> | void;
   update?(deltaMs: number): void;
   handleAction?(
-    activation: RoccoCartridgeAction,
-  ): Promise<void> | RoccoCartridgeActionResult | void;
+    action: RoccoCartridgeAction,
+    context?: CartridgeActionContext,
+  ): CartridgeActionDisposition | void;
+  getActiveLevelId?(): string | null;
   stop?(): Promise<void> | void;
   dispose?(): Promise<void> | void;
 }

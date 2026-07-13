@@ -111,7 +111,7 @@ describe('RoccoSceneActionRouter', () => {
       sceneY: 220,
     });
 
-    expect(result).toEqual(actionResult);
+    expect(result).toEqual({ consumed: true, defaultPlayerMovement: 'suppress' });
     expect(callOrder).toEqual(['developer', 'dropped', 'exit-intent', 'inventory-check', 'inventory']);
     expect(levelSceneClick).not.toHaveBeenCalled();
   });

@@ -180,9 +180,19 @@ jobs:
     needs: build-web
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    environment:
+      name: playtesting
     timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - name: Download dist artifact
         uses: actions/download-artifact@v7
         with:
@@ -194,12 +204,20 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Deploy files
+      - name: Configure verified known hosts
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo "SSH key loaded: $(ssh-add -l)"
-          ls -la dist/
-          ssh-keyscan -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts || true
-          ssh -vvv -o BatchMode=yes -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} echo "SSH OK" || true
-          scp -r -o StrictHostKeyChecking=no -P ${{ secrets.SERVER_PORT }} dist/* ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.REMOTE_PATH }}/
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy release atomically
+        env:
+          DEPLOY_HOST: ${{ secrets.SERVER_HOST }}
+          DEPLOY_PORT: ${{ secrets.SERVER_PORT }}
+          DEPLOY_USER: ${{ secrets.SERVER_USER }}
+          DEPLOY_BASE: ${{ secrets.REMOTE_PATH }}
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: bash scripts/deploy-web.sh

@@ -561,7 +561,7 @@ export class RoccoLevelManager {
         if (targetLevelId === ROCCO_PIER_START_LEVEL_ID && entryConnectorId === 'shop-exit') {
           _engine.audio.playSound('rocco-bait-shop-door-closing-sound', {
             restart: true,
-            volume: 0.42,
+            volume: 0.21,
           });
         }
       },
@@ -611,7 +611,7 @@ export class RoccoLevelManager {
         if (targetLevelId === ROCCO_PIER_START_LEVEL_ID && transition.targetEndpoint.connectorId === 'shop-exit') {
           _engine.audio.playSound('rocco-bait-shop-door-closing-sound', {
             restart: true,
-            volume: 0.42,
+            volume: 0.21,
           });
         }
       },

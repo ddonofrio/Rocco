@@ -160,7 +160,7 @@ const BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID = 'rocco-bait-shop-souvenir-
 const BAIT_SHOP_SECOND_SCREEN_ENTRY_Y = 220;
 const BAIT_SHOP_SECOND_SCREEN_EXIT_TRIGGER_HEIGHT = 30;
 const DOOR_CLOSING_SOUND_ID = 'rocco-bait-shop-door-closing-sound';
-const DOOR_CLOSING_SOUND_VOLUME = 0.42;
+const DOOR_CLOSING_SOUND_VOLUME = 0.21;
 
 export interface RoccoBaitShopScenePlaneIds {
   backplate: string;

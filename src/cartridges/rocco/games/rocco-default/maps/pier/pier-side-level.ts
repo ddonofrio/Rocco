@@ -114,7 +114,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
       engine.audio.registerSound({
         id: 'rocco-bait-shop-door-closing-sound',
         uri: pierDoorClosingSoundUrl,
-        volume: 0.42,
+        volume: 0.21,
         loop: false,
       });
       await engine.audio.preloadSound('rocco-bait-shop-door-closing-sound').catch(() => {

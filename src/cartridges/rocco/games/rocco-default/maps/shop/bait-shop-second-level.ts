@@ -116,7 +116,7 @@ const BAIT_SHOP_ACTION_MENU_ORBIT_RADIUS = 88;
 const BAIT_SHOP_ACTION_MENU_ORBIT_SPEED = 0.08;
 const BAIT_SHOP_TOILET_DOOR_SOUND_VOLUME = 0.42;
 const DOOR_CLOSING_SOUND_ID = 'rocco-bait-shop-door-closing-sound';
-const DOOR_CLOSING_SOUND_VOLUME = 0.42;
+const DOOR_CLOSING_SOUND_VOLUME = 0.21;
 
 const BAIT_SHOP_SECOND_CONNECTORS: readonly RoccoLevelConnector[] = [
   {

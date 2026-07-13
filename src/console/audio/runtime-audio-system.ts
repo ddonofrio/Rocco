@@ -26,12 +26,11 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   private readonly bufferRevisions = new Map<string, number>();
   private readonly buffers = new Map<string, { revision: number; promise: Promise<AudioBuffer | null> }>();
   private readonly activeSources = new Map<string, Set<ActiveSoundNode>>();
+  private readonly playGenerations = new Map<string, number>();
   private readonly soundEndedResolvers = new Map<string, (() => void)[]>();
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private masterVolume = 1;
-  private generation = 0;
-  private loadController: AbortController | null = null;
 
   registerSound(definition: RoccoSoundDefinition): void {
     if (this.definitions.has(definition.id)) {
@@ -50,25 +49,12 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   }
 
   async preloadSound(soundId: string): Promise<void> {
-    this.loadController?.abort('superseded');
-    this.loadController = new AbortController();
-    const currentGeneration = ++this.generation;
-    const signal = this.loadController.signal;
-
     const definition = this.definitions.get(soundId);
     if (!definition) {
       return;
     }
 
-    if (signal.aborted) {
-      return;
-    }
-
-    await this.loadBuffer(soundId, signal);
-
-    if (signal.aborted || currentGeneration !== this.generation) {
-      return;
-    }
+    await this.loadBuffer(soundId);
   }
 
   playSound(soundId: string, options?: RoccoSoundPlayOptions): SoundHandle {
@@ -89,6 +75,7 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   }
 
   stopSound(soundId: string): void {
+    this.advancePlayGeneration(soundId);
     const sources = this.activeSources.get(soundId);
     if (!sources) {
       return;
@@ -106,9 +93,12 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   }
 
   stopAllSounds(): void {
-    this.loadController?.abort('stop');
-    this.loadController = null;
-    for (const soundId of [...this.activeSources.keys()]) {
+    const soundIds = new Set<string>([
+      ...this.definitions.keys(),
+      ...this.activeSources.keys(),
+      ...this.playGenerations.keys(),
+    ]);
+    for (const soundId of soundIds) {
       this.stopSound(soundId);
     }
   }
@@ -127,11 +117,11 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     this.definitions.clear();
     this.bufferRevisions.clear();
     this.buffers.clear();
+    this.playGenerations.clear();
     this.soundEndedResolvers.clear();
     const context = this.context;
     this.context = null;
     this.masterGain = null;
-    this.loadController = null;
     if (context) {
       void context.close().catch(() => undefined);
     }
@@ -143,18 +133,9 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   }
 
   private async playSoundAsync(soundId: string, options?: RoccoSoundPlayOptions): Promise<void> {
-    this.loadController?.abort('superseded');
-    this.loadController = new AbortController();
-    const currentGeneration = ++this.generation;
-    const signal = this.loadController.signal;
-
     const definition = this.definitions.get(soundId);
     const context = this.ensureContext();
     if (!definition || !context) {
-      return;
-    }
-
-    if (signal.aborted) {
       return;
     }
 
@@ -162,16 +143,14 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
       this.stopSound(soundId);
     }
 
-    if (signal.aborted || currentGeneration !== this.generation) {
-      return;
-    }
+    const currentGeneration = this.getPlayGeneration(soundId);
 
-    const buffer = await this.loadBuffer(soundId, signal);
+    const buffer = await this.loadBuffer(soundId);
     if (!buffer) {
       return;
     }
 
-    if (signal.aborted || currentGeneration !== this.generation) {
+    if (currentGeneration !== this.getPlayGeneration(soundId)) {
       return;
     }
 
@@ -179,7 +158,7 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
       await context.resume().catch(() => undefined);
     }
 
-    if (signal.aborted || currentGeneration !== this.generation) {
+    if (currentGeneration !== this.getPlayGeneration(soundId)) {
       return;
     }
 
@@ -199,14 +178,14 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     source.start();
   }
 
-  private async loadBuffer(soundId: string, signal: AbortSignal): Promise<AudioBuffer | null> {
+  private async loadBuffer(soundId: string): Promise<AudioBuffer | null> {
     const expectedRevision = this.bufferRevisions.get(soundId) ?? 0;
     const existing = this.buffers.get(soundId);
     if (existing && existing.revision === expectedRevision) {
       return existing.promise;
     }
 
-    const pending = this.fetchAndDecode(soundId, signal).then((buffer) => {
+    const pending = this.fetchAndDecode(soundId).then((buffer) => {
       if (!buffer) {
         this.buffers.delete(soundId);
       }
@@ -217,7 +196,7 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     return pending;
   }
 
-  private async fetchAndDecode(soundId: string, signal: AbortSignal): Promise<AudioBuffer | null> {
+  private async fetchAndDecode(soundId: string): Promise<AudioBuffer | null> {
     const definition = this.definitions.get(soundId);
     const context = this.ensureContext();
     if (!definition || !context) {
@@ -225,7 +204,7 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     }
 
     try {
-      const response = await fetch(definition.uri, { signal });
+      const response = await fetch(definition.uri);
       if (!response.ok) {
         return null;
       }
@@ -271,6 +250,14 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     }
 
     this.masterGain.gain.value = this.masterVolume;
+  }
+
+  private getPlayGeneration(soundId: string): number {
+    return this.playGenerations.get(soundId) ?? 0;
+  }
+
+  private advancePlayGeneration(soundId: string): void {
+    this.playGenerations.set(soundId, this.getPlayGeneration(soundId) + 1);
   }
 
   private trackSource(soundId: string, source: AudioBufferSourceNode, gain: GainNode): void {

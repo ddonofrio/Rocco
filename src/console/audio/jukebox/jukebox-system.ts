@@ -121,10 +121,11 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
   }
 
   private createPlaylistHandle(): PlaylistHandle {
-    const self = this;
+    const getIsPlaying = (): boolean => this.isPlayingFlag;
+
     return {
-      stop: () => self.stopPlaylist(),
-      setVolume: (value: number) => self.setVolume(value),
+      stop: () => this.stopPlaylist(),
+      setVolume: (value: number) => this.setVolume(value),
       get ended() {
         let resolveEnded: (() => void) | undefined;
         const ended = new Promise<void>((resolve) => {
@@ -132,14 +133,14 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
         });
 
         const checkEnded = () => {
-          if (!self.isPlayingFlag && resolveEnded) {
+          if (!getIsPlaying() && resolveEnded) {
             resolveEnded();
           }
         };
 
         const interval = setInterval(() => {
           checkEnded();
-          if (!self.isPlayingFlag && resolveEnded) {
+          if (!getIsPlaying() && resolveEnded) {
             clearInterval(interval);
           }
         }, 100);

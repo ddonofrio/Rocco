@@ -138,7 +138,7 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
     );
 
     const handle = await system.playPlaylist('broken-playlist');
-    expect(handle.stop).toBeTypeOf('function');
+    expect((handle as { stop: unknown }).stop).toBeTypeOf('function');
     expect(system.isPlaying()).toBe(false);
   });
 
@@ -168,7 +168,7 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
     );
 
     const handle = await system.playPlaylist('short-playlist');
-    expect(handle.stop).toBeTypeOf('function');
+    expect((handle as { stop: unknown }).stop).toBeTypeOf('function');
     expect(system.isPlaying()).toBe(false);
   });
 

@@ -145,7 +145,7 @@ describe('RoccoJukeboxSystemImpl', () => {
     });
 
     const handle = await system.playPlaylist('silent-playlist');
-    expect(handle.stop).toBeTypeOf('function');
+    expect((handle as { stop: unknown }).stop).toBeTypeOf('function');
     expect(system.isPlaying()).toBe(false);
   });
 

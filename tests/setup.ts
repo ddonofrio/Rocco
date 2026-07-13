@@ -14,11 +14,8 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 // absent in the vitest environment. Provide safe fallbacks so tests can mount
 // subsystems that import build-meta.
 if (typeof globalThis !== 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   (globalThis as Record<string, unknown>).__ROCCO_VERSION__ = '0.1.0';
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   (globalThis as Record<string, unknown>).__ROCCO_COMMIT_COUNT__ = '0';
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   (globalThis as Record<string, unknown>).__ROCCO_PLAYTEST_STAGE__ = 'development';
 }
 

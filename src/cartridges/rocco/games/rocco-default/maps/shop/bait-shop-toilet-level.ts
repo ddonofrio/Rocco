@@ -285,6 +285,8 @@ const BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID = 'rocco-bait-shop-toilet-portal-loo
 const BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_VOLUME = 0.5;
 const BAIT_SHOP_TOILET_SPELL_SOUND_ID = 'rocco-bait-shop-toilet-spell-sound';
 const BAIT_SHOP_TOILET_SPELL_SOUND_VOLUME = 0.42;
+const DOOR_CLOSING_SOUND_ID = 'rocco-bait-shop-door-closing-sound';
+const DOOR_CLOSING_SOUND_VOLUME = 0.42;
 const BAIT_SHOP_TOILET_WISH_LINE_TTL_MS = 2800;
 const BAIT_SHOP_TOILET_DIRECT_DEFEAT_DELAY_MS = BAIT_SHOP_TOILET_WISH_LINE_TTL_MS;
 const BAIT_SHOP_TOILET_POST_WISH_POLICE_WARNING_DELAY_MS = 1000;
@@ -711,6 +713,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     | null = null;
   private wishSequence: BaitShopToiletWishSequence | null = null;
   private throwSequence: BaitShopToiletThrowSequence | null = null;
+  private shouldPlayDoorClosingSound = false;
 
   constructor(
     localization: RoccoLocalization = createRoccoLocalization(),
@@ -776,6 +779,12 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       volume: BAIT_SHOP_TOILET_SPELL_SOUND_VOLUME,
       loop: false,
     });
+    engine.audio.registerSound({
+      id: DOOR_CLOSING_SOUND_ID,
+      uri: baitShopToiletAssetUrls.doorClosingSound,
+      volume: DOOR_CLOSING_SOUND_VOLUME,
+      loop: false,
+    });
     await (preloader
       ? preloader.preloadSound(engine, BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID).catch(() => {
           engine.log('Audio', 'Bait shop toilet medallion step sound could not be preloaded.');
@@ -797,6 +806,13 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
       : engine.audio.preloadSound(BAIT_SHOP_TOILET_SPELL_SOUND_ID).catch(() => {
           engine.log('Audio', 'Bait shop toilet spell sound could not be preloaded.');
         }));
+    await (preloader
+      ? preloader.preloadSound(engine, DOOR_CLOSING_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet door closing sound could not be preloaded.');
+        })
+      : engine.audio.preloadSound(DOOR_CLOSING_SOUND_ID).catch(() => {
+          engine.log('Audio', 'Bait shop toilet door closing sound could not be preloaded.');
+        }));
 
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
     const initialPosition = entryConnector
@@ -806,6 +822,9 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
         }
       : { ...BAIT_SHOP_TOILET_ENTRY_POSITION };
     const initialFacing = entryConnector?.entryFacing ?? 'up';
+    if (options.entryConnectorId === BAIT_SHOP_TOILET_RETURN_CONNECTOR_ID) {
+      this.shouldPlayDoorClosingSound = true;
+    }
     const scene = await loadOrCreateBaitShopScene(engine, BAIT_SHOP_TOILET_SCENE_DEFINITION);
     const [toiletSprite, smokeSprite, portalSprite] = await Promise.all([
       createBaitShopToiletSpriteDefinition(),
@@ -935,6 +954,9 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     engine.audio.unregisterSound(BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID);
     engine.audio.unregisterSound(BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID);
     engine.audio.unregisterSound(BAIT_SHOP_TOILET_SPELL_SOUND_ID);
+    engine.audio.stopSound(DOOR_CLOSING_SOUND_ID);
+    engine.audio.unregisterSound(DOOR_CLOSING_SOUND_ID);
+    this.shouldPlayDoorClosingSound = false;
     this.engine = null;
     this.spriteController = null;
     this.toiletFrameCount = 0;
@@ -969,6 +991,13 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     this.updateWishSequence(deltaMs);
     this.updatePortalActivation();
     this.updatePortalTransition();
+    if (this.shouldPlayDoorClosingSound && this.engine) {
+      this.shouldPlayDoorClosingSound = false;
+      this.engine.audio.playSound(DOOR_CLOSING_SOUND_ID, {
+        restart: true,
+        volume: DOOR_CLOSING_SOUND_VOLUME,
+      });
+    }
   }
 
   handleGridMenu(activation: RoccoGridMenuActivation): void {

@@ -15,6 +15,8 @@ export const baitShopSecondScreenToiletDoorOpenAssetUrl = new URL(
   import.meta.url,
 ).href;
 
+export const baitShopDoorClosingSoundUrl = new URL('./assets/door-closing.mp3', import.meta.url).href;
+
 export const baitShopToiletAssetUrls = {
   background: new URL('./assets/bait-shop-toilet-background.png', import.meta.url).href,
   walkMap: new URL('./assets/bait-shop-toilet-walkmap.png', import.meta.url).href,
@@ -45,4 +47,5 @@ export const baitShopToiletAssetUrls = {
   medallionStepSound: new URL('./assets/medallion-step.mp3', import.meta.url).href,
   portalLoopSound: new URL('./assets/portal-loop-sound.mp3', import.meta.url).href,
   spellSound: new URL('./assets/spell-sound.mp3', import.meta.url).href,
+  doorClosingSound: new URL('./assets/door-closing.mp3', import.meta.url).href,
 } as const;

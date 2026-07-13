@@ -9,6 +9,7 @@ import {
   roccoDefaultActionMenuAssetUrls,
   roccoDefaultBaitBucketAssetUrls,
 } from '../../sprites';
+import { pierBaitBucketKickSoundUrl } from './pier-assets';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
@@ -43,6 +44,8 @@ const KICK_ACTION_ID = 'kick';
 const KICK_APPROACH_DISTANCE = 58;
 const KICK_LIFT_HEIGHT = 38;
 const KICK_DURATION_MS = 520;
+const KICK_SOUND_ID = 'rocco-bait-bucket-kick-sound';
+const KICK_SOUND_VOLUME = 0.5;
 const ACTION_MESSAGE_TTL_MS = 5200;
 const ACTION_MENU_ITEM_SIZE = 92;
 const ACTION_MENU_ORBIT_RADIUS = 88;
@@ -357,6 +360,10 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
     this.state = 'kicking';
     this.kickElapsedMs = 0;
     this.droppedPoseApplied = false;
+    this.engine.audio.playSound(KICK_SOUND_ID, {
+      restart: true,
+      volume: KICK_SOUND_VOLUME,
+    });
   }
 
   private updateKick(deltaMs: number): void {
@@ -456,6 +463,17 @@ export async function installDefaultBaitBucket(
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID);
 
+  engine.audio.registerSound({
+    id: KICK_SOUND_ID,
+    uri: pierBaitBucketKickSoundUrl,
+    volume: KICK_SOUND_VOLUME,
+    loop: false,
+  });
+  await engine.audio.preloadSound(KICK_SOUND_ID).catch(() => {
+    engine.log('Audio', 'Bait bucket kick sound could not be preloaded.');
+  });
+  engine.audio.stopSound(KICK_SOUND_ID);
+
   engine.video.sprites.createSpriteFromDefinition(DEFAULT_BAIT_BUCKET_SPRITE_DEFINITION_ID, {
     id: DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
     transform: {
@@ -486,5 +504,7 @@ export function uninstallDefaultBaitBucket(engine: RoccoEngine): void {
   engine.video.actionMenus.unregisterMenu(NORMAL_MENU_ID);
   engine.video.actionMenus.unregisterMenu(DROPPED_MENU_ID);
   engine.video.sprites.removeSprite(DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID);
+  engine.audio.stopSound(KICK_SOUND_ID);
+  engine.audio.unregisterSound(KICK_SOUND_ID);
   engine.video.render(0);
 }

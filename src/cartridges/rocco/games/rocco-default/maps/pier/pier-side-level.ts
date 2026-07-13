@@ -24,6 +24,8 @@ import {
   uninstallDefaultSprite,
   type RoccoDefaultSpriteController,
 } from '../../sprites';
+import { pierDoorClosingSoundUrl } from './pier-assets';
+import { ROCCO_PIER_START_LEVEL_ID } from '../../constants';
 
 export interface RoccoPierSideAmbientController {
   update(deltaMs: number): void;
@@ -108,6 +110,17 @@ export class RoccoPierSideLevel implements RoccoLevel {
     this.cloudController = cloudController;
     this.spriteController = spriteController;
     this.ambientController = ambientController;
+    if (this.id === ROCCO_PIER_START_LEVEL_ID) {
+      engine.audio.registerSound({
+        id: 'rocco-bait-shop-door-closing-sound',
+        uri: pierDoorClosingSoundUrl,
+        volume: 0.42,
+        loop: false,
+      });
+      await engine.audio.preloadSound('rocco-bait-shop-door-closing-sound').catch(() => {
+        engine.log('Audio', 'Pier start door closing sound could not be preloaded.');
+      });
+    }
     return scene;
   }
 
@@ -118,6 +131,10 @@ export class RoccoPierSideLevel implements RoccoLevel {
     uninstallDefaultCloud(engine);
     uninstallDefaultSprite(engine);
     uninstallDefaultWalkMap(engine);
+    if (this.id === ROCCO_PIER_START_LEVEL_ID) {
+      engine.audio.stopSound('rocco-bait-shop-door-closing-sound');
+      engine.audio.unregisterSound('rocco-bait-shop-door-closing-sound');
+    }
     this.cloudController = null;
     this.spriteController = null;
     this.ambientController = null;

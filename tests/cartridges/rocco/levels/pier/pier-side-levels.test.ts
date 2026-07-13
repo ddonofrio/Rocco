@@ -139,6 +139,13 @@ function createEngineMock(state: TestState): RoccoEngine {
     }),
     setPlayerSprite: () => {},
     log: () => {},
+    audio: {
+      registerSound: () => {},
+      preloadSound: () => Promise.resolve(),
+      playSound: () => {},
+      stopSound: () => {},
+      unregisterSound: () => {},
+    } as unknown as RoccoEngine['audio'],
   } as unknown as RoccoEngine;
 }
 

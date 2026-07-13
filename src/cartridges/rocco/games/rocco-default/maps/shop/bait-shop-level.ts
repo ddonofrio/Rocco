@@ -45,7 +45,7 @@ import {
   type RoccoLevelConnector,
   type RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
-import { baitShopInteriorAssetUrls } from './bait-shop-assets';
+import { baitShopInteriorAssetUrls, baitShopDoorClosingSoundUrl } from './bait-shop-assets';
 
 export const ROCCO_BAIT_SHOP_LEVEL_ID = 'bait-shop';
 export const BAIT_SHOP_SCENE_ID = 'rocco-bait-shop-scene';
@@ -157,6 +157,8 @@ const BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE_ID = 'rocco-bait-shop-souvenir-closeup';
 const BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID = 'rocco-bait-shop-souvenir-closeup-target';
 const BAIT_SHOP_SECOND_SCREEN_ENTRY_Y = 220;
 const BAIT_SHOP_SECOND_SCREEN_EXIT_TRIGGER_HEIGHT = 30;
+const DOOR_CLOSING_SOUND_ID = 'rocco-bait-shop-door-closing-sound';
+const DOOR_CLOSING_SOUND_VOLUME = 0.42;
 
 interface BaitShopBenchJumpSequence {
   elapsedMs: number;
@@ -695,6 +697,21 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       playIntro: false,
       perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
     }, preloader);
+    if (!options.entryConnectorId) {
+      engine.audio.registerSound({
+        id: DOOR_CLOSING_SOUND_ID,
+        uri: baitShopDoorClosingSoundUrl,
+        volume: DOOR_CLOSING_SOUND_VOLUME,
+        loop: false,
+      });
+      await engine.audio.preloadSound(DOOR_CLOSING_SOUND_ID).catch(() => {
+        engine.log('Audio', 'Bait shop door closing sound could not be preloaded.');
+      });
+      engine.audio.playSound(DOOR_CLOSING_SOUND_ID, {
+        restart: true,
+        volume: DOOR_CLOSING_SOUND_VOLUME,
+      });
+    }
     this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, [
       {
         targetInstanceId: BAIT_SHOP_SHELL_CITY_TARGET_INSTANCE_ID,
@@ -771,6 +788,8 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     uninstallBaitShopSceneTargets(engine);
     uninstallDefaultSprite(engine);
     uninstallBaitShopWalkMap(engine);
+    engine.audio.stopSound(DOOR_CLOSING_SOUND_ID);
+    engine.audio.unregisterSound(DOOR_CLOSING_SOUND_ID);
     this.engine = null;
     this.spriteController = null;
     this.scriptedInteractionController = null;

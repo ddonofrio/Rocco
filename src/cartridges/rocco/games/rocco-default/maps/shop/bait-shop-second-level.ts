@@ -43,6 +43,7 @@ import {
 import {
   baitShopSecondScreenAssetUrls,
   baitShopSecondScreenToiletDoorOpenAssetUrl,
+  baitShopDoorClosingSoundUrl,
 } from './bait-shop-assets';
 import {
   installBaitShopWalkMap,
@@ -114,6 +115,8 @@ const BAIT_SHOP_ACTION_MENU_ITEM_SIZE = 92;
 const BAIT_SHOP_ACTION_MENU_ORBIT_RADIUS = 88;
 const BAIT_SHOP_ACTION_MENU_ORBIT_SPEED = 0.08;
 const BAIT_SHOP_TOILET_DOOR_SOUND_VOLUME = 0.42;
+const DOOR_CLOSING_SOUND_ID = 'rocco-bait-shop-door-closing-sound';
+const DOOR_CLOSING_SOUND_VOLUME = 0.42;
 
 const BAIT_SHOP_SECOND_CONNECTORS: readonly RoccoLevelConnector[] = [
   {
@@ -272,6 +275,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
   private toiletDoorKnown = false;
   private magazineKnown = false;
   private magazineCollected = false;
+  private shouldPlayDoorClosingSound = false;
 
   constructor(
     localization: RoccoLocalization = createRoccoLocalization(),
@@ -310,6 +314,15 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     const scene = await loadOrCreateBaitShopScene(engine, BAIT_SHOP_SECOND_SCENE_DEFINITION);
     const magazineDefinition = createBaitShopMagazineSpriteDefinition(this.localization);
     await this.registerToiletDoorSound(engine);
+    engine.audio.registerSound({
+      id: DOOR_CLOSING_SOUND_ID,
+      uri: baitShopDoorClosingSoundUrl,
+      volume: DOOR_CLOSING_SOUND_VOLUME,
+      loop: false,
+    });
+    await engine.audio.preloadSound(DOOR_CLOSING_SOUND_ID).catch(() => {
+      engine.log('Audio', 'Bait shop second level door closing sound could not be preloaded.');
+    });
     await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     await (preloader?.preloadSpriteDefinition(engine, magazineDefinition) ?? engine.video.preloadSpriteDefinition(magazineDefinition));
     engine.loadPlaneScene(scene);
@@ -325,6 +338,9 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       playIntro: false,
       perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
     }, preloader);
+    if (options.entryConnectorId === BAIT_SHOP_TOILET_CONNECTOR_ID) {
+      this.shouldPlayDoorClosingSound = true;
+    }
     this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, []);
     this.syncToiletDoorPresentation();
     this.syncMagazinePresentation();
@@ -339,6 +355,9 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     this.uninstallToiletDoorInteractions(engine);
     this.uninstallMagazineInteractions(engine);
     this.unregisterToiletDoorSound(engine);
+    engine.audio.stopSound(DOOR_CLOSING_SOUND_ID);
+    engine.audio.unregisterSound(DOOR_CLOSING_SOUND_ID);
+    this.shouldPlayDoorClosingSound = false;
     uninstallDefaultSprite(engine);
     uninstallBaitShopWalkMap(engine);
     this.engine = null;
@@ -351,6 +370,13 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
   update(deltaMs: number): void {
     this.spriteController?.update(deltaMs);
     this.scriptedInteractionController?.update();
+    if (this.shouldPlayDoorClosingSound && this.engine) {
+      this.shouldPlayDoorClosingSound = false;
+      this.engine.audio.playSound(DOOR_CLOSING_SOUND_ID, {
+        restart: true,
+        volume: DOOR_CLOSING_SOUND_VOLUME,
+      });
+    }
   }
 
   handleSceneClick(activation: RoccoSceneClickAction) {

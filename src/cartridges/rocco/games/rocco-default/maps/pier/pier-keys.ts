@@ -33,7 +33,7 @@ const KEYS_COLLECT_DURATION_MS = 780;
 const KEYS_COLLECT_ARC_HEIGHT = 76;
 const KEYS_COLLECT_SCALE_BOOST = 0.38;
 const KEYS_SOUND_ID = 'rocco-keys-sound';
-const KEYS_SOUND_VOLUME = 0.3;
+const KEYS_SOUND_VOLUME = 0.8;
 
 export interface RoccoDefaultKeysController {
   update(deltaMs: number): void;

@@ -1038,6 +1038,13 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
     playSound(soundId: string) {
       state.playedSoundIds.push(soundId);
+      return {
+        stop() {},
+        setVolume() {},
+        get ended() {
+          return Promise.resolve();
+        },
+      };
     },
     setSoundVolume() {
       // noop
@@ -1090,7 +1097,13 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
     playPlaylist(playlistId: string) {
       state.playedPlaylistIds.push(playlistId);
-      return Promise.resolve();
+      return Promise.resolve({
+        stop() {},
+        setVolume() {},
+        get ended() {
+          return Promise.resolve();
+        },
+      });
     },
     stopPlaylist() {
       // noop

@@ -1,5 +1,5 @@
 import { AudioAnalyzer, type AudioAnalysisResult } from './audio-analyzer';
-import type { RoccoJukeboxPlaylist, RoccoJukeboxSystem, RoccoJukeboxTrack } from './types';
+import type { PlaylistHandle, RoccoJukeboxPlaylist, RoccoJukeboxSystem, RoccoJukeboxTrack } from './types';
 
 interface TrackState {
   track: RoccoJukeboxTrack;
@@ -29,6 +29,8 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
   private readonly cleanupTimeoutIds = new Set<number>();
   private masterVolume = 1;
   private playlistVolume = 1;
+  private generation = 0;
+  private loadController: AbortController | null = null;
 
   registerPlaylist(playlist: RoccoJukeboxPlaylist): void {
     this.playlists.set(playlist.id, this.clonePlaylist(playlist));
@@ -41,37 +43,57 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     this.playlists.delete(playlistId);
   }
 
-  async playPlaylist(playlistId: string): Promise<void> {
+  async playPlaylist(playlistId: string): Promise<PlaylistHandle> {
     const playlist = this.playlists.get(playlistId);
     if (!playlist) {
       throw new Error(`Playlist '${playlistId}' not found`);
     }
 
     if (this.currentPlaylistId === playlistId && this.isPlayingFlag) {
-      return; // Already playing
+      return this.createPlaylistHandle();
     }
 
     this.stopPlaylist();
-    
+
+    this.loadController?.abort('superseded');
+    this.loadController = new AbortController();
+    const currentGeneration = ++this.generation;
+    const signal = this.loadController.signal;
+
     const context = this.ensureContext();
     if (!context) {
       throw new Error('AudioContext not available');
+    }
+
+    if (signal.aborted) {
+      return this.createPlaylistHandle();
     }
 
     if (context.state === 'suspended') {
       await context.resume().catch(() => undefined);
     }
 
+    if (signal.aborted || currentGeneration !== this.generation) {
+      return this.createPlaylistHandle();
+    }
+
     this.currentPlaylistId = playlistId;
     this.playlistVolume = clampVolume(playlist.globalVolume ?? 1);
     this.applyMasterGainVolume();
 
-    // Load and analyze all tracks
     this.trackStates = [];
     for (const track of playlist.tracks) {
-      const buffer = await this.loadTrack(track, context);
+      if (signal.aborted || currentGeneration !== this.generation) {
+        return this.createPlaylistHandle();
+      }
+
+      const buffer = await this.loadTrack(track, context, signal);
       if (!buffer) {
         continue;
+      }
+
+      if (signal.aborted || currentGeneration !== this.generation) {
+        return this.createPlaylistHandle();
       }
 
       const analysis = AudioAnalyzer.analyzeBuffer(
@@ -94,7 +116,38 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
 
     this.isPlayingFlag = true;
     this.currentTrackIndex = 0;
-    this.scheduleNextSegment();
+    this.scheduleNextSegment(currentGeneration);
+    return this.createPlaylistHandle();
+  }
+
+  private createPlaylistHandle(): PlaylistHandle {
+    const self = this;
+    return {
+      stop: () => self.stopPlaylist(),
+      setVolume: (value: number) => self.setVolume(value),
+      get ended() {
+        let resolveEnded: (() => void) | undefined;
+        const ended = new Promise<void>((resolve) => {
+          resolveEnded = resolve;
+        });
+
+        const checkEnded = () => {
+          if (!self.isPlayingFlag && resolveEnded) {
+            resolveEnded();
+          }
+        };
+
+        const interval = setInterval(() => {
+          checkEnded();
+          if (!self.isPlayingFlag && resolveEnded) {
+            clearInterval(interval);
+          }
+        }, 100);
+        checkEnded();
+
+        return ended;
+      },
+    };
   }
 
   stopPlaylist(): void {
@@ -114,6 +167,9 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     this.currentGain = null;
     this.playlistVolume = 1;
     this.applyMasterGainVolume();
+
+    this.loadController?.abort('stop');
+    this.loadController = null;
   }
 
   isPlaying(): boolean {
@@ -146,12 +202,13 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     const context = this.context;
     this.context = null;
     this.masterGain = null;
+    this.loadController = null;
     if (context) {
       void context.close().catch(() => undefined);
     }
   }
 
-  private scheduleNextSegment(): void {
+  private scheduleNextSegment(currentGeneration: number): void {
     if (!this.isPlayingFlag || !this.context || this.trackStates.length === 0) {
       return;
     }
@@ -161,36 +218,46 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
       return;
     }
 
-    const trackState = this.trackStates[this.currentTrackIndex];
-    const segment = trackState.analysis.audioSegments[trackState.currentSegmentIndex];
+    const maxAttempts = this.trackStates.reduce(
+      (sum, trackState) => sum + trackState.analysis.audioSegments.length,
+      0,
+    ) + this.trackStates.length;
 
-    if (!segment) {
-      // Move to next track's first segment
-      trackState.currentSegmentIndex = 0;
-      this.currentTrackIndex = (this.currentTrackIndex + 1) % this.trackStates.length;
-      this.scheduleNextSegment();
+    for (let attempts = 0; attempts < maxAttempts; attempts += 1) {
+      const trackState = this.trackStates[this.currentTrackIndex];
+      const segment = trackState.analysis.audioSegments[trackState.currentSegmentIndex];
+
+      if (!segment) {
+        trackState.currentSegmentIndex = 0;
+        this.currentTrackIndex = (this.currentTrackIndex + 1) % this.trackStates.length;
+        continue;
+      }
+
+      const fadeDurationMs = playlist.mixMode.fadeDurationMs ?? 1000;
+      const minSegmentDurationMs = playlist.mixMode.minSegmentDurationMs ?? 3000;
+      const segmentDuration = segment.end - segment.start;
+      const safeFadeDuration = Math.min(fadeDurationMs / 1000, segmentDuration);
+      const minSegmentDuration = minSegmentDurationMs / 1000;
+
+      if (segmentDuration < minSegmentDuration) {
+        trackState.currentSegmentIndex++;
+        continue;
+      }
+
+      this.playSegment(trackState, segment, safeFadeDuration);
+
+      const timeUntilNextSchedule = Math.max(0, (segmentDuration - safeFadeDuration) * 1000);
+      this.scheduleTimeoutId = window.setTimeout(() => {
+        if (currentGeneration !== this.generation) {
+          return;
+        }
+        trackState.currentSegmentIndex++;
+        this.scheduleNextSegment(currentGeneration);
+      }, timeUntilNextSchedule);
       return;
     }
 
-    const fadeDuration = (playlist.mixMode.fadeDurationMs ?? 1000) / 1000;
-    const minSegmentDuration = (playlist.mixMode.minSegmentDurationMs ?? 3000) / 1000;
-    const segmentDuration = segment.end - segment.start;
-
-    // Skip very short segments
-    if (segmentDuration < minSegmentDuration) {
-      trackState.currentSegmentIndex++;
-      this.scheduleNextSegment();
-      return;
-    }
-
-    this.playSegment(trackState, segment, fadeDuration);
-
-    // Schedule next segment before this one ends
-    const timeUntilNextSchedule = (segmentDuration - fadeDuration) * 1000;
-    this.scheduleTimeoutId = window.setTimeout(() => {
-      trackState.currentSegmentIndex++;
-      this.scheduleNextSegment();
-    }, Math.max(0, timeUntilNextSchedule));
+    this.stopPlaylist();
   }
 
   private playSegment(
@@ -250,9 +317,9 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     }
   }
 
-  private async loadTrack(track: RoccoJukeboxTrack, context: AudioContext): Promise<AudioBuffer | null> {
+  private async loadTrack(track: RoccoJukeboxTrack, context: AudioContext, signal: AbortSignal): Promise<AudioBuffer | null> {
     try {
-      const response = await fetch(track.uri);
+      const response = await fetch(track.uri, { signal });
       if (!response.ok) {
         return null;
       }

@@ -111,7 +111,7 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
     vi.restoreAllMocks();
   });
 
-  it('AUD-001: recurses synchronously until stack overflow when no playlist has valid segments', async () => {
+  it('AUD-001: stops playback when no playlist has valid segments', async () => {
     vi.stubGlobal('AudioContext', SilentAudioContext);
 
     const system = new RoccoJukeboxSystemImpl();
@@ -137,10 +137,12 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
       } as Response),
     );
 
-    await expect(system.playPlaylist('broken-playlist')).rejects.toThrow(RangeError);
+    const handle = await system.playPlaylist('broken-playlist');
+    expect(handle.stop).toBeTypeOf('function');
+    expect(system.isPlaying()).toBe(false);
   });
 
-  it('AUD-001: recurses synchronously until stack overflow when all segments are shorter than minSegmentDurationMs', async () => {
+  it('AUD-001: stops playback when all segments are shorter than minSegmentDurationMs', async () => {
     vi.stubGlobal('AudioContext', ShortSegmentAudioContext);
 
     const system = new RoccoJukeboxSystemImpl();
@@ -165,10 +167,12 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
       } as Response),
     );
 
-    await expect(system.playPlaylist('short-playlist')).rejects.toThrow(RangeError);
+    const handle = await system.playPlaylist('short-playlist');
+    expect(handle.stop).toBeTypeOf('function');
+    expect(system.isPlaying()).toBe(false);
   });
 
-  it('AUD-002: stopPlaylist does not prevent a pending loadTrack from resuming playback after fetch resolves', async () => {
+  it('AUD-002: stopPlaylist prevents a pending loadTrack from resuming playback after fetch resolves', async () => {
     const system = new RoccoJukeboxSystemImpl();
     system.registerPlaylist({
       id: 'late-playlist',
@@ -208,6 +212,6 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
 
     await playPromise.catch(() => {});
 
-    expect(system.isPlaying()).toBe(true);
+    expect(system.isPlaying()).toBe(false);
   });
 });

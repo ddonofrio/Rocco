@@ -72,7 +72,7 @@ describe('RoccoRuntimeAudioSystem characterization', () => {
     vi.restoreAllMocks();
   });
 
-  it('AUD-002: re-registering a sound does not invalidate a previously cached buffer', async () => {
+  it('AUD-002: re-registering a sound invalidates a previously cached buffer', async () => {
     const fetchMock = vi.fn<typeof fetch>();
 
     fetchMock.mockResolvedValueOnce({
@@ -100,7 +100,7 @@ describe('RoccoRuntimeAudioSystem characterization', () => {
 
     await system.preloadSound('pier-bell');
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('/sounds/pier-bell-v1.mp3');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe('/sounds/pier-bell-v2.mp3');
   });
 });

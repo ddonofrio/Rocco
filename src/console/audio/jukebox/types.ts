@@ -1,3 +1,9 @@
+export interface PlaylistHandle {
+  stop(): void;
+  setVolume(value: number): void;
+  readonly ended: Promise<void>;
+}
+
 export interface RoccoJukeboxTrack {
   id: string;
   uri: string;
@@ -21,7 +27,7 @@ export interface RoccoJukeboxPlaylist {
 export interface RoccoJukeboxSystem {
   registerPlaylist(playlist: RoccoJukeboxPlaylist): void;
   unregisterPlaylist(playlistId: string): void;
-  playPlaylist(playlistId: string): Promise<void>;
+  playPlaylist(playlistId: string): Promise<PlaylistHandle>;
   stopPlaylist(): void;
   isPlaying(): boolean;
   setVolume(volume: number): void;

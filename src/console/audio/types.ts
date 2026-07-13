@@ -1,3 +1,9 @@
+export interface SoundHandle {
+  stop(): void;
+  setVolume(value: number): void;
+  readonly ended: Promise<void>;
+}
+
 export interface RoccoSoundDefinition {
   id: string;
   uri: string;
@@ -15,7 +21,7 @@ export interface RoccoAudioSystem {
   registerSound(definition: RoccoSoundDefinition): void;
   unregisterSound(soundId: string): void;
   preloadSound(soundId: string): Promise<void>;
-  playSound(soundId: string, options?: RoccoSoundPlayOptions): void;
+  playSound(soundId: string, options?: RoccoSoundPlayOptions): SoundHandle;
   setSoundVolume(soundId: string, volume: number): void;
   stopSound(soundId: string): void;
   stopAllSounds(): void;

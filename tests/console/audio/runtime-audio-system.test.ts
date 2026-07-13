@@ -128,4 +128,98 @@ describe('RoccoRuntimeAudioSystem', () => {
     expect(soundGain?.gain.value).toBeCloseTo(0.27, 4);
     expect(context?.createdSources).toHaveLength(1);
   });
+
+  it('playSound returns a handle that can stop the sound', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockResolvedValue({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+      } as Response),
+    );
+
+    const system = new RoccoRuntimeAudioSystem();
+    system.registerSound({
+      id: 'click',
+      uri: '/sounds/click.mp3',
+    });
+
+    const handle = system.playSound('click');
+
+    await vi.waitFor(() => {
+      expect(FakeAudioContext.instances[0]?.createdSources).toHaveLength(1);
+    });
+
+    handle.stop();
+
+    const context = FakeAudioContext.instances[0];
+    expect(context?.createdSources[0].onended).toBeTruthy();
+  });
+
+  it('re-registering a sound invalidates a previously cached buffer', async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+    } as Response).mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(16)),
+    } as Response);
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const system = new RoccoRuntimeAudioSystem();
+    system.registerSound({
+      id: 'pier-bell',
+      uri: '/sounds/pier-bell-v1.mp3',
+    });
+
+    await system.preloadSound('pier-bell');
+
+    system.registerSound({
+      id: 'pier-bell',
+      uri: '/sounds/pier-bell-v2.mp3',
+    });
+
+    await system.preloadSound('pier-bell');
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe('/sounds/pier-bell-v2.mp3');
+  });
+
+  it('stopAllSounds aborts a pending load', async () => {
+    let resolveFetch!: (value: ArrayBuffer) => void;
+    const fetchPromise = new Promise<ArrayBuffer>((resolve) => {
+      resolveFetch = resolve;
+    });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockReturnValue(
+        new Promise<Response>((resolve) => {
+          fetchPromise.then((arrayBuffer) => {
+            resolve({
+              ok: true,
+              arrayBuffer: () => Promise.resolve(arrayBuffer),
+            } as Response);
+          }).catch(() => {});
+        }),
+      ),
+    );
+
+    const system = new RoccoRuntimeAudioSystem();
+    system.registerSound({
+      id: 'delayed-sound',
+      uri: '/sounds/delayed.mp3',
+    });
+
+    system.playSound('delayed-sound');
+    system.stopAllSounds();
+    resolveFetch(new ArrayBuffer(8));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(FakeAudioContext.instances[0]?.createdSources).toHaveLength(0);
+  });
 });

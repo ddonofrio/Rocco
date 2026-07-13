@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AudioAnalyzer } from '../../../../src/console/audio/jukebox/audio-analyzer';
 import { RoccoJukeboxSystemImpl } from '../../../../src/console/audio/jukebox/jukebox-system';
 
 class FakeGainNode {
@@ -120,5 +121,72 @@ describe('RoccoJukeboxSystemImpl', () => {
     system.setVolume(0.5);
 
     expect(masterGain?.gain.value).toBeCloseTo(0.2);
+  });
+
+  it('does not recurse infinitely when no segments are playable', async () => {
+    vi.stubGlobal('AudioContext', FakeAudioContext);
+
+    const system = new RoccoJukeboxSystemImpl();
+
+    vi.spyOn(AudioAnalyzer, 'analyzeBuffer').mockReturnValue({
+      duration: 12,
+      silenceRegions: [],
+      audioSegments: [],
+    });
+
+    system.registerPlaylist({
+      id: 'silent-playlist',
+      tracks: [{ id: 'track-a', uri: '/music/a.mp3', volume: 0.8 }],
+      mixMode: {
+        type: 'auto-mix',
+        fadeDurationMs: 1000,
+        minSegmentDurationMs: 3000,
+      },
+    });
+
+    const handle = await system.playPlaylist('silent-playlist');
+    expect(handle.stop).toBeTypeOf('function');
+    expect(system.isPlaying()).toBe(false);
+  });
+
+  it('only the latest generation produces audio after rapid playPlaylist calls', async () => {
+    const system = new RoccoJukeboxSystemImpl();
+    system.registerPlaylist({
+      id: 'pier-music',
+      tracks: [{ id: 'track-a', uri: '/music/a.mp3', volume: 0.8 }],
+      mixMode: {
+        type: 'auto-mix',
+        fadeDurationMs: 1000,
+        minSegmentDurationMs: 3000,
+      },
+    });
+
+    const first = system.playPlaylist('pier-music');
+    system.stopPlaylist();
+    const second = system.playPlaylist('pier-music');
+
+    await first.catch(() => {});
+    await second;
+
+    expect(system.isPlaying()).toBe(true);
+  });
+
+  it('handle.stop() stops playback', async () => {
+    const system = new RoccoJukeboxSystemImpl();
+    system.registerPlaylist({
+      id: 'pier-music',
+      tracks: [{ id: 'track-a', uri: '/music/a.mp3', volume: 0.8 }],
+      mixMode: {
+        type: 'auto-mix',
+        fadeDurationMs: 1000,
+        minSegmentDurationMs: 3000,
+      },
+    });
+
+    const handle = await system.playPlaylist('pier-music');
+    expect(system.isPlaying()).toBe(true);
+
+    handle.stop();
+    expect(system.isPlaying()).toBe(false);
   });
 });

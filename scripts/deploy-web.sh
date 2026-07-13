@@ -34,8 +34,10 @@ REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
 MANIFEST="$(mktemp)"
 ( cd "$DIST_DIR" && find . -type f -print0 | sort -z | xargs -0 sha256sum ) > "$MANIFEST"
 
-# 2. Ensure the releases directory exists on the server.
-ssh "${SSH_OPTS[@]}" "$REMOTE" "mkdir -p '${DEPLOY_BASE}/releases'"
+# 2. Ensure the release directory exists on the server. scp -r requires the
+#    final target dir to already exist, so create it (and drop any partial
+#    leftover from a previous failed upload of the same SHA).
+ssh "${SSH_OPTS[@]}" "$REMOTE" "rm -rf '${REMOTE_RELEASE}' && mkdir -p '${REMOTE_RELEASE}'"
 
 # 3. Upload the build into a brand-new release directory that nothing serves yet.
 #    A partial or interrupted upload only leaves an orphan dir; it never affects

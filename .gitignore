@@ -3,3 +3,4 @@ dist
 release
 .local
 src/cartridges/local/
+coverage

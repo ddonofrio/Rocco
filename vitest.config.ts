@@ -8,4 +8,16 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     pool: 'vmForks',
   },
+  coverage: {
+    provider: 'v8',
+    reporter: ['text', 'json', 'html'],
+    include: ['src/**/*.ts'],
+    exclude: ['src/**/*.d.ts', 'src/**/index.ts'],
+    thresholds: {
+      lines: 0,
+      functions: 0,
+      statements: 0,
+      branches: 0,
+    },
+  },
 });

@@ -1,0 +1,121 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import {
+  createResourceScope,
+  ResourceScopeClosedError,
+  ResourceScopeDisposalError,
+} from '../../../src/console/lifecycle';
+
+describe('ResourceScope', () => {
+  it('disposes registered disposers in reverse (LIFO) order', async () => {
+    const scope = createResourceScope('test');
+    const order: string[] = [];
+
+    scope.defer(() => {
+      order.push('first');
+    });
+    scope.defer(() => {
+      order.push('second');
+    });
+    scope.add({
+      dispose: () => {
+        order.push('resource');
+      },
+    });
+
+    await scope.dispose();
+
+    expect(order).toEqual(['resource', 'second', 'first']);
+  });
+
+  it('returns the registered resource from add for chaining', () => {
+    const scope = createResourceScope('test');
+    const resource = { dispose: vi.fn() };
+
+    const returned = scope.add(resource);
+
+    expect(returned).toBe(resource);
+  });
+
+  it('is idempotent and runs each disposer exactly once', async () => {
+    const scope = createResourceScope('test');
+    const disposer = vi.fn();
+
+    scope.defer(disposer);
+    await scope.dispose();
+    await scope.dispose();
+
+    expect(disposer).toHaveBeenCalledTimes(1);
+    expect(scope.isDisposed).toBe(true);
+  });
+
+  it('continues disposing after a failing disposer and aggregates errors', async () => {
+    const scope = createResourceScope('test');
+    const after = vi.fn();
+
+    scope.defer(after);
+    scope.defer(() => {
+      throw new Error('boom');
+    });
+
+    let thrown: unknown;
+    try {
+      await scope.dispose();
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(ResourceScopeDisposalError);
+    expect(after).toHaveBeenCalledTimes(1);
+  });
+
+  it('aborts its AbortSignal when disposed', async () => {
+    const scope = createResourceScope('test');
+    const signal = scope.signal;
+
+    expect(signal.aborted).toBe(false);
+    await scope.dispose();
+
+    expect(signal.aborted).toBe(true);
+  });
+
+  it('rejects registrations after it is closed', async () => {
+    const scope = createResourceScope('test');
+    await scope.dispose();
+
+    expect(() => scope.defer(() => undefined)).toThrow(ResourceScopeClosedError);
+    expect(() => scope.add({ dispose: () => undefined })).toThrow(ResourceScopeClosedError);
+  });
+
+  it('creates a child owned by the parent and cascades disposal', async () => {
+    const parent = createResourceScope('parent');
+    const childDisposer = vi.fn();
+    const child = parent.createChild('child');
+    child.defer(childDisposer);
+
+    await parent.dispose();
+
+    expect(child.isDisposed).toBe(true);
+    expect(childDisposer).toHaveBeenCalledTimes(1);
+  });
+
+  it('disposing a child first detaches it from the parent without double-disposing', async () => {
+    const parent = createResourceScope('parent');
+    const childDisposer = vi.fn();
+    const child = parent.createChild('child');
+    child.defer(childDisposer);
+
+    await child.dispose();
+    await parent.dispose();
+
+    expect(childDisposer).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes its parent reference', () => {
+    const parent = createResourceScope('parent');
+    const child = parent.createChild('child');
+
+    expect(child.parent).toBe(parent);
+    expect(parent.parent).toBeNull();
+  });
+});

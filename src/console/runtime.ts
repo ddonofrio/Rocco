@@ -24,6 +24,12 @@ import { RoccoInputHandler } from './input-handler';
 import { ActionDispatcher } from './action-dispatcher';
 import { RoccoCartridgeManager } from './cartridge-manager';
 import { RoccoPersistenceAdapter } from './persistence-adapter';
+import {
+  createResourceScope,
+  LifecycleStateMachine,
+  type LifecycleState,
+  type ResourceScope,
+} from './lifecycle';
 
 function clone<T>(value: T): T {
   if (typeof structuredClone === 'function') {
@@ -58,6 +64,9 @@ export class GameRuntime implements RoccoEngine {
   private soundProfile: RoccoSoundProfile = { ...defaultSoundProfile };
   private consoleFlags: RoccoConsoleFlags;
 
+  private readonly lifecycle = new LifecycleStateMachine();
+  private rootScope!: ResourceScope;
+
   // Public subsystem access
   readonly video: RoccoRuntimeVideoSystem;
   readonly audio: RoccoRuntimeAudioSystem;
@@ -91,68 +100,132 @@ export class GameRuntime implements RoccoEngine {
 
     this.effectRegistry.register(roccoAutoScrollRuntime);
     this.applySoundProfile();
+    this.createRootScope();
+  }
+
+  /**
+   * Builds the runtime resource scope and registers every subsystem disposer
+   * in reverse of the required stop order. Disposal is LIFO, so the entries
+   * below are registered top-to-bottom as last-to-dispose first.
+   *
+   * Required stop order (first to run): stop ticker + remove resize listener,
+   * deactivate/unmount cartridge, unmount input, destroy video, destroy
+   * jukebox, destroy audio, destroy Pixi app.
+   */
+  private createRootScope(): void {
+    const scope = createResourceScope('runtime');
+
+    scope.defer(() => {
+      this.app?.destroy({ removeView: true }, true);
+      this.app = null;
+    });
+    scope.defer(() => this.audio.destroy());
+    scope.defer(() => this.jukebox.destroy());
+    scope.defer(() => {
+      if (this.app) {
+        this.video.destroy();
+      }
+    });
+    scope.defer(() => this.inputHandler?.unmount());
+
+    const cartridgeScope = scope.createChild('cartridge');
+    cartridgeScope.defer(() => this.cartridgeManager.dispose());
+
+    scope.defer(() => {
+      window.removeEventListener('resize', this.handleResize);
+      if (this.app) {
+        this.app.ticker.remove(this.renderTick);
+      }
+    });
+
+    this.rootScope = scope;
   }
 
   async init(): Promise<void> {
-    const app = new Application();
-    await app.init({
-      preference: 'webgl',
-      background: '#0f1610',
-      antialias: true,
-      autoDensity: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
-      resizeTo: this.options.mount,
-    });
+    if (this.lifecycle.current === 'ready') {
+      return;
+    }
+    if (this.lifecycle.isTerminal()) {
+      throw new Error('GameRuntime has been disposed; create a new instance to run again');
+    }
+    if (this.lifecycle.current !== 'new') {
+      this.createRootScope();
+    }
 
-    this.options.mount.replaceChildren(app.canvas);
-    this.app = app;
-    app.stage.sortableChildren = true;
-    this.video.mount(app.stage);
+    this.lifecycle.markInitializing();
+    try {
+      const app = new Application();
+      await app.init({
+        preference: 'webgl',
+        background: '#0f1610',
+        antialias: true,
+        autoDensity: true,
+        resolution: Math.min(window.devicePixelRatio || 1, 2),
+        resizeTo: this.options.mount,
+      });
 
-    this.inputHandler = new RoccoInputHandler({
-      videoSystem: this.video,
-      audioSystem: this.audio,
-      jukeboxSystem: this.jukebox,
-      viewportHost: this.options.viewportHost,
-      getActiveCartridge: () => this.cartridgeManager.getActiveCartridge(),
-      getActivePlayerSpriteId: () => this.activePlayerSpriteId,
-      actionDispatcher: new ActionDispatcher({
+      this.options.mount.replaceChildren(app.canvas);
+      this.app = app;
+      app.stage.sortableChildren = true;
+      this.video.mount(app.stage);
+
+      this.inputHandler = new RoccoInputHandler({
+        videoSystem: this.video,
+        audioSystem: this.audio,
+        jukeboxSystem: this.jukebox,
+        viewportHost: this.options.viewportHost,
         getActiveCartridge: () => this.cartridgeManager.getActiveCartridge(),
-        getActiveLevelId: () => this.cartridgeManager.getActiveLevelId(),
+        getActivePlayerSpriteId: () => this.activePlayerSpriteId,
+        actionDispatcher: new ActionDispatcher({
+          getActiveCartridge: () => this.cartridgeManager.getActiveCartridge(),
+          getActiveLevelId: () => this.cartridgeManager.getActiveLevelId(),
+          log: (channel, message) => this.log(channel, message),
+        }),
         log: (channel, message) => this.log(channel, message),
-      }),
-      log: (channel, message) => this.log(channel, message),
-    });
-    this.inputHandler.mount();
+      });
+      this.inputHandler.mount();
 
-    await this.cartridgeManager.loadAndMount({
-      app,
-      engine: this,
-      configuredCartridgeId: this.options.configuredCartridgeId,
-    });
+      await this.cartridgeManager.loadAndMount({
+        app,
+        engine: this,
+        configuredCartridgeId: this.options.configuredCartridgeId,
+      });
 
-    app.ticker.add(this.renderTick);
-    this.options.onStatusChange?.(this.statusMessage);
-    window.addEventListener('resize', this.handleResize);
+      app.ticker.add(this.renderTick);
+      this.options.onStatusChange?.(this.statusMessage);
+      window.addEventListener('resize', this.handleResize);
+      this.lifecycle.markReady();
+    } catch (error) {
+      this.lifecycle.markFailed();
+      await this.rootScope.dispose();
+      throw error;
+    }
   }
 
   async dispose(): Promise<void> {
-    window.removeEventListener('resize', this.handleResize);
-
-    await this.cartridgeManager.dispose();
-
-    if (this.app) {
-      this.app.ticker.remove(this.renderTick);
-      this.video.destroy();
+    if (this.lifecycle.current === 'disposing' || this.lifecycle.current === 'disposed') {
+      return;
     }
-    this.jukebox.destroy();
-    this.audio.destroy();
-    this.inputHandler?.unmount();
+    this.lifecycle.markDisposing();
+    try {
+      await this.rootScope.dispose();
+      this.lifecycle.markDisposed();
+    } catch (error) {
+      this.lifecycle.markFailed();
+      throw error;
+    }
+
     this.inputHandler = null;
     this.activePlaneSceneId = null;
     this.activePlayerSpriteId = null;
-    this.app?.destroy({ removeView: true }, true);
-    this.app = null;
+  }
+
+  get lifecycleState(): LifecycleState {
+    return this.lifecycle.current;
+  }
+
+  get scope(): ResourceScope {
+    return this.rootScope;
   }
 
   loadPlaneScene(scene: RoccoPlaneScene): void {
@@ -290,6 +363,10 @@ export class GameRuntime implements RoccoEngine {
   };
 
   private renderTick = (ticker: Ticker): void => {
+    if (this.lifecycle.current !== 'ready') {
+      return;
+    }
+
     this.effectElapsedMs += ticker.deltaMS;
     this.effects.tick({
       deltaMs: ticker.deltaMS,

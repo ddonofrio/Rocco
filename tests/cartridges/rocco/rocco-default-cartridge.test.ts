@@ -2746,25 +2746,79 @@ describe('RoccoDefaultCartridge', () => {
     );
   });
 
-  it('clears the intro thought line and does not continue after a scene click cancellation', async () => {
+  it('advances to the intro help line immediately on a scene click while Rocco is speaking the thought', async () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
+    const localization = createRoccoLocalization();
 
     await cartridge.mount({ engine });
     state.isSpriteMovingValue = false;
     cartridge.update(16);
-    cartridge.handleAction(makeSceneClickActivation(320, 240));
-    cartridge.update(6400);
-    cartridge.update(5400);
 
-    expect(state.spriteMessages).toEqual([]);
+    const result = cartridge.handleAction(makeSceneClickActivation(320, 240));
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:think:${serializeDialogueLine(localization.text.rocco.introThoughtLine)}`,
+    );
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(localization.text.rocco.introHelpLine)}`,
+    );
     expect(state.playedSpriteActionDirections).toContain(
       `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:up`,
     );
     expect(state.playedSpriteActionDirections).toContain(
       `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:down`,
     );
+    expect(state.inputEnabled).toBe(true);
+    expect(result).toMatchObject({ defaultPlayerMovement: 'suppress' });
+  });
+
+  it('keeps the intro help line and does not cancel after a scene click while speaking the thought', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const cartridge = createDefaultCartridgeForPierTests();
+    const localization = createRoccoLocalization();
+
+    await cartridge.mount({ engine });
+    state.isSpriteMovingValue = false;
+    cartridge.update(16);
+    cartridge.handleAction(makeSceneClickActivation(320, 240));
+
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(localization.text.rocco.introHelpLine)}`,
+    );
+
+    cartridge.update(6400);
+    cartridge.update(5400);
+
+    expect(state.spriteMessages).toEqual([
+      `${DEFAULT_SPRITE_INSTANCE_ID}:think:${serializeDialogueLine(localization.text.rocco.introThoughtLine)}`,
+      `${DEFAULT_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(localization.text.rocco.introHelpLine)}`,
+    ]);
+  });
+
+  it('finishes the intro and clears the help line on a scene click while Rocco is speaking the help line', async () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const cartridge = createDefaultCartridgeForPierTests();
+    const localization = createRoccoLocalization();
+
+    await cartridge.mount({ engine });
+    state.isSpriteMovingValue = false;
+    cartridge.update(16);
+    cartridge.update(6400);
+    expect(state.spriteMessages).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:say:${serializeDialogueLine(localization.text.rocco.introHelpLine)}`,
+    );
+
+    const result = cartridge.handleAction(makeSceneClickActivation(320, 240));
+
+    expect(state.spriteMessages).toEqual([]);
+    expect(state.playedSpriteActionDirections).toContain(
+      `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:down`,
+    );
+    expect(result).toMatchObject({ defaultPlayerMovement: 'suppress' });
   });
 
   it('moves the default cloud with vertical drift', async () => {

@@ -1,5 +1,6 @@
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
+import type { RoccoCartridgeActionResult } from '../../../../../../console/cartridges';
 import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
@@ -322,12 +323,19 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     showDefaultPelikanTalkReaction(this.engine, this.localization);
   }
 
-  handleSceneClick(): void {
-    if (!this.engine?.isInputEnabled()) {
+  handleSceneClick(): RoccoCartridgeActionResult | void {
+    const controller = this.spriteController;
+    if (!this.engine || !controller?.isIntroActive()) {
       return;
     }
 
-    this.spriteController?.cancelIntro();
+    if (controller.isIntroSpeaking()) {
+      controller.advanceIntro();
+    } else {
+      controller.cancelIntro();
+    }
+
+    return { suppressDefaultPlayerMove: true };
   }
 
   private installFeedingInteractionsIfReady(): void {

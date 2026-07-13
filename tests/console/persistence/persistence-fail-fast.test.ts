@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { RoccoPlaneScene } from '../../../src/console/video/planes';
+
 const TEST_CARTRIDGE_ID = 'test-cartridge';
 
 class MockTable<T extends { id: string }> {
@@ -90,8 +92,20 @@ describe('persistence namespacing', () => {
 
   it('does not collide between cartridges with the same scene id', async () => {
     const { loadPlaneSceneRecord, savePlaneScene } = await importPersistenceModule();
-    const sceneA = { id: 'scene-1', planes: [{ id: 'plane-a' }], palettes: [], colorRegisterSets: [], attributeMaps: [] };
-    const sceneB = { id: 'scene-1', planes: [{ id: 'plane-b' }], palettes: [], colorRegisterSets: [], attributeMaps: [] };
+    const sceneA = {
+      id: 'scene-1',
+      planes: [{ id: 'plane-a' }],
+      palettes: [],
+      colorRegisterSets: [],
+      attributeMaps: [],
+    } as unknown as RoccoPlaneScene;
+    const sceneB = {
+      id: 'scene-1',
+      planes: [{ id: 'plane-b' }],
+      palettes: [],
+      colorRegisterSets: [],
+      attributeMaps: [],
+    } as unknown as RoccoPlaneScene;
 
     await savePlaneScene('cartridge-a', sceneA);
     await savePlaneScene('cartridge-b', sceneB);

@@ -29,7 +29,9 @@ const INTRO_HELP_DURATION_MS = 5400;
 export interface RoccoDefaultSpriteController {
   update(deltaMs: number): void;
   isIntroActive(): boolean;
+  isIntroSpeaking(): boolean;
   cancelIntro(): void;
+  advanceIntro(): void;
 }
 
 export interface RoccoDefaultSpriteInstallOptions {
@@ -155,6 +157,22 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
     return this.phase !== 'idle';
   }
 
+  isIntroSpeaking(): boolean {
+    return this.phase === 'intro-thought' || this.phase === 'intro-help';
+  }
+
+  advanceIntro(): void {
+    if (this.phase === 'intro-thought') {
+      this.startIntroHelp();
+      return;
+    }
+
+    if (this.phase === 'intro-help') {
+      this.finishIntro();
+      this.engine.video.messages.clearMessages();
+    }
+  }
+
   cancelIntro(): void {
     if (!this.isIntroActive()) {
       return;
@@ -190,6 +208,7 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
       this.localization.text.rocco.introThoughtLine,
       {
         ttlMs: INTRO_THOUGHT_DURATION_MS,
+        background: true,
       },
     );
     this.engine.video.render(0);
@@ -204,6 +223,7 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
       this.localization.text.rocco.introHelpLine,
       {
         ttlMs: INTRO_HELP_DURATION_MS,
+        background: true,
       },
     );
     this.engine.video.render(0);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { RoccoCartridgeRegistration } from '../../../src/console/cartridges';
+import type { RoccoCartridge, RoccoCartridgeRegistration } from '../../../src/console/cartridges';
 import { RoccoBuiltinCartridgeProvider } from '../../../src/console/cartridges/providers/builtin-cartridge-provider';
 
 function makeRegistration(id: string): RoccoCartridgeRegistration {
@@ -10,10 +10,11 @@ function makeRegistration(id: string): RoccoCartridgeRegistration {
       title: id,
       version: '0.1.0',
     },
-    createCartridge: () => ({
-      manifest: { id },
-      mount: async () => {},
-    }),
+    createCartridge: () =>
+      ({
+        manifest: { id },
+        mount: async () => {},
+      }) as unknown as RoccoCartridge,
   };
 }
 

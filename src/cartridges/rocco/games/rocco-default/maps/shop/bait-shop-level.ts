@@ -46,6 +46,10 @@ import {
   type RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
 import { baitShopInteriorAssetUrls, baitShopDoorClosingSoundUrl } from './bait-shop-assets';
+import {
+  BaitShopBenchJumpController,
+  type BaitShopBenchJumpDownOptions,
+} from './bait-shop-bench-jump-controller';
 
 export const ROCCO_BAIT_SHOP_LEVEL_ID = 'bait-shop';
 export const BAIT_SHOP_SCENE_ID = 'rocco-bait-shop-scene';
@@ -144,8 +148,6 @@ const BAIT_SHOP_COUNTER_OCCLUSION_THRESHOLD_Y = 338;
 const BAIT_SHOP_ACTION_MENU_ITEM_SIZE = 92;
 const BAIT_SHOP_ACTION_MENU_ORBIT_RADIUS = 88;
 const BAIT_SHOP_ACTION_MENU_ORBIT_SPEED = 0.08;
-const BAIT_SHOP_BENCH_JUMP_DURATION_MS = 520;
-const BAIT_SHOP_BENCH_JUMP_ARC_HEIGHT = 52;
 const BAIT_SHOP_BENCH_DISMOUNT_IDLE_SETTLE_DELAY_MS = 650;
 const BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST = {
   farY: 280,
@@ -159,19 +161,6 @@ const BAIT_SHOP_SECOND_SCREEN_ENTRY_Y = 220;
 const BAIT_SHOP_SECOND_SCREEN_EXIT_TRIGGER_HEIGHT = 30;
 const DOOR_CLOSING_SOUND_ID = 'rocco-bait-shop-door-closing-sound';
 const DOOR_CLOSING_SOUND_VOLUME = 0.42;
-
-interface BaitShopBenchJumpSequence {
-  elapsedMs: number;
-  startOrigin: RoccoPoint;
-  endOrigin: RoccoPoint;
-  landingFacing: RoccoFacingDirection;
-  onComplete?: () => void;
-}
-
-interface BaitShopBenchJumpDownOptions {
-  walkTo?: RoccoPoint;
-  onComplete?: () => void;
-}
 
 export interface RoccoBaitShopScenePlaneIds {
   backplate: string;
@@ -277,10 +266,6 @@ function polygon(points: Array<{ x: number; y: number }>): RoccoCollisionShape {
     kind: 'polygon',
     points,
   };
-}
-
-function lerp(start: number, end: number, progress: number): number {
-  return start + (end - start) * progress;
 }
 
 function toOriginFromGroundPoint(
@@ -637,11 +622,10 @@ export class RoccoBaitShopLevel implements RoccoLevel {
 
   private readonly localization: RoccoLocalization;
   private readonly options: RoccoBaitShopLevelOptions;
+  private readonly benchJumpController: BaitShopBenchJumpController;
   private engine: RoccoEngine | null = null;
   private spriteController: RoccoDefaultSpriteController | null = null;
   private scriptedInteractionController: RoccoScriptedSceneInteractionController | null = null;
-  private benchJumpSequence: BaitShopBenchJumpSequence | null = null;
-  private roccoOnBench = false;
   private souvenirCloseupVisible = false;
   private hiddenKeysRevealed = false;
   private hiddenKeysCollected = false;
@@ -653,6 +637,89 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     this.localization = localization;
     this.options = options;
     this.title = localization.text.levels.baitShopPlaceholderTitle;
+    this.benchJumpController = new BaitShopBenchJumpController({
+      resolveJumpOrigins: (direction) => {
+        const sprite = this.engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+        if (!sprite) {
+          return null;
+        }
+
+        const scaleX = sprite.transform.scaleX || BAIT_SHOP_ROCCO_SCALE;
+        const scaleY = sprite.transform.scaleY || BAIT_SHOP_ROCCO_SCALE;
+        return direction === 'up'
+          ? {
+              startOrigin: toOriginFromGroundPoint(BAIT_SHOP_BENCH_KICK_START_POINT, scaleX, scaleY),
+              endOrigin: toOriginFromGroundPoint(BAIT_SHOP_BENCH_TOP_POINT, scaleX, scaleY),
+            }
+          : {
+              startOrigin: toOriginFromGroundPoint(BAIT_SHOP_BENCH_TOP_POINT, scaleX, scaleY),
+              endOrigin: toOriginFromGroundPoint(BAIT_SHOP_BENCH_KICK_START_POINT, scaleX, scaleY),
+            };
+      },
+      setInputEnabled: (enabled) => {
+        this.engine?.setInputEnabled(enabled);
+      },
+      setWalkConstraint: (constrainMovement) => {
+        this.setRoccoWalkConstraint(constrainMovement);
+      },
+      stopPlayerMovement: () => {
+        this.engine?.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+      },
+      setPlayerPosition: (origin) => {
+        this.engine?.video.sprites.setPosition(DEFAULT_SPRITE_INSTANCE_ID, origin.x, origin.y, {
+          constrainToWalkMap: false,
+        });
+      },
+      playRunAction: (direction) => {
+        this.engine?.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_RUN_ACTION_ID, {
+          direction,
+          restart: true,
+          playbackRate: 0,
+        });
+      },
+      playIdleAction: (direction) => {
+        this.engine?.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
+          direction,
+          restart: true,
+        });
+      },
+      render: () => {
+        this.engine?.video.render(0);
+      },
+      onBenchOccupancyChanged: () => {
+        this.syncHiddenKeysTarget();
+      },
+      onJumpUpFinished: () => {
+        this.engine?.video.messages.think(
+          DEFAULT_SPRITE_INSTANCE_ID,
+          this.localization.text.baitShop.benchJumpUpLine,
+          {
+            ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+          },
+        );
+      },
+      onJumpDownFinished: (options) => {
+        if (!this.engine) {
+          return;
+        }
+
+        if (options.onComplete) {
+          options.onComplete();
+          return;
+        }
+
+        if (options.walkTo) {
+          this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, options.walkTo.x, options.walkTo.y, {
+            idleSettleDelayMs: BAIT_SHOP_BENCH_DISMOUNT_IDLE_SETTLE_DELAY_MS,
+            idleSettleFacing: 'diagonal-from-facing',
+          });
+        }
+      },
+    });
+  }
+
+  private get roccoOnBench(): boolean {
+    return this.benchJumpController.isOnBench();
   }
 
   async mount(
@@ -663,8 +730,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     this.engine = engine;
     this.spriteController = null;
     this.scriptedInteractionController = null;
-    this.benchJumpSequence = null;
-    this.roccoOnBench = false;
+    this.benchJumpController.reset();
     this.souvenirCloseupVisible = false;
     if (this.options.hasMysteriousKey?.()) {
       this.hiddenKeysCollected = true;
@@ -793,8 +859,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     this.engine = null;
     this.spriteController = null;
     this.scriptedInteractionController = null;
-    this.benchJumpSequence = null;
-    this.roccoOnBench = false;
+    this.benchJumpController.reset();
     this.souvenirCloseupVisible = false;
     engine.video.render(0);
   }
@@ -802,7 +867,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
   update(deltaMs: number): void {
     this.spriteController?.update(deltaMs);
     this.scriptedInteractionController?.update();
-    this.updateBenchJumpSequence(deltaMs);
+    this.benchJumpController.update(deltaMs);
   }
 
   handleAction(activation: RoccoActionMenuActivation): void {
@@ -980,7 +1045,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
   }
 
   handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
-    if (this.benchJumpSequence) {
+    if (this.benchJumpController.isActive()) {
       return { suppressDefaultPlayerMove: true };
     }
 
@@ -1030,185 +1095,11 @@ export class RoccoBaitShopLevel implements RoccoLevel {
   }
 
   private startBenchJumpUpSequence(): void {
-    if (!this.engine) {
-      return;
-    }
-
-    const sprite = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
-    if (!sprite) {
-      return;
-    }
-
-    const scaleX = sprite.transform.scaleX || BAIT_SHOP_ROCCO_SCALE;
-    const scaleY = sprite.transform.scaleY || BAIT_SHOP_ROCCO_SCALE;
-    const startOrigin = toOriginFromGroundPoint(BAIT_SHOP_BENCH_KICK_START_POINT, scaleX, scaleY);
-    const endOrigin = toOriginFromGroundPoint(BAIT_SHOP_BENCH_TOP_POINT, scaleX, scaleY);
-
-    this.engine.setInputEnabled(false);
-    this.setRoccoWalkConstraint(false);
-    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
-    this.engine.video.sprites.setPosition(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      startOrigin.x,
-      startOrigin.y,
-      { constrainToWalkMap: false },
-    );
-    this.benchJumpSequence = {
-      elapsedMs: 0,
-      startOrigin,
-      endOrigin,
-      landingFacing: 'down',
-      onComplete: () => {
-        this.roccoOnBench = true;
-        this.syncHiddenKeysTarget();
-        this.engine?.setInputEnabled(true);
-        this.engine?.video.messages.think(
-          DEFAULT_SPRITE_INSTANCE_ID,
-          this.localization.text.baitShop.benchJumpUpLine,
-          {
-            ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-          },
-        );
-        this.engine?.video.render(0);
-      },
-    };
-    this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_RUN_ACTION_ID, {
-      direction: 'up',
-      restart: true,
-      playbackRate: 0,
-    });
-    this.engine.video.render(0);
+    this.benchJumpController.startJumpUp();
   }
 
   private startBenchJumpDownSequence(options: BaitShopBenchJumpDownOptions = {}): void {
-    if (!this.engine) {
-      return;
-    }
-
-    const sprite = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
-    if (!sprite) {
-      return;
-    }
-
-    const scaleX = sprite.transform.scaleX || BAIT_SHOP_ROCCO_SCALE;
-    const scaleY = sprite.transform.scaleY || BAIT_SHOP_ROCCO_SCALE;
-    const startOrigin = toOriginFromGroundPoint(BAIT_SHOP_BENCH_TOP_POINT, scaleX, scaleY);
-    const endOrigin = toOriginFromGroundPoint(BAIT_SHOP_BENCH_KICK_START_POINT, scaleX, scaleY);
-
-    this.roccoOnBench = false;
-    this.syncHiddenKeysTarget();
-    this.engine.setInputEnabled(false);
-    this.setRoccoWalkConstraint(false);
-    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
-    this.engine.video.sprites.setPosition(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      startOrigin.x,
-      startOrigin.y,
-      { constrainToWalkMap: false },
-    );
-    this.benchJumpSequence = {
-      elapsedMs: 0,
-      startOrigin,
-      endOrigin,
-      landingFacing: 'down',
-      onComplete: () => {
-        if (!this.engine) {
-          return;
-        }
-
-        this.setRoccoWalkConstraint(true);
-        this.engine.setInputEnabled(true);
-        if (options.onComplete) {
-          options.onComplete();
-          return;
-        }
-
-        if (options.walkTo) {
-          this.engine.video.sprites.goTo(
-            DEFAULT_SPRITE_INSTANCE_ID,
-            options.walkTo.x,
-            options.walkTo.y,
-            {
-              idleSettleDelayMs: BAIT_SHOP_BENCH_DISMOUNT_IDLE_SETTLE_DELAY_MS,
-              idleSettleFacing: 'diagonal-from-facing',
-            },
-          );
-        }
-        this.engine.video.render(0);
-      },
-    };
-    this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_RUN_ACTION_ID, {
-      direction: 'down',
-      restart: true,
-      playbackRate: 0,
-    });
-    this.engine.video.render(0);
-  }
-
-  private updateBenchJumpSequence(deltaMs: number): void {
-    if (!this.engine || !this.benchJumpSequence || !Number.isFinite(deltaMs) || deltaMs <= 0) {
-      return;
-    }
-
-    const sprite = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
-    if (!sprite) {
-      this.finishBenchJumpSequence();
-      return;
-    }
-
-    this.benchJumpSequence.elapsedMs = Math.min(
-      BAIT_SHOP_BENCH_JUMP_DURATION_MS,
-      this.benchJumpSequence.elapsedMs + deltaMs,
-    );
-    const progress = this.benchJumpSequence.elapsedMs / BAIT_SHOP_BENCH_JUMP_DURATION_MS;
-    const lift = Math.sin(progress * Math.PI) * BAIT_SHOP_BENCH_JUMP_ARC_HEIGHT;
-    const x = lerp(this.benchJumpSequence.startOrigin.x, this.benchJumpSequence.endOrigin.x, progress);
-    const y =
-      lerp(this.benchJumpSequence.startOrigin.y, this.benchJumpSequence.endOrigin.y, progress) - lift;
-
-    this.engine.video.sprites.setPosition(DEFAULT_SPRITE_INSTANCE_ID, x, y, {
-      constrainToWalkMap: false,
-    });
-    this.engine.video.render(0);
-
-    if (this.benchJumpSequence.elapsedMs >= BAIT_SHOP_BENCH_JUMP_DURATION_MS) {
-      this.finishBenchJumpSequence();
-    }
-  }
-
-  private finishBenchJumpSequence(): void {
-    if (!this.engine) {
-      this.benchJumpSequence = null;
-      return;
-    }
-
-    const jumpSequence = this.benchJumpSequence;
-    this.benchJumpSequence = null;
-    if (!jumpSequence) {
-      this.engine.setInputEnabled(true);
-      return;
-    }
-
-    if (jumpSequence.endOrigin) {
-      this.engine.video.sprites.setPosition(
-        DEFAULT_SPRITE_INSTANCE_ID,
-        jumpSequence.endOrigin.x,
-        jumpSequence.endOrigin.y,
-        { constrainToWalkMap: false },
-      );
-      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-        direction: jumpSequence.landingFacing,
-        restart: true,
-      });
-      this.engine.video.render(0);
-    }
-
-    if (jumpSequence.onComplete) {
-      jumpSequence.onComplete();
-      return;
-    }
-
-    this.engine.setInputEnabled(true);
+    this.benchJumpController.startJumpDown(options);
   }
 
   private setRoccoWalkConstraint(constrainMovement: boolean): void {

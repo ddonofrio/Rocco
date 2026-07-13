@@ -72,6 +72,9 @@ import {
   uninstallBaitShopWalkMap,
   type RoccoBaitShopSceneDefinition,
 } from './bait-shop-level';
+import {
+  BaitShopToiletSeatController,
+} from './bait-shop-toilet-seat-controller';
 
 export const ROCCO_BAIT_SHOP_TOILET_LEVEL_ID = 'bait-shop-toilet';
 export const BAIT_SHOP_TOILET_SCENE_ID = 'rocco-bait-shop-toilet-scene';
@@ -82,22 +85,6 @@ export interface RoccoBaitShopToiletLevelOptions {
   getCoralRelicAssemblyPlan?: () => RoccoCoralRelicAssemblyPlan;
   allowReuseDuringUrgency?: () => boolean;
   isStanIdentified?: () => boolean;
-}
-
-type BaitShopToiletSequencePhase =
-  | 'walking-to-approach-vertical'
-  | 'walking-to-approach-horizontal'
-  | 'waiting-before-frame-one'
-  | 'waiting-before-seat-walk'
-  | 'walking-to-seat'
-  | 'waiting-before-frame-two'
-  | 'standing-before-walk'
-  | 'standing-walking-to-approach'
-  | 'standing-before-frame-zero';
-
-interface BaitShopToiletSequence {
-  phase: BaitShopToiletSequencePhase;
-  elapsedMs: number;
 }
 
 type BaitShopToiletReadingPhase =
@@ -685,15 +672,12 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCap
 
   private readonly localization: RoccoLocalization;
   private readonly options: RoccoBaitShopToiletLevelOptions;
+  private readonly seatController: BaitShopToiletSeatController;
   private engine: RoccoEngine | null = null;
   private spriteController: RoccoDefaultSpriteController | null = null;
   private onConnectorTransitionRequested: ((connectorId: string) => boolean) | null = null;
   private toiletFrameCount = 0;
-  private sequence: BaitShopToiletSequence | null = null;
   private readingSequence: BaitShopToiletReadingSequence | null = null;
-  private roccoSeated = false;
-  private roccoSatOnToilet = false;
-  private queuedWalkDestination: RoccoPoint | null = null;
   private onRestartRequested: (() => void) | null = null;
   private pendingPostStandStanAlert = false;
   private passiveStanPoliceAlertElapsedMs: number | null = null;
@@ -725,6 +709,97 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCap
     this.localization = localization;
     this.options = options;
     this.title = localization.text.levels.baitShopToiletTitle;
+    this.seatController = new BaitShopToiletSeatController(
+      {
+        hasPlayerSprite: () => Boolean(this.engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)),
+        resolvePlayerGroundPoint: () => this.resolvePlayerGroundPoint(),
+        closeInteractionUi: () => {
+          this.engine?.video.actionMenus.closeMenu();
+          this.engine?.video.messages.clearMessages();
+        },
+        setInputEnabled: (enabled) => {
+          this.engine?.setInputEnabled(enabled);
+        },
+        stopPlayerMovement: () => {
+          this.engine?.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+        },
+        isPlayerMoving: () => this.engine?.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID) ?? false,
+        playIdleAction: (direction) => {
+          this.engine?.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
+            direction,
+            restart: true,
+          });
+        },
+        startWalkTo: (point, options = {}) =>
+          this.engine?.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, point.x, point.y, {
+            action: DEFAULT_SPRITE_RUN_ACTION_ID,
+            idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+            constrainToWalkMap: options.constrainToWalkMap,
+            stopDistance: 1,
+            idleSettleDelayMs: 0,
+            idleSettleFacing: 'diagonal-from-facing',
+          }) ?? false,
+        render: () => {
+          this.engine?.video.render(0);
+        },
+        setToiletFrame: (frameIndex) => {
+          this.setToiletFrame(frameIndex);
+        },
+        showHiddenRoccoAtSeatPoint: () => {
+          this.showHiddenRoccoAtSeatPoint();
+        },
+        hideRoccoAtSeatPoint: () => {
+          this.hideRoccoAtSeatPoint();
+        },
+        finishSitPresentation: () => {
+          if (!this.engine) {
+            return;
+          }
+
+          this.setToiletVisibleDescription(this.localization.text.descriptions.seatedRocco);
+          this.installSeatedRoccoActionMenu();
+          this.engine.setInputEnabled(true);
+          this.engine.video.render(0);
+        },
+        finishStandPresentation: (destination) => {
+          if (!this.engine) {
+            return;
+          }
+
+          this.setToiletVisibleDescription(this.localization.text.descriptions.toilet);
+          this.restoreDefaultActionMenus();
+          this.syncToiletUrgencyPresentation();
+          this.engine.setInputEnabled(true);
+
+          if (destination) {
+            this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, destination.x, destination.y, {
+              idleSettleDelayMs: 0,
+              idleSettleFacing: 'diagonal-from-facing',
+            });
+          }
+
+          if (this.pendingPostStandStanAlert) {
+            this.pendingPostStandStanAlert = false;
+            this.startPassiveStanPoliceAlert();
+          }
+
+          this.engine.video.render(0);
+        },
+      },
+      {
+        sitApproachPoint: { ...BAIT_SHOP_TOILET_SIT_APPROACH_POINT },
+        sitSeatPoint: { ...BAIT_SHOP_TOILET_SIT_SEAT_POINT },
+        sitWaitMs: BAIT_SHOP_TOILET_SIT_WAIT_MS,
+      },
+    );
+  }
+
+  private get roccoSeated(): boolean {
+    return this.seatController.isSeated();
+  }
+
+  private get roccoSatOnToilet(): boolean {
+    return this.seatController.hasSatOnToilet();
   }
 
   async mount(
@@ -735,10 +810,8 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCap
     this.engine = engine;
     this.spriteController = null;
     this.toiletFrameCount = 0;
-    this.sequence = null;
+    this.seatController.reset();
     this.readingSequence = null;
-    this.roccoSeated = false;
-    this.queuedWalkDestination = null;
     this.onRestartRequested = options.onRestartRequested ?? null;
     this.onConnectorTransitionRequested = options.onConnectorTransitionRequested ?? null;
     this.pendingPostStandStanAlert = false;
@@ -963,10 +1036,8 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCap
     this.engine = null;
     this.spriteController = null;
     this.toiletFrameCount = 0;
-    this.sequence = null;
+    this.seatController.reset();
     this.readingSequence = null;
-    this.roccoSeated = false;
-    this.queuedWalkDestination = null;
     this.onRestartRequested = null;
     this.onConnectorTransitionRequested = null;
     this.pendingPostStandStanAlert = false;
@@ -987,7 +1058,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCap
 
   update(deltaMs: number): void {
     this.spriteController?.update(deltaMs);
-    this.updateSequence(deltaMs);
+    this.seatController.update(deltaMs);
     this.updateReadingSequence(deltaMs);
     this.updatePassiveStanPoliceAlert(deltaMs);
     this.updateThrowSequence(deltaMs);
@@ -1082,7 +1153,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCap
 
     if (
       activation.targetInstanceId !== BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID ||
-      this.sequence
+      this.seatController.isActive()
     ) {
       return;
     }
@@ -1134,7 +1205,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCap
       return { suppressDefaultPlayerMove: true };
     }
 
-    if (!this.roccoSeated || this.sequence) {
+    if (!this.roccoSeated || this.seatController.isActive()) {
       return;
     }
 
@@ -1161,7 +1232,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCap
     activation: RoccoSceneClickAction,
     carriedItem: RoccoGridMenuCarriedItem,
   ): boolean {
-    if (this.sequence || this.readingSequence || this.wishSequence || this.throwSequence) {
+    if (this.seatController.isActive() || this.readingSequence || this.wishSequence || this.throwSequence) {
       return false;
     }
 
@@ -1916,7 +1987,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCap
     this.pendingPostStandStanAlert = true;
     this.engine.setInputEnabled(true);
     this.startStandSequence();
-    if (!this.sequence) {
+    if (!this.seatController.isActive()) {
       this.pendingPostStandStanAlert = false;
       this.startPassiveStanPoliceAlert();
       this.syncToiletUrgencyPresentation();
@@ -2155,323 +2226,11 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCap
   }
 
   private startSitSequence(): void {
-    if (!this.engine || this.sequence) {
-      return;
-    }
-
-    if (!this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
-      return;
-    }
-
-    const currentGroundPoint = this.resolvePlayerGroundPoint();
-    if (!currentGroundPoint) {
-      return;
-    }
-
-    this.engine.video.actionMenus.closeMenu();
-    this.engine.video.messages.clearMessages();
-    this.engine.setInputEnabled(false);
-    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
-
-    const needsVerticalApproach =
-      Math.abs(currentGroundPoint.y - BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y) > 1;
-    const needsHorizontalApproach =
-      Math.abs(currentGroundPoint.x - BAIT_SHOP_TOILET_SIT_APPROACH_POINT.x) > 1;
-
-    if (!needsVerticalApproach && !needsHorizontalApproach) {
-      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-        direction: 'up-left',
-        restart: true,
-      });
-      this.sequence = {
-        phase: 'waiting-before-frame-one',
-        elapsedMs: 0,
-      };
-      this.engine.video.render(0);
-      return;
-    }
-
-    const firstTarget = needsVerticalApproach
-      ? {
-          x: currentGroundPoint.x,
-          y: BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y,
-        }
-      : BAIT_SHOP_TOILET_SIT_APPROACH_POINT;
-    const started = this.engine.video.sprites.goTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      firstTarget.x,
-      firstTarget.y,
-      {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-        stopDistance: 1,
-        idleSettleDelayMs: 0,
-        idleSettleFacing: 'diagonal-from-facing',
-      },
-    );
-    if (!started) {
-      this.engine.setInputEnabled(true);
-      return;
-    }
-
-    this.sequence = {
-      phase: needsVerticalApproach
-        ? 'walking-to-approach-vertical'
-        : 'walking-to-approach-horizontal',
-      elapsedMs: 0,
-    };
-    this.engine.video.render(0);
+    this.seatController.startSitSequence();
   }
 
   private startStandSequence(destination?: RoccoPoint): void {
-    if (!this.engine || !this.roccoSeated || this.sequence) {
-      return;
-    }
-
-    this.queuedWalkDestination = destination ? { ...destination } : null;
-    this.engine.video.actionMenus.closeMenu();
-    this.engine.video.messages.clearMessages();
-    this.engine.setInputEnabled(false);
-    this.setToiletFrame(1);
-    this.showHiddenRoccoAtSeatPoint();
-    this.sequence = {
-      phase: 'standing-before-walk',
-      elapsedMs: 0,
-    };
-    this.engine.video.render(0);
-  }
-
-  private updateSequence(deltaMs: number): void {
-    if (!this.engine || !this.sequence || !Number.isFinite(deltaMs) || deltaMs < 0) {
-      return;
-    }
-
-    if (this.sequence.phase === 'walking-to-approach-vertical') {
-      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
-        return;
-      }
-
-      this.startSitApproachHorizontalWalk();
-      return;
-    }
-
-    if (this.sequence.phase === 'walking-to-approach-horizontal') {
-      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
-        return;
-      }
-
-      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-        direction: 'up-left',
-        restart: true,
-      });
-      this.sequence = {
-        phase: 'waiting-before-frame-one',
-        elapsedMs: 0,
-      };
-      this.engine.video.render(0);
-      return;
-    }
-
-    if (this.sequence.phase === 'walking-to-seat') {
-      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
-        return;
-      }
-
-      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-        direction: 'down',
-        restart: true,
-      });
-      this.sequence = {
-        phase: 'waiting-before-frame-two',
-        elapsedMs: 0,
-      };
-      this.engine.video.render(0);
-      return;
-    }
-
-    if (this.sequence.phase === 'standing-walking-to-approach') {
-      if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
-        return;
-      }
-
-      this.sequence = {
-        phase: 'standing-before-frame-zero',
-        elapsedMs: 0,
-      };
-      this.engine.video.render(0);
-      return;
-    }
-
-    this.sequence.elapsedMs += deltaMs;
-    if (this.sequence.elapsedMs < BAIT_SHOP_TOILET_SIT_WAIT_MS) {
-      return;
-    }
-
-    if (this.sequence.phase === 'waiting-before-frame-one') {
-      this.setToiletFrame(1);
-      this.sequence = {
-        phase: 'waiting-before-seat-walk',
-        elapsedMs: 0,
-      };
-      return;
-    }
-
-    if (this.sequence.phase === 'waiting-before-seat-walk') {
-      this.startSeatWalk();
-      return;
-    }
-
-    if (this.sequence.phase === 'waiting-before-frame-two') {
-      this.finishSitSequence();
-      return;
-    }
-
-    if (this.sequence.phase === 'standing-before-walk') {
-      this.startStandWalk();
-      return;
-    }
-
-    if (this.sequence.phase === 'standing-before-frame-zero') {
-      this.finishStandSequence();
-    }
-  }
-
-  private startSitApproachHorizontalWalk(): void {
-    if (!this.engine) {
-      return;
-    }
-
-    const started = this.engine.video.sprites.goTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.x,
-      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y,
-      {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-        stopDistance: 1,
-        idleSettleDelayMs: 0,
-        idleSettleFacing: 'diagonal-from-facing',
-      },
-    );
-    if (!started) {
-      this.sequence = null;
-      this.engine.setInputEnabled(true);
-      return;
-    }
-
-    this.sequence = {
-      phase: 'walking-to-approach-horizontal',
-      elapsedMs: 0,
-    };
-    this.engine.video.render(0);
-  }
-
-  private startSeatWalk(): void {
-    if (!this.engine) {
-      return;
-    }
-
-    const started = this.engine.video.sprites.goTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      BAIT_SHOP_TOILET_SIT_SEAT_POINT.x,
-      BAIT_SHOP_TOILET_SIT_SEAT_POINT.y,
-      {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-        constrainToWalkMap: false,
-        stopDistance: 1,
-        idleSettleDelayMs: 0,
-        idleSettleFacing: 'diagonal-from-facing',
-      },
-    );
-    if (!started) {
-      this.sequence = null;
-      this.engine.setInputEnabled(true);
-      return;
-    }
-
-    this.sequence = {
-      phase: 'walking-to-seat',
-      elapsedMs: 0,
-    };
-    this.engine.video.render(0);
-  }
-
-  private startStandWalk(): void {
-    if (!this.engine) {
-      return;
-    }
-
-    const started = this.engine.video.sprites.goTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.x,
-      BAIT_SHOP_TOILET_SIT_APPROACH_POINT.y,
-      {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-        constrainToWalkMap: false,
-        stopDistance: 1,
-        idleSettleDelayMs: 0,
-        idleSettleFacing: 'diagonal-from-facing',
-      },
-    );
-    if (!started) {
-      this.sequence = null;
-      this.engine.setInputEnabled(true);
-      return;
-    }
-
-    this.sequence = {
-      phase: 'standing-walking-to-approach',
-      elapsedMs: 0,
-    };
-    this.engine.video.render(0);
-  }
-
-  private finishSitSequence(): void {
-    if (!this.engine) {
-      return;
-    }
-
-    this.setToiletFrame(2);
-    this.hideRoccoAtSeatPoint();
-    this.roccoSeated = true;
-    this.roccoSatOnToilet = true;
-    this.sequence = null;
-    this.setToiletVisibleDescription(this.localization.text.descriptions.seatedRocco);
-    this.installSeatedRoccoActionMenu();
-    this.engine.setInputEnabled(true);
-    this.engine.video.render(0);
-  }
-
-  private finishStandSequence(): void {
-    if (!this.engine) {
-      return;
-    }
-
-    this.setToiletFrame(0);
-    this.roccoSeated = false;
-    this.sequence = null;
-    this.setToiletVisibleDescription(this.localization.text.descriptions.toilet);
-    this.restoreDefaultActionMenus();
-    this.syncToiletUrgencyPresentation();
-    this.engine.setInputEnabled(true);
-
-    const destination = this.queuedWalkDestination;
-    this.queuedWalkDestination = null;
-    if (destination) {
-      this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, destination.x, destination.y, {
-        idleSettleDelayMs: 0,
-        idleSettleFacing: 'diagonal-from-facing',
-      });
-    }
-
-    if (this.pendingPostStandStanAlert) {
-      this.pendingPostStandStanAlert = false;
-      this.startPassiveStanPoliceAlert();
-    }
-
-    this.engine.video.render(0);
+    this.seatController.startStandSequence(destination);
   }
 
   private hideRoccoAtSeatPoint(): void {

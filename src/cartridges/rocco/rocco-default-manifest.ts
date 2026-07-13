@@ -1,4 +1,5 @@
 import type { RoccoCartridgeManifest } from '../../console/cartridges/types';
+import { CONSOLE_SUPPORTED_CAPABILITIES } from '../../console/cartridges/sdk-v1';
 import { roccoSpanishText } from './localization';
 
 export const roccoDefaultCartridgeManifest: RoccoCartridgeManifest = {
@@ -14,5 +15,9 @@ export const roccoDefaultCartridgeManifest: RoccoCartridgeManifest = {
   tags: ['builtin', 'default', 'demo', 'rocco'],
   localizations: {
     es: roccoSpanishText.manifest,
+  },
+  runtime: {
+    sdk: '^1.0.0',
+    capabilities: CONSOLE_SUPPORTED_CAPABILITIES,
   },
 };

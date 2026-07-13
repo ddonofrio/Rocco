@@ -181,18 +181,57 @@ export interface RoccoCartridgeActionResult {
 
 When `suppressDefaultPlayerMove` is `true`, the runtime skips the default click-to-walk that would otherwise follow a `scene-click`. This check is synchronous: the runtime only inspects the direct return value, not a later async resolution. Scene targets can request the same behavior through `RoccoSceneTargetDefinition.suppressDefaultPlayerMove`.
 
-## RoccoEngine SDK Surface
+## Cartridge SDK v1
 
-The full interface lives in `src/console/engine-sdk.ts`.
+The cartridge-facing surface is split into three (audit SDK-001 / ROCCO-011):
 
-`RoccoEngine` is the cartridge entry point. It exposes:
+```text
+ConsoleKernel   (private runtime API: update/render/viewport/scheduler)
+CartridgeSdkV1  (stable, narrow, versioned API used by cartridges)
+CartridgeCapabilities (negotiated optional features)
+```
 
-- Subsystem handles: `video`, `audio`, `jukebox`, `effects`, and `persistence`.
+The full `RoccoEngine` kernel lives in `src/console/engine-sdk.ts`. Inside
+`mount(context)`, prefer the narrow, version-stamped `context.sdk` of type
+`CartridgeSdkV1` (defined in `src/console/cartridges/sdk-v1`). It is built by
+`createCartridgeSdkV1({ engine, scope, manifest })`, which wraps `RoccoEngine`
+and exposes only the stable subset. Internal-only methods (`video.update`,
+`video.render`, `video.viewport`, `video.zoom`, render-layer ordering,
+`effects.tick`, `jukebox.unlock`) are absent from the SDK object, so a cartridge
+cannot reach them even at runtime.
+
+`CartridgeSdkV1` exposes:
+
+- Subsystem handles: `video`, `audio`, `jukebox`, `effects`, `input`, `storage`.
+- `beginCompositionSession(ownerId, options?)` for the owned loading overlay.
+- `setStatus(message)` and `log(channel, message)` via `logger`.
+- `scope`: the cartridge's own `ResourceScope` for registering disposers.
+- `sdkVersion` (`'1.0.0'`) and `capabilities` (the negotiated capability ids).
+
+The manifest may declare the runtime it targets:
+
+```typescript
+runtime: {
+  sdk: '^1.0.0',
+  capabilities: ['audio.v1', 'video.sprites.v1', 'composition.v1'],
+}
+```
+
+`RoccoCartridgeManager` validates this with `assertCartridgeSdkCompatibility`
+before `mount()` and rejects incompatible SDK ranges or unknown capabilities.
+Legacy cartridges without a `runtime` block keep mounting against the full
+`RoccoEngine` kernel.
+
+`RoccoEngine` still exposes (kept for legacy callers and the kernel itself):
+
 - Scene management: `loadPlaneScene(scene)` and `serializePlaneScene(sceneId)`.
 - Player selection: `setPlayerSprite(id | null)` and `getPlayerSprite()`.
-- Input control: `setInputEnabled(enabled)` and `isInputEnabled()`.
-- Console flags: `isDeveloperModeEnabled()`, `getConsoleFlags()`, and `setConsoleFlags(patch)`.
-- Composition control: `beginComposition()` and `endComposition()`.
+- Input control: `acquireInputLease(ownerId, mode)` / `getInputMode()`
+  (prefer these over the deprecated `setInputEnabled` / `isInputEnabled`).
+- Console flags: `isDeveloperModeEnabled()`, `getConsoleFlags()`, and
+  `setConsoleFlags(patch)`.
+- Composition control: `beginCompositionSession()` (prefer over the deprecated
+  `beginComposition` / `endComposition` / `setCompositionText`).
 - Status and logging: `setStatus(message)` and `log(channel, message)`.
 
 `RoccoConsoleFlags` is the console-owned boot state shared between the runtime, the cartridge manager, and any boot-time cartridge setup hooks:

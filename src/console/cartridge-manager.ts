@@ -4,11 +4,14 @@ import { builtinCartridgeConfigs, defaultBuiltinCartridgeId } from '../cartridge
 import {
   RoccoBuiltinCartridgeProvider,
   RoccoDefaultCartridgeLoader,
+  assertCartridgeSdkCompatibility,
+  createCartridgeSdkV1,
   type RoccoCartridge,
   type RoccoCartridgeBootSetting,
 } from './cartridges';
 import { RoccoCartridgeMenu } from './cartridge-menu/cartridge-menu';
 import type { RoccoConsoleFlags, RoccoEngine } from './engine-sdk';
+import { createResourceScope, type ResourceScope } from './lifecycle';
 
 interface RoccoMenuSettingsEngine extends RoccoEngine {
   getSoundProfile(): RoccoSoundProfile;
@@ -21,6 +24,11 @@ interface CartridgeManagerOptions {
   app: Application;
   engine: RoccoMenuSettingsEngine;
   configuredCartridgeId?: string;
+  /**
+   * Existing cartridge `ResourceScope` owned by the runtime. When omitted the
+   * manager creates and owns a fallback scope, which it disposes on `dispose`.
+   */
+  cartridgeScope?: ResourceScope;
 }
 
 interface RoccoCollectedBootSetup {
@@ -30,6 +38,8 @@ interface RoccoCollectedBootSetup {
 
 export class RoccoCartridgeManager {
   private activeCartridge: RoccoCartridge | null = null;
+  private cartridgeScope: ResourceScope | null = null;
+  private ownsScope = false;
 
   async loadAndMount(options: CartridgeManagerOptions): Promise<RoccoCartridge> {
     const { app, engine, configuredCartridgeId } = options;
@@ -76,7 +86,16 @@ export class RoccoCartridgeManager {
 
     const cartridge = (await loader.loadById(selectedId)) ?? (await loader.loadDefault());
     this.activeCartridge = cartridge;
-    await cartridge.mount({ engine, locale: selectedLocale });
+    const manifest = selectedConfig?.manifest ?? cartridge.manifest;
+
+    assertCartridgeSdkCompatibility(manifest);
+
+    const scope = options.cartridgeScope ?? createResourceScope(`cartridge:${selectedId}`);
+    this.cartridgeScope = scope;
+    this.ownsScope = !options.cartridgeScope;
+
+    const sdk = createCartridgeSdkV1({ engine, scope, manifest });
+    await cartridge.mount({ engine, locale: selectedLocale, sdk });
     if (cartridge.start) {
       await cartridge.start();
     }
@@ -100,6 +119,12 @@ export class RoccoCartridgeManager {
       await this.activeCartridge.dispose();
     }
     this.activeCartridge = null;
+
+    if (this.ownsScope && this.cartridgeScope) {
+      await this.cartridgeScope.dispose();
+    }
+    this.cartridgeScope = null;
+    this.ownsScope = false;
   }
 
   private loadInitialLocales(

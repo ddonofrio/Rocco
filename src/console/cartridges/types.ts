@@ -1,6 +1,7 @@
 import type { RoccoConsoleFlags, RoccoEngine } from '../engine-sdk';
 import type { RoccoActionMenuActivation } from '../video/action-menu';
 import type { RoccoGridMenuActivation } from '../video/grid-menu';
+import type { CartridgeSdkV1 } from './sdk-v1';
 
 export interface RoccoSceneClickAction {
   kind: 'scene-click';
@@ -58,6 +59,7 @@ export interface RoccoCartridgeManifest {
   engineVersion?: string;
   tags?: string[];
   localizations?: Record<string, RoccoCartridgeLocalizedManifest>;
+  runtime?: CartridgeManifestRuntime;
 }
 
 export type RoccoCartridgeLocalizedManifest = Partial<
@@ -67,9 +69,27 @@ export type RoccoCartridgeLocalizedManifest = Partial<
   >
 >;
 
+/**
+ * Declares the console SDK runtime a cartridge targets and the capabilities it
+ * negotiates. Validated by `assertCartridgeSdkCompatibility` before mount
+ * (audit SDK-001 / ROCCO-011). Absent for legacy cartridges, which mount
+ * with the full `RoccoEngine` kernel.
+ */
+export interface CartridgeManifestRuntime {
+  /** Semver range the cartridge requires, e.g. `'^1.0.0'`. */
+  sdk?: string;
+  /** Capability ids the cartridge intends to use. */
+  capabilities?: readonly string[];
+}
+
 export interface RoccoCartridgeContext {
   engine: RoccoEngine;
   locale?: string;
+  /**
+   * Version-stamped, narrow SDK surface (audit ROCCO-011). Prefer this over
+   * the deprecated `engine` kernel. Always provided by the manager.
+   */
+  sdk?: CartridgeSdkV1;
 }
 
 export interface RoccoCartridgeSetupConsole {

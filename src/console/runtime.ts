@@ -79,6 +79,7 @@ export class GameRuntime implements RoccoEngine {
 
   private readonly lifecycle = new LifecycleStateMachine();
   private rootScope!: ResourceScope;
+  private cartridgeScope: ResourceScope | null = null;
 
   // Public subsystem access
   readonly video: RoccoRuntimeVideoSystem;
@@ -143,6 +144,7 @@ export class GameRuntime implements RoccoEngine {
     scope.defer(() => this.inputHandler?.unmount());
 
     const cartridgeScope = scope.createChild('cartridge');
+    this.cartridgeScope = cartridgeScope;
     cartridgeScope.defer(() => this.cartridgeManager.dispose());
 
     scope.defer(() => {
@@ -204,6 +206,7 @@ export class GameRuntime implements RoccoEngine {
         app,
         engine: this,
         configuredCartridgeId: this.options.configuredCartridgeId,
+        cartridgeScope: this.cartridgeScope ?? undefined,
       });
 
       app.ticker.add(this.renderTick);

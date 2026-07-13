@@ -43,7 +43,24 @@ interface RoccoCartridgeContext {
 }
 ```
 
-`engine` is the primary runtime SDK surface cartridge code should use. Cartridges reach console capabilities through `RoccoEngine` and the subsystem handles it exposes, such as `engine.video`, `engine.audio`, `engine.effects`, `engine.jukebox`, and `engine.persistence`. `locale` is set by the cartridge menu when a localized cartridge is loaded.
+`engine` is the full runtime SDK kernel. Prefer the narrow, version-stamped
+`CartridgeSdkV1` exposed as `context.sdk` inside `mount`, which hides internal
+runtime methods (`render`, `viewport`, `effects.tick`, `jukebox.unlock`, ...).
+`locale` is set by the cartridge menu when a localized cartridge is loaded.
+
+The manifest may declare a `runtime` block:
+
+```typescript
+runtime: {
+  sdk: '^1.0.0',            // semver range the cartridge requires
+  capabilities: ['audio.v1', 'video.sprites.v1'],
+}
+```
+
+`RoccoCartridgeManager` validates this with `assertCartridgeSdkCompatibility`
+before mounting and rejects incompatible SDK ranges or unknown capabilities.
+Legacy cartridges without a `runtime` block keep mounting against the full
+`RoccoEngine` kernel. The v1 SDK and capability set live in `sdk-v1/`.
 
 Boot-time setup uses a narrower context:
 

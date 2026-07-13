@@ -34,7 +34,8 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     this.mountContext = { ...context };
     this.gameRuntime?.unmount();
     this.gameRuntime = null;
-    const composition = context.engine.beginCompositionSession('rocco-default-mount', {
+    const sdk = context.sdk ?? context.engine;
+    const composition = sdk.beginCompositionSession('rocco-default-mount', {
       message: 'LOADING 0%',
     });
 
@@ -45,7 +46,7 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     });
 
     try {
-      context.engine.jukebox.registerPlaylist({
+      sdk.jukebox.registerPlaylist({
         id: RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID,
         tracks: [
           {
@@ -83,7 +84,7 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
       });
       this.gameRuntime = gameRuntime;
       await gameRuntime.mount(context.engine, preloader);
-      await context.engine.jukebox
+      await sdk.jukebox
         .playPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID)
         .catch(() => {
           context.engine.log('System', 'Background music could not start.');
@@ -110,7 +111,8 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
   }
 
   stop(): void {
-    this.mountContext?.engine.jukebox.unregisterPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
+    const sdk = this.mountContext?.sdk ?? this.mountContext?.engine;
+    sdk?.jukebox.unregisterPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
     this.gameRuntime?.unmount();
     this.gameRuntime = null;
     this.mountContext = null;
@@ -121,12 +123,11 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
       return;
     }
 
-    const engine = this.mountContext.engine;
     const mountContext = { ...this.mountContext };
     this.gameRuntime?.unmount();
     this.gameRuntime = null;
     void this.mount(mountContext).catch(() => {
-      engine.log('System', 'Default cartridge restart failed.');
+      this.mountContext?.engine.log('System', 'Default cartridge restart failed.');
     });
   }
 }

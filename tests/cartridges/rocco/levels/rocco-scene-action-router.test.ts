@@ -66,18 +66,27 @@ describe('RoccoSceneActionRouter', () => {
       togglePlayerInventory: vi.fn(),
     };
     const droppedInventory = {
-      handleSceneClick: vi.fn(() => {
+      canHandleSceneClick: vi.fn(() => {
         callOrder.push('dropped');
         return false;
       }),
+      handleSceneClick: vi.fn(() => {
+        return false;
+      }),
+      canHandleActionMenu: vi.fn(() => false),
       handleActionMenu: vi.fn(() => false),
     };
     const developerRuntime = {
-      handleSceneClick: vi.fn(() => {
+      canHandleSceneClick: vi.fn(() => {
         callOrder.push('developer');
         return false;
       }),
+      handleSceneClick: vi.fn(() => {
+        return false;
+      }),
+      canHandleGridMenuAction: vi.fn(() => false),
       handleGridMenuAction: vi.fn(() => false),
+      canHandlePlayerAction: vi.fn(() => false),
       handlePlayerAction: vi.fn(() => false),
       clearTransientState: vi.fn(),
     };
@@ -112,7 +121,14 @@ describe('RoccoSceneActionRouter', () => {
     });
 
     expect(result).toEqual({ consumed: true, defaultPlayerMovement: 'suppress' });
-    expect(callOrder).toEqual(['developer', 'dropped', 'exit-intent', 'inventory-check', 'inventory']);
+    expect(callOrder).toEqual([
+      'developer',
+      'dropped',
+      'exit-intent',
+      'inventory-check',
+      'inventory-check',
+      'inventory',
+    ]);
     expect(levelSceneClick).not.toHaveBeenCalled();
   });
 
@@ -132,12 +148,17 @@ describe('RoccoSceneActionRouter', () => {
       togglePlayerInventory: vi.fn(),
     };
     const droppedInventory = {
+      canHandleSceneClick: vi.fn(() => false),
       handleSceneClick: vi.fn(() => false),
+      canHandleActionMenu: vi.fn(() => false),
       handleActionMenu: vi.fn(() => false),
     };
     const developerRuntime = {
+      canHandleSceneClick: vi.fn(() => false),
       handleSceneClick: vi.fn(() => false),
+      canHandleGridMenuAction: vi.fn(() => false),
       handleGridMenuAction: vi.fn(() => false),
+      canHandlePlayerAction: vi.fn(() => false),
       handlePlayerAction: vi.fn(() => false),
       clearTransientState: vi.fn(),
     };

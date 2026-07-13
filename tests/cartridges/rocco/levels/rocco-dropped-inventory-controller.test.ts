@@ -6,6 +6,7 @@ import {
   createRoccoKeysInventoryItem,
   createRoccoMagazineInventoryItem,
 } from '../../../../src/cartridges/rocco/inventory';
+import type { RoccoToiletLevelCapability } from '../../../../src/cartridges/rocco/levels/runtime/rocco-level-capabilities';
 import { RoccoDroppedInventoryController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-dropped-inventory-controller';
 import type { RoccoLevel } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
 import type { RoccoEngine } from '../../../../src/console/engine-sdk';
@@ -33,6 +34,20 @@ function createLevel(levelId: string): RoccoLevel {
     unmount() {},
     update() {},
     handleAction() {},
+  };
+}
+
+type ToiletLevelTestDouble = RoccoLevel & RoccoToiletLevelCapability;
+
+function createToiletLevel(levelId = 'bait-shop-toilet'): ToiletLevelTestDouble {
+  return {
+    ...createLevel(levelId),
+    isEscapeUrgencyActive: () => true,
+    startThrowCoralRelicSequence: () => {},
+    openCoralRelicWishMenu: () => {},
+    refreshDeveloperEventPresentation: () => {},
+    shouldLoseOnExit: () => false,
+    beginExitDefeat: () => {},
   };
 }
 
@@ -174,21 +189,7 @@ describe('RoccoDroppedInventoryController', () => {
       tryAddItemToInventory: () => true,
     });
     const relic = createRoccoCoralRelicInventoryItem(localization);
-    const level: RoccoLevel = {
-      id: 'bait-shop-toilet',
-      title: 'bait-shop-toilet',
-      connectors: [],
-      mount() {
-        return Promise.reject(
-          new Error('mount() is not used in dropped-inventory controller unit tests.'),
-        );
-      },
-      unmount() {},
-      update() {},
-      handleAction() {},
-      isEscapeUrgencyActive: () => true,
-      openCoralRelicWishMenu: () => {},
-    };
+    const level = createToiletLevel();
     const { engine, state } = createDroppedInventoryEngine();
 
     controller.dropItem(level.id, relic, { x: 150, y: 260 });
@@ -207,21 +208,7 @@ describe('RoccoDroppedInventoryController', () => {
       tryAddItemToInventory: () => true,
     });
     const relic = createRoccoCoralRelicInventoryItem(localization);
-    const level: RoccoLevel = {
-      id: 'bait-shop-toilet',
-      title: 'bait-shop-toilet',
-      connectors: [],
-      mount() {
-        return Promise.reject(
-          new Error('mount() is not used in dropped-inventory controller unit tests.'),
-        );
-      },
-      unmount() {},
-      update() {},
-      handleAction() {},
-      isEscapeUrgencyActive: () => true,
-      openCoralRelicWishMenu: () => {},
-    };
+    const level = createToiletLevel();
     const { engine, state } = createDroppedInventoryEngine();
 
     controller.dropItem(level.id, relic, { x: 150, y: 260 });
@@ -250,21 +237,7 @@ describe('RoccoDroppedInventoryController', () => {
       tryAddItemToInventory: () => true,
     });
     const relic = createRoccoCoralRelicInventoryItem(localization);
-    const level: RoccoLevel = {
-      id: 'bait-shop-toilet',
-      title: 'bait-shop-toilet',
-      connectors: [],
-      mount() {
-        return Promise.reject(
-          new Error('mount() is not used in dropped-inventory controller unit tests.'),
-        );
-      },
-      unmount() {},
-      update() {},
-      handleAction() {},
-      isEscapeUrgencyActive: () => true,
-      openCoralRelicWishMenu: () => {},
-    };
+    const level = createToiletLevel();
     const { engine, state } = createDroppedInventoryEngine();
 
     controller.dropItem(level.id, relic, { x: 150, y: 260 });
@@ -306,21 +279,7 @@ describe('RoccoDroppedInventoryController', () => {
       tryAddItemToInventory: () => true,
     });
     const relic = createRoccoCoralRelicInventoryItem(localization);
-    const level: RoccoLevel = {
-      id: 'bait-shop-toilet',
-      title: 'bait-shop-toilet',
-      connectors: [],
-      mount() {
-        return Promise.reject(
-          new Error('mount() is not used in dropped-inventory controller unit tests.'),
-        );
-      },
-      unmount() {},
-      update() {},
-      handleAction() {},
-      isEscapeUrgencyActive: () => true,
-      openCoralRelicWishMenu: () => {},
-    };
+    const level = createToiletLevel();
     const { engine } = createDroppedInventoryEngine();
 
     controller.dropItem(level.id, relic, { x: 150, y: 260 });

@@ -1,0 +1,145 @@
+import type {
+  CartridgeActionContext,
+  CartridgeActionDisposition,
+  RoccoCartridgeAction,
+  RoccoCartridgeActionResult,
+  RoccoSceneClickAction,
+} from '../../../console/cartridges';
+import type { RoccoEngine } from '../../../console/engine-sdk';
+import type { RoccoActionMenuActivation } from '../../../console/video/action-menu';
+import type {
+  RoccoGridMenuActivation,
+  RoccoGridMenuCarriedItem,
+} from '../../../console/video/grid-menu';
+import type { RoccoLevel } from '../levels/rocco-level-types';
+import type { RoccoInventory } from '../inventory';
+import type { RoccoLocalization } from '../localization';
+import type { RoccoPlayerAppearance } from '../rocco-player-appearance';
+import type { RoccoDeveloperRuntimeController } from '../levels/runtime/rocco-developer-runtime-controller';
+import type { RoccoDroppedInventoryController } from '../levels/runtime/rocco-dropped-inventory-controller';
+import type {
+  RoccoInventoryRuntimeController,
+  RoccoInventoryRuntimeSceneClickResolution,
+} from '../levels/runtime/rocco-inventory-runtime-controller';
+import type { RoccoScriptedSequenceController } from '../levels/runtime/rocco-scripted-sequence-controller';
+import type { RoccoLevelTransitionController } from '../levels/runtime/rocco-level-transition-controller';
+
+export type InteractionKind = 'scene-click' | 'action-menu' | 'grid-menu';
+export type InteractionStage = 'default' | 'before-exit-intent';
+
+/**
+ * Frozen view of everything an interaction rule needs to decide and act.
+ * Rules receive this instead of reaching into the central router, so the
+ * router stops importing feature-specific scene or inventory IDs (audit DOM-002).
+ */
+export interface InteractionContext {
+  readonly action: RoccoCartridgeAction;
+  readonly cartridgeContext: CartridgeActionContext | undefined;
+  readonly engine: RoccoEngine | null;
+  readonly activeLevel: RoccoLevel | null;
+  readonly inventory: RoccoInventory;
+  readonly localization: RoccoLocalization;
+  readonly getRoccoAppearance: () => RoccoPlayerAppearance;
+  readonly setRoccoAppearance: (appearance: RoccoPlayerAppearance) => void;
+  readonly isStanIdentified: () => boolean;
+  readonly isStanAwake: () => boolean;
+  readonly inventoryRuntime: RoccoInventoryRuntimeController;
+  readonly droppedInventory: RoccoDroppedInventoryController;
+  readonly developerRuntime: RoccoDeveloperRuntimeController;
+  readonly scriptedSequences: RoccoScriptedSequenceController;
+  readonly transitions: RoccoLevelTransitionController;
+}
+
+export type InteractionDisposition = CartridgeActionDisposition;
+
+/**
+ * Distributed interaction rule (audit ROCCO-016 / DOM-002).
+ *
+ * `matches()` must be a cheap, side-effect-free predicate. `execute()` performs
+ * the real work and returns the disposition (or `void` to mean "handled, do not
+ * suppress movement", which the dispatcher treats as not consumed).
+ */
+export interface InteractionRule {
+  readonly id: string;
+  readonly priority: number;
+  readonly kind: InteractionKind;
+  readonly stage?: InteractionStage;
+  matches(context: InteractionContext): boolean;
+  execute(context: InteractionContext, signal: AbortSignal): InteractionDisposition | void;
+}
+
+/**
+ * Special carried-item scene-click rule, evaluated by the inventory runtime's
+ * `handleSpecialSceneClick` sub-dispatch (e.g. using the lab coat on Rocco,
+ * giving Stan the 20 EUR bill, defeating Stan with the keys, using the keys on
+ * the bait shop door). Kept separate from {@link InteractionRule} because the
+ * triggering context is a scene click plus a carried grid item.
+ */
+export interface SpecialInventorySceneClickRule {
+  readonly id: string;
+  readonly priority: number;
+  matches(context: InteractionContext, carriedItem: RoccoGridMenuCarriedItem): boolean;
+  execute(context: InteractionContext, carriedItem: RoccoGridMenuCarriedItem): RoccoInventoryRuntimeSceneClickResolution;
+}
+
+export class DuplicateInteractionRuleError extends Error {
+  readonly ruleId: string;
+  readonly ownerIds: readonly string[];
+
+  constructor(
+    ruleId: string,
+    ownerIds: readonly string[],
+  ) {
+    super(`Duplicate interaction rule '${ruleId}' registered by: ${ownerIds.join(', ')}.`);
+    this.ruleId = ruleId;
+    this.ownerIds = ownerIds;
+    this.name = 'DuplicateInteractionRuleError';
+  }
+}
+
+export function isSceneClickAction(action: RoccoCartridgeAction): action is RoccoSceneClickAction {
+  return 'kind' in action && action.kind === 'scene-click';
+}
+
+export function isGridMenuAction(action: RoccoCartridgeAction): action is RoccoGridMenuActivation {
+  return 'kind' in action && action.kind === 'grid-menu';
+}
+
+export function isActionMenuAction(
+  action: RoccoCartridgeAction,
+): action is RoccoActionMenuActivation {
+  return !('kind' in action);
+}
+
+export function normalizeDisposition(
+  result: boolean | CartridgeActionDisposition | RoccoCartridgeActionResult | void | null | undefined,
+): InteractionDisposition | void {
+  if (result === undefined || result === null) {
+    return undefined;
+  }
+
+  if (typeof result === 'boolean') {
+    return result ? { consumed: true, defaultPlayerMovement: 'allow' } : undefined;
+  }
+
+  if ('defaultPlayerMovement' in result) {
+    return result;
+  }
+
+  return {
+    consumed: true,
+    defaultPlayerMovement: result.suppressDefaultPlayerMove ? 'suppress' : 'allow',
+  };
+}
+
+export function resolveInteractionKind(action: RoccoCartridgeAction): InteractionKind {
+  if (isSceneClickAction(action)) {
+    return 'scene-click';
+  }
+
+  if (isGridMenuAction(action)) {
+    return 'grid-menu';
+  }
+
+  return 'action-menu';
+}

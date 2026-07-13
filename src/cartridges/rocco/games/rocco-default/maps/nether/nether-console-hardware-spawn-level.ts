@@ -40,7 +40,10 @@ import {
   type RoccoDefaultSpriteController,
 } from '../../sprites';
 import { RoccoScriptedSceneInteractionController } from '../../../../scripted-scene-interaction-controller';
-import { ROCCO_LAB_COAT_PLAYER_APPEARANCE } from '../../../../rocco-player-appearance';
+import {
+  ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+  type RoccoPlayerAppearance,
+} from '../../../../rocco-player-appearance';
 import {
   findRoccoLevelConnector,
   type RoccoLevel,
@@ -48,6 +51,7 @@ import {
   type RoccoLevelMountOptions,
   type RoccoLevelRestartRequest,
 } from '../../../../levels/rocco-level-types';
+import { type RoccoAppearanceCapability } from '../../../../levels/runtime/rocco-level-capabilities';
 import {
   createRoccoBataInventoryItem,
 } from '../../inventory';
@@ -864,7 +868,7 @@ const NETHER_SCENE_DEFINITION: RoccoNetherSceneDefinition = {
   ],
 };
 
-export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
+export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAppearanceCapability {
   readonly id = ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID;
   readonly title: string;
   readonly connectors = NETHER_CONNECTORS;
@@ -1161,6 +1165,10 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
     this.zoomIntroElapsedMs = 0;
     engine.video.zoom.clear();
     engine.video.render(0);
+  }
+
+  applyRoccoAppearance(appearance: RoccoPlayerAppearance): void {
+    this.options.roccoAppearance = appearance;
   }
 
   update(deltaMs: number): void {

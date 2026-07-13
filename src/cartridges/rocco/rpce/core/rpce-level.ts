@@ -59,15 +59,6 @@ export interface RpceLevel {
   handleAction(activation: RoccoActionMenuActivation): void;
   handleGridMenu?(activation: RoccoGridMenuActivation): void;
   handleSceneClick?(action: RoccoSceneClickAction): RoccoCartridgeActionResult | void;
-  isEscapeUrgencyActive?: () => boolean;
-  startThrowCoralRelicSequence?: (
-    relicItem: RpceInventoryItem,
-    onComplete: (groundPoint: RoccoPoint) => void,
-  ) => void;
-  openCoralRelicWishMenu?: (
-    groundPoint: RoccoPoint,
-    consumeRelic: () => void,
-  ) => void;
 }
 
 export function containsRpceLevelRectPoint(rect: RpceLevelRect, point: RoccoPoint): boolean {

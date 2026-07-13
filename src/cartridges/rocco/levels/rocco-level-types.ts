@@ -59,15 +59,6 @@ export interface RoccoLevel {
   handleAction(activation: RoccoActionMenuActivation): void;
   handleGridMenu?(activation: RoccoGridMenuActivation): void;
   handleSceneClick?(action: RoccoSceneClickAction): RoccoCartridgeActionResult | void;
-  isEscapeUrgencyActive?: () => boolean;
-  startThrowCoralRelicSequence?: (
-    relicItem: RoccoInventoryItem,
-    onComplete: (groundPoint: RoccoPoint) => void,
-  ) => void;
-  openCoralRelicWishMenu?: (
-    groundPoint: RoccoPoint,
-    consumeRelic: () => void,
-  ) => void;
 }
 
 export function containsRoccoLevelRectPoint(rect: RoccoLevelRect, point: RoccoPoint): boolean {

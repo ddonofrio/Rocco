@@ -62,6 +62,9 @@ import {
   type RoccoLevelConnector,
   type RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
+import {
+  type RoccoToiletLevelCapability,
+} from '../../../../levels/runtime/rocco-level-capabilities';
 import { baitShopToiletAssetUrls } from './bait-shop-assets';
 import {
   installBaitShopWalkMap,
@@ -675,7 +678,7 @@ function createSeatedRoccoActionMenuDefinition(
   };
 }
 
-export class RoccoBaitShopToiletLevel implements RoccoLevel {
+export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCapability {
   readonly id = ROCCO_BAIT_SHOP_TOILET_LEVEL_ID;
   readonly title: string;
   readonly connectors = BAIT_SHOP_TOILET_CONNECTORS;

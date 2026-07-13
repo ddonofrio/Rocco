@@ -153,8 +153,12 @@ export class RoccoDeveloperRuntimeController {
     this.deactivateSpriteCycleMode(engine);
   }
 
+  canHandlePlayerAction(engine: RoccoEngine, activation: RoccoActionMenuActivation): boolean {
+    return this.isDeveloperModeEnabled(engine) && isRoccoPlayerDeveloperAction(activation);
+  }
+
   handlePlayerAction(engine: RoccoEngine, activation: RoccoActionMenuActivation): boolean {
-    if (!this.isDeveloperModeEnabled(engine) || !isRoccoPlayerDeveloperAction(activation)) {
+    if (!this.canHandlePlayerAction(engine, activation)) {
       return false;
     }
 
@@ -162,8 +166,22 @@ export class RoccoDeveloperRuntimeController {
     return true;
   }
 
+  canHandleSceneClick(
+    engine: RoccoEngine,
+    _activation?: RoccoSceneClickAction,
+  ): boolean {
+    return (
+      this.isDeveloperModeEnabled(engine) &&
+      (this.developerSpriteCycleActive || this.developerJumpPending)
+    );
+  }
+
+  canHandleGridMenuAction(engine: RoccoEngine, activation: RoccoGridMenuActivation): boolean {
+    return this.isDeveloperModeEnabled(engine) && this.isDeveloperGridMenuId(activation.definitionId);
+  }
+
   handleGridMenuAction(engine: RoccoEngine, activation: RoccoGridMenuActivation): boolean {
-    if (!this.isDeveloperModeEnabled(engine)) {
+    if (!this.canHandleGridMenuAction(engine, activation)) {
       return false;
     }
 
@@ -218,7 +236,6 @@ export class RoccoDeveloperRuntimeController {
 
     return false;
   }
-
   handleSceneClick(
     engine: RoccoEngine,
     activation: RoccoSceneClickAction,
@@ -940,5 +957,17 @@ export class RoccoDeveloperRuntimeController {
 
   private isDeveloperModeEnabled(engine: RoccoEngine | null | undefined): boolean {
     return isRoccoDeveloperModeEnabled(engine);
+  }
+
+  private isDeveloperGridMenuId(definitionId: string): boolean {
+    return [
+      ROCCO_DEVELOPER_ROOT_MENU_ID,
+      ROCCO_DEVELOPER_LEVEL_MENU_ID,
+      ROCCO_DEVELOPER_SCREEN_MENU_ID,
+      ROCCO_DEVELOPER_INVENTORY_MENU_ID,
+      ROCCO_DEVELOPER_EVENT_LEVEL_MENU_ID,
+      ROCCO_DEVELOPER_EVENT_SCREEN_MENU_ID,
+      ROCCO_DEVELOPER_EVENT_MENU_ID,
+    ].includes(definitionId);
   }
 }

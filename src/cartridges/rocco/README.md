@@ -25,6 +25,7 @@
 | `assets/`       | Shared cartridge assets for characters, props, sounds, and icons  |
 | `rpce/`         | Cartridge-local point-and-click runtime, reusable dialogue helpers, and generic inventory primitives |
 | `games/`        | Game definitions, shared game-owned barrels, and map-first ownership |
+| `interactions/` | Distributed interaction rules and interaction-registry assembly |
 | `dialogue/`     | Compatibility path for RPCE dialogue helpers                      |
 | `inventory/`    | Rocco cartridge inventory state, souvenir assets, fusion recipes, prop storages, and grid-menu projection |
 | `levels/runtime/` | Compatibility-path runtime helpers backed by the RPCE/game split |
@@ -63,6 +64,7 @@ Rocco transitions through edge connectors on connected screens. The cartridge bo
 - The keys are revealed through the Pier Middle sequence and can be collected.
 - The inventory starts with a 20 EUR bill and later stores collected keys, the magazine, the mysterious key, the lab coat, and fused ritual items.
 - Clicking Rocco opens a radial menu with self-talk and inventory options.
+- The cartridge assembles scene-click, action-menu, and grid-menu behavior through a distributed interaction registry under `interactions/`, with feature-owned rules ordered by priority instead of one feature-heavy central router.
 - The inventory option toggles a reorderable 3x3 grid menu populated from Rocco cartridge inventory state.
 - The bait shop souvenir table reuses the same cartridge inventory layer as a left-right transfer view, with a 5x4 table layout and table-only placement rules.
 - Full player inventory blocks new pickups instead of reusing an occupied slot.

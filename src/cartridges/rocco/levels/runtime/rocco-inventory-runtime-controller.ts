@@ -206,6 +206,14 @@ export class RoccoInventoryRuntimeController {
     this.finishInventoryTransferClose(engine, notifyLevel);
   }
 
+  canHandleGridMenuAction(activation: RoccoGridMenuActivation): boolean {
+    if (this.activeInventoryTransferSession?.matchesDefinition(activation.definitionId)) {
+      return true;
+    }
+
+    return activation.definitionId === ROCCO_INVENTORY_MENU_ID;
+  }
+
   handleGridMenuAction(engine: RoccoEngine, activation: RoccoGridMenuActivation): boolean {
     if (this.activeInventoryTransferSession?.matchesDefinition(activation.definitionId)) {
       this.handleInventoryTransferGridAction(engine, activation);

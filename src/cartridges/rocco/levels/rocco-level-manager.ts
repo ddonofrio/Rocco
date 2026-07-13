@@ -67,10 +67,10 @@ import {
   type RoccoPierBeginningAmbientPersistentState,
 } from '../games/rocco-default/maps/pier';
 import {
-  RoccoBaitShopToiletLevel,
   ROCCO_BAIT_SHOP_LEVEL_ID,
   ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
 } from '../games/rocco-default/maps/shop';
+import { createRoccoInteractionRegistry } from '../interactions';
 import { RoccoDeveloperRuntimeController } from './runtime/rocco-developer-runtime-controller';
 import { RoccoLevelRegistry } from './runtime/rocco-level-registry';
 import {
@@ -88,6 +88,10 @@ import {
   ROCCO_STAN_POLICE_DEFEAT_SOUND_ID,
   RoccoScriptedSequenceController,
 } from './runtime/rocco-scripted-sequence-controller';
+import {
+  isRoccoAppearanceCapability,
+  isRoccoToiletLevelCapability,
+} from './runtime/rocco-level-capabilities';
 import { RoccoSceneActionRouter } from './runtime/rocco-scene-action-router';
 import { RoccoAssetPreloader } from './rocco-asset-preloader';
 import { createRoccoDefaultGameMaps, ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS, ROCCO_DEFAULT_GAME_ID } from '../games/rocco-default';
@@ -261,11 +265,12 @@ export class RoccoLevelManager {
         this.canCollectIntoInventory(itemId, showFullMessage),
       refreshStatus: () => this.refreshStatus(),
       onToiletReuseEventChanged: () => {
-        if (this.activeLevel instanceof RoccoBaitShopToiletLevel) {
+        if (this.activeLevel && isRoccoToiletLevelCapability(this.activeLevel)) {
           this.activeLevel.refreshDeveloperEventPresentation();
         }
       },
     });
+    const interactionRegistry = createRoccoInteractionRegistry();
     this.actionRouter = new RoccoSceneActionRouter({
       localization: this.localization,
       inventory: this.inventory,
@@ -274,14 +279,15 @@ export class RoccoLevelManager {
       droppedInventory: this.droppedInventory,
       scriptedSequences: this.scriptedSequences,
       developerRuntime: this.developerRuntime,
+      registry: interactionRegistry,
       getEngine: () => this.engine,
       getActiveLevel: () => this.activeLevel,
       getRoccoAppearance: () => this.roccoAppearance,
       setRoccoAppearance: (appearance) => {
         this.roccoAppearance = appearance;
         const activeLevel = this.activeLevel;
-        if (activeLevel && typeof (activeLevel as unknown as Record<string, unknown>).options === 'object') {
-          (activeLevel as unknown as { options: { roccoAppearance?: string } }).options.roccoAppearance = appearance;
+        if (activeLevel && isRoccoAppearanceCapability(activeLevel)) {
+          activeLevel.applyRoccoAppearance(appearance);
         }
       },
       isStanIdentified: () => this.isStanIdentified(),
@@ -387,10 +393,7 @@ export class RoccoLevelManager {
       return;
     }
 
-    if (
-      this.activeLevel instanceof RoccoBaitShopToiletLevel &&
-      this.activeLevel.shouldLoseOnExit(transition.connector.id)
-    ) {
+    if (isRoccoToiletLevelCapability(this.activeLevel) && this.activeLevel.shouldLoseOnExit(transition.connector.id)) {
       this.transitions.clearPendingExitIntent();
       this.activeLevel.beginExitDefeat();
       return;
@@ -846,11 +849,12 @@ export class RoccoLevelManager {
   ): boolean {
     const activeLevel = this.activeLevel;
     if (
-      activeLevel?.id === ROCCO_BAIT_SHOP_TOILET_LEVEL_ID &&
+      activeLevel &&
+      isRoccoToiletLevelCapability(activeLevel) &&
       droppedItem.item.id === ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID &&
-      (activeLevel as RoccoBaitShopToiletLevel).isEscapeUrgencyActive()
+      activeLevel.isEscapeUrgencyActive()
     ) {
-      (activeLevel as RoccoBaitShopToiletLevel).startThrowCoralRelicSequence(droppedItem.item, (groundPoint) => {
+      activeLevel.startThrowCoralRelicSequence(droppedItem.item, (groundPoint) => {
         this.droppedInventory.dropItem(levelId, droppedItem.item, groundPoint);
         this.syncActiveLevelDroppedInventoryPresentation();
       });

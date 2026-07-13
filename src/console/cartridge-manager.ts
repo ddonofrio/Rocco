@@ -160,6 +160,9 @@ export class RoccoCartridgeManager {
         };
 
         for (const bootSetting of setupResult?.bootSettings ?? []) {
+          if (bootSettingsById.has(bootSetting.id)) {
+            throw new Error(`Duplicate boot setting registration '${bootSetting.id}'.`);
+          }
           bootSettingsById.set(bootSetting.id, bootSetting);
         }
       } catch (error) {

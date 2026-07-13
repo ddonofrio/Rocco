@@ -18,8 +18,16 @@ export class RoccoBuiltinCartridgeProvider implements RoccoCartridgeProvider {
 
   constructor(registrations: RoccoCartridgeRegistration[]) {
     for (const registration of registrations) {
-      this.registrations.set(registration.manifest.id, registration);
+      this.register(registration);
     }
+  }
+
+  private register(registration: RoccoCartridgeRegistration): void {
+    const id = registration.manifest.id;
+    if (this.registrations.has(id)) {
+      throw new Error(`Duplicate cartridge registration '${id}'.`);
+    }
+    this.registrations.set(id, registration);
   }
 
   list(): Promise<RoccoCartridgeManifest[]> {

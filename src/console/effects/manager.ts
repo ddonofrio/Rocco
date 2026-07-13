@@ -2,6 +2,7 @@ import type {
   RoccoEffect,
   RoccoEffectContext,
   RoccoEffectManager,
+  RoccoEffectPatch,
   RoccoEffectRegistry,
   RoccoEffectTargetResolver,
 } from './types';
@@ -58,7 +59,7 @@ export class RoccoDefaultEffectManager implements RoccoEffectManager {
     effect.enabled = false;
   }
 
-  update(effectId: string, patch: Partial<RoccoEffect>): void {
+  update(effectId: string, patch: RoccoEffectPatch): void {
     const current = this.requireEffect(effectId);
     const nextParams =
       patch.params === undefined

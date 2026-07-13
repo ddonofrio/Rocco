@@ -1115,7 +1115,9 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel {
     engine.audio.stopSound(NETHER_SECURITY_ALERT_SOUND_ID);
     engine.audio.unregisterSound(NETHER_SECURITY_ALERT_SOUND_ID);
     engine.audio.stopSound(NETHER_ARRIVAL_PORTAL_LOOP_SOUND_ID);
+    engine.audio.unregisterSound(NETHER_ARRIVAL_PORTAL_LOOP_SOUND_ID);
     engine.audio.stopSound(NETHER_ARRIVAL_SPELL_SOUND_ID);
+    engine.audio.unregisterSound(NETHER_ARRIVAL_SPELL_SOUND_ID);
     engine.video.actionMenus.unregisterMenu(NETHER_SECURITY_CAMERA_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(NETHER_INTERCOMUNICADOR_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(NETHER_NOISY_MACHINE_ACTION_MENU_ID);

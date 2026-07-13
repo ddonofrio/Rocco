@@ -34,6 +34,9 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   private loadController: AbortController | null = null;
 
   registerSound(definition: RoccoSoundDefinition): void {
+    if (this.definitions.has(definition.id)) {
+      throw new Error(`Duplicate sound registration '${definition.id}'.`);
+    }
     this.definitions.set(definition.id, clone(definition));
     const current = this.bufferRevisions.get(definition.id) ?? 0;
     this.bufferRevisions.set(definition.id, current + 1);

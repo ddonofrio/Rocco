@@ -15,6 +15,7 @@ import {
   DEFAULT_WALK_MAP_ALPHA_THRESHOLD,
   DEFAULT_WALK_MAP_ID,
 } from '../../constants';
+import { roccoDefaultCartridgeManifest } from '../../../../rocco-default-manifest';
 
 export interface RoccoNetherSceneDefinition {
   sceneId: string;
@@ -129,16 +130,19 @@ export async function loadOrCreateNetherScene(
   definition: RoccoNetherSceneDefinition,
 ): Promise<RoccoPlaneScene> {
   const defaultScene = buildNetherScene(definition);
-  const restoredRecord = await engine.persistence.loadPlaneSceneRecord(definition.sceneId);
+  const restoredRecord = await engine.persistence.loadPlaneSceneRecord(
+    roccoDefaultCartridgeManifest.id,
+    definition.sceneId,
+  );
   if (!restoredRecord) {
-    await engine.persistence.savePlaneScene(defaultScene);
+    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, defaultScene);
     engine.log('System', `Nether scene '${definition.sceneId}' initialized.`);
     return defaultScene;
   }
 
   const normalized = normalizeNetherScene(definition, restoredRecord.scene);
   if (normalized.changed) {
-    await engine.persistence.savePlaneScene(normalized.scene);
+    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, normalized.scene);
     engine.log('System', `Nether scene '${definition.sceneId}' refreshed.`);
   }
 

@@ -7,8 +7,8 @@ import type { InputMode, InputPolicyLease } from './input/input-policy-stack';
 import type { CompositionSession } from './composition/composition-service';
 
 export interface RoccoEnginePersistence {
-  loadPlaneSceneRecord(sceneId: string): Promise<RoccoPlaneSceneRecord | null>;
-  savePlaneScene(scene: RoccoPlaneScene): Promise<void>;
+  loadPlaneSceneRecord(cartridgeId: string, sceneId: string): Promise<RoccoPlaneSceneRecord | null>;
+  savePlaneScene(cartridgeId: string, scene: RoccoPlaneScene): Promise<void>;
 }
 
 export interface RoccoConsoleFlags {

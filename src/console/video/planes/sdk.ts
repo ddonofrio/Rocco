@@ -6,6 +6,7 @@ import type {
   RoccoColorRegisterSet,
   RoccoGraphicPlane,
   RoccoPalette,
+  RoccoPlanePatch,
   RoccoPlaneScene,
   RoccoPlaneSDK,
   RoccoPlaneSource,
@@ -95,7 +96,7 @@ export class RoccoGraphicPlaneSDK implements RoccoPlaneSDK {
     scene.planes.push(ensurePlaneDefaults(clone(plane)));
   }
 
-  updatePlane(sceneId: string, planeId: string, patch: Partial<RoccoGraphicPlane>): void {
+  updatePlane(sceneId: string, planeId: string, patch: RoccoPlanePatch): void {
     const plane = this.getPlane(sceneId, planeId);
     const next: RoccoGraphicPlane = {
       ...plane,

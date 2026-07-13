@@ -1,3 +1,5 @@
+export type RoccoEffectPatch = Partial<Omit<RoccoEffect, 'id' | 'kind' | 'targetType' | 'targetId'>>;
+
 export interface RoccoEffect<TParams = unknown> {
   id: string;
   kind: string;
@@ -30,7 +32,7 @@ export interface RoccoEffectManager {
   remove(effectId: string): void;
   enable(effectId: string): void;
   disable(effectId: string): void;
-  update(effectId: string, patch: Partial<RoccoEffect>): void;
+  update(effectId: string, patch: RoccoEffectPatch): void;
   tick(context: RoccoEffectContext): void;
 }
 

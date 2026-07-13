@@ -11,8 +11,7 @@ export class RoccoLevelRegistry {
 
   constructor(options: RoccoLevelRegistryOptions) {
     for (const map of options.maps) {
-      this.mapsById.set(map.id, map);
-      this.registerLevels(this.instantiateMapLevels(map));
+      this.registerMap(map);
     }
   }
 
@@ -42,6 +41,14 @@ export class RoccoLevelRegistry {
     this.resetMap('nether');
   }
 
+  private registerMap(map: RpceMapDefinition<RoccoLevel>): void {
+    if (this.mapsById.has(map.id)) {
+      throw new Error(`Duplicate map registration '${map.id}'.`);
+    }
+    this.mapsById.set(map.id, map);
+    this.registerLevels(this.instantiateMapLevels(map));
+  }
+
   private instantiateMapLevels(map: RpceMapDefinition<RoccoLevel>): readonly RoccoLevel[] {
     return map.levels.map((definition) => {
       if (!definition.createLevel) {
@@ -54,6 +61,9 @@ export class RoccoLevelRegistry {
 
   private registerLevels(levels: readonly RoccoLevel[]): void {
     for (const level of levels) {
+      if (this.levels.has(level.id)) {
+        throw new Error(`Duplicate level registration '${level.id}'.`);
+      }
       this.levels.set(level.id, level);
     }
   }

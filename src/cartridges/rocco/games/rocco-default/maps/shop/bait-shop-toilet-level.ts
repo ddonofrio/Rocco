@@ -1882,6 +1882,7 @@ export class RoccoBaitShopToiletLevel implements RoccoLevel {
     this.setReadingOverlayVisible(false);
     this.escapeUrgencyActive = true;
     this.pendingPostStandStanAlert = true;
+    this.engine.setInputEnabled(true);
     this.startStandSequence();
     if (!this.sequence) {
       this.pendingPostStandStanAlert = false;

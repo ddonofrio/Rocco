@@ -47,6 +47,10 @@ export class RoccoActionMenuSystemSDK implements RoccoActionMenuSystem {
       throw new Error(`Action menu definition '${definition.id}' must include at least one item.`);
     }
 
+    if (this.definitions.has(definition.id)) {
+      throw new Error(`Duplicate action menu registration '${definition.id}'.`);
+    }
+
     this.definitions.set(definition.id, normalizeDefinition(definition));
   }
 

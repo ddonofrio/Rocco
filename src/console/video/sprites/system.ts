@@ -179,13 +179,15 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
   }
 
   loadSpriteDefinition(definition: RoccoSpriteDefinition): void {
-    this.store.register(definition);
+    this.store.registerOrReplace(definition);
     this.visualHelper.clearVisualCachesForDefinition(definition.id);
     void this.preloadDefinitionAssets(definition);
   }
 
   loadSpriteDefinitions(definitions: RoccoSpriteDefinition[]): void {
-    this.store.registerMany(definitions);
+    for (const definition of definitions) {
+      this.store.registerOrReplace(definition);
+    }
     for (const definition of definitions) {
       this.visualHelper.clearVisualCachesForDefinition(definition.id);
     }

@@ -89,6 +89,10 @@ export class RoccoSceneTargetSystemSDK implements RoccoSceneTargetSystem {
       throw new Error(`Scene target '${definition.instanceId}' requires a definitionId.`);
     }
 
+    if (this.targets.has(definition.instanceId)) {
+      throw new Error(`Duplicate scene target registration '${definition.instanceId}'.`);
+    }
+
     this.targets.set(definition.instanceId, normalizeDefinition(definition));
   }
 

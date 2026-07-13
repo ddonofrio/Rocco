@@ -33,6 +33,9 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
   private loadController: AbortController | null = null;
 
   registerPlaylist(playlist: RoccoJukeboxPlaylist): void {
+    if (this.playlists.has(playlist.id)) {
+      throw new Error(`Duplicate playlist registration '${playlist.id}'.`);
+    }
     this.playlists.set(playlist.id, this.clonePlaylist(playlist));
   }
 

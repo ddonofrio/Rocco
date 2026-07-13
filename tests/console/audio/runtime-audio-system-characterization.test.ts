@@ -93,6 +93,14 @@ describe('RoccoRuntimeAudioSystem characterization', () => {
 
     await system.preloadSound('pier-bell');
 
+    expect(() =>
+      system.registerSound({
+        id: 'pier-bell',
+        uri: '/sounds/pier-bell-v2.mp3',
+      }),
+    ).toThrow("Duplicate sound registration 'pier-bell'.");
+
+    system.unregisterSound('pier-bell');
     system.registerSound({
       id: 'pier-bell',
       uri: '/sounds/pier-bell-v2.mp3',

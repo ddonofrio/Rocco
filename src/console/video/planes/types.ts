@@ -221,6 +221,8 @@ export interface RoccoGraphicPlane {
   metadata?: Record<string, unknown>;
 }
 
+export type RoccoPlanePatch = Partial<Omit<RoccoGraphicPlane, 'id'>>;
+
 export interface RoccoPlaneScene {
   id: string;
   planes: RoccoGraphicPlane[];
@@ -244,7 +246,7 @@ export interface RoccoPlaneSDK {
   serializeScene(sceneId: string): RoccoPlaneScene;
 
   addPlane(sceneId: string, plane: RoccoGraphicPlane): void;
-  updatePlane(sceneId: string, planeId: string, patch: Partial<RoccoGraphicPlane>): void;
+  updatePlane(sceneId: string, planeId: string, patch: RoccoPlanePatch): void;
   removePlane(sceneId: string, planeId: string): void;
 
   setPlaneSource(sceneId: string, planeId: string, source: RoccoPlaneSource): void;

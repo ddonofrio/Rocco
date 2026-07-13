@@ -15,6 +15,7 @@ import { BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID } from '../../inventory';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
+import { roccoDefaultCartridgeManifest } from '../../../../rocco-default-manifest';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import {
   DEFAULT_DESIGN_HEIGHT,
@@ -511,10 +512,13 @@ export async function loadOrCreateBaitShopScene(
   engine: RoccoEngine,
   definition: RoccoBaitShopSceneDefinition,
 ): Promise<RoccoPlaneScene> {
-  const restoredRecord = await engine.persistence.loadPlaneSceneRecord(definition.sceneId);
+  const restoredRecord = await engine.persistence.loadPlaneSceneRecord(
+    roccoDefaultCartridgeManifest.id,
+    definition.sceneId,
+  );
   if (!restoredRecord) {
     const created = createDefaultBaitShopScene(definition);
-    await engine.persistence.savePlaneScene(created);
+    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, created);
     engine.log('System', `Bait shop scene '${definition.sceneId}' initialized.`);
     return created;
   }
@@ -522,7 +526,7 @@ export async function loadOrCreateBaitShopScene(
   engine.log('System', `Bait shop scene '${definition.sceneId}' restored from IndexedDB.`);
   const normalized = normalizeBaitShopScene(restoredRecord.scene, definition);
   if (normalized.changed) {
-    await engine.persistence.savePlaneScene(normalized.scene);
+    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, normalized.scene);
     engine.log('System', `Bait shop scene '${definition.sceneId}' refreshed.`);
   }
 
@@ -858,7 +862,6 @@ export class RoccoBaitShopLevel implements RoccoLevel {
         moveTo: { ...BAIT_SHOP_BENCH_KICK_START_POINT },
         constrainToWalkMap: false,
         facing: 'up',
-        restoreInputOnComplete: false,
         onReached: () => {
           this.startBenchJumpUpSequence();
         },
@@ -1014,7 +1017,6 @@ export class RoccoBaitShopLevel implements RoccoLevel {
 
     const sprite = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
     if (!sprite) {
-      this.engine.setInputEnabled(true);
       return;
     }
 
@@ -1023,6 +1025,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     const startOrigin = toOriginFromGroundPoint(BAIT_SHOP_BENCH_KICK_START_POINT, scaleX, scaleY);
     const endOrigin = toOriginFromGroundPoint(BAIT_SHOP_BENCH_TOP_POINT, scaleX, scaleY);
 
+    this.engine.setInputEnabled(false);
     this.setRoccoWalkConstraint(false);
     this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
     this.engine.video.sprites.setPosition(
@@ -1634,6 +1637,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       return;
     }
 
+    this.engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID);
     this.engine.video.sceneTargets?.registerTarget({
       instanceId: BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID,
       definitionId: 'rocco-bait-shop-hidden-keys',

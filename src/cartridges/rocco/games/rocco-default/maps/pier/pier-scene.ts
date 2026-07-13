@@ -10,6 +10,7 @@ import {
 } from '../../constants';
 import { pierBackgroundAssetUrls } from './pier-assets';
 import { makeDefaultWaterColorEffect } from './pier-video-effects';
+import { roccoDefaultCartridgeManifest } from '../../../../rocco-default-manifest';
 
 const DEFAULT_PLANE_IDS = new Set([
   'rocco-green-black-backplate',
@@ -182,10 +183,13 @@ export async function loadOrCreatePierScene(
   engine: RoccoEngine,
   options: RoccoPierSceneOptions,
 ): Promise<RoccoPlaneScene> {
-  const restoredRecord = await engine.persistence.loadPlaneSceneRecord(options.sceneId);
+  const restoredRecord = await engine.persistence.loadPlaneSceneRecord(
+    roccoDefaultCartridgeManifest.id,
+    options.sceneId,
+  );
   if (!restoredRecord) {
     const created = createDefaultRoccoScene(options);
-    await engine.persistence.savePlaneScene(created);
+    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, created);
     engine.log('System', `Pier scene '${options.sceneId}' initialized.`);
     return created;
   }
@@ -193,7 +197,7 @@ export async function loadOrCreatePierScene(
   engine.log('System', `Pier scene '${options.sceneId}' restored from IndexedDB.`);
   const normalized = normalizeDefaultRoccoScene(restoredRecord.scene, options);
   if (normalized.changed) {
-    await engine.persistence.savePlaneScene(normalized.scene);
+    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, normalized.scene);
     engine.log('System', `Pier scene '${options.sceneId}' refreshed.`);
   }
 

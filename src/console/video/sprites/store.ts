@@ -31,6 +31,14 @@ export class RoccoSpriteStore {
 
   register(definition: RoccoSpriteDefinition): void {
     this.validateDefinition(definition);
+    if (this.definitions.has(definition.id)) {
+      throw new Error(`Duplicate sprite definition registration '${definition.id}'.`);
+    }
+    this.definitions.set(definition.id, clone(definition));
+  }
+
+  registerOrReplace(definition: RoccoSpriteDefinition): void {
+    this.validateDefinition(definition);
     this.definitions.set(definition.id, clone(definition));
   }
 

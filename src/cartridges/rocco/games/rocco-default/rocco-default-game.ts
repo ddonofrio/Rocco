@@ -11,6 +11,7 @@ import {
 import {
   createRoccoDefaultShopMapStructure,
 } from './maps/shop';
+import { ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS } from './game-structure';
 
 export const ROCCO_DEFAULT_GAME_ID = 'rocco-default-game';
 
@@ -26,6 +27,7 @@ export function createRoccoDefaultGameDefinition(
       createRoccoDefaultShopMapStructure(),
       createRoccoDefaultNetherMapStructure(),
     ],
+    connections: ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS,
     createRuntimeController: (options) =>
       new RoccoLevelManager({
         ...options,

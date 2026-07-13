@@ -1,5 +1,10 @@
 ﻿import { describe, expect, it } from 'vitest';
 
+import { RpceGameCompiler, type RpceCompiledGame } from '../../../../src/cartridges/rocco/rpce/core';
+import {
+  createRoccoDefaultGameDefinition,
+  createRoccoLocalization,
+} from '../../../../src/cartridges/rocco/games/rocco-default';
 import { RoccoLevelTransitionController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-level-transition-controller';
 import type { RoccoLevel, RoccoLevelConnector } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
 import type { RoccoPoint } from '../../../../src/console/video/sprites';
@@ -20,10 +25,15 @@ function createLevel(levelId: string, connectors: readonly RoccoLevelConnector[]
   };
 }
 
+function createCompiledGame(): RpceCompiledGame {
+  return new RpceGameCompiler().compile(createRoccoDefaultGameDefinition(createRoccoLocalization('en')));
+}
+
 describe('RoccoLevelTransitionController', () => {
   it('requires a matching exit intent before crossing a touched connector', () => {
     const playerGround: RoccoPoint = { x: 8, y: 20 };
     const controller = new RoccoLevelTransitionController({
+      compiledGame: createCompiledGame(),
       canTraverseConnector: () => true,
       resolvePlayerGroundPoint: () => playerGround,
     });
@@ -57,6 +67,7 @@ describe('RoccoLevelTransitionController', () => {
   it('blocks repeated transitions while the cooldown is still active', () => {
     const playerGround: RoccoPoint = { x: 8, y: 20 };
     const controller = new RoccoLevelTransitionController({
+      compiledGame: createCompiledGame(),
       canTraverseConnector: () => true,
       resolvePlayerGroundPoint: () => playerGround,
     });
@@ -89,6 +100,7 @@ describe('RoccoLevelTransitionController', () => {
 
   it('refuses gated connectors when traversal rules deny them', () => {
     const controller = new RoccoLevelTransitionController({
+      compiledGame: createCompiledGame(),
       canTraverseConnector: (connector) => !connector.requiresKeys,
       resolvePlayerGroundPoint: () => ({ x: 8, y: 20 }),
     });
@@ -113,6 +125,7 @@ describe('RoccoLevelTransitionController', () => {
 
   it('resolves scripted connector transitions through the shared graph', () => {
     const controller = new RoccoLevelTransitionController({
+      compiledGame: createCompiledGame(),
       canTraverseConnector: () => true,
       resolvePlayerGroundPoint: () => undefined,
     });
@@ -136,6 +149,7 @@ describe('RoccoLevelTransitionController', () => {
 
   it('resolves the bait-shop toilet portal into the Nether entry connector', () => {
     const controller = new RoccoLevelTransitionController({
+      compiledGame: createCompiledGame(),
       canTraverseConnector: () => true,
       resolvePlayerGroundPoint: () => undefined,
     });
@@ -159,6 +173,7 @@ describe('RoccoLevelTransitionController', () => {
 
   it('clears a pending exit intent when the scene click targets an object instead of the floor', () => {
     const controller = new RoccoLevelTransitionController({
+      compiledGame: createCompiledGame(),
       canTraverseConnector: () => true,
       resolvePlayerGroundPoint: () => ({ x: 8, y: 20 }),
     });

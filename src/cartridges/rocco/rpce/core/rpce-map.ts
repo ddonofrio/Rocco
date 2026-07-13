@@ -13,6 +13,7 @@ export interface RpceLevelConnection {
 
 export interface RpceLevelDefinition<TLevel extends RpceLevel = RpceLevel> {
   id: string;
+  title?: string;
   createLevel?: () => TLevel;
 }
 
@@ -40,6 +41,12 @@ export interface RpceGameDefinition<
   title: string;
   maps: readonly RpceMapDefinition<TLevel>[];
   initialMapId?: string;
+  /**
+   * Cross-map connections whose endpoints live in different maps. Per-map connections
+   * stay on the map definition; this field owns the links that span maps (for example
+   * the bait-shop toilet portal into the Nether entry).
+   */
+  connections?: readonly RpceLevelConnection[];
   hooks?: RpceGameRuntimeHooks;
   createRuntimeController: (
     options: TControllerOptions,

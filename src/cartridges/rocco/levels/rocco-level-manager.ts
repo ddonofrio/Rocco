@@ -24,7 +24,6 @@ import {
   DEFAULT_STAN_SLEEPING_ANIMATION_ID,
   DEFAULT_STAN_SPRITE_INSTANCE_ID,
   PIER_LEVEL_TRANSITION_COOLDOWN_MS,
-  ROCCO_PIER_MIDDLE_LEVEL_ID,
   ROCCO_PIER_START_LEVEL_ID,
 } from '../games/rocco-default/constants';
 import {
@@ -91,7 +90,8 @@ import {
 } from './runtime/rocco-scripted-sequence-controller';
 import { RoccoSceneActionRouter } from './runtime/rocco-scene-action-router';
 import { RoccoAssetPreloader } from './rocco-asset-preloader';
-import { createRoccoDefaultGameMaps } from '../games/rocco-default';
+import { createRoccoDefaultGameMaps, ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS, ROCCO_DEFAULT_GAME_ID } from '../games/rocco-default';
+import { RpceGameCompiler, type RpceCompiledGame } from '../rpce/core';
 
 export interface RoccoLevelManagerMountResult {
   level: RoccoLevel;
@@ -112,7 +112,6 @@ const BAIT_SHOP_DOOR_END_GROUND_X =
   DEFAULT_BAIT_SHOP_DOOR_X +
   DEFAULT_BAIT_SHOP_DOOR_WIDTH -
   BAIT_SHOP_DOOR_PLAYER_RIGHT_EDGE_OFFSET;
-const DEFAULT_START_LEVEL_ID = ROCCO_PIER_MIDDLE_LEVEL_ID;
 const ROCCO_SHARED_UI_ASSET_URLS = [
   roccoDefaultActionMenuAssetUrls.developerMode,
   roccoDefaultActionMenuAssetUrls.grab,
@@ -150,6 +149,7 @@ export class RoccoLevelManager {
   private activeLevel: RoccoLevel | null = null;
   private activeSceneId: string | null = null;
   private readonly levelTransitionService: RoccoLevelTransitionService;
+  private readonly compiledGame: RpceCompiledGame<RoccoLevel>;
   private pendingNetherEntrySnapshot: RoccoNetherEntrySnapshot | null = null;
   private readonly localization: RoccoLocalization;
   private roccoAppearance: RoccoPlayerAppearance = DEFAULT_ROCCO_PLAYER_APPEARANCE;
@@ -193,7 +193,53 @@ export class RoccoLevelManager {
       syncWorldPresentation: () => this.syncActiveLevelDroppedInventoryPresentation(),
       refreshStatus: () => this.refreshStatus(),
     });
+    const compiledMaps = createRoccoDefaultGameMaps({
+      localization: this.localization,
+      mountPierBeginningAmbient: (engine, _localization, _persistentState, _preloader, entryConnectorId) =>
+        installPierBeginningAmbient(
+          engine,
+          this.localization,
+          this.beginningAmbientState,
+          undefined,
+          entryConnectorId,
+        ),
+      isStanIdentified: () => this.beginningAmbientState.stan.isIdentified,
+      hasMysteriousKey: () => this.inventory.hasItem(ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID),
+      onMysteriousKeyCollected: () =>
+        this.tryAddItemToInventory(createRoccoMysteriousKeyInventoryItem(this.localization)),
+      hasMagazine: () => this.inventory.hasItem(ROCCO_INVENTORY_MAGAZINE_ITEM_ID),
+      onMagazineCollected: (known) =>
+        this.tryAddItemToInventory(createRoccoMagazineInventoryItem(this.localization, known)),
+      hasCoralRelic: () =>
+        this.hasAccessibleInventoryItem(
+          ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
+          ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
+        ),
+      getCoralRelicAssemblyPlan: () =>
+        planRoccoCoralRelicAssembly(
+          this.listAccessibleInventoryItemIds(ROCCO_BAIT_SHOP_TOILET_LEVEL_ID),
+        ),
+      allowToiletReuseDuringUrgency: () =>
+        this.developerRuntime.isToiletReuseAllowedDuringUrgency(),
+      openStorageInventory: (storageId, onInventoryClosed) => {
+        this.openInventoryTransferMenu(storageId, onInventoryClosed);
+      },
+      closeStorageInventory: (storageId) => {
+        this.closeInventoryTransferMenu(storageId);
+      },
+      onExitShopRequested: () => {
+        void this.switchToLevel(ROCCO_PIER_START_LEVEL_ID, 'shop-exit');
+      },
+    });
+    this.compiledGame = new RpceGameCompiler().compile({
+      id: ROCCO_DEFAULT_GAME_ID,
+      title: 'ROCCO',
+      initialMapId: 'pier',
+      maps: compiledMaps,
+      connections: ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS,
+    });
     this.transitions = new RoccoLevelTransitionController({
+      compiledGame: this.compiledGame,
       canTraverseConnector: (connector) =>
         !connector.requiresKeys || this.inventory.hasItem(ROCCO_INVENTORY_KEYS_ITEM_ID),
       resolvePlayerGroundPoint: () => this.resolvePlayerGroundPoint(),
@@ -242,44 +288,7 @@ export class RoccoLevelManager {
       isStanAwake: () => this.isStanAwake(),
     });
     this.levelRegistry = new RoccoLevelRegistry({
-      maps: createRoccoDefaultGameMaps({
-        localization: this.localization,
-        mountPierBeginningAmbient: (engine, _localization, _persistentState, _preloader, entryConnectorId) =>
-          installPierBeginningAmbient(
-            engine,
-            this.localization,
-            this.beginningAmbientState,
-            undefined,
-            entryConnectorId,
-          ),
-        isStanIdentified: () => this.beginningAmbientState.stan.isIdentified,
-        hasMysteriousKey: () => this.inventory.hasItem(ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID),
-        onMysteriousKeyCollected: () =>
-          this.tryAddItemToInventory(createRoccoMysteriousKeyInventoryItem(this.localization)),
-        hasMagazine: () => this.inventory.hasItem(ROCCO_INVENTORY_MAGAZINE_ITEM_ID),
-        onMagazineCollected: (known) =>
-          this.tryAddItemToInventory(createRoccoMagazineInventoryItem(this.localization, known)),
-        hasCoralRelic: () =>
-          this.hasAccessibleInventoryItem(
-            ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
-            ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
-          ),
-        getCoralRelicAssemblyPlan: () =>
-          planRoccoCoralRelicAssembly(
-            this.listAccessibleInventoryItemIds(ROCCO_BAIT_SHOP_TOILET_LEVEL_ID),
-          ),
-        allowToiletReuseDuringUrgency: () =>
-          this.developerRuntime.isToiletReuseAllowedDuringUrgency(),
-        openStorageInventory: (storageId, onInventoryClosed) => {
-          this.openInventoryTransferMenu(storageId, onInventoryClosed);
-        },
-        closeStorageInventory: (storageId) => {
-          this.closeInventoryTransferMenu(storageId);
-        },
-        onExitShopRequested: () => {
-          void this.switchToLevel(ROCCO_PIER_START_LEVEL_ID, 'shop-exit');
-        },
-      }),
+      compiledGame: this.compiledGame,
     });
   }
 
@@ -311,7 +320,7 @@ export class RoccoLevelManager {
     this.scriptedSequences.resetRuntimeState(this.engine);
     this.inventoryRuntime.resetRuntimeState();
     this.netherEntrySnapshot = null;
-    const level = this.levelRegistry.requireLevel(DEFAULT_START_LEVEL_ID);
+    const level = this.levelRegistry.requireLevel(this.compiledGame.initialLevelId ?? 'pier');
     this.activeLevel = level;
     const scene = await level.mount(engine, this.createLevelMountOptions(), preloader);
     installRoccoPlayerActionMenu(engine, this.localization);
@@ -427,7 +436,7 @@ export class RoccoLevelManager {
   private restoreNetherEntrySnapshot(): void {
     const snapshot = this.netherEntrySnapshot;
     this.clearNetherDroppedInventoryItems();
-    this.levelRegistry.resetNetherLevels();
+    this.levelRegistry.resetMap('nether');
     if (!snapshot) {
       return;
     }

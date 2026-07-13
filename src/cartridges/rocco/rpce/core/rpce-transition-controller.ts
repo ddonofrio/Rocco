@@ -6,7 +6,7 @@ import {
   type RpceLevel,
   type RpceLevelConnector,
 } from './rpce-level';
-import type { RpceLevelConnection, RpceLevelConnectionEndpoint } from './rpce-map';
+import type { RpceLevelConnectionEndpoint } from './rpce-map';
 
 interface RpcePendingExitIntent {
   levelId: string;
@@ -20,7 +20,10 @@ export interface RpceResolvedLevelTransition {
 }
 
 export interface RpceTransitionControllerOptions {
-  connections: readonly RpceLevelConnection[];
+  resolveConnectedEndpoint: (
+    levelId: string,
+    connectorId: string,
+  ) => RpceLevelConnectionEndpoint | null;
   canTraverseConnector: (connector: RpceLevelConnector) => boolean;
   resolvePlayerGroundPoint: () => RoccoPoint | undefined;
 }
@@ -132,7 +135,7 @@ export class RpceTransitionController {
     fromLevelId: string,
     connector: RpceLevelConnector,
   ): RpceResolvedLevelTransition | null {
-    const targetEndpoint = this.resolveConnectedEndpoint(fromLevelId, connector.id);
+    const targetEndpoint = this.options.resolveConnectedEndpoint(fromLevelId, connector.id);
     if (!targetEndpoint) {
       return null;
     }
@@ -143,21 +146,5 @@ export class RpceTransitionController {
       targetEndpoint,
     };
   }
-
-  private resolveConnectedEndpoint(
-    levelId: string,
-    connectorId: string,
-  ): RpceLevelConnectionEndpoint | undefined {
-    for (const connection of this.options.connections) {
-      if (connection.a.levelId === levelId && connection.a.connectorId === connectorId) {
-        return connection.b;
-      }
-
-      if (connection.b.levelId === levelId && connection.b.connectorId === connectorId) {
-        return connection.a;
-      }
-    }
-
-    return undefined;
-  }
 }
+

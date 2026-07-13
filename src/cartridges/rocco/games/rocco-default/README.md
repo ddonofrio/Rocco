@@ -31,3 +31,28 @@ Map folders are the structural ownership point:
 Each map folder exports its map definition, the concrete level implementations, and the local
 asset surface for that map. The legacy `src/cartridges/rocco/levels/**` folders now re-export
 from these game-owned paths as compatibility wrappers.
+
+## Game graph and the compiled model
+
+`createRoccoDefaultGameDefinition` is the single declarative source of truth. It is built from
+the per-map `*MapStructure()` builders (the canonical literal structure of ids, levels,
+connections, and `initialLevelId`) plus the game-level cross-map connections exported as
+`ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS` (the bait-shop toilet portal into the Nether entry).
+
+The functional `createRoccoDefault*Map(options)` builders derive their level list from the same
+`*MapStructure()` source and only attach the runtime `createLevel` factories. There is no second,
+independent copy of the graph.
+
+At runtime `RoccoLevelManager` compiles the functional maps once with `RpceGameCompiler`
+(see `src/cartridges/rocco/rpce/core/rpce-game-compiler.ts`). The resulting `CompiledGame` is the
+only model the level registry and the transition controller consume:
+
+- the initial level is read from `compiledGame.initialLevelId` (never hard-coded);
+- the registry instantiates levels from `compiledGame.levelsById`;
+- the transition controller resolves endpoints through the indexed `compiledGame.transitionsByEndpoint`.
+
+The compiler fails fast on duplicate map/level ids, connections that reference unknown levels, a
+missing `initialMapId`, an initial map without an `initialLevelId`, duplicate connections, and
+self-loop connections. It also computes `reachableLevelIds` from the initial level for
+observability; note that pier and shop are linked by scripted transitions (for example
+`enterBaitShop`), not by the connector graph, so the shop is intentionally not connector-reachable.

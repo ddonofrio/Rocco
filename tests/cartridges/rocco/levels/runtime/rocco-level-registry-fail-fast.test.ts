@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { RpceGameCompiler, type RpceGameGraph } from '../../../../../src/cartridges/rocco/rpce/core';
 import { RoccoLevelRegistry } from '../../../../../src/cartridges/rocco/levels/runtime/rocco-level-registry';
 import type { RoccoLevel } from '../../../../../src/cartridges/rocco/levels/rocco-level-types';
-import type { RpceMapDefinition } from '../../../../../src/cartridges/rocco/rpce/core';
+import type { RpceLevelDefinition, RpceMapDefinition } from '../../../../../src/cartridges/rocco/rpce/core';
 
 function makeLevel(id: string): unknown {
   return {
@@ -16,20 +17,29 @@ function makeLevel(id: string): unknown {
   };
 }
 
-function makeMap(id: string, levelIds: string[]): unknown {
+function makeMap(id: string, levelIds: string[]): RpceMapDefinition<RoccoLevel> {
   return {
     id,
     title: id,
     initialLevelId: levelIds[0] ?? id,
-    levels: levelIds.map((levelId) => ({ id: levelId, createLevel: () => makeLevel(levelId) })),
+    levels: levelIds.map((levelId) => ({ id: levelId, createLevel: () => makeLevel(levelId) })) as RpceLevelDefinition<RoccoLevel>[],
     connections: [],
+  };
+}
+
+function compileGame(maps: RpceMapDefinition<RoccoLevel>[]): RpceGameGraph<RoccoLevel> {
+  return {
+    id: 'test-game',
+    title: 'Test Game',
+    initialMapId: maps[0]?.id ?? 'map-a',
+    maps,
   };
 }
 
 describe('RoccoLevelRegistry', () => {
   it('registers maps and levels', () => {
     const registry = new RoccoLevelRegistry({
-      maps: [makeMap('map-a', ['level-1']) as RpceMapDefinition<RoccoLevel>],
+      compiledGame: new RpceGameCompiler().compile(compileGame([makeMap('map-a', ['level-1'])])),
     });
 
     expect(registry.listLevels()).toHaveLength(1);
@@ -38,22 +48,20 @@ describe('RoccoLevelRegistry', () => {
   it('throws on duplicate map id', () => {
     expect(() =>
       new RoccoLevelRegistry({
-        maps: [
-          makeMap('map-a', ['level-1']) as RpceMapDefinition<RoccoLevel>,
-          makeMap('map-a', ['level-2']) as RpceMapDefinition<RoccoLevel>,
-        ],
+        compiledGame: new RpceGameCompiler().compile(
+          compileGame([makeMap('map-a', ['level-1']), makeMap('map-a', ['level-2'])]),
+        ),
       }),
-    ).toThrow("Duplicate map registration 'map-a'.");
+    ).toThrow("Duplicate map id 'map-a'.");
   });
 
   it('throws on duplicate level id', () => {
     expect(() =>
       new RoccoLevelRegistry({
-        maps: [
-          makeMap('map-a', ['level-1']) as RpceMapDefinition<RoccoLevel>,
-          makeMap('map-b', ['level-1']) as RpceMapDefinition<RoccoLevel>,
-        ],
+        compiledGame: new RpceGameCompiler().compile(
+          compileGame([makeMap('map-a', ['level-1']), makeMap('map-b', ['level-1'])]),
+        ),
       }),
-    ).toThrow("Duplicate level registration 'level-1'.");
+    ).toThrow("Duplicate level id 'level-1' across maps.");
   });
 });

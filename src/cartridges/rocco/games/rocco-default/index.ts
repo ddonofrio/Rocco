@@ -4,7 +4,7 @@ export {
 } from './rocco-default-game';
 export {
   createRoccoDefaultGameMaps,
-  ROCCO_DEFAULT_GAME_CONNECTIONS,
+  ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS,
   type RoccoDefaultGameMapsOptions,
 } from './game-structure';
 export * from './constants';

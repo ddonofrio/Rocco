@@ -6,8 +6,8 @@ These files are not generic console systems. They are the legacy compatibility p
 
 ## Files
 
-- `rocco-level-registry.ts` - Creates and stores the level instances used by the cartridge from the game-owned map definitions, including Nether-map re-creation for checkpoint restores.
-- `rocco-level-transition-controller.ts` - Uses the game-owned connection graph while keeping pending exit intent, connector hit resolution, scripted connector resolution, and transition cooldown state in one compatibility controller.
+- `rocco-level-registry.ts` - Creates and stores the level instances used by the cartridge from the compiled game graph (`CompiledGame`). It instantiates levels from `compiledGame.levelsById` and re-creates a map on `resetMap(mapId)` (used for Nether re-creation during checkpoint restores). It no longer owns any game-specific map concept.
+- `rocco-level-transition-controller.ts` - Wraps the generic `RpceTransitionController` and resolves connector endpoints through the compiled graph's indexed `transitionsByEndpoint`. It keeps pending exit intent, connector hit resolution, scripted connector resolution, and transition cooldown state in one compatibility controller. It does not import a flat global connection list.
 - `rocco-scene-action-router.ts` - Owns action-routing priority across developer mode, dropped items, carried inventory use, grid menus, self actions, and level-specific action handling.
 - `rocco-inventory-runtime-controller.ts` - Owns player inventory storage, storage-transfer sessions, carried-item routing, item fusion coordination, and world-drop handoff.
 - `rocco-dropped-inventory-controller.ts` - Owns per-level dropped-item state, dropped-item presentation, and pickup flow.

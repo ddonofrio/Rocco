@@ -1,17 +1,20 @@
 import type { RoccoLevel } from '../rocco-level-types';
-import type { RpceMapDefinition } from '../../rpce/core';
+import type { RpceCompiledGame, RpceCompiledMap } from '../../rpce/core';
 
 export interface RoccoLevelRegistryOptions {
-  maps: readonly RpceMapDefinition<RoccoLevel>[];
+  compiledGame: RpceCompiledGame<RoccoLevel>;
 }
 
 export class RoccoLevelRegistry {
   private readonly levels = new Map<string, RoccoLevel>();
-  private readonly mapsById = new Map<string, RpceMapDefinition<RoccoLevel>>();
+  private readonly mapsById = new Map<string, RpceCompiledMap>();
+  private readonly compiledGame: RpceCompiledGame<RoccoLevel>;
 
   constructor(options: RoccoLevelRegistryOptions) {
-    for (const map of options.maps) {
-      this.registerMap(map);
+    this.compiledGame = options.compiledGame;
+    for (const map of options.compiledGame.mapsById.values()) {
+      this.mapsById.set(map.id, map);
+      this.registerLevels(this.instantiateMapLevels(map));
     }
   }
 
@@ -37,25 +40,14 @@ export class RoccoLevelRegistry {
     this.registerLevels(this.instantiateMapLevels(map));
   }
 
-  resetNetherLevels(): void {
-    this.resetMap('nether');
-  }
-
-  private registerMap(map: RpceMapDefinition<RoccoLevel>): void {
-    if (this.mapsById.has(map.id)) {
-      throw new Error(`Duplicate map registration '${map.id}'.`);
-    }
-    this.mapsById.set(map.id, map);
-    this.registerLevels(this.instantiateMapLevels(map));
-  }
-
-  private instantiateMapLevels(map: RpceMapDefinition<RoccoLevel>): readonly RoccoLevel[] {
-    return map.levels.map((definition) => {
-      if (!definition.createLevel) {
-        throw new Error(`Map '${map.id}' level '${definition.id}' does not provide a factory.`);
+  private instantiateMapLevels(map: RpceCompiledMap): readonly RoccoLevel[] {
+    return map.levelIds.map((levelId) => {
+      const compiledLevel = this.compiledGame.levelsById.get(levelId);
+      if (!compiledLevel?.createLevel) {
+        throw new Error(`Map '${map.id}' level '${levelId}' has no factory.`);
       }
 
-      return definition.createLevel();
+      return compiledLevel.createLevel();
     });
   }
 

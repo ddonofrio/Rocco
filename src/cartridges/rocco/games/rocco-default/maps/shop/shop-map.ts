@@ -44,49 +44,43 @@ export const ROCCO_DEFAULT_SHOP_CONNECTIONS: readonly RpceLevelConnection[] = [
 export function createRoccoDefaultShopMap(
   options: RoccoDefaultShopMapOptions,
 ): RpceMapDefinition<RoccoLevel> {
+  const structure = createRoccoDefaultShopMapStructure();
+  const factories: Record<string, () => RoccoLevel> = {
+    [ROCCO_BAIT_SHOP_LEVEL_ID]: () =>
+      new RoccoBaitShopLevel(options.localization, {
+        isStanIdentified: options.isStanIdentified,
+        hasMysteriousKey: options.hasMysteriousKey,
+        onMysteriousKeyCollected: options.onMysteriousKeyCollected,
+        onOpenStorageInventoryRequested: (storageId, onInventoryClosed) => {
+          options.openStorageInventory(storageId, onInventoryClosed);
+        },
+        onCloseStorageInventoryRequested: (storageId) => {
+          options.closeStorageInventory(storageId);
+        },
+        onExitShopRequested: options.onExitShopRequested,
+      }),
+    [ROCCO_BAIT_SHOP_SECOND_LEVEL_ID]: () =>
+      new RoccoBaitShopSecondLevel(options.localization, {
+        hasMagazine: options.hasMagazine,
+        hasMysteriousKey: options.hasMysteriousKey,
+        onMagazineCollected: options.onMagazineCollected,
+      }),
+    [ROCCO_BAIT_SHOP_TOILET_LEVEL_ID]: () =>
+      new RoccoBaitShopToiletLevel(options.localization, {
+        hasMagazine: options.hasMagazine,
+        hasCoralRelic: options.hasCoralRelic,
+        getCoralRelicAssemblyPlan: options.getCoralRelicAssemblyPlan,
+        allowReuseDuringUrgency: options.allowToiletReuseDuringUrgency,
+        isStanIdentified: options.isStanIdentified,
+      }),
+  };
+
   return {
-    id: ROCCO_DEFAULT_SHOP_MAP_ID,
-    title: 'Shop',
-    initialLevelId: ROCCO_BAIT_SHOP_LEVEL_ID,
-    levels: [
-      {
-        id: ROCCO_BAIT_SHOP_LEVEL_ID,
-        createLevel: () =>
-          new RoccoBaitShopLevel(options.localization, {
-            isStanIdentified: options.isStanIdentified,
-            hasMysteriousKey: options.hasMysteriousKey,
-            onMysteriousKeyCollected: options.onMysteriousKeyCollected,
-            onOpenStorageInventoryRequested: (storageId, onInventoryClosed) => {
-              options.openStorageInventory(storageId, onInventoryClosed);
-            },
-            onCloseStorageInventoryRequested: (storageId) => {
-              options.closeStorageInventory(storageId);
-            },
-            onExitShopRequested: options.onExitShopRequested,
-          }),
-      },
-      {
-        id: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID,
-        createLevel: () =>
-          new RoccoBaitShopSecondLevel(options.localization, {
-            hasMagazine: options.hasMagazine,
-            hasMysteriousKey: options.hasMysteriousKey,
-            onMagazineCollected: options.onMagazineCollected,
-          }),
-      },
-      {
-        id: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
-        createLevel: () =>
-          new RoccoBaitShopToiletLevel(options.localization, {
-            hasMagazine: options.hasMagazine,
-            hasCoralRelic: options.hasCoralRelic,
-            getCoralRelicAssemblyPlan: options.getCoralRelicAssemblyPlan,
-            allowReuseDuringUrgency: options.allowToiletReuseDuringUrgency,
-            isStanIdentified: options.isStanIdentified,
-          }),
-      },
-    ],
-    connections: ROCCO_DEFAULT_SHOP_CONNECTIONS,
+    ...structure,
+    levels: structure.levels.map((definition) => ({
+      ...definition,
+      createLevel: factories[definition.id],
+    })),
   };
 }
 

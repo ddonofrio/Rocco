@@ -62,7 +62,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: vite build
+        run: npm exec -- vite build
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@v6

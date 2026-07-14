@@ -36,7 +36,6 @@ function createWindow() {
 }
 
 await app.whenReady();
-
 createWindow();
 
 app.on('activate', () => {

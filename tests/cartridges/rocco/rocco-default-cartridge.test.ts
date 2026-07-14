@@ -1460,7 +1460,7 @@ describe('RoccoDefaultCartridge', () => {
     );
     expect(state.movedSpriteActions).toEqual([DEFAULT_SPRITE_RUN_ACTION_ID]);
     expect(listPlayedSpriteAnimationsFor(state, DEFAULT_SPRITE_INSTANCE_ID)).toEqual([]);
-    expect(state.inputEnabled).toBe(false);
+    expect(state.inputEnabled).toBe(true);
     expect(state.displayProfileCalls).toBe(0);
     expect(state.statusMessages[0]?.includes(cartridge.manifest.title)).toBe(true);
     expect(state.registeredPlaylistIds).toEqual(['rocco-game-music']);
@@ -1835,16 +1835,14 @@ describe('RoccoDefaultCartridge', () => {
     expect(state.clearedCarriedGridMenuCount).toBe(2);
   });
 
-  it('hands the keys to Stan and triggers the police defeat sequence', async () => {
+  it('does not hand the keys to Stan while he is asleep', async () => {
     const localization = createRoccoLocalization('es');
     const state = makeEngineState();
     const engine = createEngineMock(state);
-    const onRestartRequested = vi.fn();
     const manager = createLevelManagerForTests({
       cartridgeTitle: 'ROCCO',
       inventory: createInventoryWithKeys(),
       localization,
-      onRestartRequested,
     });
 
     await manager.mount(engine);
@@ -1862,32 +1860,15 @@ describe('RoccoDefaultCartridge', () => {
 
     expect(state.inputEnabled).toBe(true);
     expect(state.clearedCarriedGridMenuCount).toBe(1);
-    expect(state.spriteMessages).toContain(
-      `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${localization.text.inventory.keysOnStanArrestLine}`,
-    );
-    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).toContain(
+    expect(
+      localization.text.inventory.keysOnStanSleepingLines.some((line) =>
+        state.spriteMessages.includes(`${DEFAULT_SPRITE_INSTANCE_ID}:think:${line}`),
+      ),
+    ).toBe(true);
+    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_STAN_SPRITE_INSTANCE_ID)).not.toContain(
       `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-look-right`,
     );
     expect(state.playedSoundIds).not.toContain('rocco-stan-police-whistle-sound');
-
-    manager.update(3799);
-
-    expect(state.playedSoundIds).not.toContain('rocco-stan-police-whistle-sound');
-
-    manager.update(1);
-
-    expect(state.playedSoundIds).toContain('rocco-stan-police-whistle-sound');
-    expect(state.addedPrimitives).toContain('rocco-stan-police-defeat-fade:0');
-
-    manager.update(1300);
-
-    expect(state.addedTitles).toContain(
-      `rocco-stan-police-defeat-title:${localization.text.keys.defeatTitle}`,
-    );
-
-    manager.update(3600);
-
-    expect(onRestartRequested).toHaveBeenCalledTimes(1);
   });
 
   it('transitions from Pier Middle east to Pier Beginning after Rocco has the keys', async () => {

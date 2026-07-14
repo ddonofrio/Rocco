@@ -182,34 +182,11 @@ export class RoccoLevelTransitionService {
     }
 
     if (this.activeRun) {
-      if (this.activeRun.published) {
-        engine.log(
-          'System',
-          `Level transition '${plan.id}' rejected: another transition is already publishing.`,
-        );
-        return false;
-      }
-
       engine.log(
         'System',
-        `Level transition '${plan.id}' is superseding '${this.activeRun.id}' before publication.`,
+        `Level transition '${plan.id}' rejected: another transition '${this.activeRun.id}' is already in progress.`,
       );
-      this.abortActiveRun({
-        kind: 'superseded',
-        mode: 'rollback',
-        requestedBy: plan.id,
-      });
-      await this.activeRun.settled;
-
-      if (this.fatalTransitionState) {
-        return false;
-      }
-
-      engine = this.options.getEngine();
-      activeLevel = this.options.getActiveLevel();
-      if (!engine || !activeLevel) {
-        return false;
-      }
+      return false;
     }
 
     const generation = this.generation + 1;
@@ -231,11 +208,14 @@ export class RoccoLevelTransitionService {
     let targetMountAttempted = false;
 
     try {
-      prepared = await plan.prepare({
+      const preparedCandidate = plan.prepare({
         engine,
         currentLevel: activeLevel,
         signal: run.controller.signal,
       });
+      prepared = isPromiseLike(preparedCandidate)
+        ? await preparedCandidate
+        : preparedCandidate;
       this.assertRunNotAborted(
         run.controller.signal,
         `Level transition '${plan.id}' was cancelled during prepare.`,
@@ -644,4 +624,13 @@ function normalizeAbortReason(reason: unknown): RoccoLevelTransitionAbortReason 
   }
 
   return null;
+}
+
+function isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'then' in value &&
+    typeof value.then === 'function'
+  );
 }

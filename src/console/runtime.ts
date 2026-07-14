@@ -51,15 +51,19 @@ function describeUnknownError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function combineErrors(message: string, errors: readonly unknown[]): unknown {
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+function combineErrors(message: string, errors: readonly unknown[]): Error | null {
   if (errors.length === 0) {
     return null;
   }
   if (errors.length === 1) {
-    return errors[0];
+    return toError(errors[0]);
   }
 
-  return new AggregateError(errors, message);
+  return new AggregateError(errors.map((error) => toError(error)), message);
 }
 
 function formatCompositionOverlayText(session: CompositionSessionInfo): string {
@@ -203,7 +207,7 @@ export class GameRuntime implements RoccoEngine {
     scope.defer(() => {
       const disposeListener = this.compositionListener;
       this.compositionListener = null;
-      disposeListener?.();
+      void disposeListener?.();
     });
     scope.defer(() => this.cartridgeManager.dispose());
 
@@ -318,7 +322,7 @@ export class GameRuntime implements RoccoEngine {
         `GameRuntime init failed: ${describeUnknownError(error)}`,
         [error, cleanupError].filter((item) => item !== null),
       );
-      throw combinedError ?? error;
+      throw combinedError ?? toError(error);
     }
   }
 
@@ -335,16 +339,16 @@ export class GameRuntime implements RoccoEngine {
     this.resetRuntimeReferences();
 
     if (disposalError) {
-      throw disposalError;
+      throw toError(disposalError);
     }
   }
 
-  private async disposeRootScope(): Promise<unknown | null> {
+  private async disposeRootScope(): Promise<Error | null> {
     try {
       await this.rootScope.dispose();
       return null;
     } catch (error) {
-      return error;
+      return toError(error);
     }
   }
 

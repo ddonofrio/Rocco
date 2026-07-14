@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mainTestState = vi.hoisted(() => ({
   registerSW: vi.fn(),
-  runtimeInit: vi.fn(async () => undefined),
-  runtimeDispose: vi.fn(async () => undefined),
+  runtimeInit: vi.fn(() => Promise.resolve()),
+  runtimeDispose: vi.fn(() => Promise.resolve()),
   viewportMount: vi.fn(),
   viewportUnmount: vi.fn(),
   viewportSetDisplayProfile: vi.fn(),
@@ -18,21 +18,25 @@ vi.mock('virtual:pwa-register', () => ({
 }));
 
 vi.mock('../src/console/runtime', () => ({
-  GameRuntime: vi.fn().mockImplementation(() => ({
-    init: mainTestState.runtimeInit,
-    dispose: mainTestState.runtimeDispose,
-  })),
+  GameRuntime: class MockGameRuntime {
+    init = mainTestState.runtimeInit;
+    dispose = mainTestState.runtimeDispose;
+  },
 }));
 
 vi.mock('../src/console/video', () => ({
   viewport: {
-    RoccoViewportHost: vi.fn().mockImplementation(() => ({
-      mount: mainTestState.viewportMount,
-      unmount: mainTestState.viewportUnmount,
-      getStageElement: () => mainTestState.stageElement ?? document.createElement('div'),
-      getRootElement: () => mainTestState.rootElement ?? document.createElement('div'),
-      setDisplayProfile: mainTestState.viewportSetDisplayProfile,
-    })),
+    RoccoViewportHost: class MockViewportHost {
+      mount = mainTestState.viewportMount;
+      unmount = mainTestState.viewportUnmount;
+      getStageElement() {
+        return mainTestState.stageElement ?? document.createElement('div');
+      }
+      getRootElement() {
+        return mainTestState.rootElement ?? document.createElement('div');
+      }
+      setDisplayProfile = mainTestState.viewportSetDisplayProfile;
+    },
   },
 }));
 

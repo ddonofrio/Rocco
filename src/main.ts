@@ -107,15 +107,17 @@ function installGlobalErrorHandlers(
   onFatalError: (title: string, error: unknown) => void,
 ): () => void {
   const handleWindowError = (event: ErrorEvent): void => {
+    event.preventDefault();
     const location = event.filename
       ? ` at ${event.filename}:${event.lineno}:${event.colno}`
       : '';
-    const error = event.error ?? event.message;
+    const error: unknown = event.error ?? event.message;
     onLog('System', `Unhandled error${location}: ${describeUnknownError(error)}`);
     onFatalError('A runtime error occurred.', error);
   };
 
   const handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
+    event.preventDefault();
     onLog('System', `Unhandled promise rejection: ${describeUnknownError(event.reason)}`);
     onFatalError('A runtime error occurred.', event.reason);
   };

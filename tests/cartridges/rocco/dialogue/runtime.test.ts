@@ -45,6 +45,33 @@ function makeGridMenuActivation(
 }
 
 function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
+  let legacyInputEnabled = state.inputEnabled;
+  const activeInputLeases: Array<{
+    ownerId: string;
+    mode: 'interactive' | 'advance-only' | 'blocked';
+  }> = [];
+
+  const recomputeInputMode = (): 'interactive' | 'advance-only' | 'blocked' => {
+    if (!legacyInputEnabled) {
+      return 'blocked';
+    }
+
+    if (activeInputLeases.some((lease) => lease.mode === 'blocked')) {
+      return 'blocked';
+    }
+
+    if (activeInputLeases.some((lease) => lease.mode === 'advance-only')) {
+      return 'advance-only';
+    }
+
+    return 'interactive';
+  };
+
+  const syncLegacyInputState = (): void => {
+    state.inputEnabled = recomputeInputMode() === 'interactive';
+    state.inputHistory.push(state.inputEnabled);
+  };
+
   return {
     video: {
       messages: {
@@ -116,19 +143,33 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
       },
     },
     setInputEnabled(enabled: boolean) {
-      state.inputEnabled = enabled;
-      state.inputHistory.push(enabled);
+      legacyInputEnabled = enabled;
+      syncLegacyInputState();
     },
     isInputEnabled() {
       return state.inputEnabled;
     },
-    getInputMode: () => (state.inputEnabled ? 'interactive' : 'blocked'),
-    acquireInputLease: () => ({
-      ownerId: 'test',
-      mode: 'blocked' as const,
-      acquiredAt: 0,
-      dispose() {},
-    }),
+    getInputMode: () => recomputeInputMode(),
+    acquireInputLease(
+      ownerId: string,
+      mode: 'interactive' | 'advance-only' | 'blocked',
+    ) {
+      const lease = { ownerId, mode };
+      activeInputLeases.push(lease);
+      syncLegacyInputState();
+      return {
+        ownerId,
+        mode,
+        acquiredAt: 0,
+        dispose() {
+          const index = activeInputLeases.indexOf(lease);
+          if (index >= 0) {
+            activeInputLeases.splice(index, 1);
+          }
+          syncLegacyInputState();
+        },
+      };
+    },
     beginCompositionSession: () => ({
       id: 'test',
       ownerId: 'test',

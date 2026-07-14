@@ -36,15 +36,19 @@ interface RoccoCollectedBootSetup {
   bootSettings: RoccoCartridgeBootSetting[];
 }
 
-function combineErrors(message: string, errors: readonly unknown[]): unknown {
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+function combineErrors(message: string, errors: readonly unknown[]): Error | null {
   if (errors.length === 0) {
     return null;
   }
   if (errors.length === 1) {
-    return errors[0];
+    return toError(errors[0]);
   }
 
-  return new AggregateError(errors, message);
+  return new AggregateError(errors.map((error) => toError(error)), message);
 }
 
 export class RoccoCartridgeManager {
@@ -241,7 +245,7 @@ export class RoccoCartridgeManager {
     cartridge: RoccoCartridge | null,
     scope: ResourceScope | null,
     cartridgeId: string,
-  ): Promise<unknown | null> {
+  ): Promise<Error | null> {
     const failures: unknown[] = [];
 
     if (cartridge?.stop) {

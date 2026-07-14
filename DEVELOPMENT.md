@@ -67,9 +67,12 @@ Avoid these command forms:
 ## Available Commands
 
 - `npm run dev` starts Vite.
-- `npm run check` runs tracked-content hygiene, ESLint, and TypeScript checking.
+- `npm run verify:static` runs tracked-content hygiene, asset-reference checks, ESLint, and TypeScript checking.
+- `npm run test:coverage` runs the full Vitest suite with coverage.
+- `npm run verify` runs the full quality gate: static checks plus coverage.
+- `npm run check` is an alias for `npm run verify`.
 - `npm run build` runs the default web build alias.
-- `npm run build:web` runs ESLint, TypeScript checking, and the browser Vite build.
+- `npm run build:web` runs the full quality gate once and then the browser Vite build once.
 - `npm run build:mac` runs TypeScript checking, the desktop Vite build, and `electron-builder` for the unsigned macOS DMG.
 - `npm run build:windows` runs TypeScript checking, the desktop Vite build, and `electron-builder` for the portable Windows executable.
 - `npm run build:linux` runs TypeScript checking, the desktop Vite build, and `electron-builder` for the Linux AppImage.
@@ -91,7 +94,7 @@ The GitHub Actions `Build` workflow uploads these artifacts:
 - `windows-latest-portable` containing the portable Windows executable.
 - `ubuntu-latest-appimage` containing the Linux AppImage.
 
-The unsigned macOS DMG is built in the workflow on `macos-latest`.
+The unsigned macOS DMG is built in the workflow on `macos-26`.
 The Linux AppImage is built in the workflow on `ubuntu-latest`.
 
 ## Validation Workflow
@@ -100,8 +103,8 @@ Start with the narrowest useful validation:
 
 1. Run the focused test for the touched module when one exists.
 2. Run `npm run typecheck` through the wrapper for TypeScript changes.
-3. Run `npm run build` when bundling, assets, imports, or integration behavior need coverage.
-4. Run `npm run lint` when style or static analysis risk is relevant.
+3. Run `npm run verify` when the change touches shared runtime behavior, tests, or repo-wide contracts.
+4. Run `npm run build:web` when bundling, assets, imports, or integration behavior need production-build coverage.
 
 Before any `git push`, always run the full web pre-push gate through the wrapper:
 
@@ -109,16 +112,16 @@ Before any `git push`, always run the full web pre-push gate through the wrapper
 powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','build:web')"
 ```
 
-Treat `npm run build:web` as mandatory before a push even if focused tests and `npm run typecheck` already passed. It is the closest local match to the default CI gate because it runs ESLint, TypeScript checking, and the browser production build together.
+Treat `npm run build:web` as mandatory before a push even if focused tests and `npm run typecheck` already passed. It is the closest local match to the default CI gate because it runs the quality gate and the browser production build together.
 
-When you need the smallest repo-wide validation flow, run `npm run check` through the wrapper. It runs tracked-content hygiene, ESLint, and TypeScript checking together.
+When you need the smallest repo-wide CI-equivalent validation flow, run `npm run verify` through the wrapper. `npm run check` is a short alias for the same command.
 
 Do not run `npm run format` for a narrow task unless the user asks for whole-repository formatting.
 
 ## Refinement Workflow
 
 - During an active refinement session, make the requested gameplay or UI change first and ask the user to validate it manually before adding tests or broader feature-documentation updates for that specific change.
-- After the user explicitly confirms the behavior is correct, add the deferred automated coverage and documentation updates that belong to the validated change.
+- After the user explicitly confirms the behavior is correct, add the deferred automated coverage and documentation updates that belong to the validated change before final handoff.
 - If a new development request arrives while earlier validated work still has deferred tests or docs pending, flag that outstanding follow-up before starting the new scope.
 
 ## Text Encoding

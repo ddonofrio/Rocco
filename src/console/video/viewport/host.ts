@@ -203,15 +203,17 @@ export class RoccoViewportHost {
       renderWidth = this.designWidth * scale;
       renderHeight = this.designHeight * scale;
 
-      const maxPanX = 0;
-      const minPanX = viewportWidth - renderWidth;
-      const maxPanY = 0;
-      const minPanY = viewportHeight - renderHeight;
+      const centeredOffsetX = (viewportWidth - renderWidth) / 2;
+      const centeredOffsetY = (viewportHeight - renderHeight) / 2;
+      const minPanX = viewportWidth - renderWidth - centeredOffsetX;
+      const maxPanX = -centeredOffsetX;
+      const minPanY = viewportHeight - renderHeight - centeredOffsetY;
+      const maxPanY = -centeredOffsetY;
       this.panX = Math.max(minPanX, Math.min(maxPanX, this.panX));
       this.panY = Math.max(minPanY, Math.min(maxPanY, this.panY));
 
-      offsetX = (viewportWidth - renderWidth) / 2 + this.panX;
-      offsetY = (viewportHeight - renderHeight) / 2 + this.panY;
+      offsetX = centeredOffsetX + this.panX;
+      offsetY = centeredOffsetY + this.panY;
     }
 
     this.stageElement.style.width = `${this.designWidth}px`;
@@ -346,12 +348,13 @@ export class RoccoViewportHost {
     const dy = event.clientY - this.panState.startY;
 
     if (!this.panState.active) {
-      if (Math.abs(dx) > this.panThreshold || Math.abs(dy) > this.panThreshold) {
-        this.panState.active = true;
-        event.preventDefault();
-        event.stopImmediatePropagation();
+      if (Math.abs(dx) <= this.panThreshold && Math.abs(dy) <= this.panThreshold) {
+        return;
       }
-      return;
+
+      this.panState.active = true;
+      event.preventDefault();
+      event.stopImmediatePropagation();
     }
 
     this.panX = this.panState.startPanX + dx;

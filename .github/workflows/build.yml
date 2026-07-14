@@ -9,10 +9,6 @@ on:
       - main
   workflow_dispatch:
 
-concurrency:
-  group: deploy-playtesting
-  cancel-in-progress: false
-
 jobs:
   quality:
     name: Quality gate
@@ -35,10 +31,7 @@ jobs:
         run: npm ci
 
       - name: Static analysis
-        run: npm run verify:static
-
-      - name: Run tests with coverage
-        run: npm run test:coverage
+        run: npm run verify
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v6
@@ -69,7 +62,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run verify
+        run: vite build
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@v6
@@ -180,6 +173,9 @@ jobs:
     needs: build-web
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    concurrency:
+      group: deploy-playtesting
+      cancel-in-progress: false
     environment:
       name: playtesting
     timeout-minutes: 15

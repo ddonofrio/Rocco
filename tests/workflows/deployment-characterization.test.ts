@@ -37,4 +37,21 @@ describe('Deployment workflow characterization', () => {
     expect(script).toContain('current');
     expect(script).toContain('integrity.sha256');
   });
+
+  it('CLOSE-011: deploy restores the previous release when the smoke test fails', async () => {
+    const script = await readFile(deployScriptPath, 'utf-8');
+    expect(script).toContain('PREVIOUS_TARGET=');
+    expect(script).toContain('Smoke test failed');
+    expect(script).toContain("readlink '${CURRENT_LINK}'");
+  });
+
+  it('CLOSE-011: deploy and rollback share a remote lock and cleanup trap', async () => {
+    const deployScript = await readFile(deployScriptPath, 'utf-8');
+    const rollbackScript = await readFile(join(repoRoot, 'scripts', 'rollback-web.sh'), 'utf-8');
+
+    expect(deployScript).toContain('.deploy-lock');
+    expect(deployScript).toContain('trap cleanup EXIT');
+    expect(rollbackScript).toContain('.deploy-lock');
+    expect(rollbackScript).toContain('trap cleanup EXIT');
+  });
 });

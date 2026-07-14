@@ -208,20 +208,12 @@ describe('RoccoDroppedInventoryController', () => {
     controller.syncActiveLevelPresentation(engine, level);
 
     expect(state.registeredActionMenuIds).toContain('rocco-dropped-coral-relic-action-menu');
-    expect(state.registeredTargets).toContainEqual(
-      expect.objectContaining({
-        instanceId: 'rocco-dropped-inventory-target:bait-shop-toilet:rocco-coral-relic',
-        shape: expect.objectContaining({
-          kind: 'rect',
-          width: expect.any(Number),
-          height: expect.any(Number),
-        }),
-      }),
-    );
     const target = state.registeredTargets.find(
       (entry) =>
         entry.instanceId === 'rocco-dropped-inventory-target:bait-shop-toilet:rocco-coral-relic',
     );
+    expect(target).toBeDefined();
+    expect(target?.shape.kind).toBe('rect');
     expect(target?.shape.width).toBeGreaterThan(17);
     expect(target?.shape.height).toBeGreaterThan(24);
   });

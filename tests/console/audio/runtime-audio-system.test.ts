@@ -198,10 +198,12 @@ describe('RoccoRuntimeAudioSystem', () => {
       expect(FakeAudioContext.instances[0]?.createdSources).toHaveLength(1);
     });
 
+    const ended = handle.ended;
     handle.stop();
 
     const context = FakeAudioContext.instances[0];
-    expect(context?.createdSources[0].onended).toBeTruthy();
+    await expect(ended).resolves.toBeUndefined();
+    expect(context?.createdSources[0].onended).toBeNull();
   });
 
   it('re-registering a sound invalidates a previously cached buffer', async () => {

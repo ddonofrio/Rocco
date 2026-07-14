@@ -124,6 +124,8 @@ A level can call it without arguments to request the cartridge-level restart beh
 
 The current Nether first screen uses this path so a local defeat can remount the same screen at its entry checkpoint without rebuilding the whole cartridge state.
 
+The manager now runs checkpoint restarts through a prepared transition commit. That keeps inventory runtime state, dropped items, scripted-sequence flags, and Nether map recreation behind one rollback boundary so a failed restart can remount the previous level instead of leaving partially reset cartridge state behind.
+
 ## Level IDs, Scene IDs, And Naming
 
 Use a stable naming convention:

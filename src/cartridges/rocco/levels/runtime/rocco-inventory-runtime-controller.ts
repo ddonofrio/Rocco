@@ -31,6 +31,13 @@ export interface RoccoInventoryRuntimeSceneClickResolution {
   actionResult?: RoccoCartridgeActionResult;
 }
 
+export interface RoccoInventoryRuntimeControllerSnapshot {
+  storages: ReadonlyArray<{
+    storageId: string;
+    items: readonly RoccoInventoryItem[];
+  }>;
+}
+
 interface RoccoStoredDroppedInventoryItem {
   item: RoccoInventoryItem;
   groundPoint: RoccoPoint;
@@ -101,6 +108,36 @@ export class RoccoInventoryRuntimeController {
   }
 
   resetRuntimeState(): void {
+    this.activeInventoryTransferSession = null;
+    this.activeInventoryTransferCloseHandler = null;
+  }
+
+  createSnapshot(): RoccoInventoryRuntimeControllerSnapshot {
+    return {
+      storages: [...this.inventoryStorages.values()].map((storage) => ({
+        storageId: storage.id,
+        items: storage.listItems(),
+      })),
+    };
+  }
+
+  restoreSnapshot(snapshot: RoccoInventoryRuntimeControllerSnapshot): void {
+    const snapshotStorageIds = new Set(snapshot.storages.map((storage) => storage.storageId));
+    for (const storage of this.inventoryStorages.values()) {
+      if (!snapshotStorageIds.has(storage.id)) {
+        storage.clear();
+      }
+    }
+
+    for (const storageSnapshot of snapshot.storages) {
+      const storage = this.inventoryStorages.get(storageSnapshot.storageId);
+      if (!storage) {
+        continue;
+      }
+
+      storage.replaceItems(storageSnapshot.items);
+    }
+
     this.activeInventoryTransferSession = null;
     this.activeInventoryTransferCloseHandler = null;
   }

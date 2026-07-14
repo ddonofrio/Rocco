@@ -364,7 +364,7 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
     const first = asManager(manager).switchToLevel('level-b');
     const second = asManager(manager).switchToLevel('level-b');
 
-    expect(await second).toBe(true);
+    expect(await second).toBe(false);
     expect(mountSpy).toHaveBeenCalledTimes(1);
 
     blocked.resolve(mockScene('scene-b'));

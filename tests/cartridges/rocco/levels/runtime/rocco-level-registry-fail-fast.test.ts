@@ -58,6 +58,25 @@ describe('RoccoLevelRegistry', () => {
     expect(secondInstance).not.toBe(firstInstance);
   });
 
+  it('prepareMapReset delays publication until commit and can restore the previous instances', () => {
+    const registry = new RoccoLevelRegistry({
+      compiledGame: new RpceGameCompiler().compile(compileGame([makeMap('map-a', ['level-1'])])),
+    });
+
+    const firstInstance = registry.requireLevel('level-1');
+    const preparedReset = registry.prepareMapReset('map-a');
+    const preparedInstance = preparedReset.requireLevel('level-1');
+
+    expect(registry.requireLevel('level-1')).toBe(firstInstance);
+    expect(preparedInstance).not.toBe(firstInstance);
+
+    preparedReset.commit();
+    expect(registry.requireLevel('level-1')).toBe(preparedInstance);
+
+    preparedReset.rollback();
+    expect(registry.requireLevel('level-1')).toBe(firstInstance);
+  });
+
   it('throws on duplicate map id', () => {
     expect(() =>
       new RoccoLevelRegistry({

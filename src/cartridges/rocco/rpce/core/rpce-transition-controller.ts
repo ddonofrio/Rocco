@@ -13,6 +13,11 @@ interface RpcePendingExitIntent {
   connectorId: string;
 }
 
+export interface RpceTransitionControllerSnapshot {
+  pendingExitIntent: RpcePendingExitIntent | null;
+  transitionCooldownMs: number;
+}
+
 export interface RpceResolvedLevelTransition {
   fromLevelId: string;
   connector: RpceLevelConnector;
@@ -48,6 +53,20 @@ export class RpceTransitionController {
 
   setCooldown(durationMs: number): void {
     this.transitionCooldownMs = Math.max(0, Math.round(durationMs));
+  }
+
+  createSnapshot(): RpceTransitionControllerSnapshot {
+    return {
+      pendingExitIntent: this.pendingExitIntent ? { ...this.pendingExitIntent } : null,
+      transitionCooldownMs: this.transitionCooldownMs,
+    };
+  }
+
+  restoreSnapshot(snapshot: RpceTransitionControllerSnapshot): void {
+    this.pendingExitIntent = snapshot.pendingExitIntent
+      ? { ...snapshot.pendingExitIntent }
+      : null;
+    this.transitionCooldownMs = Math.max(0, Math.round(snapshot.transitionCooldownMs));
   }
 
   update(level: RpceLevel | null, deltaMs: number): RpceResolvedLevelTransition | null {
@@ -147,4 +166,3 @@ export class RpceTransitionController {
     };
   }
 }
-

@@ -42,6 +42,7 @@ interface TestState {
   registeredSounds: Map<string, RoccoSoundDefinition>;
   playedSounds: Array<{ soundId: string; options?: RoccoSoundPlayOptions }>;
   inputEnabled: boolean;
+  inputLeases: string[];
   isSpriteMovingValue: boolean;
 }
 
@@ -54,6 +55,7 @@ function createState(overrides: Partial<TestState> = {}): TestState {
     registeredSounds: new Map(),
     playedSounds: [],
     inputEnabled: true,
+    inputLeases: [],
     isSpriteMovingValue: false,
     ...overrides,
   };
@@ -200,12 +202,20 @@ function createEngineMock(state: TestState): RoccoEngine {
     },
     isInputEnabled: () => state.inputEnabled,
     getInputMode: () => (state.inputEnabled ? 'interactive' : 'blocked'),
-    acquireInputLease: () => ({
-      ownerId: 'test',
-      mode: 'blocked' as const,
-      acquiredAt: 0,
-      dispose() {},
-    }),
+    acquireInputLease: (ownerId: string) => {
+      state.inputLeases.push(ownerId);
+      return {
+        ownerId,
+        mode: 'blocked' as const,
+        acquiredAt: 0,
+        dispose() {
+          const index = state.inputLeases.indexOf(ownerId);
+          if (index !== -1) {
+            state.inputLeases.splice(index, 1);
+          }
+        },
+      };
+    },
     beginCompositionSession: () => ({
       id: 'test',
       ownerId: 'test',
@@ -300,5 +310,26 @@ describe('RoccoBaitShopSecondLevel', () => {
         volume: 0.21,
       },
     });
+  });
+
+  it('releases the scripted interaction lease after walking into the toilet transition', async () => {
+    const state = createState();
+    const engine = createEngineMock(state);
+    const onConnectorTransitionRequested = vi.fn(() => true);
+    const level = new RoccoBaitShopSecondLevel(createRoccoLocalization('es'));
+
+    await level.mount(engine, {
+      onConnectorTransitionRequested,
+    });
+
+    (level as unknown as { walkIntoToilet: () => void }).walkIntoToilet();
+
+    expect(state.inputLeases).toContain('scripted-scene-interaction');
+
+    state.isSpriteMovingValue = false;
+    level.update(16);
+
+    expect(onConnectorTransitionRequested).toHaveBeenCalledWith('toilet-door');
+    expect(state.inputLeases).not.toContain('scripted-scene-interaction');
   });
 });

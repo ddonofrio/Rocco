@@ -77,6 +77,12 @@ interface RoccoDeveloperSpriteCyclePreview {
   frame: RoccoSpriteFrame;
 }
 
+export interface RoccoDeveloperRuntimeSnapshot {
+  allowToiletReuseDuringUrgency: boolean;
+  developerJumpPending: boolean;
+  developerEventScreenSelectionId: string | null;
+}
+
 export interface RoccoDeveloperRuntimeControllerOptions {
   localization: RoccoLocalization;
   inventory: RoccoInventory;
@@ -140,6 +146,31 @@ export class RoccoDeveloperRuntimeController {
     }
 
     return `${baseStatus} | ${this.localization.text.developer.clickToJumpStatus}`;
+  }
+
+  createSnapshot(): RoccoDeveloperRuntimeSnapshot {
+    return {
+      allowToiletReuseDuringUrgency: this.developerEvents.allowToiletReuseDuringUrgency,
+      developerJumpPending: this.developerJumpPending,
+      developerEventScreenSelectionId: this.developerEventScreenSelectionId,
+    };
+  }
+
+  restoreSnapshot(
+    snapshot: RoccoDeveloperRuntimeSnapshot,
+    engine?: RoccoEngine | null,
+  ): void {
+    const eventChanged =
+      this.developerEvents.allowToiletReuseDuringUrgency !==
+      snapshot.allowToiletReuseDuringUrgency;
+    this.deactivateSpriteCycleMode(engine);
+    this.developerJumpPending = snapshot.developerJumpPending;
+    this.developerEventScreenSelectionId = snapshot.developerEventScreenSelectionId;
+    this.developerEvents.allowToiletReuseDuringUrgency =
+      snapshot.allowToiletReuseDuringUrgency;
+    if (eventChanged) {
+      this.options.onToiletReuseEventChanged?.();
+    }
   }
 
   resetRuntimeState(engine?: RoccoEngine | null): void {

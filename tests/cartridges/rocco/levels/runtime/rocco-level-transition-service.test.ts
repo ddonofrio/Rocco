@@ -26,48 +26,60 @@ function createMockLevel(levelId: string): {
 }
 
 function createMockEngine() {
+  const failedCompositions: unknown[] = [];
+  const disposedCompositions: string[] = [];
+  const releasedLeases: string[] = [];
+  const logCalls: string[] = [];
   return {
-    acquireInputLease() {
-      return {
-        ownerId: 'level-transition',
-        mode: 'blocked' as const,
-        acquiredAt: 0,
-        dispose() {
-          // noop
-        },
-      };
+    engine: {
+      acquireInputLease(ownerId: string) {
+        return {
+          ownerId,
+          mode: 'blocked' as const,
+          acquiredAt: 0,
+          dispose() {
+            releasedLeases.push(ownerId);
+          },
+        };
+      },
+      beginCompositionSession(ownerId: string) {
+        return {
+          id: 'composition-1',
+          ownerId,
+          message: 'LOADING 0%',
+          status: 'active' as const,
+          report() {
+            // noop
+          },
+          fail(error: unknown) {
+            failedCompositions.push(error);
+          },
+          dispose() {
+            disposedCompositions.push(ownerId);
+          },
+        };
+      },
+      log(_channel: string, message: string) {
+        logCalls.push(message);
+      },
     },
-    beginCompositionSession() {
-      return {
-        id: 'composition-1',
-        ownerId: 'level-transition',
-        message: 'LOADING 0%',
-        status: 'active' as const,
-        report() {
-          // noop
-        },
-        fail() {
-          // noop
-        },
-        dispose() {
-          // noop
-        },
-      };
-    },
-    log() {
-      // noop
+    state: {
+      failedCompositions,
+      disposedCompositions,
+      releasedLeases,
+      logCalls,
     },
   };
 }
 
 describe('RoccoLevelTransitionService', () => {
-  it('resolves the target after preCommit so reset flows can mount a fresh level instance', async () => {
-    const engine = createMockEngine();
+  it('prepares the target before commit so reset flows can mount a fresh level instance', async () => {
+    const { engine } = createMockEngine();
     const currentLevel = createMockLevel('current-level');
     const staleTarget = createMockLevel('restart-target');
     const freshTarget = createMockLevel('restart-target');
     let activeLevel: RoccoLevel | null = currentLevel.level;
-    let resolvedTarget = staleTarget.level;
+    let preparedTarget = staleTarget.level;
 
     const service = new RoccoLevelTransitionService({
       getEngine: () => engine as never,
@@ -78,27 +90,126 @@ describe('RoccoLevelTransitionService', () => {
       createMountOptions: () => ({}),
     });
 
-    const preCommit = vi.fn(() => {
-      resolvedTarget = freshTarget.level;
-    });
-    const resolveTarget = vi.fn(() => resolvedTarget);
-
+    const commit = vi.fn();
     const result = await service.run({
       id: 'restart-target',
-      resolveTarget,
-      buildMountOptions: () => ({}),
-      preCommit,
-      onCommitted: vi.fn(),
+      prepare: () => {
+        preparedTarget = freshTarget.level;
+        return {
+          targetLevel: preparedTarget,
+          mountOptions: {},
+          commit,
+          rollback: vi.fn(),
+          onCommitted: vi.fn(),
+        };
+      },
     });
 
     expect(result).toBe(true);
-    expect(preCommit).toHaveBeenCalledTimes(1);
-    expect(resolveTarget).toHaveBeenCalledTimes(1);
-    expect(preCommit.mock.invocationCallOrder[0]).toBeLessThan(
-      resolveTarget.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
-    );
+    expect(commit).toHaveBeenCalledTimes(1);
     expect(staleTarget.mount).not.toHaveBeenCalled();
     expect(freshTarget.mount).toHaveBeenCalledTimes(1);
     expect(activeLevel).toBe(freshTarget.level);
+  });
+
+  it('keeps the current level untouched when prepare fails before commit', async () => {
+    const { engine } = createMockEngine();
+    const currentLevel = createMockLevel('current-level');
+    let activeLevel: RoccoLevel | null = currentLevel.level;
+
+    const service = new RoccoLevelTransitionService({
+      getEngine: () => engine as never,
+      getActiveLevel: () => activeLevel,
+      setActiveLevel: (level) => {
+        activeLevel = level;
+      },
+      createMountOptions: () => ({}),
+    });
+
+    const result = await service.run({
+      id: 'broken-prepare',
+      prepare: () => {
+        throw new Error('prepare failed');
+      },
+    });
+
+    expect(result).toBe(false);
+    expect(activeLevel).toBe(currentLevel.level);
+    expect(currentLevel.unmount).not.toHaveBeenCalled();
+    expect(currentLevel.mount).not.toHaveBeenCalled();
+  });
+
+  it('rolls back and remounts the current level when the target mount fails', async () => {
+    const { engine } = createMockEngine();
+    const currentLevel = createMockLevel('current-level');
+    const targetLevel = createMockLevel('target-level');
+    targetLevel.mount.mockRejectedValue(new Error('mount failed'));
+    let activeLevel: RoccoLevel | null = currentLevel.level;
+
+    const service = new RoccoLevelTransitionService({
+      getEngine: () => engine as never,
+      getActiveLevel: () => activeLevel,
+      setActiveLevel: (level) => {
+        activeLevel = level;
+      },
+      createMountOptions: () => ({}),
+    });
+
+    const rollback = vi.fn();
+    const onRolledBack = vi.fn();
+    const result = await service.run({
+      id: 'target-failure',
+      prepare: () => ({
+        targetLevel: targetLevel.level,
+        mountOptions: {},
+        commit: vi.fn(),
+        rollback,
+        onCommitted: vi.fn(),
+        onRolledBack,
+      }),
+    });
+
+    expect(result).toBe(false);
+    expect(rollback).toHaveBeenCalledTimes(1);
+    expect(targetLevel.unmount).toHaveBeenCalledTimes(1);
+    expect(currentLevel.mount).toHaveBeenCalledTimes(1);
+    expect(onRolledBack).toHaveBeenCalledTimes(1);
+    expect(activeLevel).toBe(currentLevel.level);
+  });
+
+  it('enters a fatal state when rollback cannot restore the previous level', async () => {
+    const { engine, state } = createMockEngine();
+    const currentLevel = createMockLevel('current-level');
+    const targetLevel = createMockLevel('target-level');
+    targetLevel.mount.mockRejectedValue(new Error('mount failed'));
+    currentLevel.mount.mockRejectedValue(new Error('restore failed'));
+    let activeLevel: RoccoLevel | null = currentLevel.level;
+
+    const service = new RoccoLevelTransitionService({
+      getEngine: () => engine as never,
+      getActiveLevel: () => activeLevel,
+      setActiveLevel: (level) => {
+        activeLevel = level;
+      },
+      createMountOptions: () => ({}),
+    });
+
+    const result = await service.run({
+      id: 'fatal-rollback',
+      prepare: () => ({
+        targetLevel: targetLevel.level,
+        mountOptions: {},
+        commit: vi.fn(),
+        rollback: vi.fn(),
+        onCommitted: vi.fn(),
+      }),
+    });
+
+    expect(result).toBe(false);
+    expect(service.currentPhase).toBe('fatal');
+    expect(activeLevel).toBeNull();
+    expect(state.failedCompositions).toHaveLength(1);
+    expect(state.releasedLeases).toHaveLength(0);
+    expect(state.disposedCompositions).toHaveLength(0);
   });
 });

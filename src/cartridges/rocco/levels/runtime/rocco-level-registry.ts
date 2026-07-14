@@ -5,6 +5,15 @@ export interface RoccoLevelRegistryOptions {
   compiledGame: RpceCompiledGame<RoccoLevel>;
 }
 
+export interface RoccoPreparedLevelMapReset {
+  readonly mapId: string;
+  readonly levelIds: readonly string[];
+
+  requireLevel(levelId: string): RoccoLevel;
+  commit(): void;
+  rollback(): void;
+}
+
 export class RoccoLevelRegistry {
   private readonly levels = new Map<string, RoccoLevel>();
   private readonly mapsById = new Map<string, RpceCompiledMap>();
@@ -31,17 +40,56 @@ export class RoccoLevelRegistry {
     return [...this.levels.values()];
   }
 
-  resetMap(mapId: string): void {
+  prepareMapReset(mapId: string): RoccoPreparedLevelMapReset {
     const map = this.mapsById.get(mapId);
     if (!map) {
       throw new Error(`Map '${mapId}' is not registered.`);
     }
 
-    for (const levelId of map.levelIds) {
-      this.levels.delete(levelId);
-    }
+    const previousLevels = map.levelIds.map((levelId) => {
+      const level = this.levels.get(levelId);
+      if (!level) {
+        throw new Error(`Map '${mapId}' level '${levelId}' is not registered.`);
+      }
 
-    this.registerLevels(this.instantiateMapLevels(map));
+      return level;
+    });
+    const nextLevels = this.instantiateMapLevels(map);
+    const nextLevelsById = new Map(nextLevels.map((level) => [level.id, level]));
+    let committed = false;
+
+    return {
+      mapId,
+      levelIds: [...map.levelIds],
+      requireLevel: (levelId) => {
+        const level = nextLevelsById.get(levelId);
+        if (!level) {
+          throw new Error(`Prepared map '${mapId}' does not contain level '${levelId}'.`);
+        }
+
+        return level;
+      },
+      commit: () => {
+        if (committed) {
+          return;
+        }
+
+        this.replaceLevels(map.levelIds, nextLevels);
+        committed = true;
+      },
+      rollback: () => {
+        if (!committed) {
+          return;
+        }
+
+        this.replaceLevels(map.levelIds, previousLevels);
+        committed = false;
+      },
+    };
+  }
+
+  resetMap(mapId: string): void {
+    this.prepareMapReset(mapId).commit();
   }
 
   private instantiateMapLevels(map: RpceCompiledMap): readonly RoccoLevel[] {
@@ -62,5 +110,13 @@ export class RoccoLevelRegistry {
       }
       this.levels.set(level.id, level);
     }
+  }
+
+  private replaceLevels(levelIds: readonly string[], nextLevels: readonly RoccoLevel[]): void {
+    for (const levelId of levelIds) {
+      this.levels.delete(levelId);
+    }
+
+    this.registerLevels(nextLevels);
   }
 }

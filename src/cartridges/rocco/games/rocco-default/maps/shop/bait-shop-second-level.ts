@@ -540,7 +540,6 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       targetInstanceId: BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID,
       moveTo: { ...BAIT_SHOP_TOILET_DOOR_GROUND_POINT },
       facing: 'up',
-      restoreInputOnComplete: false,
       onReached: () => {
         const transitioned =
           this.onConnectorTransitionRequested?.(BAIT_SHOP_TOILET_CONNECTOR_ID) ?? false;

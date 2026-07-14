@@ -94,7 +94,7 @@ export class RoccoScriptedSceneInteractionController {
   }
 
   cancel(): void {
-    if (!this.activeInteraction) {
+    if (!this.activeInteraction && !this.inputLease) {
       return;
     }
 

@@ -39,6 +39,13 @@ interface RoccoPendingBaitShopDoorUse {
   levelId: string;
 }
 
+export interface RoccoScriptedSequenceControllerSnapshot {
+  stanPoliceDefeat: StanPoliceDefeatSequence | null;
+  baitShopDoorEntry: BaitShopDoorEntrySequence | null;
+  stanMoneyExchange: StanMoneyExchangeSequence | null;
+  pendingBaitShopDoorUse: RoccoPendingBaitShopDoorUse | null;
+}
+
 export interface RoccoScriptedSequenceControllerOptions {
   localization: RoccoLocalization;
   onRestartRequested?: () => void;
@@ -84,6 +91,26 @@ export class RoccoScriptedSequenceController {
 
   hasPendingBaitShopDoorUse(): boolean {
     return this.pendingBaitShopDoorUse !== null;
+  }
+
+  createSnapshot(): RoccoScriptedSequenceControllerSnapshot {
+    return {
+      stanPoliceDefeat: this.stanPoliceDefeat ? { ...this.stanPoliceDefeat } : null,
+      baitShopDoorEntry: this.baitShopDoorEntry ? { ...this.baitShopDoorEntry } : null,
+      stanMoneyExchange: this.stanMoneyExchange ? { ...this.stanMoneyExchange } : null,
+      pendingBaitShopDoorUse: this.pendingBaitShopDoorUse
+        ? { ...this.pendingBaitShopDoorUse }
+        : null,
+    };
+  }
+
+  restoreSnapshot(snapshot: RoccoScriptedSequenceControllerSnapshot): void {
+    this.stanPoliceDefeat = snapshot.stanPoliceDefeat ? { ...snapshot.stanPoliceDefeat } : null;
+    this.baitShopDoorEntry = snapshot.baitShopDoorEntry ? { ...snapshot.baitShopDoorEntry } : null;
+    this.stanMoneyExchange = snapshot.stanMoneyExchange ? { ...snapshot.stanMoneyExchange } : null;
+    this.pendingBaitShopDoorUse = snapshot.pendingBaitShopDoorUse
+      ? { ...snapshot.pendingBaitShopDoorUse }
+      : null;
   }
 
   resetRuntimeState(engine?: RoccoEngine | null): void {

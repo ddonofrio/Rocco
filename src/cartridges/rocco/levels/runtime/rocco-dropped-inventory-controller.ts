@@ -30,6 +30,14 @@ interface RoccoPendingDroppedInventoryPickup {
   itemId: string;
 }
 
+export interface RoccoDroppedInventoryControllerSnapshot {
+  droppedInventoryItemsByLevel: ReadonlyArray<
+    readonly [string, readonly RoccoDroppedInventoryItemState[]]
+  >;
+  pendingDroppedInventoryPickup: RoccoPendingDroppedInventoryPickup | null;
+  coralRelicRefuseIndex: number;
+}
+
 export interface RoccoDroppedInventoryControllerOptions {
   localization: RoccoLocalization;
   resolvePlayerGroundPoint: () => RoccoPoint | undefined;
@@ -67,6 +75,42 @@ export class RoccoDroppedInventoryController {
 
   resetRuntimeState(): void {
     this.pendingDroppedInventoryPickup = null;
+  }
+
+  createSnapshot(): RoccoDroppedInventoryControllerSnapshot {
+    return {
+      droppedInventoryItemsByLevel: [...this.droppedInventoryItemsByLevel.entries()].map(
+        ([levelId, items]) => [
+          levelId,
+          items.map((item) => ({
+            item: structuredClone(item.item),
+            groundPoint: { ...item.groundPoint },
+          })),
+        ] as const,
+      ),
+      pendingDroppedInventoryPickup: this.pendingDroppedInventoryPickup
+        ? { ...this.pendingDroppedInventoryPickup }
+        : null,
+      coralRelicRefuseIndex: this.coralRelicRefuseIndex,
+    };
+  }
+
+  restoreSnapshot(snapshot: RoccoDroppedInventoryControllerSnapshot): void {
+    this.droppedInventoryItemsByLevel.clear();
+    for (const [levelId, items] of snapshot.droppedInventoryItemsByLevel) {
+      this.droppedInventoryItemsByLevel.set(
+        levelId,
+        items.map((item) => ({
+          item: structuredClone(item.item),
+          groundPoint: { ...item.groundPoint },
+        })),
+      );
+    }
+
+    this.pendingDroppedInventoryPickup = snapshot.pendingDroppedInventoryPickup
+      ? { ...snapshot.pendingDroppedInventoryPickup }
+      : null;
+    this.coralRelicRefuseIndex = Math.max(0, Math.floor(snapshot.coralRelicRefuseIndex));
   }
 
   clearLevelItemsWhere(predicate: (levelId: string) => boolean): void {

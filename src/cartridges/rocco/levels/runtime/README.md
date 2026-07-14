@@ -8,6 +8,7 @@ These files are not generic console systems. They are the legacy compatibility p
 
 - `rocco-level-registry.ts` - Creates and stores the level instances used by the cartridge from the compiled game graph (`CompiledGame`). It instantiates levels from `compiledGame.levelsById` and re-creates a map on `resetMap(mapId)` (used for Nether re-creation during checkpoint restores). It no longer owns any game-specific map concept.
 - `rocco-level-transition-controller.ts` - Wraps the generic `RpceTransitionController` and resolves connector endpoints through the compiled graph's indexed `transitionsByEndpoint`. It keeps pending exit intent, connector hit resolution, scripted connector resolution, and transition cooldown state in one compatibility controller. It does not import a flat global connection list.
+- `rocco-level-transition-service.ts` - Runs prepared level switches under a transition lease and composition overlay. It separates prepare, commit, and rollback so restart flows can rebuild target maps transactionally and remount the previous level if the target publish fails.
 - `rocco-scene-action-router.ts` - Builds the interaction context, runs the staged interaction registry dispatch, keeps the blocking-sequence guard, and updates exit intent at the correct point in the scene-click pipeline.
 - `rocco-inventory-runtime-controller.ts` - Owns player inventory storage, storage-transfer sessions, carried-item routing, item fusion coordination, and world-drop handoff.
 - `rocco-dropped-inventory-controller.ts` - Owns per-level dropped-item state, dropped-item presentation, and pickup flow.
@@ -30,6 +31,7 @@ The current runtime layer covers:
 - Connector-to-connector graph traversal.
 - Exit-intent tracking from scene clicks.
 - Transition cooldown enforcement.
+- Transactional level switching with rollback and fatal-transition escalation.
 - Interaction-context assembly plus staged dispatch into the distributed interaction registry.
 - Inventory storage and transfer orchestration.
 - Carried-item scene-click handling and world drops.

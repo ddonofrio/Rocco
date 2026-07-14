@@ -31,17 +31,18 @@ function createWindow() {
     return { action: 'deny' };
   });
 
-  Menu.setApplicationMenu(undefined);
+  Menu.setApplicationMenu(null);
   void window.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
 }
 
-await app.whenReady();
-createWindow();
+app.whenReady().then(() => {
+  createWindow();
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
 });
 
 app.on('window-all-closed', () => {

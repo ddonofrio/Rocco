@@ -6,7 +6,7 @@ import type { RoccoSceneTargetDefinition } from '../../../src/console/video/scen
 
 describe('RoccoRuntimeDefaultPlayerMovePolicyCoordinator', () => {
   const coordinator = new RoccoRuntimeDefaultPlayerMovePolicyCoordinator({
-    getSceneTarget: () => undefined,
+    getSceneTarget: () => {},
   });
 
   it('COR-002: a synchronous disposition with defaultPlayerMovement:suppress suppresses movement', () => {
@@ -58,11 +58,11 @@ describe('RoccoRuntimeDefaultPlayerMovePolicyCoordinator', () => {
       getSceneTarget: () => sceneTarget,
     });
 
-    const result = coordinatorWithTarget.shouldSuppressDefaultPlayerMove({
+    const isResult = coordinatorWithTarget.shouldSuppressDefaultPlayerMove({
       target: { kind: 'scene-target', instanceId: 'bait-shop-door', definitionId: 'bait-shop-door' },
       cartridgeDisposition: null,
     });
 
-    expect(result).toBe(true);
+    expect(isResult).toBe(true);
   });
 });

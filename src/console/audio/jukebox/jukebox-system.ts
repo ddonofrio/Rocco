@@ -22,7 +22,7 @@ interface TrackState {
 }
 
 function createDeferred<T>(): Deferred<T> {
-  let resolved = false;
+  let isResolved = false;
   let resolvePromise!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((resolve) => {
     resolvePromise = resolve;
@@ -31,10 +31,10 @@ function createDeferred<T>(): Deferred<T> {
   return {
     promise,
     resolve(value) {
-      if (resolved) {
+      if (isResolved) {
         return;
       }
-      resolved = true;
+      isResolved = true;
       resolvePromise(value);
     },
   };
@@ -106,7 +106,7 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     }
 
     if (context.state === 'suspended') {
-      await context.resume().catch(() => undefined);
+      await context.resume().catch(() => {});
     }
 
     if (signal.aborted || !this.isActivePlayback(playback)) {
@@ -240,7 +240,7 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     if (!context || context.state === 'running') {
       return;
     }
-    void context.resume().catch(() => undefined);
+    void context.resume().catch(() => {});
   }
 
   destroy(): void {
@@ -251,7 +251,7 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     this.masterGain = null;
     this.loadController = null;
     if (context) {
-      void context.close().catch(() => undefined);
+      void context.close().catch(() => {});
     }
   }
 
@@ -295,7 +295,7 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
       this.playSegment(playback, trackState, segment, safeFadeDuration);
 
       const timeUntilNextSchedule = Math.max(0, (segmentDuration - safeFadeDuration) * 1000);
-      this.scheduleTimeoutId = window.setTimeout(() => {
+      this.scheduleTimeoutId = globalThis.setTimeout(() => {
         if (!this.isActivePlayback(playback)) {
           return;
         }
@@ -323,8 +323,8 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     const duration = segment.end - segment.start;
 
     // Shift current to previous (will fade out)
-    const prevSource = this.currentSource;
-    const prevGain = this.currentGain;
+    const previousSource = this.currentSource;
+    const previousGain = this.currentGain;
 
     // Create new source and gain for this segment
     const source = context.createBufferSource();
@@ -352,15 +352,15 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     this.currentGain = gain;
 
     // Fade out previous source if exists
-    if (prevSource && prevGain) {
-      prevGain.gain.cancelScheduledValues(now);
-      prevGain.gain.setValueAtTime(prevGain.gain.value, now);
-      prevGain.gain.linearRampToValueAtTime(0, now + fadeDuration);
+    if (previousSource && previousGain) {
+      previousGain.gain.cancelScheduledValues(now);
+      previousGain.gain.setValueAtTime(previousGain.gain.value, now);
+      previousGain.gain.linearRampToValueAtTime(0, now + fadeDuration);
       
       // Stop and clean up previous source after fade out
-      const timeoutId = window.setTimeout(() => {
+      const timeoutId = globalThis.setTimeout(() => {
         this.cleanupTimeoutIds.delete(timeoutId);
-        this.stopSource(prevSource);
+        this.stopSource(previousSource);
       }, fadeDuration * 1000);
       this.cleanupTimeoutIds.add(timeoutId);
     }

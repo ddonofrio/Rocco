@@ -80,17 +80,17 @@ export const spanishMiddleLevelText: RoccoTextCatalog['middleLevel'] = {
 export const spanishPierDoorText: RoccoTextCatalog['pierDoor'] = {
   lookWithKeyLines: [
     'Tiene una cerradura donde parece encajar una de estas llaves.',
-    'Creo que podr\u00eda abrirla.',
-    'Podr\u00eda usar las llaves de mi inventario.',
+    'Creo que podr\u{ED}a abrirla.',
+    'Podr\u{ED}a usar las llaves de mi inventario.',
   ],
   lookWithoutKeyLines: [
     'Es una puerta cerrada.',
     'Parece la entrada de la tienda.',
-    'Me pregunto qu\u00e9 vender\u00e1n.',
+    'Me pregunto qu\u{E9} vender\u{E1}n.',
   ],
   openWithKeyLines: [
     'Creo que en el bolsillo tengo las llaves.',
-    'Podr\u00eda probarlas desde el inventario.',
+    'Podr\u{ED}a probarlas desde el inventario.',
   ],
   openWithoutKeyLines: [
     'No va a abrirse sola.',
@@ -107,8 +107,8 @@ export const spanishPierDoorText: RoccoTextCatalog['pierDoor'] = {
     'No. Que el viejo siga dormido.',
   ],
   kickAwakeLines: [
-    'Hay un polic\u00eda en la esquina, no quiero ir preso.',
-    'Con un polic\u00eda en la esquina, patear esa puerta es mala idea.',
+    'Hay un polic\u{ED}a en la esquina, no quiero ir preso.',
+    'Con un polic\u{ED}a en la esquina, patear esa puerta es mala idea.',
     'No gracias. Hoy prefiero no acabar detenido.',
   ],
 };

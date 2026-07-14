@@ -371,9 +371,9 @@ export class RoccoInventoryRuntimeController {
     }
 
     if (activation.interaction === 'carry') {
-      const committed = this.activeInventoryTransferSession.commitMenuItems(activation.items);
+      const isCommitted = this.activeInventoryTransferSession.commitMenuItems(activation.items);
       engine.video.gridMenus.clearCarriedItem();
-      if (!committed) {
+      if (!isCommitted) {
         engine.video.gridMenus.openMenu(
           this.activeInventoryTransferSession.createGridMenuDefinition(),
         );
@@ -386,8 +386,8 @@ export class RoccoInventoryRuntimeController {
     }
 
     if (activation.interaction === 'place') {
-      const committed = this.activeInventoryTransferSession.commitMenuItems(activation.items);
-      if (!committed) {
+      const isCommitted = this.activeInventoryTransferSession.commitMenuItems(activation.items);
+      if (!isCommitted) {
         engine.video.gridMenus.openMenu(
           this.activeInventoryTransferSession.createGridMenuDefinition(),
         );

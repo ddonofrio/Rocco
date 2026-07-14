@@ -41,7 +41,7 @@ export class RoccoBuildBadgeRenderer {
       return;
     }
 
-    this.hostElement.appendChild(this.badgeElement);
+    this.hostElement.append(this.badgeElement);
     this.mounted = true;
   }
 

@@ -108,7 +108,7 @@ export class RoccoCursorHost {
     this.attachmentElement.style.objectFit = 'contain';
     this.attachmentElement.style.transform = 'translate(-50%, -50%)';
     this.attachmentElement.style.filter = 'drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7))';
-    this.cursorElement.appendChild(this.attachmentElement);
+    this.cursorElement.append(this.attachmentElement);
 
     this.createLine('top');
     this.createLine('right');
@@ -124,7 +124,7 @@ export class RoccoCursorHost {
 
     this.previousCursorStyle = this.rootElement.style.cursor;
     this.rootElement.style.cursor = this.profile.enabled ? 'none' : this.previousCursorStyle;
-    this.rootElement.appendChild(this.cursorElement);
+    this.rootElement.append(this.cursorElement);
     this.rootElement.addEventListener('pointermove', this.onPointerMove);
     this.rootElement.addEventListener('pointerleave', this.onPointerLeave);
     this.rootElement.addEventListener('pointerdown', this.onPointerDown);
@@ -196,7 +196,7 @@ export class RoccoCursorHost {
     line.style.position = 'absolute';
     line.style.display = 'block';
     line.style.pointerEvents = 'none';
-    this.cursorElement.appendChild(line);
+    this.cursorElement.append(line);
     this.lineElements.set(position, line);
   }
 

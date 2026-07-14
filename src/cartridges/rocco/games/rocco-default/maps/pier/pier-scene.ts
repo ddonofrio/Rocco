@@ -143,13 +143,13 @@ function normalizeDefaultRoccoScene(
   scene: RoccoPlaneScene,
   options: RoccoPierSceneOptions,
 ): { scene: RoccoPlaneScene; changed: boolean } {
-  let changed = false;
+  let isChanged = false;
   const defaultPlanes = createDefaultRoccoPlanes(options);
   const currentPlanes = new Map(scene.planes.map((plane) => [plane.id, plane]));
   const normalizedDefaultPlanes = defaultPlanes.map((defaultPlane) => {
     const currentPlane = currentPlanes.get(defaultPlane.id);
     if (!currentPlane || !hasSameJsonShape(currentPlane, defaultPlane)) {
-      changed = true;
+      isChanged = true;
       return defaultPlane;
     }
 
@@ -158,7 +158,7 @@ function normalizeDefaultRoccoScene(
   const customPlanes = scene.planes.filter((plane) => !DEFAULT_PLANE_IDS.has(plane.id));
   const nextPlanes = [...normalizedDefaultPlanes, ...customPlanes];
   if (!hasSameJsonShape(scene.planes, nextPlanes)) {
-    changed = true;
+    isChanged = true;
   }
 
   const nextScene: RoccoPlaneScene = {
@@ -171,8 +171,8 @@ function normalizeDefaultRoccoScene(
     attributeMaps: scene.attributeMaps ?? [],
   };
 
-  const sceneChanged = !hasSameJsonShape(scene, nextScene);
-  if (!changed && !sceneChanged) {
+  const isSceneChanged = !hasSameJsonShape(scene, nextScene);
+  if (!isChanged && !isSceneChanged) {
     return { scene, changed: false };
   }
 

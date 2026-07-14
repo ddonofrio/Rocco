@@ -70,7 +70,7 @@ export function resolveRuntimeSceneTargets(
     options.renderables.map((renderable, index) => [renderable.instance.id, index] as const),
   );
   const runtimePlanesById = new Map(
-    options.runtimeScene?.planes.map((plane) => [plane.id, plane] as const) ?? [],
+    options.runtimeScene?.planes.map((plane) => [plane.id, plane] as const),
   );
   const planeOccluders = options.runtimeScene
     ? listRuntimePlaneOccluders(options.runtimeScene, options.resolveRenderLayerZIndex)
@@ -440,7 +440,7 @@ function isPointOnOpaquePlanePixel(
         samplePoint.y < height
       );
     }
-    case 'image':
+    case 'image': {
       return isPointOnOpaqueImagePlanePixel(
         plane,
         plane.source,
@@ -448,10 +448,12 @@ function isPointOnOpaquePlanePixel(
         localPoint.y,
         planeAlphaMasks,
       );
+    }
     case 'bitmap':
     case 'tileset':
-    default:
+    default: {
       return false;
+    }
   }
 }
 

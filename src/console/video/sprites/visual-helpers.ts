@@ -220,7 +220,7 @@ function loadImage(uri: string): Promise<HTMLImageElement> {
   }
 
   return new Promise((resolve, reject) => {
-    image.onload = () => resolve(image);
+    image.addEventListener('load', () => resolve(image));
     image.onerror = () => reject(new Error(`Could not load sprite image '${uri}'.`));
   });
 }

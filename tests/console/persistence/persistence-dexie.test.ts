@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { RoccoDatabase } from '../../../src/console/persistence/db';
 import { DexieSaveStore } from '../../../src/console/persistence/store';
-import { createSaveRepository } from '../../../src/console/persistence/save-repository';
+import { createSaveRepository as createSaveRepo } from '../../../src/console/persistence/save-repository';
 import type {
   CartridgeSaveProvider,
   SaveEnvelopeRow,
@@ -80,10 +80,10 @@ describe('Dexie persistence with real IndexedDB', () => {
     });
 
     it('saves and loads a scene through the real database', async () => {
-      const db = new RoccoDatabase();
+      const database = new RoccoDatabase();
       const scene = makeScene();
 
-      await db.scenes_v4.put({
+      await database.scenes_v4.put({
         id: 'cart:scene-1',
         cartridgeId: 'cart',
         sceneId: 'scene-1',
@@ -91,16 +91,16 @@ describe('Dexie persistence with real IndexedDB', () => {
         updatedAt: Date.now(),
       });
 
-      const row = await db.scenes_v4.get(['cart', 'scene-1']);
+      const row = await database.scenes_v4.get(['cart', 'scene-1']);
       expect(row).toBeDefined();
       expect(row?.sceneId).toBe('scene-1');
       expect(row?.scene.planes[0].id).toBe('plane-1');
     });
 
     it('does not collide between cartridges with the same scene id', async () => {
-      const db = new RoccoDatabase();
+      const database = new RoccoDatabase();
 
-      await db.scenes_v4.put({
+      await database.scenes_v4.put({
         id: 'cart-a:scene-1',
         cartridgeId: 'cart-a',
         sceneId: 'scene-1',
@@ -108,7 +108,7 @@ describe('Dexie persistence with real IndexedDB', () => {
         updatedAt: Date.now(),
       });
 
-      await db.scenes_v4.put({
+      await database.scenes_v4.put({
         id: 'cart-b:scene-1',
         cartridgeId: 'cart-b',
         sceneId: 'scene-1',
@@ -116,8 +116,8 @@ describe('Dexie persistence with real IndexedDB', () => {
         updatedAt: Date.now(),
       });
 
-      const rowA = await db.scenes_v4.get(['cart-a', 'scene-1']);
-      const rowB = await db.scenes_v4.get(['cart-b', 'scene-1']);
+      const rowA = await database.scenes_v4.get(['cart-a', 'scene-1']);
+      const rowB = await database.scenes_v4.get(['cart-b', 'scene-1']);
 
       expect(rowA?.cartridgeId).toBe('cart-a');
       expect(rowB?.cartridgeId).toBe('cart-b');
@@ -128,9 +128,9 @@ describe('Dexie persistence with real IndexedDB', () => {
 
   describe('save store', () => {
     it('increments revision on each save', async () => {
-      const db = new RoccoDatabase();
-      const store = new DexieSaveStore(db);
-      const repo = createSaveRepository<TestState>({
+      const database = new RoccoDatabase();
+      const store = new DexieSaveStore(database);
+      const repo = createSaveRepo<TestState>({
         cartridgeId: 'cart',
         cartridgeVersion: '1.0.0',
         provider: makeProvider(1),
@@ -143,9 +143,9 @@ describe('Dexie persistence with real IndexedDB', () => {
     });
 
     it('rejects a stale expectedRevision when the slot does not exist', async () => {
-      const db = new RoccoDatabase();
-      const store = new DexieSaveStore(db);
-      const repo = createSaveRepository<TestState>({
+      const database = new RoccoDatabase();
+      const store = new DexieSaveStore(database);
+      const repo = createSaveRepo<TestState>({
         cartridgeId: 'cart',
         cartridgeVersion: '1.0.0',
         provider: makeProvider(1),
@@ -158,9 +158,9 @@ describe('Dexie persistence with real IndexedDB', () => {
     });
 
     it('deletes a slot and load returns null', async () => {
-      const db = new RoccoDatabase();
-      const store = new DexieSaveStore(db);
-      const repo = createSaveRepository<TestState>({
+      const database = new RoccoDatabase();
+      const store = new DexieSaveStore(database);
+      const repo = createSaveRepo<TestState>({
         cartridgeId: 'cart',
         cartridgeVersion: '1.0.0',
         provider: makeProvider(1),
@@ -175,9 +175,9 @@ describe('Dexie persistence with real IndexedDB', () => {
     });
 
     it('rejects import from a different cartridge', async () => {
-      const db = new RoccoDatabase();
-      const store = new DexieSaveStore(db);
-      const repo = createSaveRepository<TestState>({
+      const database = new RoccoDatabase();
+      const store = new DexieSaveStore(database);
+      const repo = createSaveRepo<TestState>({
         cartridgeId: 'cart-a',
         cartridgeVersion: '1.0.0',
         provider: makeProvider(1),
@@ -200,9 +200,9 @@ describe('Dexie persistence with real IndexedDB', () => {
     });
 
     it('rejects import with invalid revision or timestamps', async () => {
-      const db = new RoccoDatabase();
-      const store = new DexieSaveStore(db);
-      const repo = createSaveRepository<TestState>({
+      const database = new RoccoDatabase();
+      const store = new DexieSaveStore(database);
+      const repo = createSaveRepo<TestState>({
         cartridgeId: 'cart-a',
         cartridgeVersion: '1.0.0',
         provider: makeProvider(1),
@@ -239,8 +239,8 @@ describe('Dexie persistence with real IndexedDB', () => {
     });
 
     it('persists migrated export metadata with bumped revision and current cartridge version', async () => {
-      const db = new RoccoDatabase();
-      const store = new DexieSaveStore(db);
+      const database = new RoccoDatabase();
+      const store = new DexieSaveStore(database);
       const seed: SaveEnvelopeRow = {
         key: 'cart:p:s',
         cartridgeId: 'cart',
@@ -255,7 +255,7 @@ describe('Dexie persistence with real IndexedDB', () => {
       };
       await store.put(seed);
 
-      const repo = createSaveRepository<TestState>({
+      const repo = createSaveRepo<TestState>({
         cartridgeId: 'cart',
         cartridgeVersion: '2.0.0',
         provider: makeProvider(2),
@@ -274,8 +274,8 @@ describe('Dexie persistence with real IndexedDB', () => {
     });
 
     it('rolls back a failed transaction so no partial row is published', async () => {
-      const db = new RoccoDatabase();
-      const store = new DexieSaveStore(db);
+      const database = new RoccoDatabase();
+      const store = new DexieSaveStore(database);
 
       const failingStore: SaveStore = {
         get: store.get.bind(store),
@@ -299,7 +299,7 @@ describe('Dexie persistence with real IndexedDB', () => {
         transaction: store.transaction.bind(store),
       };
 
-      const repo = createSaveRepository<TestState>({
+      const repo = createSaveRepo<TestState>({
         cartridgeId: 'cart',
         cartridgeVersion: '1.0.0',
         provider: makeProvider(1),
@@ -318,9 +318,9 @@ describe('Dexie persistence with real IndexedDB', () => {
       closeRoccoDatabase();
       await resetPersistenceDatabase();
 
-      const db = new RoccoDatabase();
+      const database = new RoccoDatabase();
 
-      await db.scenes.put({
+      await database.scenes.put({
         id: 'old-1',
         cartridgeId: '',
         sceneId: 'old-1',
@@ -328,7 +328,7 @@ describe('Dexie persistence with real IndexedDB', () => {
         updatedAt: 100,
       });
 
-      await db.scenes.put({
+      await database.scenes.put({
         id: 'old-2',
         cartridgeId: '',
         sceneId: 'old-2',
@@ -336,7 +336,7 @@ describe('Dexie persistence with real IndexedDB', () => {
         updatedAt: 200,
       });
 
-      await db.scenes_v4.put({
+      await database.scenes_v4.put({
         id: 'rocco-default:old-1',
         cartridgeId: 'rocco-default',
         sceneId: 'old-1',
@@ -346,12 +346,12 @@ describe('Dexie persistence with real IndexedDB', () => {
 
       await loadPlaneSceneRecord('rocco-default', 'old-2');
 
-      const row = await db.scenes_v4.get(['rocco-default', 'old-2']);
+      const row = await database.scenes_v4.get(['rocco-default', 'old-2']);
       expect(row).toBeDefined();
       expect(row?.sceneId).toBe('old-2');
       expect(row?.cartridgeId).toBe('rocco-default');
 
-      const row2 = await db.scenes_v4.get(['rocco-default', 'old-1']);
+      const row2 = await database.scenes_v4.get(['rocco-default', 'old-1']);
       expect(row2?.sceneId).toBe('old-1');
     });
   });

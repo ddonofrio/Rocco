@@ -34,7 +34,7 @@ function createMockLevel(levelId: string): RoccoLevel {
 }
 
 function createMockEngine() {
-  let inputEnabled = true;
+  let isInputEnabled = true;
   const setInputEnabledCalls: boolean[] = [];
   const compositionTextCalls: string[] = [];
   const beginCompositionCalls = vi.fn();
@@ -60,12 +60,12 @@ function createMockEngine() {
         },
       };
     },
-    getInputMode: () => (inputEnabled ? 'interactive' : 'blocked'),
+    getInputMode: () => (isInputEnabled ? 'interactive' : 'blocked'),
     setInputEnabled(enabled: boolean) {
-      inputEnabled = enabled;
+      isInputEnabled = enabled;
       setInputEnabledCalls.push(enabled);
     },
-    isInputEnabled: () => inputEnabled,
+    isInputEnabled: () => isInputEnabled,
     beginCompositionSession(ownerId: string) {
       beginCompositionSessionCalls(ownerId);
       const session = { ownerId, messages: [] as string[], disposed: false };
@@ -95,10 +95,12 @@ function createMockEngine() {
     beginComposition: beginCompositionCalls,
     endComposition: endCompositionCalls,
     setCompositionText(text: string | null) {
-      if (text) {
-        compositionTextCalls.push(text);
-        compositionSessions.at(-1)?.messages.push(text);
+      if (!text) {
+      	return;
       }
+
+      compositionTextCalls.push(text);
+      compositionSessions.at(-1)?.messages.push(text);
     },
     video: {
       render: renderCalls,
@@ -231,9 +233,9 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
   it('COR-001: a successful switch mounts the target and ends composition with input restored', async () => {
     const { manager, state } = getManager();
 
-    const result = await asManager(manager).switchToLevel('level-b');
+    const isResult = await asManager(manager).switchToLevel('level-b');
 
-    expect(result).toBe(true);
+    expect(isResult).toBe(true);
     expect(activeLevelId(manager)).toBe('level-b');
     expect(state.beginCompositionSessionCalls).toHaveBeenCalledTimes(1);
     expect(state.compositionSessions.at(-1)?.disposed).toBe(true);
@@ -251,9 +253,9 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
       throw new Error(`Level '${levelId}' is not registered.`);
     });
 
-    const result = await asManager(manager).switchToLevel('pier-start', 'shop-exit');
+    const isResult = await asManager(manager).switchToLevel('pier-start', 'shop-exit');
 
-    expect(result).toBe(true);
+    expect(isResult).toBe(true);
     expect(state.playSoundCalls).toContainEqual({
       soundId: 'rocco-bait-shop-door-closing-sound',
       options: {
@@ -296,9 +298,9 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
     const { manager, state, levelB } = getManager();
     vi.spyOn(levelB, 'mount').mockRejectedValue(new Error('mount failed'));
 
-    const result = await asManager(manager).switchToLevel('level-b');
+    const isResult = await asManager(manager).switchToLevel('level-b');
 
-    expect(result).toBe(false);
+    expect(isResult).toBe(false);
     expect(activeLevelId(manager)).toBe('level-a');
     expect(state.beginCompositionSessionCalls).toHaveBeenCalledTimes(1);
     expect(state.compositionSessions.at(-1)?.disposed).toBe(true);
@@ -311,9 +313,9 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
     const unmountSpy = vi.spyOn(levelA, 'unmount');
     const mountSpy = vi.spyOn(levelA, 'mount');
 
-    const result = await asManager(manager).switchToLevel('level-unknown');
+    const isResult = await asManager(manager).switchToLevel('level-unknown');
 
-    expect(result).toBe(false);
+    expect(isResult).toBe(false);
     expect(activeLevelId(manager)).toBe('level-a');
     expect(unmountSpy).not.toHaveBeenCalled();
     expect(mountSpy).not.toHaveBeenCalled();

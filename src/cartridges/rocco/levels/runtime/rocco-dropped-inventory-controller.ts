@@ -81,7 +81,7 @@ export class RoccoDroppedInventoryController {
 
   createSnapshot(): RoccoDroppedInventoryControllerSnapshot {
     return {
-      droppedInventoryItemsByLevel: [...this.droppedInventoryItemsByLevel.entries()].map(
+      droppedInventoryItemsByLevel: [...this.droppedInventoryItemsByLevel].map(
         ([levelId, items]) => [
           levelId,
           items.map((item) => ({
@@ -116,7 +116,7 @@ export class RoccoDroppedInventoryController {
   }
 
   clearLevelItemsWhere(predicate: (levelId: string) => boolean): void {
-    for (const levelId of [...this.droppedInventoryItemsByLevel.keys()]) {
+    for (const levelId of this.droppedInventoryItemsByLevel.keys()) {
       if (predicate(levelId)) {
         this.droppedInventoryItemsByLevel.delete(levelId);
       }
@@ -383,7 +383,7 @@ export class RoccoDroppedInventoryController {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     engine.setInputEnabled(false);
-    const started = engine.video.sprites.goTo(
+    const isStarted = engine.video.sprites.goTo(
       DEFAULT_SPRITE_INSTANCE_ID,
       droppedItem.groundPoint.x,
       droppedItem.groundPoint.y,
@@ -395,7 +395,7 @@ export class RoccoDroppedInventoryController {
         idleSettleFacing: 'diagonal-from-facing',
       },
     );
-    if (!started) {
+    if (!isStarted) {
       engine.setInputEnabled(true);
       return;
     }

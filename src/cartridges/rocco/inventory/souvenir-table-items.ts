@@ -21,25 +21,25 @@ export const BAIT_SHOP_SOUVENIR_RAZOR_SHELL_ITEM_ID = 'souvenir-razor-shell';
 export const BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID = 'souvenir-red-coral';
 
 const souvenirTableAssetUrls = {
-  amberSpiral: new URL('./assets/souvenirs/amber-spiral.png', import.meta.url).href,
-  amberStar: new URL('./assets/souvenirs/amber-star.png', import.meta.url).href,
-  amberTurritella: new URL('./assets/souvenirs/amber-turritella.png', import.meta.url).href,
-  beachNecklace: new URL('./assets/souvenirs/beach-necklace.png', import.meta.url).href,
-  copperFan: new URL('./assets/souvenirs/copper-fan.png', import.meta.url).href,
-  goldenNautilus: new URL('./assets/souvenirs/golden-nautilus.png', import.meta.url).href,
-  goldenScallop: new URL('./assets/souvenirs/golden-scallop.png', import.meta.url).href,
-  hollowUrchin: new URL('./assets/souvenirs/hollow-urchin.png', import.meta.url).href,
-  horseshoeCrab: new URL('./assets/souvenirs/horseshoe-crab.png', import.meta.url).href,
-  japaneseFloat: new URL('./assets/souvenirs/japanese-float.png', import.meta.url).href,
-  razorShell: new URL('./assets/souvenirs/razor-shell.png', import.meta.url).href,
-  redCoral: new URL('./assets/souvenirs/red-coral.png', import.meta.url).href,
-  seaDollar: new URL('./assets/souvenirs/sea-dollar.png', import.meta.url).href,
-  speckledCowrie: new URL('./assets/souvenirs/speckled-cowrie.png', import.meta.url).href,
-  spinyMurex: new URL('./assets/souvenirs/spiny-murex.png', import.meta.url).href,
-  stripedClam: new URL('./assets/souvenirs/striped-clam.png', import.meta.url).href,
-  stripedUrchin: new URL('./assets/souvenirs/striped-urchin.png', import.meta.url).href,
-  tigerCone: new URL('./assets/souvenirs/tiger-cone.png', import.meta.url).href,
-  towerShell: new URL('./assets/souvenirs/tower-shell.png', import.meta.url).href,
+  amberSpiral: new URL('assets/souvenirs/amber-spiral.png', import.meta.url).href,
+  amberStar: new URL('assets/souvenirs/amber-star.png', import.meta.url).href,
+  amberTurritella: new URL('assets/souvenirs/amber-turritella.png', import.meta.url).href,
+  beachNecklace: new URL('assets/souvenirs/beach-necklace.png', import.meta.url).href,
+  copperFan: new URL('assets/souvenirs/copper-fan.png', import.meta.url).href,
+  goldenNautilus: new URL('assets/souvenirs/golden-nautilus.png', import.meta.url).href,
+  goldenScallop: new URL('assets/souvenirs/golden-scallop.png', import.meta.url).href,
+  hollowUrchin: new URL('assets/souvenirs/hollow-urchin.png', import.meta.url).href,
+  horseshoeCrab: new URL('assets/souvenirs/horseshoe-crab.png', import.meta.url).href,
+  japaneseFloat: new URL('assets/souvenirs/japanese-float.png', import.meta.url).href,
+  razorShell: new URL('assets/souvenirs/razor-shell.png', import.meta.url).href,
+  redCoral: new URL('assets/souvenirs/red-coral.png', import.meta.url).href,
+  seaDollar: new URL('assets/souvenirs/sea-dollar.png', import.meta.url).href,
+  speckledCowrie: new URL('assets/souvenirs/speckled-cowrie.png', import.meta.url).href,
+  spinyMurex: new URL('assets/souvenirs/spiny-murex.png', import.meta.url).href,
+  stripedClam: new URL('assets/souvenirs/striped-clam.png', import.meta.url).href,
+  stripedUrchin: new URL('assets/souvenirs/striped-urchin.png', import.meta.url).href,
+  tigerCone: new URL('assets/souvenirs/tiger-cone.png', import.meta.url).href,
+  towerShell: new URL('assets/souvenirs/tower-shell.png', import.meta.url).href,
 } as const;
 
 const SOUVENIR_REFERENCE_HEIGHT_AT_DEFAULT_ROCCO_SCALE = 24;
@@ -76,7 +76,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       height: 300,
       labels: {
         en: 'Sea Dollar',
-        es: 'D\u00f3lar marino',
+        es: 'D\u{F3}lar marino',
       },
     },
     {
@@ -120,7 +120,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       height: 300,
       labels: {
         en: 'Golden Nautilus',
-        es: 'N\u00e1utilo dorado',
+        es: 'N\u{E1}utilo dorado',
       },
     },
     {
@@ -142,7 +142,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       height: 300,
       labels: {
         en: 'Spiny Murex',
-        es: 'M\u00farice espinoso',
+        es: 'M\u{FA}rice espinoso',
       },
     },
     {
@@ -186,7 +186,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       height: 300,
       labels: {
         en: 'Amber Star',
-        es: 'Estrella \u00e1mbar',
+        es: 'Estrella \u{E1}mbar',
       },
     },
     {
@@ -208,7 +208,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       height: 300,
       labels: {
         en: 'Japanese Float',
-        es: 'Flotador japon\u00e9s',
+        es: 'Flotador japon\u{E9}s',
       },
     },
     {
@@ -230,7 +230,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       height: 300,
       labels: {
         en: 'Amber Turritella',
-        es: 'Turritela \u00e1mbar',
+        es: 'Turritela \u{E1}mbar',
       },
     },
     {
@@ -252,7 +252,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       height: 265,
       labels: {
         en: 'Amber Spiral',
-        es: 'Espiral \u00e1mbar',
+        es: 'Espiral \u{E1}mbar',
       },
     },
     {

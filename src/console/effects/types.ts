@@ -1,11 +1,11 @@
 export type RoccoEffectPatch = Partial<Omit<RoccoEffect, 'id' | 'kind' | 'targetType' | 'targetId'>>;
 
-export interface RoccoEffect<TParams = unknown> {
+export interface RoccoEffect<TParameters = unknown> {
   id: string;
   kind: string;
   targetType: string;
   targetId: string;
-  params: TParams;
+  params: TParameters;
   enabled: boolean;
 }
 
@@ -16,14 +16,14 @@ export interface RoccoEffectContext {
   elapsedSeconds: number;
 }
 
-export interface RoccoEffectRuntime<TTarget = unknown, TParams = unknown> {
+export interface RoccoEffectRuntime<TTarget = unknown, TParameters = unknown> {
   kind: string;
   targetType: string;
-  apply(target: TTarget, params: TParams, context: RoccoEffectContext): void;
+  apply(target: TTarget, parameters: TParameters, context: RoccoEffectContext): void;
 }
 
 export interface RoccoEffectRegistry {
-  register<TTarget, TParams>(runtime: RoccoEffectRuntime<TTarget, TParams>): void;
+  register<TTarget, TParameters>(runtime: RoccoEffectRuntime<TTarget, TParameters>): void;
   get(kind: string, targetType: string): RoccoEffectRuntime | undefined;
 }
 

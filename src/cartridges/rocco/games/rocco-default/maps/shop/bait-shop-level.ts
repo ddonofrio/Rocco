@@ -128,7 +128,7 @@ const BAIT_SHOP_LEFT_WALL_INTERACTION_POINT = {
   x: 300,
   y: 430,
 } as const;
-const BAIT_SHOP_LOOK_MESSAGE_TTL_MS = 10400;
+const BAIT_SHOP_LOOK_MESSAGE_TTL_MS = 10_400;
 const BAIT_SHOP_SHELL_CITY_HISTORY_KEY = 'bait-shop-shell-city-sign';
 const BAIT_SHOP_BENCH_LOOK_HISTORY_KEY = 'bait-shop-bench-look';
 const BAIT_SHOP_BENCH_GRAB_HISTORY_KEY = 'bait-shop-bench-grab';
@@ -459,14 +459,14 @@ function normalizeBaitShopScene(
   scene: RoccoPlaneScene,
   definition: RoccoBaitShopSceneDefinition,
 ): { scene: RoccoPlaneScene; changed: boolean } {
-  let changed = false;
+  let isChanged = false;
   const defaultPlanes = createDefaultBaitShopPlanes(definition);
   const defaultPlaneIds = new Set(defaultPlanes.map((plane) => plane.id));
   const currentPlanes = new Map(scene.planes.map((plane) => [plane.id, plane]));
   const normalizedDefaultPlanes = defaultPlanes.map((defaultPlane) => {
     const currentPlane = currentPlanes.get(defaultPlane.id);
     if (!currentPlane || !hasSameJsonShape(currentPlane, defaultPlane)) {
-      changed = true;
+      isChanged = true;
       return defaultPlane;
     }
 
@@ -475,7 +475,7 @@ function normalizeBaitShopScene(
   const customPlanes = scene.planes.filter((plane) => !defaultPlaneIds.has(plane.id));
   const nextPlanes = [...normalizedDefaultPlanes, ...customPlanes];
   if (!hasSameJsonShape(scene.planes, nextPlanes)) {
-    changed = true;
+    isChanged = true;
   }
 
   const nextScene: RoccoPlaneScene = {
@@ -488,7 +488,7 @@ function normalizeBaitShopScene(
     attributeMaps: scene.attributeMaps ?? [],
   };
 
-  if (!changed && hasSameJsonShape(scene, nextScene)) {
+  if (!isChanged && hasSameJsonShape(scene, nextScene)) {
     return { scene, changed: false };
   }
 
@@ -610,7 +610,7 @@ function loadImage(uri: string): Promise<HTMLImageElement> {
   }
 
   return new Promise((resolve, reject) => {
-    image.onload = () => resolve(image);
+    image.addEventListener('load', () => resolve(image));
     image.onerror = () => reject(new Error(`Could not load image '${uri}'.`));
   });
 }
@@ -1526,8 +1526,8 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       return;
     }
 
-    const collected = this.options.onMysteriousKeyCollected?.() ?? true;
-    if (!collected) {
+    const isCollected = this.options.onMysteriousKeyCollected?.() ?? true;
+    if (!isCollected) {
       return;
     }
 

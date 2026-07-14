@@ -325,8 +325,8 @@ function createEngineMock(state: TestState): RoccoEngine {
         stopMovement: () => {
           state.isSpriteMovingValue = false;
         },
-        goTo: (...args: [string, number, number]) => {
-          void args;
+        goTo: (...arguments_: [string, number, number]) => {
+          void arguments_;
           state.isSpriteMovingValue = true;
           return true;
         },

@@ -9,7 +9,7 @@ export const englishInventoryText: RoccoTextCatalog['inventory'] = {
   magazineLabel: 'Magazine',
   micromaniaLabel: 'Micromania',
   mysteriousKeyLabel: 'Key',
-  twentyEurosLabel: '\u20ac20',
+  twentyEurosLabel: '\u{20AC}20',
   bataLabel: 'Lab coat',
   floatingAmuletLabel: 'Floating Amulet',
   spiralRazorLabel: 'Turritella Razor',

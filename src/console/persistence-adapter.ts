@@ -1,9 +1,9 @@
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from './video/planes';
 import { loadPlaneSceneRecord, savePlaneScene, closeRoccoDatabase } from './persistence/db';
-import { createSaveRepository } from './persistence/save-repository';
+import { createSaveRepository as createSaveRepo } from './persistence/save-repository';
 import type {
-  CartridgeSaveRepository,
-  CreateSaveRepositoryOptions,
+  CartridgeSaveRepository as CartridgeSaveRepo,
+  CreateSaveRepositoryOptions as CreateSaveRepoOptions,
 } from './persistence/types';
 import type { RoccoEnginePersistence } from './engine-sdk';
 
@@ -17,9 +17,9 @@ export class RoccoPersistenceAdapter implements RoccoEnginePersistence {
   }
 
   createSaveRepository<TState>(
-    options: CreateSaveRepositoryOptions<TState>,
-  ): CartridgeSaveRepository<TState> {
-    return createSaveRepository(options);
+    options: CreateSaveRepoOptions<TState>,
+  ): CartridgeSaveRepo<TState> {
+    return createSaveRepo(options);
   }
 
   /** Releases the IndexedDB connection. Idempotent. */

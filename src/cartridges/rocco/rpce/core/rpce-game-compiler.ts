@@ -466,10 +466,10 @@ class ReadonlyMapView<K, V> implements ReadonlyMap<K, V> {
 
   forEach(
     callbackfn: (value: V, key: K, map: ReadonlyMap<K, V>) => void,
-    thisArg?: unknown,
+    thisArgument?: unknown,
   ): void {
     this.source.forEach((value, key) => {
-      callbackfn.call(thisArg, value, key, this);
+      callbackfn.call(thisArgument, value, key, this);
     });
   }
 
@@ -507,10 +507,10 @@ class ReadonlySetView<T> implements ReadonlySet<T> {
 
   forEach(
     callbackfn: (value: T, value2: T, set: ReadonlySet<T>) => void,
-    thisArg?: unknown,
+    thisArgument?: unknown,
   ): void {
     this.source.forEach((value) => {
-      callbackfn.call(thisArg, value, value, this);
+      callbackfn.call(thisArgument, value, value, this);
     });
   }
 

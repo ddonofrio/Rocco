@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createSaveRepository } from '../../../src/console/persistence/save-repository';
+import { createSaveRepository as createSaveRepo } from '../../../src/console/persistence/save-repository';
 import type {
   CartridgeSaveProvider,
   SaveEnvelopeRow,
@@ -141,7 +141,7 @@ describe('versioned save repository', () => {
   it('round-trips payload and metadata on save/load', async () => {
     const store = new MemorySaveStore();
     const state: TestState = { level: 3 };
-    const repo = createSaveRepository({
+    const repo = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(1, state),
@@ -162,7 +162,7 @@ describe('versioned save repository', () => {
 
   it('increments the revision on each save', async () => {
     const store = new MemorySaveStore();
-    const repo = createSaveRepository({
+    const repo = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(1, { level: 1 }),
@@ -191,7 +191,7 @@ describe('versioned save repository', () => {
       }),
     );
 
-    const repo = createSaveRepository({
+    const repo = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(1, { level: 99 }),
@@ -225,7 +225,7 @@ describe('versioned save repository', () => {
       }),
     );
 
-    const repo = createSaveRepository({
+    const repo = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(2, { level: 7 }),
@@ -258,7 +258,7 @@ describe('versioned save repository', () => {
       }),
     );
 
-    const repo = createSaveRepository({
+    const repo = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(2, { level: 1 }),
@@ -270,13 +270,13 @@ describe('versioned save repository', () => {
 
   it('never collides across cartridges, profiles, or slots', async () => {
     const store = new MemorySaveStore();
-    const repoA = createSaveRepository({
+    const repoA = createSaveRepo({
       cartridgeId: 'cart-a',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(1, { level: 1 }),
       store,
     });
-    const repoB = createSaveRepository({
+    const repoB = createSaveRepo({
       cartridgeId: 'cart-b',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(1, { level: 2 }),
@@ -295,7 +295,7 @@ describe('versioned save repository', () => {
 
   it('lists only the requested profile slots', async () => {
     const store = new MemorySaveStore();
-    const repo = createSaveRepository({
+    const repo = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(1, { level: 1 }),
@@ -315,7 +315,7 @@ describe('versioned save repository', () => {
 
   it('removes a slot on delete', async () => {
     const store = new MemorySaveStore();
-    const repo = createSaveRepository({
+    const repo = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(1, { level: 1 }),
@@ -342,7 +342,7 @@ describe('versioned save repository', () => {
         payload: { level: 4 },
       }),
     );
-    const repoA = createSaveRepository({
+    const repoA = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(2, { level: 0 }),
@@ -357,7 +357,7 @@ describe('versioned save repository', () => {
     expect(envelope?.payload).toEqual({ level: 4, migrated: true });
 
     const storeB = new MemorySaveStore();
-    const repoB = createSaveRepository({
+    const repoB = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '2.0.0',
       provider: makeProvider(2, { level: 0 }),
@@ -372,7 +372,7 @@ describe('versioned save repository', () => {
 
   it('rejects invalid import metadata before publishing', async () => {
     const store = new MemorySaveStore();
-    const repo = createSaveRepository({
+    const repo = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(1, { level: 1 }),
@@ -412,7 +412,7 @@ describe('versioned save repository', () => {
 
   it('surfaces quota errors as SaveQuotaExceededError', async () => {
     const store = new QuotaSaveStore();
-    const repo = createSaveRepository({
+    const repo = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(1, { level: 1 }),
@@ -437,7 +437,7 @@ describe('versioned save repository', () => {
       }),
     );
 
-    const repo = createSaveRepository({
+    const repo = createSaveRepo({
       cartridgeId: 'cart',
       cartridgeVersion: '0.1.0',
       provider: makeProvider(1, { level: 9 }),

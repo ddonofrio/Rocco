@@ -38,13 +38,13 @@ function createVideoSystemMock(overrides: Partial<InputHandlerVideoSystem> = {})
     },
     actionMenus: {
       activateAt() {
-        return undefined;
+        return;
       },
       closeMenu() {
         // noop
       },
       getHoveredItem() {
-        return undefined;
+        return;
       },
       isOpen() {
         return false;
@@ -58,19 +58,19 @@ function createVideoSystemMock(overrides: Partial<InputHandlerVideoSystem> = {})
     },
     gridMenus: {
       activateAt() {
-        return undefined;
+        return;
       },
       clearCarriedItem() {
         // noop
       },
       getCarriedItem() {
-        return undefined;
+        return;
       },
       getHoveredItem() {
-        return undefined;
+        return;
       },
       getRenderableMenu() {
-        return undefined;
+        return;
       },
       isOpen() {
         return false;
@@ -89,7 +89,7 @@ function createVideoSystemMock(overrides: Partial<InputHandlerVideoSystem> = {})
     },
     sceneTargets: {
       getTarget() {
-        return undefined;
+        return;
       },
     },
     sprites: {
@@ -137,10 +137,10 @@ function makeCartridge(handleAction: RoccoCartridge['handleAction']): RoccoCartr
 
 describe('RoccoInputHandler characterization', () => {
   it('CON-001: actions are dispatched through the ActionDispatcher and return a synchronous disposition', () => {
-    let handleActionCalled = false;
+    let isHandleActionCalled = false;
 
     const cartridge = makeCartridge((_action, _context) => {
-      handleActionCalled = true;
+      isHandleActionCalled = true;
       return { consumed: true, defaultPlayerMovement: 'allow' };
     });
 
@@ -182,7 +182,7 @@ describe('RoccoInputHandler characterization', () => {
 
     storedHandler(makeClickEvent(320, 180));
 
-    expect(handleActionCalled).toBe(true);
+    expect(isHandleActionCalled).toBe(true);
   });
 
   it('CON-001: a second click is dropped while an exclusive action completion is still in flight', () => {

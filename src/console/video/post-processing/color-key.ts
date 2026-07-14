@@ -61,9 +61,9 @@ export function matchesRoccoColorKey(
 export async function loadRoccoImageElement(uri: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
-    image.onload = () => {
+    image.addEventListener('load', () => {
       resolve(image);
-    };
+    });
     image.onerror = () => {
       reject(new Error(`Failed to load image '${uri}'.`));
     };
@@ -114,5 +114,5 @@ function roccoColorDistance(left: RoccoWaterColorRgb, right: RoccoWaterColorRgb)
   const deltaRed = left[0] - right[0];
   const deltaGreen = left[1] - right[1];
   const deltaBlue = left[2] - right[2];
-  return Math.sqrt(deltaRed * deltaRed + deltaGreen * deltaGreen + deltaBlue * deltaBlue);
+  return Math.hypot(deltaRed, deltaGreen, deltaBlue);
 }

@@ -26,8 +26,8 @@ import type { InputMode, InputPolicyLease } from '../../input/input-policy-stack
 import type { ResourceScope } from '../../lifecycle';
 import type { CompositionSession } from '../../composition/composition-service';
 import type {
-  CartridgeSaveRepository,
-  CreateSaveRepositoryOptions,
+  CartridgeSaveRepository as CartridgeSaveRepo,
+  CreateSaveRepositoryOptions as CreateSaveRepoOptions,
 } from '../../persistence/types';
 import type { CartridgeCapability } from './capabilities';
 
@@ -173,7 +173,7 @@ export interface CartridgeInputApi {
 }
 
 export type CartridgeCreateSaveRepositoryOptions<TState> = Omit<
-  CreateSaveRepositoryOptions<TState>,
+  CreateSaveRepoOptions<TState>,
   'cartridgeId' | 'cartridgeVersion'
 >;
 
@@ -182,7 +182,7 @@ export interface CartridgeStorageApi {
   savePlaneScene(scene: RoccoPlaneScene): Promise<void>;
   createSaveRepository<TState>(
     options: CartridgeCreateSaveRepositoryOptions<TState>,
-  ): CartridgeSaveRepository<TState>;
+  ): CartridgeSaveRepo<TState>;
 }
 
 export interface CartridgeLoggerApi {

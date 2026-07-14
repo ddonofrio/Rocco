@@ -152,7 +152,7 @@ describe('RoccoInventoryRuntimeController', () => {
       refreshStatus,
     });
 
-    const handled = controller.handleGridMenuAction(engine, {
+    const isHandled = controller.handleGridMenuAction(engine, {
       kind: 'grid-menu',
       definitionId: ROCCO_INVENTORY_MENU_ID,
       interaction: 'button',
@@ -161,7 +161,7 @@ describe('RoccoInventoryRuntimeController', () => {
       items: menuDefinition.items,
     });
 
-    expect(handled).toBe(true);
+    expect(isHandled).toBe(true);
     expect(storeDroppedInventoryItem).toHaveBeenCalledOnce();
     const [[levelId, droppedItem]] = storeDroppedInventoryItem.mock.calls;
     expect(levelId).toBe('pier-middle');

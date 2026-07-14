@@ -45,14 +45,14 @@ function makeGridMenuActivation(
 }
 
 function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
-  let legacyInputEnabled = state.inputEnabled;
+  let isLegacyInputEnabled = state.inputEnabled;
   const activeInputLeases: Array<{
     ownerId: string;
     mode: 'interactive' | 'advance-only' | 'blocked';
   }> = [];
 
   const recomputeInputMode = (): 'interactive' | 'advance-only' | 'blocked' => {
-    if (!legacyInputEnabled) {
+    if (!isLegacyInputEnabled) {
       return 'blocked';
     }
 
@@ -123,10 +123,10 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
           return false;
         },
         getHoveredItem() {
-          return undefined;
+          return;
         },
         activateAt() {
-          return undefined;
+          return;
         },
         getCarriedItem() {
           return undefined as RoccoGridMenuCarriedItem | undefined;
@@ -135,7 +135,7 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
           // noop
         },
         getRenderableMenu() {
-          return undefined;
+          return;
         },
       },
       render() {
@@ -143,7 +143,7 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
       },
     },
     setInputEnabled(enabled: boolean) {
-      legacyInputEnabled = enabled;
+      isLegacyInputEnabled = enabled;
       syncLegacyInputState();
     },
     isInputEnabled() {
@@ -163,7 +163,7 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
         acquiredAt: 0,
         dispose() {
           const index = activeInputLeases.indexOf(lease);
-          if (index >= 0) {
+          if (index !== -1) {
             activeInputLeases.splice(index, 1);
           }
           syncLegacyInputState();
@@ -307,7 +307,7 @@ describe('RoccoDialogueSession', () => {
     expect(state.messages.at(-1)).toBe('stan:say:Across the street.|Where the pier begins.');
     expect(session.isActive()).toBe(true);
 
-    session.update(11199);
+    session.update(11_199);
 
     expect(session.isActive()).toBe(true);
     expect(state.inputEnabled).toBe(false);

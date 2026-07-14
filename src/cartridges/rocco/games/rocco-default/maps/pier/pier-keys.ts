@@ -237,7 +237,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     this.keysY = keys.transform.y;
     this.state = 'approaching-grab';
     this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
-    const started = this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, this.keysX, this.keysY, {
+    const isStarted = this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, this.keysX, this.keysY, {
       targetInstanceId: DEFAULT_KEYS_SPRITE_INSTANCE_ID,
       keepDistance: KEYS_APPROACH_KEEP_DISTANCE,
       action: DEFAULT_SPRITE_RUN_ACTION_ID,
@@ -247,7 +247,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
       idleSettleDelayMs: 0,
       idleSettleFacing: 'diagonal-from-facing',
     });
-    if (!started) {
+    if (!isStarted) {
       this.state = 'revealed';
       this.engine.setInputEnabled(true);
       this.engine.video.actionMenus.registerMenu(createDefaultKeysActionMenu(this.localization));
@@ -362,14 +362,14 @@ class RoccoKeysController implements RoccoDefaultKeysController {
 
   cancel(): void {
     // Cancel any non-cancelable sequence and re-enable input
-    if (
-      this.state === 'approaching-grab' ||
-      this.state === 'collecting'
-    ) {
-      this.state = 'revealed';
-      this.engine.setInputEnabled(true);
-      this.revealAt(this.keysX, this.keysY);
+    if (!(this.state === 'approaching-grab' ||
+      this.state === 'collecting')) {
+    	return;
     }
+
+    this.state = 'revealed';
+    this.engine.setInputEnabled(true);
+    this.revealAt(this.keysX, this.keysY);
   }
 }
 

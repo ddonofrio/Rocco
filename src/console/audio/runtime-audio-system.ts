@@ -16,7 +16,7 @@ interface ActiveSoundPlayback {
 }
 
 function createDeferred<T>(): Deferred<T> {
-  let resolved = false;
+  let isResolved = false;
   let resolvePromise!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((resolve) => {
     resolvePromise = resolve;
@@ -25,10 +25,10 @@ function createDeferred<T>(): Deferred<T> {
   return {
     promise,
     resolve(value) {
-      if (resolved) {
+      if (isResolved) {
         return;
       }
-      resolved = true;
+      isResolved = true;
       resolvePromise(value);
     },
   };
@@ -123,13 +123,13 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
       return;
     }
 
-    for (const playbackId of [...playbackIds]) {
+    for (const playbackId of playbackIds) {
       this.finishPlayback(playbackId);
     }
   }
 
   stopAllSounds(): void {
-    for (const playbackId of [...this.activePlaybacks.keys()]) {
+    for (const playbackId of this.activePlaybacks.keys()) {
       this.finishPlayback(playbackId);
     }
   }
@@ -140,7 +140,7 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
       return;
     }
 
-    void context.resume().catch(() => undefined);
+    void context.resume().catch(() => {});
   }
 
   destroy(): void {
@@ -154,7 +154,7 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     this.context = null;
     this.masterGain = null;
     if (context) {
-      void context.close().catch(() => undefined);
+      void context.close().catch(() => {});
     }
   }
 
@@ -194,7 +194,7 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   ): Promise<void> {
     const definition = this.definitions.get(playback.soundId);
     const context = this.ensureContext();
-    let started = false;
+    let isStarted = false;
 
     try {
       if (!definition || !context || playback.finished) {
@@ -207,7 +207,7 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
       }
 
       if (context.state === 'suspended') {
-        await context.resume().catch(() => undefined);
+        await context.resume().catch(() => {});
       }
 
       if (playback.finished || context.state !== 'running') {
@@ -224,13 +224,13 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
       gain.gain.value = playback.requestedVolume;
       source.connect(gain);
       gain.connect(masterGain);
-      source.onended = () => {
+      source.addEventListener('ended', () => {
         this.finishPlayback(playback.playbackId);
-      };
+      });
       source.start();
-      started = true;
+      isStarted = true;
     } finally {
-      if (!started) {
+      if (!isStarted) {
         this.finishPlayback(playback.playbackId);
       }
     }

@@ -256,12 +256,12 @@ export class PixiRoccoGridMenuRenderer {
     this.applyDecorations(definition);
 
     const itemsBySlot = new Map<number, RoccoGridMenuItem>();
-    definition.items.forEach((item, index) => {
+    for (const [index, item] of definition.items.entries()) {
       const slotIndex = Math.max(0, Math.floor(item.slotIndex ?? index));
       itemsBySlot.set(slotIndex, item);
-    });
+    }
 
-    const blockedSlotIndexes = new Set(definition.blockedSlotIndexes ?? []);
+    const blockedSlotIndexes = new Set(definition.blockedSlotIndexes);
     const staleSlots = new Set(this.slotNodes.keys());
     const slotCount = columns * rows;
     for (let slotIndex = 0; slotIndex < slotCount; slotIndex += 1) {
@@ -461,7 +461,7 @@ export class PixiRoccoGridMenuRenderer {
     layout: string,
   ): void {
     const definition = renderable.definition;
-    const hovered = renderable.state.hoveredSlotIndex === slotIndex;
+    const isHovered = renderable.state.hoveredSlotIndex === slotIndex;
     const hasCarriedItem = Boolean(renderable.state.carriedItem);
     const isTextList = layout === 'text-list';
     node.root.position.set(x, y);
@@ -471,12 +471,12 @@ export class PixiRoccoGridMenuRenderer {
       .roundRect(0, 0, slotWidth, slotHeight, 6)
       .fill({
         color: definition.slotFill ?? '#182317',
-        alpha: item ? 0.95 : hovered && hasCarriedItem ? 0.78 : 0.55,
+        alpha: item ? 0.95 : isHovered && hasCarriedItem ? 0.78 : 0.55,
       })
       .stroke({
-        color: hovered ? definition.hoverStroke ?? '#8ecf6e' : definition.slotStroke ?? '#5b704f',
-        width: hovered ? 3 : 1,
-        alpha: hovered ? 1 : 0.82,
+        color: isHovered ? definition.hoverStroke ?? '#8ecf6e' : definition.slotStroke ?? '#5b704f',
+        width: isHovered ? 3 : 1,
+        alpha: isHovered ? 1 : 0.82,
       });
 
     node.icon.visible = Boolean(item?.imageUri) && !isTextList;
@@ -537,12 +537,12 @@ export class PixiRoccoGridMenuRenderer {
     const buttonWidth = Math.max(44, (innerWidth - totalGapWidth) / buttons.length);
     const buttonY = padding + titleHeight + slotSectionHeight + buttonGap;
 
-    buttons.forEach((button, index) => {
+    for (const [index, button] of buttons.entries()) {
       const node = this.ensureButtonNode(panelRoot, index);
       const buttonX = padding + index * (buttonWidth + buttonGap);
       this.applyButtonNode(node, renderable, button, buttonX, buttonY, buttonWidth, buttonHeight);
       staleButtons.delete(index);
-    });
+    }
 
     this.clearButtonNodes(staleButtons);
   }
@@ -556,8 +556,8 @@ export class PixiRoccoGridMenuRenderer {
     width: number,
     height: number,
   ): void {
-    const hovered = renderable.state.hoveredButtonId === button.id;
-    const enabled = this.isButtonEnabled(button, renderable);
+    const isHovered = renderable.state.hoveredButtonId === button.id;
+    const isEnabled = this.isButtonEnabled(button, renderable);
     node.root.position.set(x, y);
 
     node.frame.clear();
@@ -565,18 +565,18 @@ export class PixiRoccoGridMenuRenderer {
       .roundRect(0, 0, width, height, 8)
       .fill({
         color: '#101810',
-        alpha: enabled ? 0.9 : 0.42,
+        alpha: isEnabled ? 0.9 : 0.42,
       })
       .stroke({
-        color: hovered && enabled ? '#8ecf6e' : '#d7e6c5',
-        width: hovered && enabled ? 3 : 2,
-        alpha: enabled ? 0.95 : 0.45,
+        color: isHovered && isEnabled ? '#8ecf6e' : '#d7e6c5',
+        width: isHovered && isEnabled ? 3 : 2,
+        alpha: isEnabled ? 0.95 : 0.45,
       });
 
     node.label.text = button.label;
     node.label.x = width / 2;
     node.label.y = height / 2;
-    node.label.alpha = enabled ? 1 : 0.45;
+    node.label.alpha = isEnabled ? 1 : 0.45;
   }
 
   private isButtonEnabled(button: RoccoGridMenuButton, renderable: RoccoGridMenuRenderable): boolean {

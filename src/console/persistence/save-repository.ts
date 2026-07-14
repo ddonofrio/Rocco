@@ -16,8 +16,8 @@ import {
   SaveQuotaExceededError,
   SaveRevisionConflictError,
   SaveSchemaError,
-  type CartridgeSaveRepository,
-  type CreateSaveRepositoryOptions,
+  type CartridgeSaveRepository as CartridgeSaveRepo,
+  type CreateSaveRepositoryOptions as CreateSaveRepoOptions,
   type PortableSaveEnvelope,
   type SaveEnvelopeRow,
   type SaveMetadata,
@@ -46,7 +46,7 @@ function isNonNegativeSafeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
-function assertRepositoryIdentity(
+function assertRepoIdentity(
   cartridgeId: string,
   cartridgeVersion: string,
   providerSchemaVersion: number,
@@ -82,11 +82,11 @@ function toMetadata(row: SaveEnvelopeRow): SaveMetadata {
 }
 
 export function createSaveRepository<TState>(
-  options: CreateSaveRepositoryOptions<TState>,
-): CartridgeSaveRepository<TState> {
+  options: CreateSaveRepoOptions<TState>,
+): CartridgeSaveRepo<TState> {
   const { cartridgeId, cartridgeVersion, provider } = options;
   const store: SaveStore = options.store ?? new DexieSaveStore();
-  assertRepositoryIdentity(cartridgeId, cartridgeVersion, provider.schemaVersion);
+  assertRepoIdentity(cartridgeId, cartridgeVersion, provider.schemaVersion);
 
   function keyOf(profileId: string, slotId: string): SaveStoreKey {
     return buildKey(cartridgeId, profileId, slotId);

@@ -22,7 +22,7 @@ export interface ResolveDepthModeSampleYOptions extends RuntimePlaneDepthResolut
 }
 
 export function resolveRuntimePlaneScene(options: ResolveRuntimePlaneSceneOptions): RoccoPlaneScene {
-  let changed = false;
+  let isChanged = false;
   const planes = options.scene.planes.map((plane) => {
     const resolvedRenderLayer = resolvePlaneRenderLayer({
       plane,
@@ -34,14 +34,14 @@ export function resolveRuntimePlaneScene(options: ResolveRuntimePlaneSceneOption
       return plane;
     }
 
-    changed = true;
+    isChanged = true;
     return {
       ...plane,
       renderLayer: resolvedRenderLayer,
     };
   });
 
-  if (!changed) {
+  if (!isChanged) {
     return options.scene;
   }
 

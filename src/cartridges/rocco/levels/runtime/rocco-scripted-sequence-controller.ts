@@ -208,7 +208,7 @@ export class RoccoScriptedSequenceController {
       return;
     }
 
-    const started = engine.video.sprites.goTo(
+    const isStarted = engine.video.sprites.goTo(
       DEFAULT_SPRITE_INSTANCE_ID,
       this.options.baitShopDoorEndGroundX,
       currentGroundPoint.y,
@@ -220,7 +220,7 @@ export class RoccoScriptedSequenceController {
         idleSettleFacing: 'diagonal-from-facing',
       },
     );
-    if (!started) {
+    if (!isStarted) {
       engine.video.render(0);
       return;
     }
@@ -324,14 +324,14 @@ export class RoccoScriptedSequenceController {
       phase: 'walking-vertical',
       elapsedMs: 0,
     };
-    const started = engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, groundPoint.x, 0, {
+    const isStarted = engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, groundPoint.x, 0, {
       action: DEFAULT_SPRITE_RUN_ACTION_ID,
       idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
       stopDistance: 1,
       idleSettleDelayMs: 0,
       idleSettleFacing: 'diagonal-from-facing',
     });
-    if (!started) {
+    if (!isStarted) {
       this.baitShopDoorEntry = {
         phase: 'transitioning',
         elapsedMs: 0,

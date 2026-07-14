@@ -41,13 +41,11 @@ export function checkCartridgeSdkCompatibility(
     return { ok: true, errors: Object.freeze([]) };
   }
 
-  if (runtime.sdk !== undefined && runtime.sdk !== '') {
-    if (!satisfies(runtime.sdk, CARTRIDGE_SDK_VERSION)) {
+  if (runtime.sdk !== undefined && runtime.sdk !== '' && !satisfies(runtime.sdk, CARTRIDGE_SDK_VERSION)) {
       errors.push(
         `runtime.sdk '${runtime.sdk}' is not satisfied by console SDK '${CARTRIDGE_SDK_VERSION}'`,
       );
     }
-  }
 
   if (runtime.capabilities) {
     for (const capability of runtime.capabilities) {

@@ -3,34 +3,34 @@ import { Container, Graphics, Rectangle, Text, TextStyle } from 'pixi.js';
 const FONT_FAMILY = 'Cascadia Mono, Lucida Console, monospace';
 
 export const ROCCO_CARTRIDGE_MENU_COLORS = {
-  bg: 0x0d110c,
-  bgLine: 0x1a2318,
-  titleBrand: 0x8ecf6e,
-  titleSub: 0x4a6b42,
-  itemBg: 0x111a10,
-  itemBgHover: 0x1a2e18,
-  itemBgSelected: 0x1f3c1b,
-  itemBorder: 0x2a3f28,
-  itemBorderSelected: 0x5cb84a,
-  itemTitle: 0xd4ecc8,
-  itemTitleSelected: 0xaee89a,
-  itemSub: 0x4e6b48,
-  itemDisabled: 0x334132,
-  scrollBar: 0x2a3f28,
-  scrollThumb: 0x4a7040,
-  detailLabel: 0x4a6b42,
-  detailValue: 0xb0c8a8,
-  footerHint: 0x5a7055,
-  scanline: 0x000000,
-  panelBg: 0x0f150e,
-  panelBorder: 0x223120,
-  buttonFill: 0x375334,
-  buttonBorder: 0x7dbb64,
-  buttonText: 0x0d110c,
-  controlDim: 0x1a2618,
-  controlBorder: 0x415a3e,
-  controlFill: 0x5cb84a,
-  controlText: 0xd7efd0,
+  bg: 0x0d_11_0c,
+  bgLine: 0x1a_23_18,
+  titleBrand: 0x8e_cf_6e,
+  titleSub: 0x4a_6b_42,
+  itemBg: 0x11_1a_10,
+  itemBgHover: 0x1a_2e_18,
+  itemBgSelected: 0x1f_3c_1b,
+  itemBorder: 0x2a_3f_28,
+  itemBorderSelected: 0x5c_b8_4a,
+  itemTitle: 0xd4_ec_c8,
+  itemTitleSelected: 0xae_e8_9a,
+  itemSub: 0x4e_6b_48,
+  itemDisabled: 0x33_41_32,
+  scrollBar: 0x2a_3f_28,
+  scrollThumb: 0x4a_70_40,
+  detailLabel: 0x4a_6b_42,
+  detailValue: 0xb0_c8_a8,
+  footerHint: 0x5a_70_55,
+  scanline: 0x00_00_00,
+  panelBg: 0x0f_15_0e,
+  panelBorder: 0x22_31_20,
+  buttonFill: 0x37_53_34,
+  buttonBorder: 0x7d_bb_64,
+  buttonText: 0x0d_11_0c,
+  controlDim: 0x1a_26_18,
+  controlBorder: 0x41_5a_3e,
+  controlFill: 0x5c_b8_4a,
+  controlText: 0xd7_ef_d0,
 } as const;
 
 export const ROCCO_CARTRIDGE_MENU_TOGGLE_W = 94;
@@ -109,7 +109,7 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
     this.root.addChild(
       new Graphics()
         .rect(0, options.footerY, options.designWidth, options.footerHeight)
-        .fill({ color: 0x0a0f09, alpha: 1 }),
+        .fill({ color: 0x0a_0f_09, alpha: 1 }),
     );
     this.root.addChild(
       new Graphics().rect(0, options.footerY, options.designWidth, 1).fill({

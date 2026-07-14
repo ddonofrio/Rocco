@@ -160,7 +160,7 @@ export class RoccoDeveloperRuntimeController {
     snapshot: RoccoDeveloperRuntimeSnapshot,
     engine?: RoccoEngine | null,
   ): void {
-    const eventChanged =
+    const isEventChanged =
       this.developerEvents.allowToiletReuseDuringUrgency !==
       snapshot.allowToiletReuseDuringUrgency;
     this.deactivateSpriteCycleMode(engine);
@@ -168,7 +168,7 @@ export class RoccoDeveloperRuntimeController {
     this.developerEventScreenSelectionId = snapshot.developerEventScreenSelectionId;
     this.developerEvents.allowToiletReuseDuringUrgency =
       snapshot.allowToiletReuseDuringUrgency;
-    if (eventChanged) {
+    if (isEventChanged) {
       this.options.onToiletReuseEventChanged?.();
     }
   }
@@ -462,8 +462,8 @@ export class RoccoDeveloperRuntimeController {
       return;
     }
 
-    const switched = await this.options.switchToLevel(screenOption.targetLevelId);
-    if (!switched) {
+    const isSwitched = await this.options.switchToLevel(screenOption.targetLevelId);
+    if (!isSwitched) {
       this.options.refreshStatus();
       return;
     }
@@ -813,7 +813,7 @@ export class RoccoDeveloperRuntimeController {
     }
 
     const extraFrames: RoccoSpriteFrame[] = [];
-    const previewFrameRefs = definition.images.map((image, index) => {
+    const previewFrameReferences = definition.images.map((image, index) => {
       const existingFrame = existingFrameByImageId.get(image.id);
       if (existingFrame) {
         return {
@@ -845,7 +845,7 @@ export class RoccoDeveloperRuntimeController {
           id: DEVELOPER_SPRITE_CYCLE_ANIMATION_ID,
           loop: true,
           playbackRate: 1,
-          frames: previewFrameRefs,
+          frames: previewFrameReferences,
         },
       },
     };

@@ -119,7 +119,7 @@ export class RoccoScriptedSceneInteractionController {
 
     this.activeInteraction = { definition };
     this.inputLease = this.engine.acquireInputLease('scripted-scene-interaction', 'blocked');
-    const started = this.engine.video.sprites.goTo(
+    const isStarted = this.engine.video.sprites.goTo(
       DEFAULT_SPRITE_INSTANCE_ID,
       definition.moveTo.x,
       definition.moveTo.y,
@@ -132,7 +132,7 @@ export class RoccoScriptedSceneInteractionController {
         idleSettleFacing: 'diagonal-from-facing',
       },
     );
-    if (!started) {
+    if (!isStarted) {
       this.activeInteraction = null;
       this.inputLease.dispose();
       this.inputLease = null;

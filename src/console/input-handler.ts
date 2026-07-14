@@ -333,14 +333,14 @@ export class RoccoInputHandler {
     const cartridgeActionResult = this.actionDispatcher.dispatch(sceneClickAction, {
       owner: 'scene-click',
     });
-    const sceneClickConsumed = cartridgeActionResult.consumed === true;
-    const suppressDefaultPlayerMove = this.defaultPlayerMovePolicy.shouldSuppressDefaultPlayerMove({
+    const isSceneClickConsumed = cartridgeActionResult.consumed;
+    const isSuppressDefaultPlayerMove = this.defaultPlayerMovePolicy.shouldSuppressDefaultPlayerMove({
       target: actionTarget,
       cartridgeDisposition: cartridgeActionResult,
     });
 
     if (
-      !sceneClickConsumed &&
+      !isSceneClickConsumed &&
       visibleTarget &&
       this.videoSystem.actionMenus.openMenuForTarget(
         visibleTarget.instanceId,
@@ -352,7 +352,7 @@ export class RoccoInputHandler {
       if (
         playerSpriteId &&
         visibleTarget.instanceId !== playerSpriteId &&
-        !suppressDefaultPlayerMove
+        !isSuppressDefaultPlayerMove
       ) {
         this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
           idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
@@ -372,7 +372,7 @@ export class RoccoInputHandler {
       return;
     }
 
-    if (playerSpriteId && !suppressDefaultPlayerMove) {
+    if (playerSpriteId && !isSuppressDefaultPlayerMove) {
       this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
         idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
         idleSettleFacing: 'diagonal-from-facing',
@@ -402,7 +402,7 @@ export class RoccoInputHandler {
   private clearForegroundMessages(): boolean {
     const foregroundMessages = this.videoSystem.messages
       .listMessages()
-      .filter((message) => message.background !== true);
+      .filter((message) => !message.background);
     if (foregroundMessages.length === 0) {
       return false;
     }
@@ -419,7 +419,7 @@ export class RoccoInputHandler {
       .listMessages()
       .some(
         (message) =>
-          message.background !== true &&
+          !message.background &&
           this.resolveCurrentMessageVisibleAgeMs(message.durationMs, message.ttlMs) <
             MIN_MESSAGE_CANCEL_AGE_MS,
       );

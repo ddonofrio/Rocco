@@ -324,10 +324,10 @@ const NETHER_PIPE_SMOKE_RENDER_LAYER = 'world.behind';
 const NETHER_PIPE_SMOKE_Z_INDEX = 18;
 
 const netherSecurityCameraAssetUrls = [
-  new URL('./assets/camera/1.png', import.meta.url).href,
-  new URL('./assets/camera/2.png', import.meta.url).href,
-  new URL('./assets/camera/3.png', import.meta.url).href,
-  new URL('./assets/camera/4.png', import.meta.url).href,
+  new URL('assets/camera/1.png', import.meta.url).href,
+  new URL('assets/camera/2.png', import.meta.url).href,
+  new URL('assets/camera/3.png', import.meta.url).href,
+  new URL('assets/camera/4.png', import.meta.url).href,
 ] as const;
 
 interface NetherSecurityCameraText {
@@ -361,25 +361,25 @@ const NETHER_SECURITY_CAMERA_TEXT_BY_LOCALE: Record<string, NetherSecurityCamera
     ],
   },
   es: {
-    description: 'C\u00e1mara de seguridad',
+    description: 'C\u{E1}mara de seguridad',
     lookLines: [
-      'Es una c\u00e1mara de seguridad.',
+      'Es una c\u{E1}mara de seguridad.',
       'Parece parte de un sistema de vigilancia.',
-      'Seguro que hay alguien mirando detr\u00e1s.',
-      'Me pregunto cu\u00e1ntas de estas habr\u00e1 por aqu\u00ed.',
-      'Parece cara. \u00bfQu\u00e9 tendr\u00e1 adentro?',
+      'Seguro que hay alguien mirando detr\u{E1}s.',
+      'Me pregunto cu\u{E1}ntas de estas habr\u{E1} por aqu\u{ED}.',
+      'Parece cara. \u{BF}Qu\u{E9} tendr\u{E1} adentro?',
     ],
     grabLines: [
-      'No llego, est\u00e1 muy alta.',
+      'No llego, est\u{E1} muy alta.',
       'Ni de puntillas la alcanzo.',
-      'Tendr\u00eda que medir medio metro m\u00e1s.',
+      'Tendr\u{ED}a que medir medio metro m\u{E1}s.',
       'Como no salte... y no pienso saltar.',
     ],
     kickLines: [
       'Apenas puedo levantar mi pierna para caminar.',
-      'No estoy para patear c\u00e1maras ahora mismo.',
-      'Si levanto m\u00e1s la rodilla me desmonto.',
-      'Necesitar\u00eda calentar antes de intentar eso.',
+      'No estoy para patear c\u{E1}maras ahora mismo.',
+      'Si levanto m\u{E1}s la rodilla me desmonto.',
+      'Necesitar\u{ED}a calentar antes de intentar eso.',
     ],
   },
 };
@@ -402,11 +402,11 @@ const NETHER_NOISY_MACHINE_TEXT_BY_LOCALE: Record<string, NetherNoisyMachineText
     ],
   },
   es: {
-    description: 'M\u00e1quina tremendamente ruidosa',
+    description: 'M\u{E1}quina tremendamente ruidosa',
     grabLine: 'No voy a tocar eso.',
     lookLines: [
-      'Es una m\u00e1quina que parece importante.',
-      'Pensaba que era una caldera, pero parece m\u00e1s bien un motor.',
+      'Es una m\u{E1}quina que parece importante.',
+      'Pensaba que era una caldera, pero parece m\u{E1}s bien un motor.',
       'Suelta vapor por todos lados.',
       'Tiene pinta de estar a punto de explotar.',
     ],
@@ -447,13 +447,13 @@ const NETHER_SHELF_TEXT_BY_LOCALE: Record<string, NetherShelfText> = {
   es: {
     description: 'Un armario con una bata.',
     lookLine: 'Hay una bata en el fondo, casi ni se ve.',
-    grabBeforeLookLine: 'Es una estanter\u00eda vac\u00eda.',
+    grabBeforeLookLine: 'Es una estanter\u{ED}a vac\u{ED}a.',
     grabAfterLookLine: 'Cojo esta bata.',
-    grabAfterTakeLine: 'Est\u00e1 vac\u00eda.',
+    grabAfterTakeLine: 'Est\u{E1} vac\u{ED}a.',
     emptyLookLines: [
-      'Est\u00e1 vac\u00eda.',
-      'Una estanter\u00eda empotrada.',
-      'Aqu\u00ed hab\u00eda una bata.',
+      'Est\u{E1} vac\u{ED}a.',
+      'Una estanter\u{ED}a empotrada.',
+      'Aqu\u{ED} hab\u{ED}a una bata.',
     ],
   },
 };
@@ -1866,8 +1866,8 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     }
 
     const batItem = createRoccoBataInventoryItem(this.localization);
-    const pickupAllowed = this.options.onPickupRequested?.(batItem) ?? true;
-    if (!pickupAllowed) {
+    const isPickupAllowed = this.options.onPickupRequested?.(batItem) ?? true;
+    if (!isPickupAllowed) {
       return;
     }
 

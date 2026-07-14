@@ -73,12 +73,12 @@ function ensureBootErrorOverlay(host: HTMLElement): {
     retryButton.style.color = '#fef2f2';
     retryButton.style.cursor = 'pointer';
     retryButton.addEventListener('click', () => {
-      window.location.reload();
+      location.reload();
     });
 
     panel.append(title, detail, retryButton);
     overlay.append(panel);
-    host.appendChild(overlay);
+    host.append(overlay);
   }
 
   const title = overlay.querySelector<HTMLHeadingElement>('[data-rocco-boot-title="true"]');
@@ -122,12 +122,12 @@ function installGlobalErrorHandlers(
     onFatalError('A runtime error occurred.', event.reason);
   };
 
-  window.addEventListener('error', handleWindowError);
-  window.addEventListener('unhandledrejection', handleUnhandledRejection);
+  globalThis.addEventListener('error', handleWindowError);
+  globalThis.addEventListener('unhandledrejection', handleUnhandledRejection);
 
   return () => {
-    window.removeEventListener('error', handleWindowError);
-    window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    globalThis.removeEventListener('error', handleWindowError);
+    globalThis.removeEventListener('unhandledrejection', handleUnhandledRejection);
   };
 }
 

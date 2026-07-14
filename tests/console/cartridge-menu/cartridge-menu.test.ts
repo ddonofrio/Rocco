@@ -19,10 +19,10 @@ describe('RoccoCartridgeMenu', () => {
 
     const renderSpy = vi
       .spyOn(menuAccess, 'render')
-      .mockImplementation(() => undefined);
+      .mockImplementation(() => {});
     const activateSpy = vi
       .spyOn(menuAccess, 'activateSettingsSelection')
-      .mockImplementation(() => undefined);
+      .mockImplementation(() => {});
 
     menuAccess.settingsSelectionId = 'video';
 

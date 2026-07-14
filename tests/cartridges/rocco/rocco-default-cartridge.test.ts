@@ -503,14 +503,14 @@ interface EngineMockState {
 }
 
 function createEngineMock(state: EngineMockState): RoccoEngine {
-  let legacyInputEnabled = state.inputEnabled;
+  let isLegacyInputEnabled = state.inputEnabled;
   const activeInputLeases: Array<{
     ownerId: string;
     mode: 'interactive' | 'advance-only' | 'blocked';
   }> = [];
 
   const recomputeInputMode = (): 'interactive' | 'advance-only' | 'blocked' => {
-    if (!legacyInputEnabled) {
+    if (!isLegacyInputEnabled) {
       return 'blocked';
     }
 
@@ -538,7 +538,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       // noop
     },
     getWalkMap() {
-      return undefined;
+      return;
     },
     listWalkMaps() {
       return [];
@@ -550,7 +550,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       // noop
     },
     getSpriteDefinition() {
-      return undefined;
+      return;
     },
     listSpriteDefinitions() {
       return [];
@@ -861,13 +861,13 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       return false;
     },
     getHoveredItem() {
-      return undefined;
+      return;
     },
     activateAt() {
-      return undefined;
+      return;
     },
     getRenderableMenu() {
-      return undefined;
+      return;
     },
     update() {
       // noop
@@ -897,10 +897,10 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       return false;
     },
     getHoveredItem() {
-      return undefined;
+      return;
     },
     activateAt() {
-      return undefined;
+      return;
     },
     getCarriedItem() {
       return state.carriedGridMenuItem;
@@ -910,7 +910,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       state.clearedCarriedGridMenuCount += 1;
     },
     getRenderableMenu() {
-      return undefined;
+      return;
     },
   };
 
@@ -925,7 +925,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       // noop
     },
     getPrimitive() {
-      return undefined;
+      return;
     },
     listPrimitives() {
       return [];
@@ -943,7 +943,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       // noop
     },
     getTitle() {
-      return undefined;
+      return;
     },
     listTitles() {
       return [];
@@ -978,7 +978,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       // noop
     },
     resolvePlane() {
-      return undefined;
+      return;
     },
   };
 
@@ -1016,7 +1016,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
         // noop
       },
       getHost() {
-        return undefined;
+        return;
       },
     },
     zoom,
@@ -1147,7 +1147,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       // noop
     },
     getCurrentTrack() {
-      return undefined;
+      return;
     },
     unlock() {
       // noop
@@ -1181,7 +1181,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
 
     // Input control
     setInputEnabled(enabled: boolean) {
-      legacyInputEnabled = enabled;
+      isLegacyInputEnabled = enabled;
       syncLegacyInputState();
     },
     isInputEnabled() {
@@ -1201,11 +1201,11 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
         acquiredAt: 0,
         dispose() {
           const activeIndex = activeInputLeases.indexOf(leaseRecord);
-          if (activeIndex >= 0) {
+          if (activeIndex !== -1) {
             activeInputLeases.splice(activeIndex, 1);
           }
           const stateIndex = state.inputLeases.indexOf(leaseRecord);
-          if (stateIndex >= 0) {
+          if (stateIndex !== -1) {
             state.inputLeases.splice(stateIndex, 1);
           }
           syncLegacyInputState();
@@ -1734,7 +1734,7 @@ describe('RoccoDefaultCartridge', () => {
         },
         {
           id: ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
-          label: '\u20ac20',
+          label: '\u{20AC}20',
           slotIndex: 1,
         },
       ],
@@ -2341,7 +2341,7 @@ describe('RoccoDefaultCartridge', () => {
       wakeStanToRootDialogue(manager);
       chooseStanDialogue(manager, 'introduce-self', 0);
       advanceStanConversationToFollowUpMenu(manager);
-      manager.update(12000);
+      manager.update(12_000);
 
       setCarriedInventoryItem(state, ROCCO_INVENTORY_KEYS_ITEM_ID);
       manager.handleAction(
@@ -2462,7 +2462,7 @@ describe('RoccoDefaultCartridge', () => {
 
     expect(state.activeGridMenuDefinitionId).toBe(DEFAULT_STAN_DIALOGUE_MENU_ID);
 
-    manager.update(11999);
+    manager.update(11_999);
 
     expect(state.closedGridMenuCount).toBe(0);
 
@@ -2543,7 +2543,7 @@ describe('RoccoDefaultCartridge', () => {
       `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:stan-look-right`,
     );
 
-    manager.update(12000);
+    manager.update(12_000);
 
     expect(
       countPlayedSpriteAnimation(

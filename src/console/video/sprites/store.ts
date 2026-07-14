@@ -144,15 +144,15 @@ export class RoccoSpriteStore {
       definitionId: base.definitionId,
       transform: {
         ...base.transform,
-        ...(options.transform ?? {}),
+        ...options.transform,
       },
       motion: {
         ...base.motion,
-        ...(options.motion ?? {}),
+        ...options.motion,
       },
       animation: {
         ...base.animation,
-        ...(options.animation ?? {}),
+        ...options.animation,
       },
       state: options.state ? clone(options.state) : base.state,
     };
@@ -217,10 +217,10 @@ export class RoccoSpriteStore {
         throw new Error(`Sprite definition '${definition.id}' animation '${animation.id}' has no frames.`);
       }
 
-      for (const frameRef of animation.frames) {
-        if (!frameIds.has(frameRef.frameId)) {
+      for (const frameReference of animation.frames) {
+        if (!frameIds.has(frameReference.frameId)) {
           throw new Error(
-            `Sprite definition '${definition.id}' animation '${animation.id}' references missing frame '${frameRef.frameId}'.`,
+            `Sprite definition '${definition.id}' animation '${animation.id}' references missing frame '${frameReference.frameId}'.`,
           );
         }
       }

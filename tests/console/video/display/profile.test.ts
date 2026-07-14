@@ -22,15 +22,15 @@ function makeMetrics(): RoccoViewportMetrics {
 }
 
 afterEach(() => {
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('RoccoDisplayProfileRenderer', () => {
   it('creates overlay when crtMask is enabled', () => {
     const root = document.createElement('div');
     const stage = document.createElement('div');
-    root.appendChild(stage);
-    document.body.appendChild(root);
+    root.append(stage);
+    document.body.append(root);
 
     const renderer = new RoccoDisplayProfileRenderer({
       rootElement: root,
@@ -50,7 +50,7 @@ describe('RoccoDisplayProfileRenderer', () => {
   it('keeps overlay hidden when crtMask and edgeVignette are disabled', () => {
     const root = document.createElement('div');
     const stage = document.createElement('div');
-    root.appendChild(stage);
+    root.append(stage);
 
     const renderer = new RoccoDisplayProfileRenderer({
       rootElement: root,
@@ -69,7 +69,7 @@ describe('RoccoDisplayProfileRenderer', () => {
   it('updates overlay size and position from viewport metrics', () => {
     const root = document.createElement('div');
     const stage = document.createElement('div');
-    root.appendChild(stage);
+    root.append(stage);
 
     const renderer = new RoccoDisplayProfileRenderer({
       rootElement: root,
@@ -89,19 +89,21 @@ describe('RoccoDisplayProfileRenderer', () => {
 
 describe('RoccoViewportHost display profile integration', () => {
   it('tracks contain metrics and allows toggling the display profile', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      value: 1280,
-      configurable: true,
-      writable: true,
-    });
-    Object.defineProperty(window, 'innerHeight', {
-      value: 720,
-      configurable: true,
-      writable: true,
+    Object.defineProperties(globalThis, {
+    	innerWidth: {
+	      value: 1280,
+	      configurable: true,
+	      writable: true,
+	    },
+    	innerHeight: {
+	      value: 720,
+	      configurable: true,
+	      writable: true,
+	    },
     });
 
     const root = document.createElement('div');
-    document.body.appendChild(root);
+    document.body.append(root);
 
     const host = new RoccoViewportHost({
       root,
@@ -127,19 +129,21 @@ describe('RoccoViewportHost display profile integration', () => {
   });
 
   it('uses full viewport overlay in cover mode', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      value: 375,
-      configurable: true,
-      writable: true,
-    });
-    Object.defineProperty(window, 'innerHeight', {
-      value: 812,
-      configurable: true,
-      writable: true,
+    Object.defineProperties(globalThis, {
+    	innerWidth: {
+	      value: 375,
+	      configurable: true,
+	      writable: true,
+	    },
+    	innerHeight: {
+	      value: 812,
+	      configurable: true,
+	      writable: true,
+	    },
     });
 
     const root = document.createElement('div');
-    document.body.appendChild(root);
+    document.body.append(root);
 
     const host = new RoccoViewportHost({
       root,

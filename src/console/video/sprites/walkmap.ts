@@ -80,12 +80,12 @@ function collectWalkableSpansForColumn(
 
   for (let y = 0; y < height; y += 1) {
     const alpha = data[(y * width + x) * 4 + 3] ?? 0;
-    const walkable = alpha >= alphaThreshold;
-    if (walkable && openY === null) {
+    const isWalkable = alpha >= alphaThreshold;
+    if (isWalkable && openY === null) {
       openY = y;
     }
-    if ((!walkable || y === height - 1) && openY !== null) {
-      const closeY = walkable && y === height - 1 ? y : y - 1;
+    if ((!isWalkable || y === height - 1) && openY !== null) {
+      const closeY = isWalkable && y === height - 1 ? y : y - 1;
       spans.push({ yMin: openY, yMax: closeY });
       openY = null;
     }
@@ -103,7 +103,7 @@ function loadImage(uri: string): Promise<HTMLImageElement> {
   }
 
   return new Promise((resolve, reject) => {
-    image.onload = () => resolve(image);
+    image.addEventListener('load', () => resolve(image));
     image.onerror = () => reject(new Error(`Could not load image '${uri}'.`));
   });
 }

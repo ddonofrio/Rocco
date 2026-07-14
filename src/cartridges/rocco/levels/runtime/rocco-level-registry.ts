@@ -56,7 +56,7 @@ export class RoccoLevelRegistry {
     });
     const nextLevels = this.instantiateMapLevels(map);
     const nextLevelsById = new Map(nextLevels.map((level) => [level.id, level]));
-    let committed = false;
+    let isCommitted = false;
 
     return {
       mapId,
@@ -70,20 +70,20 @@ export class RoccoLevelRegistry {
         return level;
       },
       commit: () => {
-        if (committed) {
+        if (isCommitted) {
           return;
         }
 
         this.replaceLevels(map.levelIds, nextLevels);
-        committed = true;
+        isCommitted = true;
       },
       rollback: () => {
-        if (!committed) {
+        if (!isCommitted) {
           return;
         }
 
         this.replaceLevels(map.levelIds, previousLevels);
-        committed = false;
+        isCommitted = false;
       },
     };
   }

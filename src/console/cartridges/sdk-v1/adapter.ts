@@ -78,9 +78,9 @@ export function createCartridgeSdkV1(
       loadPlaneSceneRecord: (sceneId) =>
         engine.persistence.loadPlaneSceneRecord(manifest.id, sceneId),
       savePlaneScene: (scene) => engine.persistence.savePlaneScene(manifest.id, scene),
-      createSaveRepository: (repositoryOptions) =>
+      createSaveRepository: (repoOptions) =>
         engine.persistence.createSaveRepository({
-          ...repositoryOptions,
+          ...repoOptions,
           cartridgeId: manifest.id,
           cartridgeVersion: manifest.version,
         }),

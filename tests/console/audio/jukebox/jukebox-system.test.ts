@@ -66,8 +66,8 @@ class FakeAudioContext {
   decodeAudioData(): Promise<AudioBuffer> {
     return Promise.resolve({
       duration: 12,
-      sampleRate: 44100,
-      getChannelData: () => new Float32Array(44100).fill(0.5),
+      sampleRate: 44_100,
+      getChannelData: () => new Float32Array(44_100).fill(0.5),
     } as unknown as AudioBuffer);
   }
 

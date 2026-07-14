@@ -5,21 +5,23 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RoccoViewportHost } from '../../../../src/console/video/viewport/host';
 
 function setViewportSize(width: number, height: number): void {
-  Object.defineProperty(window, 'innerWidth', {
-    value: width,
-    configurable: true,
-    writable: true,
-  });
-  Object.defineProperty(window, 'innerHeight', {
-    value: height,
-    configurable: true,
-    writable: true,
+  Object.defineProperties(globalThis, {
+  	innerWidth: {
+	    value: width,
+	    configurable: true,
+	    writable: true,
+	  },
+  	innerHeight: {
+	    value: height,
+	    configurable: true,
+	    writable: true,
+	  },
   });
 }
 
 afterEach(() => {
   vi.restoreAllMocks();
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('RoccoViewportHost', () => {
@@ -27,7 +29,7 @@ describe('RoccoViewportHost', () => {
     setViewportSize(1280, 720);
 
     const root = document.createElement('div');
-    document.body.appendChild(root);
+    document.body.append(root);
 
     const host = new RoccoViewportHost({
       root,
@@ -52,7 +54,7 @@ describe('RoccoViewportHost', () => {
     setViewportSize(375, 812);
 
     const root = document.createElement('div');
-    document.body.appendChild(root);
+    document.body.append(root);
 
     const host = new RoccoViewportHost({
       root,
@@ -77,7 +79,7 @@ describe('RoccoViewportHost', () => {
     setViewportSize(375, 812);
 
     const root = document.createElement('div');
-    document.body.appendChild(root);
+    document.body.append(root);
 
     const host = new RoccoViewportHost({
       root,
@@ -98,7 +100,7 @@ describe('RoccoViewportHost', () => {
     setViewportSize(375, 812);
 
     const root = document.createElement('div');
-    document.body.appendChild(root);
+    document.body.append(root);
 
     const host = new RoccoViewportHost({
       root,
@@ -126,7 +128,7 @@ describe('RoccoViewportHost', () => {
     setViewportSize(375, 812);
 
     const root = document.createElement('div');
-    document.body.appendChild(root);
+    document.body.append(root);
 
     const host = new RoccoViewportHost({
       root,
@@ -174,7 +176,7 @@ describe('RoccoViewportHost', () => {
     setViewportSize(375, 812);
 
     const root = document.createElement('div');
-    document.body.appendChild(root);
+    document.body.append(root);
 
     const host = new RoccoViewportHost({
       root,
@@ -219,15 +221,15 @@ describe('RoccoViewportHost', () => {
     setViewportSize(375, 812);
 
     const root = document.createElement('div');
-    document.body.appendChild(root);
+    document.body.append(root);
 
-    let actionFired = false;
+    let isActionFired = false;
     const host = new RoccoViewportHost({
       root,
       designWidth: 960,
       designHeight: 540,
       onCursorAction: () => {
-        actionFired = true;
+        isActionFired = true;
       },
     });
 
@@ -250,7 +252,7 @@ describe('RoccoViewportHost', () => {
     });
     hostElement.dispatchEvent(pointerUp);
 
-    expect(actionFired).toBe(true);
+    expect(isActionFired).toBe(true);
 
     host.unmount();
   });
@@ -259,7 +261,7 @@ describe('RoccoViewportHost', () => {
     setViewportSize(375, 812);
 
     const root = document.createElement('div');
-    document.body.appendChild(root);
+    document.body.append(root);
 
     const host = new RoccoViewportHost({
       root,

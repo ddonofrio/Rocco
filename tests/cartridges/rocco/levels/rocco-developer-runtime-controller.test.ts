@@ -153,9 +153,9 @@ function createDeveloperEngine(
         closeMenu: () => {},
       },
       gridMenus: {
-        openMenu: (definitionArg: RoccoGridMenuDefinition) => {
-          state.openedGridMenuIds.push(definitionArg.id);
-          state.openedGridMenus.push(definitionArg);
+        openMenu: (definitionArgument: RoccoGridMenuDefinition) => {
+          state.openedGridMenuIds.push(definitionArgument.id);
+          state.openedGridMenus.push(definitionArgument);
         },
         closeMenu: () => {
           state.closedGridMenuCount += 1;
@@ -287,7 +287,7 @@ describe('RoccoDeveloperRuntimeController', () => {
     const controller = createController();
     const { engine, state } = createDeveloperEngine();
 
-    const handled = controller.handlePlayerAction(engine, {
+    const isHandled = controller.handlePlayerAction(engine, {
       definitionId: ROCCO_PLAYER_ACTION_MENU_ID,
       targetInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
       targetDefinitionId: 'rocco-player',
@@ -295,7 +295,7 @@ describe('RoccoDeveloperRuntimeController', () => {
       actionId: ROCCO_PLAYER_DEVELOPER_ACTION_ID,
     });
 
-    expect(handled).toBe(true);
+    expect(isHandled).toBe(true);
     expect(state.openedGridMenuIds).toEqual([ROCCO_DEVELOPER_ROOT_MENU_ID]);
   });
 
@@ -303,7 +303,7 @@ describe('RoccoDeveloperRuntimeController', () => {
     const controller = createController();
     const { engine, state } = createDeveloperEngine();
 
-    const handled = controller.handleGridMenuAction(engine, {
+    const isHandled = controller.handleGridMenuAction(engine, {
       kind: 'grid-menu',
       definitionId: ROCCO_DEVELOPER_ROOT_MENU_ID,
       interaction: 'activate',
@@ -311,7 +311,7 @@ describe('RoccoDeveloperRuntimeController', () => {
       items: [],
     });
 
-    expect(handled).toBe(true);
+    expect(isHandled).toBe(true);
 
     const levelMenu = state.openedGridMenus.at(-1);
     expect(levelMenu?.id).toBe(ROCCO_DEVELOPER_LEVEL_MENU_ID);
@@ -322,7 +322,7 @@ describe('RoccoDeveloperRuntimeController', () => {
     ]);
     expect(levelMenu?.items.map((item) => item.id)).not.toContain(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID);
 
-    const screenHandled = controller.handleGridMenuAction(engine, {
+    const isScreenHandled = controller.handleGridMenuAction(engine, {
       kind: 'grid-menu',
       definitionId: ROCCO_DEVELOPER_LEVEL_MENU_ID,
       interaction: 'activate',
@@ -330,7 +330,7 @@ describe('RoccoDeveloperRuntimeController', () => {
       items: [],
     });
 
-    expect(screenHandled).toBe(true);
+    expect(isScreenHandled).toBe(true);
 
     const netherScreenMenu = state.openedGridMenus.at(-1);
     expect(netherScreenMenu?.id).toBe(ROCCO_DEVELOPER_SCREEN_MENU_ID);
@@ -349,7 +349,7 @@ describe('RoccoDeveloperRuntimeController', () => {
     });
     const { engine, state } = createDeveloperEngine();
 
-    const handled = controller.handleGridMenuAction(engine, {
+    const isHandled = controller.handleGridMenuAction(engine, {
       kind: 'grid-menu',
       definitionId: ROCCO_DEVELOPER_SCREEN_MENU_ID,
       interaction: 'activate',
@@ -357,7 +357,7 @@ describe('RoccoDeveloperRuntimeController', () => {
       items: [],
     });
 
-    expect(handled).toBe(true);
+    expect(isHandled).toBe(true);
     await Promise.resolve();
     await Promise.resolve();
 

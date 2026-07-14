@@ -7,7 +7,7 @@ function runtimeKey(kind: string, targetType: string): string {
 export class RoccoDefaultEffectRegistry implements RoccoEffectRegistry {
   private readonly runtimes = new Map<string, RoccoEffectRuntime>();
 
-  register<TTarget, TParams>(runtime: RoccoEffectRuntime<TTarget, TParams>): void {
+  register<TTarget, TParameters>(runtime: RoccoEffectRuntime<TTarget, TParameters>): void {
     const key = runtimeKey(runtime.kind, runtime.targetType);
     this.runtimes.set(key, runtime);
   }

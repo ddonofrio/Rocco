@@ -1,7 +1,7 @@
 import { ROCCO_SPRITE_DIRECTIONS } from './types';
 import type {
   RoccoAnimationClip,
-  RoccoAnimationFrameRef,
+  RoccoAnimationFrameRef as RoccoAnimationFrameReference,
   RoccoAnimationMotionBinding,
   RoccoFacingDirection,
   RoccoMoveOptions,
@@ -284,11 +284,11 @@ export class RoccoSpriteMotionAnimationDriver {
     const deltaSeconds = deltaMs / 1000;
     const previousX = instance.transform.x;
     const previousY = instance.transform.y;
-    const hadCommand = instance.motion.command !== undefined;
+    const isHadCommand = instance.motion.command !== undefined;
 
-    const commandIntegrated = this.applyMovementCommand(instance, definition, deltaSeconds);
-    const completedCommandThisTick = hadCommand && commandIntegrated && instance.motion.command === undefined;
-    if (!commandIntegrated) {
+    const isCommandIntegrated = this.applyMovementCommand(instance, definition, deltaSeconds);
+    const isCompletedCommandThisTick = isHadCommand && isCommandIntegrated && instance.motion.command === undefined;
+    if (!isCommandIntegrated) {
       this.integrateMotion(instance, definition, deltaSeconds);
     }
 
@@ -298,9 +298,9 @@ export class RoccoSpriteMotionAnimationDriver {
     if (movedDistance > EPSILON) {
       instance.motion.distanceAccumulator += movedDistance;
       const facing = toFacingDirection(movedX, movedY);
-      if (facing && !completedCommandThisTick) {
+      if (facing && !isCompletedCommandThisTick) {
         instance.facing = facing;
-        if (!commandIntegrated && !instance.motion.command) {
+        if (!isCommandIntegrated && !instance.motion.command) {
           this.applyVelocityDrivenAction(instance, definition, facing);
         }
       }
@@ -375,7 +375,7 @@ export class RoccoSpriteMotionAnimationDriver {
         return true;
       }
 
-      const currentTarget = command.path[command.currentIndex] ?? command.path[command.path.length - 1];
+      const currentTarget = command.path[command.currentIndex] ?? command.path.at(-1);
       if (this.driveTowardTarget(instance, definition, currentTarget, command.options, deltaSeconds)) {
         command.currentIndex += 1;
         if (command.currentIndex >= command.path.length) {
@@ -387,8 +387,8 @@ export class RoccoSpriteMotionAnimationDriver {
     }
 
     if (command.kind === 'move-to') {
-      const reached = this.driveTowardTarget(instance, definition, command.target, command.options, deltaSeconds);
-      if (reached) {
+      const isReached = this.driveTowardTarget(instance, definition, command.target, command.options, deltaSeconds);
+      if (isReached) {
         instance.motion.command = undefined;
         this.applyMovementOnComplete(instance, definition, command.options);
       }
@@ -706,12 +706,12 @@ export class RoccoSpriteMotionAnimationDriver {
       guard += 1;
       const safeFrameIndex = clamp(instance.animation.frameIndex, 0, clip.frames.length - 1);
       instance.animation.frameIndex = safeFrameIndex;
-      const frameRef = clip.frames[safeFrameIndex];
-      if (!frameRef) {
+      const frameReference = clip.frames[safeFrameIndex];
+      if (!frameReference) {
         instance.animation.playing = false;
         return;
       }
-      const duration = this.resolveFrameDuration(frameRef, definition);
+      const duration = this.resolveFrameDuration(frameReference, definition);
       if (instance.animation.elapsedMs < duration) {
         return;
       }
@@ -752,13 +752,13 @@ export class RoccoSpriteMotionAnimationDriver {
     instance.animation.playing = false;
   }
 
-  private resolveFrameDuration(frameRef: RoccoAnimationFrameRef, definition: RoccoSpriteDefinition): number {
-    const byRef = Number(frameRef.durationMs ?? NaN);
-    if (Number.isFinite(byRef) && byRef > 0) {
-      return byRef;
+  private resolveFrameDuration(frameReference: RoccoAnimationFrameReference, definition: RoccoSpriteDefinition): number {
+    const byReference = Number(frameReference.durationMs ?? NaN);
+    if (Number.isFinite(byReference) && byReference > 0) {
+      return byReference;
     }
 
-    const frame = definition.frames.find((item) => item.id === frameRef.frameId);
+    const frame = definition.frames.find((item) => item.id === frameReference.frameId);
     const byFrame = Number(frame?.durationMs ?? NaN);
     if (Number.isFinite(byFrame) && byFrame > 0) {
       return byFrame;

@@ -191,20 +191,27 @@ export function createRoccoDeveloperInventoryItem(
   itemId: string,
 ): RoccoInventoryItem | undefined {
   switch (itemId) {
-    case ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID:
+    case ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID: {
       return createRoccoCoralRelicInventoryItem(localization);
-    case ROCCO_INVENTORY_KEYS_ITEM_ID:
+    }
+    case ROCCO_INVENTORY_KEYS_ITEM_ID: {
       return createRoccoKeysInventoryItem(localization);
-    case ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID:
+    }
+    case ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID: {
       return createRoccoMysteriousKeyInventoryItem(localization);
-    case ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID:
+    }
+    case ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID: {
       return createRoccoTwentyEurosInventoryItem(localization);
-    case ROCCO_DEVELOPER_MAGAZINE_CHOICE_ID:
+    }
+    case ROCCO_DEVELOPER_MAGAZINE_CHOICE_ID: {
       return createRoccoMagazineInventoryItem(localization, false);
-    case ROCCO_DEVELOPER_MICROMANIA_CHOICE_ID:
+    }
+    case ROCCO_DEVELOPER_MICROMANIA_CHOICE_ID: {
       return createRoccoMagazineInventoryItem(localization, true);
-    default:
+    }
+    default: {
       return undefined;
+    }
   }
 }
 

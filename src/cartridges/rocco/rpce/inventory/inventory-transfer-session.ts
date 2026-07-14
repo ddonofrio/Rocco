@@ -310,12 +310,12 @@ export class RpceInventoryTransferSession {
 
     for (let row = 0; row < totalRows; row += 1) {
       for (let column = 0; column < totalColumns; column += 1) {
-        const inLeftStorage = row < this.leftStorage.rows && column < this.leftStorage.columns;
-        const inRightStorage =
+        const isInLeftStorage = row < this.leftStorage.rows && column < this.leftStorage.columns;
+        const isInRightStorage =
           row < this.rightStorage.rows &&
           column >= rightStartColumn &&
           column < rightStartColumn + this.rightStorage.columns;
-        if (inLeftStorage || inRightStorage) {
+        if (isInLeftStorage || isInRightStorage) {
           continue;
         }
 

@@ -501,14 +501,14 @@ export class GameRuntime implements RoccoEngine {
     if (!this.compositionOverlay) {
       this.compositionOverlay = new Container();
       this.compositionOverlay.label = 'composition-overlay';
-      this.compositionOverlay.zIndex = 10000;
+      this.compositionOverlay.zIndex = 10_000;
       this.compositionOverlay.sortableChildren = true;
       this.compositionBackground = new Graphics();
       this.compositionOverlay.addChild(this.compositionBackground);
       this.app.stage.addChild(this.compositionOverlay);
     }
 
-    const overlayBackgroundColor = session.status === 'failed' ? 0x1a0b0b : 0x0d110c;
+    const overlayBackgroundColor = session.status === 'failed' ? 0x1a_0b_0b : 0x0d_11_0c;
     this.compositionBackground ??= new Graphics();
     this.compositionBackground
       .clear()
@@ -517,7 +517,10 @@ export class GameRuntime implements RoccoEngine {
 
     const overlayText = formatCompositionOverlayText(session);
 
-    if (!this.compositionText) {
+    if (this.compositionText) {
+      this.compositionText.text = overlayText;
+      this.compositionText.style.fill = session.status === 'failed' ? '#fca5a5' : '#9ca3af';
+    } else {
       this.compositionText = new Text({
         text: overlayText,
         style: {
@@ -530,11 +533,8 @@ export class GameRuntime implements RoccoEngine {
         },
       });
       this.compositionText.anchor.set(0.5);
-      this.compositionText.zIndex = 10001;
+      this.compositionText.zIndex = 10_001;
       this.compositionOverlay.addChild(this.compositionText);
-    } else {
-      this.compositionText.text = overlayText;
-      this.compositionText.style.fill = session.status === 'failed' ? '#fca5a5' : '#9ca3af';
     }
 
     this.compositionText.x = this.app.screen.width / 2;
@@ -546,7 +546,7 @@ export class GameRuntime implements RoccoEngine {
     if (!this.app || !this.compositionOverlay) {
       return;
     }
-    this.app.stage.removeChild(this.compositionOverlay);
+    this.compositionOverlay.removeFromParent();
     this.compositionOverlay.destroy({ children: true });
     this.compositionOverlay = null;
     this.compositionBackground = null;
@@ -640,13 +640,13 @@ export class GameRuntime implements RoccoEngine {
 
   private readonly resolveEffectTarget: RoccoEffectTargetResolver = (targetType, targetId) => {
     if (!this.activePlaneSceneId) {
-      return undefined;
+      return;
     }
 
     if (targetType === 'graphic-plane') {
       return this.video.planes.resolvePlane(this.activePlaneSceneId, targetId);
     }
-    return undefined;
+    return;
   };
 
   private applySoundProfile(): void {

@@ -107,7 +107,7 @@ export class RoccoCartridgeMessageRuntime {
     }
 
     const historyKey =
-      selection.historyKey ?? `${message.spriteInstanceId}:${message.mode}:${lines.join('\u001e')}`;
+      selection.historyKey ?? `${message.spriteInstanceId}:${message.mode}:${lines.join('\u{1E}')}`;
     const selected = this.selectLines(lines, historyKey, selection);
     return selected.length === 1 ? selected[0] ?? '' : selected;
   }

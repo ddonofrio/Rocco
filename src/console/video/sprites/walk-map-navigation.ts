@@ -94,7 +94,7 @@ function resolveWalkMapPathNode(
 
 function resolveNearestSpanIndex(column: RoccoSpriteWalkMapColumn, localY: number): number {
   let nearestIndex = 0;
-  let nearestDistance = Number.POSITIVE_INFINITY;
+  let nearestDistance = Infinity;
 
   for (let index = 0; index < column.spans.length; index += 1) {
     const span = column.spans[index];
@@ -344,7 +344,7 @@ function pushWalkMapWaypoint(waypoints: RoccoPoint[], origin: RoccoPoint, localX
 }
 
 function pushDistinctPoint(points: RoccoPoint[], point: RoccoPoint): void {
-  const previous = points[points.length - 1];
+  const previous = points.at(-1);
   if (previous && Math.abs(previous.x - point.x) <= EPSILON && Math.abs(previous.y - point.y) <= EPSILON) {
     return;
   }
@@ -413,7 +413,7 @@ function resolveWalkMapColumn(
   }
 
   let nearest: RoccoSpriteWalkMapColumn | undefined;
-  let nearestDistance = Number.POSITIVE_INFINITY;
+  let nearestDistance = Infinity;
   for (const column of walkMap.columns) {
     const distance = Math.abs(column.x - clampedX);
     if (distance < nearestDistance) {
@@ -429,7 +429,7 @@ function resolveNearestSpan(
   localY: number,
 ): { yMin: number; yMax: number } | undefined {
   let nearest = column.spans[0];
-  let nearestDistance = Number.POSITIVE_INFINITY;
+  let nearestDistance = Infinity;
   for (const span of column.spans) {
     if (localY >= span.yMin && localY <= span.yMax) {
       return span;

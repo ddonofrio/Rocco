@@ -44,12 +44,12 @@ export function makeGraphicPlaneAutoScrollEffect(
 export const roccoAutoScrollRuntime: RoccoEffectRuntime<RoccoGraphicPlane, RoccoAutoScrollParams> = {
   kind: 'auto-scroll',
   targetType: 'graphic-plane',
-  apply(target, params, context) {
-    const units = params.units ?? 'pixels-per-second';
+  apply(target, parameters, context) {
+    const units = parameters.units ?? 'pixels-per-second';
     const factor = units === 'pixels-per-frame' ? 1 : context.deltaSeconds;
 
-    target.scroll.x += params.velocityX * factor;
-    target.scroll.y += params.velocityY * factor;
+    target.scroll.x += parameters.velocityX * factor;
+    target.scroll.y += parameters.velocityY * factor;
 
     if (target.wrap.x) {
       target.scroll.x = wrapValue(target.scroll.x, resolveWrapSpan(target, 'x'));
@@ -64,20 +64,24 @@ function resolveWrapSpan(target: RoccoGraphicPlane, axis: 'x' | 'y'): number {
   const fallback = 0;
 
   switch (target.source.kind) {
-    case 'image':
+    case 'image': {
       return axis === 'x' ? target.source.width ?? fallback : target.source.height ?? fallback;
-    case 'bitmap':
+    }
+    case 'bitmap': {
       return axis === 'x' ? target.source.width : target.source.height;
-    case 'tilemap':
+    }
+    case 'tilemap': {
       return axis === 'x'
         ? target.source.width * target.source.tileWidth
         : target.source.height * target.source.tileHeight;
+    }
     case 'procedural': {
       const key = axis === 'x' ? 'width' : 'height';
-      const fromParams = Number(target.source.params?.[key] ?? NaN);
-      return Number.isFinite(fromParams) ? fromParams : fallback;
+      const fromParameters = Number(target.source.params?.[key] ?? NaN);
+      return Number.isFinite(fromParameters) ? fromParameters : fallback;
     }
-    default:
+    default: {
       return fallback;
+    }
   }
 }

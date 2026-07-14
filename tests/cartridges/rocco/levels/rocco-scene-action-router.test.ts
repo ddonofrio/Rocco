@@ -312,7 +312,7 @@ describe('RoccoSceneActionRouter', () => {
         ({
           video: {
             gridMenus: {
-              getCarriedItem: () => undefined,
+              getCarriedItem: () => {},
             },
           },
         }) as unknown as RoccoEngine,

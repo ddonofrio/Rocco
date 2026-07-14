@@ -70,12 +70,12 @@ class InputPolicyLeaseImpl implements InputPolicyLease {
     ownerId: string,
     mode: InputMode,
     acquiredAt: number,
-    releaseFn: (lease: InputPolicyLeaseImpl) => void,
+    releaseFunction: (lease: InputPolicyLeaseImpl) => void,
   ) {
     this.ownerId = ownerId;
     this.mode = mode;
     this.acquiredAt = acquiredAt;
-    this.releaseFn = releaseFn;
+    this.releaseFn = releaseFunction;
   }
 
   dispose(): void {
@@ -107,14 +107,16 @@ export class InputPolicyStackImpl implements InputPolicyStack {
   }
 
   releaseAll(ownerId: string): void {
-    let changed = false;
+    let isChanged = false;
     for (let index = this.leases.length - 1; index >= 0; index -= 1) {
-      if (this.leases[index]?.ownerId === ownerId) {
-        this.leases.splice(index, 1);
-        changed = true;
+      if (this.leases[index]?.ownerId !== ownerId) {
+      	continue;
       }
+
+      this.leases.splice(index, 1);
+      isChanged = true;
     }
-    if (changed) {
+    if (isChanged) {
       this.recompute();
     }
   }

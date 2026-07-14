@@ -14,8 +14,8 @@ import type { SaveEnvelopeRow, SaveStore, SaveStoreKey } from './types';
 export class DexieSaveStore implements SaveStore {
   private readonly db: RoccoDatabase;
 
-  constructor(db?: RoccoDatabase) {
-    this.db = db ?? getRoccoDatabase();
+  constructor(database?: RoccoDatabase) {
+    this.db = database ?? getRoccoDatabase();
   }
 
   get(key: SaveStoreKey): Promise<SaveEnvelopeRow | undefined> {

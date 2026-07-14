@@ -110,7 +110,7 @@ export class RoccoDisplayProfileRenderer {
       return;
     }
 
-    this.rootElement.appendChild(this.overlayElement);
+    this.rootElement.append(this.overlayElement);
     this.mounted = true;
   }
 
@@ -205,9 +205,9 @@ export class RoccoDisplayProfileRenderer {
   }
 
   private resolveStageFilter(profile: RoccoDisplayProfile): string {
-    const brightness = Math.abs(profile.brightness - 1) < 0.001;
-    const contrast = Math.abs(profile.contrast - 1) < 0.001;
-    if (brightness && contrast) {
+    const isBrightness = Math.abs(profile.brightness - 1) < 0.001;
+    const isContrast = Math.abs(profile.contrast - 1) < 0.001;
+    if (isBrightness && isContrast) {
       return 'none';
     }
 

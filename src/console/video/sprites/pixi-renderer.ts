@@ -63,7 +63,7 @@ export class PixiRoccoSpriteRenderer {
     }
 
     for (const layerRoot of this.layerRoots.values()) {
-      this.stage.removeChild(layerRoot);
+      layerRoot.removeFromParent();
       layerRoot.destroy({ children: true });
     }
     this.layerRoots.clear();
@@ -77,7 +77,7 @@ export class PixiRoccoSpriteRenderer {
     }
 
     const staleIds = new Set(this.nodes.keys());
-    renderables.forEach((renderable, index) => {
+    for (const [index, renderable] of renderables.entries()) {
       const layerRoot = this.ensureLayerRoot(renderable.instance.renderLayer);
       let node = this.nodes.get(renderable.instance.id);
       if (!node) {
@@ -92,7 +92,7 @@ export class PixiRoccoSpriteRenderer {
 
       this.applyRenderable(node, renderable, index);
       staleIds.delete(renderable.instance.id);
-    });
+    }
 
     for (const staleId of staleIds) {
       const node = this.nodes.get(staleId);
@@ -357,9 +357,9 @@ export class PixiRoccoSpriteRenderer {
 
   private hashToColor(seed: string, alpha: number): string {
     let hash = 0;
-    for (let i = 0; i < seed.length; i += 1) {
-      hash = (hash << 5) - hash + seed.charCodeAt(i);
-      hash |= 0;
+    for (let index = 0; index < seed.length; index += 1) {
+      hash = (hash << 5) - hash + seed.charCodeAt(index);
+      hash = Math.trunc(hash);
     }
 
     const hue = Math.abs(hash) % 360;
@@ -368,7 +368,7 @@ export class PixiRoccoSpriteRenderer {
 
   private toTintNumber(value: string | undefined): number {
     if (!value) {
-      return 0xffffff;
+      return 0xff_ff_ff;
     }
 
     if (value.startsWith('#')) {
@@ -377,6 +377,6 @@ export class PixiRoccoSpriteRenderer {
         return parsed;
       }
     }
-    return 0xffffff;
+    return 0xff_ff_ff;
   }
 }

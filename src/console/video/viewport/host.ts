@@ -136,16 +136,16 @@ export class RoccoViewportHost {
     }
 
     if (this.ownsRootElement && !this.rootElement.parentElement) {
-      document.body.appendChild(this.rootElement);
+      document.body.append(this.rootElement);
     }
 
     this.applyRootStyles();
     this.attachHostListeners();
-    this.hostElement.appendChild(this.stageElement);
+    this.hostElement.append(this.stageElement);
     this.displayProfileRenderer.mount();
     this.buildBadgeRenderer.mount();
     this.cursorHost.mount();
-    this.rootElement.appendChild(this.hostElement);
+    this.rootElement.append(this.hostElement);
     window.addEventListener('resize', this.onWindowResize);
 
     this.mounted = true;

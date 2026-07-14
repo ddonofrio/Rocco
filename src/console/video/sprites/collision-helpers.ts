@@ -341,20 +341,20 @@ function isPointInRect(point: RoccoPoint, rect: WorldRect): boolean {
 }
 
 function isPointInPolygon(point: RoccoPoint, points: readonly RoccoPoint[]): boolean {
-  let inside = false;
-  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-    const xi = points[i]?.x ?? 0;
-    const yi = points[i]?.y ?? 0;
-    const xj = points[j]?.x ?? 0;
-    const yj = points[j]?.y ?? 0;
+  let isInside = false;
+  for (let index = 0, index_ = points.length - 1; index < points.length; index_ = index++) {
+    const xi = points[index]?.x ?? 0;
+    const yi = points[index]?.y ?? 0;
+    const xj = points[index_]?.x ?? 0;
+    const yj = points[index_]?.y ?? 0;
 
-    const intersects =
+    const isIntersects =
       yi > point.y !== yj > point.y && point.x < ((xj - xi) * (point.y - yi)) / (yj - yi + EPSILON) + xi;
-    if (intersects) {
-      inside = !inside;
+    if (isIntersects) {
+      isInside = !isInside;
     }
   }
-  return inside;
+  return isInside;
 }
 
 function intersectsRectRect(left: WorldRect, right: WorldRect): boolean {
@@ -387,8 +387,8 @@ function toBounds(shape: WorldShape): WorldRect {
     };
   }
 
-  let minX = Number.POSITIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
+  let minX = Infinity;
+  let minY = Infinity;
   let maxX = Number.NEGATIVE_INFINITY;
   let maxY = Number.NEGATIVE_INFINITY;
   for (const point of shape.polygon.points) {

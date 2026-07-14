@@ -510,7 +510,7 @@ export class RoccoLevelManager {
   ): RoccoLevelMountOptions {
     return {
       ...this.createLevelMountOptions(),
-      ...(mountState ? this.cloneMountStateSnapshot(mountState) ?? {} : {}),
+      ...(mountState && (this.cloneMountStateSnapshot(mountState) ?? {})),
     };
   }
 

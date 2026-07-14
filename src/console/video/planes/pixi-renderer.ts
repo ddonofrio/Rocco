@@ -109,7 +109,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     }
 
     for (const layerRoot of mounted.layerRoots.values()) {
-      mounted.host.removeChild(layerRoot);
+      layerRoot.removeFromParent();
       layerRoot.destroy({ children: true });
     }
     this.mountedScenes.delete(sceneId);
@@ -216,23 +216,28 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
 
   private createSourceContainer(plane: RoccoGraphicPlane): SourceContainerBuild {
     switch (plane.source.kind) {
-      case 'solid':
+      case 'solid': {
         return this.createSolidNode(plane, plane.source);
-      case 'image':
+      }
+      case 'image': {
         return this.createImageNode(plane, plane.source);
-      case 'tilemap':
+      }
+      case 'tilemap': {
         return this.createTilemapNode(plane, plane.source);
-      case 'procedural':
+      }
+      case 'procedural': {
         return this.createProceduralNode(plane, plane.source);
+      }
       case 'bitmap':
       case 'tileset':
-      default:
+      default: {
         return {
           content: this.createPlaceholderNode(plane.source.kind),
           mode: 'static',
           wrapSpanX: 0,
           wrapSpanY: 0,
         };
+      }
     }
   }
 
@@ -412,7 +417,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
   }
 
   private applyColorModel(container: Container, colorModel: RoccoColorModel): void {
-    container.tint = 0xffffff;
+    container.tint = 0xff_ff_ff;
     container.alpha = 1;
     if (colorModel.kind !== 'tint') {
       return;
@@ -446,7 +451,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
   private applyViewport(root: Container, node: PlaneNode, plane: RoccoGraphicPlane): void {
     if (!plane.viewport) {
       if (node.viewportMask) {
-        root.removeChild(node.viewportMask);
+        node.viewportMask.removeFromParent();
         node.viewportMask.destroy();
         node.viewportMask = undefined;
       }
@@ -519,7 +524,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
           .rect(x * tilemap.tileWidth, y * tilemap.tileHeight, tilemap.tileWidth, tilemap.tileHeight)
           .fill('#8a6841')
           .stroke({ width: 1, color: '#2f2417' });
-        tile.alpha = cell.priority !== undefined ? Math.min(1, 0.5 + cell.priority * 0.05) : 0.85;
+        tile.alpha = cell.priority === undefined ? 0.85 : Math.min(1, 0.5 + cell.priority * 0.05);
         container.addChild(tile);
       }
     }
@@ -566,7 +571,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     try {
       return new Color(value).toNumber();
     } catch {
-      return 0xffffff;
+      return 0xff_ff_ff;
     }
   }
 
@@ -591,7 +596,7 @@ export function createProceduralStarField(source: RoccoProceduralSource): Contai
 
   const random = mulberry32(seed);
   const stars = new Graphics();
-  for (let i = 0; i < starCount; i += 1) {
+  for (let index = 0; index < starCount; index += 1) {
     const x = Math.floor(random() * width);
     const y = Math.floor(random() * height);
     const radius = Math.max(1, Math.floor(random() * 2));
@@ -605,28 +610,28 @@ export function createProceduralStarField(source: RoccoProceduralSource): Contai
 function mulberry32(seed: number): () => number {
   let t = seed >>> 0;
   return () => {
-    t += 0x6d2b79f5;
+    t += 0x6d_2b_79_f5;
     let value = Math.imul(t ^ (t >>> 15), t | 1);
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
   };
 }
 
 export function makeDraggablePlaneRoot(root: Container): void {
-  let dragging = false;
+  let isDragging = false;
   let offsetX = 0;
   let offsetY = 0;
 
   root.eventMode = 'static';
 
   root.on('pointerdown', (event: FederatedPointerEvent) => {
-    dragging = true;
+    isDragging = true;
     offsetX = event.global.x - root.x;
     offsetY = event.global.y - root.y;
   });
 
   root.on('pointermove', (event: FederatedPointerEvent) => {
-    if (!dragging) {
+    if (!isDragging) {
       return;
     }
 
@@ -634,9 +639,9 @@ export function makeDraggablePlaneRoot(root: Container): void {
   });
 
   root.on('pointerup', () => {
-    dragging = false;
+    isDragging = false;
   });
   root.on('pointerupoutside', () => {
-    dragging = false;
+    isDragging = false;
   });
 }

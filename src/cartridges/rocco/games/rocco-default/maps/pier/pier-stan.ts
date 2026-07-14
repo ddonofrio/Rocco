@@ -53,7 +53,7 @@ const STAN_SHEET_MIN_OPAQUE_PIXELS = 4000;
 const STAN_WAKE_STEP_DURATION_MS = 1000;
 const STAN_LOOK_AROUND_STEP_DURATION_MS = 1000;
 const STAN_DIALOGUE_MENU_Y = 286;
-const STAN_AWAKE_IDLE_TIMEOUT_MS = 12000;
+const STAN_AWAKE_IDLE_TIMEOUT_MS = 12_000;
 const STAN_SHOP_EXIT_DOOR_REACTION_WINDOW_MS = 5000;
 const STAN_REAR_ALERT_HALF_WIDTH = 92;
 const STAN_REAR_ALERT_MAX_GROUND_Y = DEFAULT_STAN_Y + 28;
@@ -234,8 +234,8 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       }
     }
 
-    const roccoBehindStan = this.isRoccoBehindStan();
-    if (roccoBehindStan) {
+    const isRoccoBehindStan = this.isRoccoBehindStan();
+    if (isRoccoBehindStan) {
       this.awakeIdleMs = 0;
       this.wakeForRearPresence();
     }
@@ -247,12 +247,12 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     let remainingDeltaMs = deltaMs;
     while (remainingDeltaMs > 0) {
       if (this.sequence) {
-        const dialogueWasBusy =
+        const isDialogueWasBusy =
           this.dialogue.isActive() && !this.dialogue.isAwaitingChoice();
         const deltaBeforeSequence = remainingDeltaMs;
         remainingDeltaMs = this.advanceSequence(remainingDeltaMs);
         const consumedDeltaMs = deltaBeforeSequence - remainingDeltaMs;
-        if (dialogueWasBusy && consumedDeltaMs > 0) {
+        if (isDialogueWasBusy && consumedDeltaMs > 0) {
           this.dialogue.update(consumedDeltaMs);
         }
         this.awakeIdleMs = 0;
@@ -266,7 +266,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       }
 
       if (this.dialogue.isAwaitingChoice()) {
-        if (!roccoBehindStan) {
+        if (!isRoccoBehindStan) {
           this.awakeIdleMs += remainingDeltaMs;
           if (this.awakeIdleMs >= STAN_AWAKE_IDLE_TIMEOUT_MS) {
             this.fallAsleep();
@@ -276,7 +276,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       }
 
       if (this.state === 'awake') {
-        if (!roccoBehindStan) {
+        if (!isRoccoBehindStan) {
           this.awakeIdleMs += remainingDeltaMs;
           if (this.awakeIdleMs >= STAN_AWAKE_IDLE_TIMEOUT_MS) {
             this.fallAsleep();
@@ -322,17 +322,21 @@ class RoccoStanController implements RoccoPierSideAmbientController {
   }
 
   handleGridMenu(activation: RoccoGridMenuActivation): void {
-    if (this.dialogue.handleGridMenu(activation)) {
-      this.awakeIdleMs = 0;
-      this.engine.video.render(0);
+    if (!this.dialogue.handleGridMenu(activation)) {
+    	return;
     }
+
+    this.awakeIdleMs = 0;
+    this.engine.video.render(0);
   }
 
   handleSceneClick(_activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
-    if (this.dialogue.isActive() && !this.dialogue.isAwaitingChoice()) {
-      this.dialogue.advance();
-      return { suppressDefaultPlayerMove: true };
+    if (!this.dialogue.isActive() || this.dialogue.isAwaitingChoice()) {
+    	return;
     }
+
+    this.dialogue.advance();
+    return { suppressDefaultPlayerMove: true };
   }
 
   unmount(engine: RoccoEngine): void {
@@ -626,7 +630,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
 
   private showStanDoorThought(): void {
     const lines = this.localization.text.stan.doorWakeThoughtLines;
-    if (!lines.length) {
+    if (lines.length === 0) {
       return;
     }
 

@@ -140,7 +140,7 @@ describe('RoccoDroppedInventoryController', () => {
     const localization = createRoccoLocalization('en');
     const controller = new RoccoDroppedInventoryController({
       localization,
-      resolvePlayerGroundPoint: () => undefined,
+      resolvePlayerGroundPoint: () => {},
       resolvePlayerBaseScale: () => 1,
       tryAddItemToInventory: () => true,
     });
@@ -233,7 +233,7 @@ describe('RoccoDroppedInventoryController', () => {
     controller.dropItem(level.id, relic, { x: 150, y: 260 });
     controller.syncActiveLevelPresentation(engine, level);
 
-    const handled = controller.handleActionMenu(engine, level, {
+    const isHandled = controller.handleActionMenu(engine, level, {
       definitionId: 'rocco-dropped-coral-relic-action-menu',
       targetInstanceId: 'rocco-dropped-inventory-sprite:bait-shop-toilet:rocco-coral-relic',
       targetDefinitionId: 'rocco-dropped-inventory-definition:rocco-coral-relic',
@@ -241,7 +241,7 @@ describe('RoccoDroppedInventoryController', () => {
       itemId: 'look',
     });
 
-    expect(handled).toBe(true);
+    expect(isHandled).toBe(true);
     expect(state.thoughtMessages).toContain(
       `rocco-dropped-inventory-sprite:bait-shop-toilet:rocco-coral-relic:${localization.text.baitShop.coralRelicLookLine}`,
     );
@@ -262,7 +262,7 @@ describe('RoccoDroppedInventoryController', () => {
     controller.dropItem(level.id, relic, { x: 150, y: 260 });
     controller.syncActiveLevelPresentation(engine, level);
 
-    const handled = controller.handleActionMenu(engine, level, {
+    const isHandled = controller.handleActionMenu(engine, level, {
       definitionId: 'rocco-dropped-coral-relic-action-menu',
       targetInstanceId: 'rocco-dropped-inventory-sprite:bait-shop-toilet:rocco-coral-relic',
       targetDefinitionId: 'rocco-dropped-inventory-definition:rocco-coral-relic',
@@ -270,12 +270,12 @@ describe('RoccoDroppedInventoryController', () => {
       itemId: 'grab',
     });
 
-    expect(handled).toBe(true);
+    expect(isHandled).toBe(true);
     expect(state.thoughtMessages).toContain(
       `rocco-dropped-inventory-sprite:bait-shop-toilet:rocco-coral-relic:${localization.text.baitShop.coralRelicRefuseLines[0]}`,
     );
 
-    const handledSecond = controller.handleActionMenu(engine, level, {
+    const isHandledSecond = controller.handleActionMenu(engine, level, {
       definitionId: 'rocco-dropped-coral-relic-action-menu',
       targetInstanceId: 'rocco-dropped-inventory-sprite:bait-shop-toilet:rocco-coral-relic',
       targetDefinitionId: 'rocco-dropped-inventory-definition:rocco-coral-relic',
@@ -283,7 +283,7 @@ describe('RoccoDroppedInventoryController', () => {
       itemId: 'grab',
     });
 
-    expect(handledSecond).toBe(true);
+    expect(isHandledSecond).toBe(true);
     expect(state.thoughtMessages).toContain(
       `rocco-dropped-inventory-sprite:bait-shop-toilet:rocco-coral-relic:${localization.text.baitShop.coralRelicRefuseLines[1]}`,
     );
@@ -304,7 +304,7 @@ describe('RoccoDroppedInventoryController', () => {
     controller.dropItem(level.id, relic, { x: 150, y: 260 });
     controller.syncActiveLevelPresentation(engine, level);
 
-    const handled = controller.handleActionMenu(engine, level, {
+    const isHandled = controller.handleActionMenu(engine, level, {
       definitionId: 'rocco-dropped-coral-relic-action-menu',
       targetInstanceId: 'rocco-dropped-inventory-sprite:bait-shop-toilet:rocco-coral-relic',
       targetDefinitionId: 'rocco-dropped-inventory-definition:rocco-coral-relic',
@@ -312,6 +312,6 @@ describe('RoccoDroppedInventoryController', () => {
       itemId: 'step',
     });
 
-    expect(handled).toBe(true);
+    expect(isHandled).toBe(true);
   });
 });

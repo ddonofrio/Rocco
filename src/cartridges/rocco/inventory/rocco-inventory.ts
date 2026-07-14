@@ -36,13 +36,13 @@ const INVENTORY_BUTTON_HEIGHT = 40;
 const INVENTORY_BUTTON_GAP = 14;
 const INVENTORY_SLOT_SIZE = 106;
 const INVENTORY_SLOT_GAP = 8;
-const roccoAbyssalTalismanAssetUrl = new URL('./assets/souvenirs/abyssal-talisman.png', import.meta.url)
+const roccoAbyssalTalismanAssetUrl = new URL('assets/souvenirs/abyssal-talisman.png', import.meta.url)
   .href;
-export const roccoCoralRelicAssetUrl = new URL('./assets/souvenirs/coral-relic.png', import.meta.url)
+export const roccoCoralRelicAssetUrl = new URL('assets/souvenirs/coral-relic.png', import.meta.url)
   .href;
-const roccoFloatingAmuletAssetUrl = new URL('./assets/souvenirs/floating-amulet.png', import.meta.url)
+const roccoFloatingAmuletAssetUrl = new URL('assets/souvenirs/floating-amulet.png', import.meta.url)
   .href;
-const roccoSpiralRazorAssetUrl = new URL('./assets/souvenirs/spiral-razor.png', import.meta.url)
+const roccoSpiralRazorAssetUrl = new URL('assets/souvenirs/spiral-razor.png', import.meta.url)
   .href;
 const roccoBataAssetUrl = new URL('../assets/props/lab-coat.png', import.meta.url).href;
 const roccoBataGroundAssetUrl = new URL('../assets/props/lab-coat-ground.png', import.meta.url)
@@ -292,16 +292,21 @@ export function resolveRoccoInventoryItemLabel(
   localization: RoccoLocalization,
 ): string | undefined {
   switch (itemId) {
-    case ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID:
+    case ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID: {
       return createRoccoFloatingAmuletInventoryItem(localization).label;
-    case ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID:
+    }
+    case ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID: {
       return createRoccoSpiralRazorInventoryItem(localization).label;
-    case ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID:
+    }
+    case ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID: {
       return createRoccoAbyssalTalismanInventoryItem(localization).label;
-    case ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID:
+    }
+    case ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID: {
       return createRoccoCoralRelicInventoryItem(localization).label;
-    default:
+    }
+    default: {
       return createBaitShopSouvenirTableItems(localization).find((item) => item.id === itemId)?.label;
+    }
   }
 }
 

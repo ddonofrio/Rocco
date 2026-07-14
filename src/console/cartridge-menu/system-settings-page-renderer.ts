@@ -101,7 +101,7 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
 
     let rowY = SETTINGS_TOP + 42;
     for (const option of settingsOptions) {
-      const selected = option.id === settingsSelectionId;
+      const isSelected = option.id === settingsSelectionId;
       const row = this.ui.createInteractiveContainer(
         PANEL_X + 14,
         rowY,
@@ -112,13 +112,13 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
         },
       );
 
-      this.drawRowFrame(row, MODULE_ROW_W, MODULE_ROW_H, selected);
+      this.drawRowFrame(row, MODULE_ROW_W, MODULE_ROW_H, isSelected);
 
       const label = this.ui.makeText(option.label, {
         fontSize: 18,
-        fontWeight: selected ? '700' : '400',
+        fontWeight: isSelected ? '700' : '400',
         fill: option.enabled
-          ? selected
+          ? isSelected
             ? C.itemTitleSelected
             : C.itemTitle
           : C.itemDisabled,
@@ -376,11 +376,11 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     const columnGap = 390;
     const rowGap = 34;
 
-    fields.forEach(([label, value], index) => {
+    for (const [index, [label, value]] of fields.entries()) {
       const column = index % 2;
       const row = Math.floor(index / 2);
       this.drawDetailField(startX + column * columnGap, startY + row * rowGap, label, value);
-    });
+    }
   }
 
   private drawVideoOptionRow(
@@ -393,17 +393,17 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     onVideoDecrease: (id: 'brightness' | 'contrast') => void,
     onVideoIncrease: (id: 'brightness' | 'contrast') => void,
   ): number {
-    const selected = videoSelectionId === id;
+    const isSelected = videoSelectionId === id;
     const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
       onVideoRowPointerDown(id);
     });
 
-    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, selected);
+    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
 
     const text = this.ui.makeText(label, {
       fontSize: 16,
-      fontWeight: selected ? '700' : '400',
-      fill: selected ? C.itemTitleSelected : C.itemTitle,
+      fontWeight: isSelected ? '700' : '400',
+      fill: isSelected ? C.itemTitleSelected : C.itemTitle,
       letterSpacing: 2,
     });
     text.x = 14;
@@ -422,7 +422,7 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
 
       const chevron = this.ui.makeText('>', {
         fontSize: 16,
-        fill: selected ? C.titleBrand : C.detailValue,
+        fill: isSelected ? C.titleBrand : C.detailValue,
       });
       chevron.x = OPTION_ROW_W - 18;
       chevron.y = 12;
@@ -461,11 +461,11 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     const columnGap = 390;
     const rowGap = 34;
 
-    fields.forEach(([label, value], index) => {
+    for (const [index, [label, value]] of fields.entries()) {
       const column = index % 2;
       const row = Math.floor(index / 2);
       this.drawDetailField(startX + column * columnGap, startY + row * rowGap, label, value);
-    });
+    }
   }
 
   private drawSoundOptionRow(
@@ -478,17 +478,17 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     onSoundDecrease: (id: SoundRowId) => void,
     onSoundIncrease: (id: SoundRowId) => void,
   ): number {
-    const selected = soundSelectionId === id;
+    const isSelected = soundSelectionId === id;
     const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
       onSoundRowPointerDown(id);
     });
 
-    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, selected);
+    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
 
     const text = this.ui.makeText(label, {
       fontSize: 16,
-      fontWeight: selected ? '700' : '400',
-      fill: selected ? C.itemTitleSelected : C.itemTitle,
+      fontWeight: isSelected ? '700' : '400',
+      fill: isSelected ? C.itemTitleSelected : C.itemTitle,
       letterSpacing: 2,
     });
     text.x = 14;
@@ -527,17 +527,17 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     displayProfile: RoccoDisplayProfile,
     onFilterRowPointerDown: (id: FilterRowId) => void,
   ): number {
-    const selected = filterSelectionId === id;
+    const isSelected = filterSelectionId === id;
     const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
       onFilterRowPointerDown(id);
     });
 
-    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, selected);
+    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
 
     const text = this.ui.makeText(label, {
       fontSize: 16,
-      fontWeight: selected ? '700' : '400',
-      fill: selected ? C.itemTitleSelected : C.itemTitle,
+      fontWeight: isSelected ? '700' : '400',
+      fill: isSelected ? C.itemTitleSelected : C.itemTitle,
       letterSpacing: 2,
     });
     text.x = 14;

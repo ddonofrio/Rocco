@@ -148,17 +148,21 @@ export class RoccoCartridgeMenuSession {
 
   routeBuiltInSettingsSelection(optionId: string): boolean {
     switch (optionId) {
-      case 'video':
+      case 'video': {
         this.openVideoSettings();
         return true;
-      case 'sound':
+      }
+      case 'sound': {
         this.openSoundSettings();
         return true;
-      case 'back':
+      }
+      case 'back': {
         this.openCartridgeSelection();
         return true;
-      default:
+      }
+      default: {
         return false;
+      }
     }
   }
 

@@ -23,7 +23,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function createSignature(lines: readonly string[]): string {
-  return lines.map((line, index) => `${index}:${line}`).join('\u001f');
+  return lines.map((line, index) => `${index}:${line}`).join('\u{1F}');
 }
 
 function normalizeIndexes(indexes: readonly number[], maxExclusive: number): number[] {
@@ -79,7 +79,7 @@ export function selectNonRepeatingLines(
       : undefined;
   const pickedIndexes: number[] = [];
   const random = options.random ?? Math.random;
-  const avoidImmediateRepeat = options.avoidImmediateRepeat ?? true;
+  const isAvoidImmediateRepeat = options.avoidImmediateRepeat ?? true;
 
   while (pickedIndexes.length < requestedCount && totalCount > 0) {
     if (remainingIndexes.length === 0) {
@@ -87,9 +87,9 @@ export function selectNonRepeatingLines(
         totalCount,
         pickedIndexes,
         pickedIndexes.length > 0
-          ? pickedIndexes[pickedIndexes.length - 1]
+          ? pickedIndexes.at(-1)
           : priorLastSelectedIndex,
-        avoidImmediateRepeat && pickedIndexes.length === 0,
+        isAvoidImmediateRepeat && pickedIndexes.length === 0,
       );
       if (remainingIndexes.length === 0) {
         break;
@@ -105,7 +105,7 @@ export function selectNonRepeatingLines(
     pickedIndexes.push(pickedIndex);
   }
 
-  const lastSelectedIndex = pickedIndexes[pickedIndexes.length - 1] ?? priorLastSelectedIndex;
+  const lastSelectedIndex = pickedIndexes.at(-1) ?? priorLastSelectedIndex;
 
   return {
     lines: pickedIndexes.map((index) => options.lines[index] ?? ''),

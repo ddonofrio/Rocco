@@ -55,7 +55,7 @@ describe('src/main.ts bootstrap', () => {
 
     mainTestState.viewportMount.mockImplementation(() => {
       if (mainTestState.rootElement && !mainTestState.rootElement.parentElement) {
-        appRoot.appendChild(mainTestState.rootElement);
+        appRoot.append(mainTestState.rootElement);
       }
     });
     mainTestState.viewportUnmount.mockImplementation(() => {
@@ -64,7 +64,7 @@ describe('src/main.ts bootstrap', () => {
   });
 
   afterEach(() => {
-    document.body.innerHTML = '';
+    document.body.replaceChildren();
   });
 
   it('renders a recoverable boot error when runtime init fails', async () => {
@@ -90,7 +90,7 @@ describe('src/main.ts bootstrap', () => {
 
     await import('../src/main.ts');
 
-    window.dispatchEvent(
+    globalThis.dispatchEvent(
       new ErrorEvent('error', {
         message: 'boom',
         error: new Error('boom'),

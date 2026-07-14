@@ -61,13 +61,13 @@ function createVideoSystemMock(overrides: Partial<InputHandlerVideoSystem> = {})
     },
     actionMenus: {
       activateAt() {
-        return undefined;
+        return;
       },
       closeMenu() {
         // noop
       },
       getHoveredItem() {
-        return undefined;
+        return;
       },
       isOpen() {
         return false;
@@ -81,19 +81,19 @@ function createVideoSystemMock(overrides: Partial<InputHandlerVideoSystem> = {})
     },
     gridMenus: {
       activateAt() {
-        return undefined;
+        return;
       },
       clearCarriedItem() {
         // noop
       },
       getCarriedItem() {
-        return undefined;
+        return;
       },
       getHoveredItem() {
-        return undefined;
+        return;
       },
       getRenderableMenu() {
-        return undefined;
+        return;
       },
       isOpen() {
         return false;
@@ -112,7 +112,7 @@ function createVideoSystemMock(overrides: Partial<InputHandlerVideoSystem> = {})
     },
     sceneTargets: {
       getTarget() {
-        return undefined;
+        return;
       },
     },
     sprites: {
@@ -417,7 +417,7 @@ describe('RoccoInputHandler', () => {
         manifest: { id: 'test-cartridge', title: 'Test', version: '1.0.0' },
         mount() {},
         handleAction() {
-          return undefined;
+          return;
         },
       }),
       getActivePlayerSpriteId: () => 'rocco',
@@ -704,10 +704,10 @@ describe('RoccoInputHandler', () => {
             return carriedItem;
           },
           getHoveredItem() {
-            return undefined;
+            return;
           },
           getRenderableMenu() {
-            return undefined;
+            return;
           },
           isOpen() {
             return true;
@@ -869,10 +869,10 @@ describe('RoccoInputHandler', () => {
             };
           },
           getHoveredItem() {
-            return undefined;
+            return;
           },
           getRenderableMenu() {
-            return undefined;
+            return;
           },
           isOpen() {
             return true;

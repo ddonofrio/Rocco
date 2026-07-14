@@ -202,10 +202,10 @@ export class RoccoLevelTransitionService {
     this.activeRun = run;
 
     let prepared: RoccoPreparedLevelTransition | null = null;
-    let keepResourcesLocked = false;
-    let currentLevelNeedsRestore = false;
-    let currentLevelNeedsCleanupBeforeRestore = false;
-    let targetMountAttempted = false;
+    let isKeepResourcesLocked = false;
+    let isCurrentLevelNeedsRestore = false;
+    let isCurrentLevelNeedsCleanupBeforeRestore = false;
+    let isTargetMountAttempted = false;
 
     try {
       const preparedCandidate = plan.prepare({
@@ -238,10 +238,10 @@ export class RoccoLevelTransitionService {
 
       try {
         activeLevel.unmount(engine);
-        currentLevelNeedsRestore = true;
+        isCurrentLevelNeedsRestore = true;
       } catch (unmountError) {
-        currentLevelNeedsRestore = true;
-        currentLevelNeedsCleanupBeforeRestore = true;
+        isCurrentLevelNeedsRestore = true;
+        isCurrentLevelNeedsCleanupBeforeRestore = true;
         throw unmountError;
       }
 
@@ -250,7 +250,7 @@ export class RoccoLevelTransitionService {
         `Level transition '${plan.id}' was cancelled after the current level unmounted.`,
       );
 
-      targetMountAttempted = true;
+      isTargetMountAttempted = true;
       const scene = await prepared.targetLevel.mount(engine, prepared.mountOptions, preloader);
       this.assertRunNotAborted(
         run.controller.signal,
@@ -292,13 +292,13 @@ export class RoccoLevelTransitionService {
         originalError: error,
         prepared,
         currentLevel: activeLevel,
-        cleanupTarget: targetMountAttempted,
-        currentLevelNeedsRestore,
-        currentLevelNeedsCleanupBeforeRestore,
+        cleanupTarget: isTargetMountAttempted,
+        currentLevelNeedsRestore: isCurrentLevelNeedsRestore,
+        currentLevelNeedsCleanupBeforeRestore: isCurrentLevelNeedsCleanupBeforeRestore,
         abortReason: normalizeAbortReason(run.controller.signal.reason),
       });
       if (rollbackResult.fatalError) {
-        keepResourcesLocked = this.enterFatalState(
+        isKeepResourcesLocked = this.enterFatalState(
           engine,
           composition,
           inputLease,
@@ -329,7 +329,7 @@ export class RoccoLevelTransitionService {
       }
       run.resolveSettled();
 
-      if (!keepResourcesLocked) {
+      if (!isKeepResourcesLocked) {
         composition.dispose();
         inputLease.dispose();
         this.busy = false;

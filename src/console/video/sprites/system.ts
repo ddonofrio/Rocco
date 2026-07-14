@@ -626,12 +626,12 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
 
   listRenderableSprites(options?: { includeTransparent?: boolean }): RoccoRenderableSprite[] {
     const renderables: RoccoRenderableSprite[] = [];
-    const includeTransparent = options?.includeTransparent === true;
+    const isIncludeTransparent = options?.includeTransparent === true;
     for (const instance of this.instances.values()) {
       if (
         !instance.enabled ||
         !instance.visible ||
-        (!includeTransparent && instance.opacity <= 0)
+        (!isIncludeTransparent && instance.opacity <= 0)
       ) {
         continue;
       }
@@ -709,7 +709,7 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
 
     let scaleX = 1;
     let scaleY = 1;
-    let changed = false;
+    let isChanged = false;
 
     const mode = autoAdjust.mode ?? 'match-visible-height';
     if (mode === 'match-visible-height') {
@@ -720,7 +720,7 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
         if (Number.isFinite(scale) && scale > 0 && Math.abs(scale - 1) >= EPSILON) {
           scaleX *= scale;
           scaleY *= scale;
-          changed = true;
+          isChanged = true;
         }
       }
     }
@@ -733,10 +733,10 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     if (perspectiveScale !== undefined && Math.abs(perspectiveScale - 1) >= EPSILON) {
       scaleX *= perspectiveScale;
       scaleY *= perspectiveScale;
-      changed = true;
+      isChanged = true;
     }
 
-    if (!changed) {
+    if (!isChanged) {
       return undefined;
     }
 
@@ -819,12 +819,15 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     }
 
     switch (perspectiveByY.speedScaleMode) {
-      case 'horizontal-only':
+      case 'horizontal-only': {
         return { x: scale, y: 1 };
-      case 'vertical-only':
+      }
+      case 'vertical-only': {
         return { x: 1, y: scale };
-      default:
+      }
+      default: {
         return { x: scale, y: scale };
+      }
     }
   }
 
@@ -1105,9 +1108,9 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       };
     }
 
-    const followSurface = navigation.followSurface !== false;
+    const isFollowSurface = navigation.followSurface !== false;
     const nextGroundX = resolved.x;
-    const nextGroundY = followSurface ? resolved.y : groundY;
+    const nextGroundY = isFollowSurface ? resolved.y : groundY;
     return {
       x: nextGroundX - groundAnchor.x * scaleX,
       y: nextGroundY - groundAnchor.y * scaleY,

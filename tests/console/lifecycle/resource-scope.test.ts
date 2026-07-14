@@ -65,16 +65,16 @@ describe('ResourceScope', () => {
 
     expect(firstDispose).toBe(secondDispose);
 
-    let settled = false;
+    let isSettled = false;
     void secondDispose.then(() => {
-      settled = true;
+      isSettled = true;
     });
     await Promise.resolve();
-    expect(settled).toBe(false);
+    expect(isSettled).toBe(false);
 
     resolveDisposer();
     await firstDispose;
-    expect(settled).toBe(true);
+    expect(isSettled).toBe(true);
   });
 
   it('continues disposing after a failing disposer and aggregates errors', async () => {
@@ -111,8 +111,8 @@ describe('ResourceScope', () => {
     const scope = createResourceScope('test');
     await scope.dispose();
 
-    expect(() => scope.defer(() => undefined)).toThrow(ResourceScopeClosedError);
-    expect(() => scope.add({ dispose: () => undefined })).toThrow(ResourceScopeClosedError);
+    expect(() => scope.defer(() => {})).toThrow(ResourceScopeClosedError);
+    expect(() => scope.add({ dispose: () => {} })).toThrow(ResourceScopeClosedError);
   });
 
   it('creates a child owned by the parent and cascades disposal', async () => {
@@ -160,15 +160,15 @@ describe('ResourceScope', () => {
   it('aborts child scopes before later parent disposers run', async () => {
     const parent = createResourceScope('parent');
     const child = parent.createChild('child');
-    let childAbortedWhenParentDisposerRan = false;
+    let isChildAbortedWhenParentDisposerRan = false;
 
     parent.defer(() => {
-      childAbortedWhenParentDisposerRan = child.signal.aborted;
+      isChildAbortedWhenParentDisposerRan = child.signal.aborted;
     });
 
     await parent.dispose();
 
-    expect(childAbortedWhenParentDisposerRan).toBe(true);
+    expect(isChildAbortedWhenParentDisposerRan).toBe(true);
   });
 
   it('waits for an in-flight child disposal when the parent closes', async () => {
@@ -186,12 +186,12 @@ describe('ResourceScope', () => {
     const childDispose = child.dispose();
     const parentDispose = parent.dispose();
 
-    let parentSettled = false;
+    let isParentSettled = false;
     void parentDispose.catch(() => {
-      parentSettled = true;
+      isParentSettled = true;
     });
     await Promise.resolve();
-    expect(parentSettled).toBe(false);
+    expect(isParentSettled).toBe(false);
 
     rejectChild(new Error('child failed'));
 

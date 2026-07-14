@@ -59,7 +59,7 @@ export class PixiRoccoActionMenuRenderer {
     const layerRoot = this.ensureLayerRoot();
     const staleIds = new Set(this.nodes.keys());
 
-    renderable.definition.items.forEach((item, index) => {
+    for (const [index, item] of renderable.definition.items.entries()) {
       const node = this.ensureNode(item);
       if (node.root.parent !== layerRoot) {
         node.root.parent?.removeChild(node.root);
@@ -68,7 +68,7 @@ export class PixiRoccoActionMenuRenderer {
 
       this.applyItemNode(node, renderable, item, index);
       staleIds.delete(item.id);
-    });
+    }
 
     for (const staleId of staleIds) {
       const node = this.nodes.get(staleId);
@@ -161,14 +161,14 @@ export class PixiRoccoActionMenuRenderer {
     const definition = renderable.definition;
     const state = renderable.state;
     const itemSize = definition.itemSize ?? 44;
-    const hovered = state.hoveredItemId === item.id;
-    const scale = hovered ? definition.hoverScale ?? 1.14 : 1;
+    const isHovered = state.hoveredItemId === item.id;
+    const scale = isHovered ? definition.hoverScale ?? 1.14 : 1;
     const position = this.resolveItemPosition(renderable, index);
 
     node.root.position.set(position.x, position.y);
     node.root.scale.set(scale, scale);
     node.root.alpha = 0.96;
-    node.root.zIndex = hovered ? 10 : index;
+    node.root.zIndex = isHovered ? 10 : index;
 
     node.circle.clear();
     node.circle
@@ -177,14 +177,14 @@ export class PixiRoccoActionMenuRenderer {
       .stroke({
         width: definition.circleStrokeWidth ?? 2,
         color: definition.circleStroke ?? '#d7e6c5',
-        alpha: hovered ? 1 : 0.78,
+        alpha: isHovered ? 1 : 0.78,
       });
 
-    if (node.imageUri !== item.imageUri) {
+    if (node.imageUri === item.imageUri) {
       node.icon.texture = this.resolveTexture(item.imageUri);
-      node.imageUri = item.imageUri;
     } else {
       node.icon.texture = this.resolveTexture(item.imageUri);
+      node.imageUri = item.imageUri;
     }
     node.icon.width = itemSize;
     node.icon.height = itemSize;

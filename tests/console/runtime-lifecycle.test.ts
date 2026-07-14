@@ -67,17 +67,17 @@ describe('GameRuntime lifecycle', () => {
 
     expect(firstDispose).toBe(secondDispose);
 
-    let settled = false;
+    let isSettled = false;
     void secondDispose.then(() => {
-      settled = true;
+      isSettled = true;
     });
     await Promise.resolve();
-    expect(settled).toBe(false);
+    expect(isSettled).toBe(false);
 
     resolveCleanup();
 
     await expect(firstDispose).resolves.toBeUndefined();
-    expect(settled).toBe(true);
+    expect(isSettled).toBe(true);
     expect(runtime.lifecycleState).toBe('disposed');
   });
 

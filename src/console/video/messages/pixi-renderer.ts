@@ -69,7 +69,7 @@ export class PixiRoccoSpriteMessageRenderer {
     }
 
     for (const layerRoot of this.layerRoots.values()) {
-      this.stage.removeChild(layerRoot);
+      layerRoot.removeFromParent();
       layerRoot.destroy({ children: true });
     }
     this.layerRoots.clear();
@@ -215,7 +215,7 @@ export class PixiRoccoSpriteMessageRenderer {
         .map((sprite) => sprite.instance.id),
     );
 
-    return [...spriteBoundsById.entries()]
+    return [...spriteBoundsById]
       .filter(
         ([instanceId]) =>
           instanceId !== currentSpriteInstanceId && !ignoredSpriteIds.has(instanceId),
@@ -524,7 +524,7 @@ export class PixiRoccoSpriteMessageRenderer {
     const clampPenalty =
       Math.abs(candidate.layout.x - candidate.preferredX) +
       Math.abs(candidate.layout.y - candidate.preferredY);
-    return overlapArea * 100000 + clampPenalty * 20 + candidate.preferencePenalty;
+    return overlapArea * 100_000 + clampPenalty * 20 + candidate.preferencePenalty;
   }
 
   private computeIntersectionArea(rect: BubbleLayout, obstacle: SpriteBounds): number {

@@ -61,7 +61,7 @@ export class RoccoDefaultEffectManager implements RoccoEffectManager {
 
   update(effectId: string, patch: RoccoEffectPatch): void {
     const current = this.requireEffect(effectId);
-    const nextParams =
+    const nextParameters =
       patch.params === undefined
         ? current.params
         : isObject(current.params) && isObject(patch.params)
@@ -71,7 +71,7 @@ export class RoccoDefaultEffectManager implements RoccoEffectManager {
     const next: RoccoEffect = {
       ...current,
       ...patch,
-      params: nextParams,
+      params: nextParameters,
     };
 
     this.effects.set(effectId, clone(next));

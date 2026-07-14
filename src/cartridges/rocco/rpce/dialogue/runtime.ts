@@ -383,7 +383,7 @@ export class RoccoDialogueSession {
         : this.npcSpriteInstanceId;
     const messageOptions: RoccoSpriteMessageOptions = {
       ttlMs: sequence.ttlMs,
-      ...(sequence.messageOptions ?? {}),
+      ...sequence.messageOptions,
     };
 
     this.setPhase(sequence.speaker === 'player' ? 'waiting-player' : 'waiting-npc');
@@ -441,7 +441,7 @@ export class RoccoDialogueSession {
   private createNpcMessageOptions(ttlMs: number): RoccoSpriteMessageOptions {
     return {
       ttlMs,
-      ...(this.npcMessageStyle ? { style: this.npcMessageStyle } : {}),
+      ...(this.npcMessageStyle && { style: this.npcMessageStyle }),
     };
   }
 

@@ -87,12 +87,12 @@ export class BaitShopToiletSeatController {
     this.host.setInputEnabled(false);
     this.host.stopPlayerMovement();
 
-    const needsVerticalApproach =
+    const isNeedsVerticalApproach =
       Math.abs(currentGroundPoint.y - this.options.sitApproachPoint.y) > 1;
-    const needsHorizontalApproach =
+    const isNeedsHorizontalApproach =
       Math.abs(currentGroundPoint.x - this.options.sitApproachPoint.x) > 1;
 
-    if (!needsVerticalApproach && !needsHorizontalApproach) {
+    if (!isNeedsVerticalApproach && !isNeedsHorizontalApproach) {
       this.host.playIdleAction('up-left');
       this.sequence = {
         phase: 'waiting-before-frame-one',
@@ -102,20 +102,20 @@ export class BaitShopToiletSeatController {
       return;
     }
 
-    const firstTarget = needsVerticalApproach
+    const firstTarget = isNeedsVerticalApproach
       ? {
           x: currentGroundPoint.x,
           y: this.options.sitApproachPoint.y,
         }
       : this.options.sitApproachPoint;
-    const started = this.host.startWalkTo(firstTarget);
-    if (!started) {
+    const isStarted = this.host.startWalkTo(firstTarget);
+    if (!isStarted) {
       this.host.setInputEnabled(true);
       return;
     }
 
     this.sequence = {
-      phase: needsVerticalApproach
+      phase: isNeedsVerticalApproach
         ? 'walking-to-approach-vertical'
         : 'walking-to-approach-horizontal',
       elapsedMs: 0,
@@ -230,8 +230,8 @@ export class BaitShopToiletSeatController {
   }
 
   private startSitApproachHorizontalWalk(): void {
-    const started = this.host.startWalkTo(this.options.sitApproachPoint);
-    if (!started) {
+    const isStarted = this.host.startWalkTo(this.options.sitApproachPoint);
+    if (!isStarted) {
       this.sequence = null;
       this.host.setInputEnabled(true);
       return;
@@ -245,10 +245,10 @@ export class BaitShopToiletSeatController {
   }
 
   private startSeatWalk(): void {
-    const started = this.host.startWalkTo(this.options.sitSeatPoint, {
+    const isStarted = this.host.startWalkTo(this.options.sitSeatPoint, {
       constrainToWalkMap: false,
     });
-    if (!started) {
+    if (!isStarted) {
       this.sequence = null;
       this.host.setInputEnabled(true);
       return;
@@ -262,10 +262,10 @@ export class BaitShopToiletSeatController {
   }
 
   private startStandWalk(): void {
-    const started = this.host.startWalkTo(this.options.sitApproachPoint, {
+    const isStarted = this.host.startWalkTo(this.options.sitApproachPoint, {
       constrainToWalkMap: false,
     });
-    if (!started) {
+    if (!isStarted) {
       this.sequence = null;
       this.host.setInputEnabled(true);
       return;

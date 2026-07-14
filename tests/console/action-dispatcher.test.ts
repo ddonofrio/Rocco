@@ -44,7 +44,7 @@ describe('ActionDispatcher', () => {
   });
 
   it('treats an undefined result as not consumed and allows default movement', () => {
-    const cartridge = makeCartridge(() => undefined);
+    const cartridge = makeCartridge(() => {});
 
     const dispatcher = new ActionDispatcher({
       getActiveCartridge: () => cartridge,

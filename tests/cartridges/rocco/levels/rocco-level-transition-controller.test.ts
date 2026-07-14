@@ -127,7 +127,7 @@ describe('RoccoLevelTransitionController', () => {
     const controller = new RoccoLevelTransitionController({
       compiledGame: createCompiledGame(),
       canTraverseConnector: () => true,
-      resolvePlayerGroundPoint: () => undefined,
+      resolvePlayerGroundPoint: () => {},
     });
     const level = createLevel('bait-shop-second', [
       {
@@ -151,7 +151,7 @@ describe('RoccoLevelTransitionController', () => {
     const controller = new RoccoLevelTransitionController({
       compiledGame: createCompiledGame(),
       canTraverseConnector: () => true,
-      resolvePlayerGroundPoint: () => undefined,
+      resolvePlayerGroundPoint: () => {},
     });
     const level = createLevel('bait-shop-toilet', [
       {

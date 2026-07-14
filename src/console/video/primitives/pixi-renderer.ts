@@ -36,7 +36,7 @@ export class PixiRoccoPrimitiveRenderer {
     }
 
     for (const layerRoot of this.layerRoots.values()) {
-      this.stage.removeChild(layerRoot);
+      layerRoot.removeFromParent();
       layerRoot.destroy({ children: true });
     }
     this.layerRoots.clear();
@@ -112,29 +112,34 @@ export class PixiRoccoPrimitiveRenderer {
     graphics.zIndex = primitive.zIndex;
 
     switch (primitive.kind) {
-      case 'point':
+      case 'point': {
         graphics.circle(primitive.x, primitive.y, primitive.size).fill(primitive.color);
         break;
-      case 'line':
+      }
+      case 'line': {
         graphics
           .moveTo(primitive.x1, primitive.y1)
           .lineTo(primitive.x2, primitive.y2)
           .stroke({ width: primitive.strokeWidth, color: primitive.color });
         break;
-      case 'rect':
+      }
+      case 'rect': {
         graphics.rect(primitive.x, primitive.y, primitive.width, primitive.height);
         this.applyFillOrStroke(graphics, primitive.color, primitive.fill, primitive.strokeWidth);
         break;
-      case 'circle':
+      }
+      case 'circle': {
         graphics.circle(primitive.x, primitive.y, primitive.radius);
         this.applyFillOrStroke(graphics, primitive.color, primitive.fill, primitive.strokeWidth);
         break;
-      case 'polygon':
+      }
+      case 'polygon': {
         if (primitive.points.length > 0) {
           graphics.poly(primitive.points);
           this.applyFillOrStroke(graphics, primitive.color, primitive.fill, primitive.strokeWidth);
         }
         break;
+      }
     }
   }
 

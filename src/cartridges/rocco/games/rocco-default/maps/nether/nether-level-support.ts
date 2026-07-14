@@ -158,7 +158,7 @@ function loadImage(uri: string): Promise<HTMLImageElement> {
   }
 
   return new Promise((resolve, reject) => {
-    image.onload = () => resolve(image);
+    image.addEventListener('load', () => resolve(image));
     image.onerror = () => reject(new Error(`Could not load image '${uri}'.`));
   });
 }
@@ -167,7 +167,7 @@ export function resolveNetherWalkMapDepthRange(walkMap: RoccoSpriteWalkMap): {
   farY: number;
   nearY: number;
 } {
-  let farY = Number.POSITIVE_INFINITY;
+  let farY = Infinity;
   let nearY = Number.NEGATIVE_INFINITY;
 
   for (const column of walkMap.columns) {
@@ -226,7 +226,7 @@ function resolveNearestWalkMapColumn(
   preferredX: number,
 ): RoccoSpriteWalkMap['columns'][number] {
   let nearest = walkMap.columns[0];
-  let nearestDistance = Number.POSITIVE_INFINITY;
+  let nearestDistance = Infinity;
   const clampedX = clamp(Math.round(preferredX - walkMap.origin.x), 0, walkMap.width - 1);
 
   for (const column of walkMap.columns) {
@@ -245,7 +245,7 @@ function resolveNearestWalkMapSpan(
   preferredY: number,
 ): RoccoSpriteWalkMap['columns'][number]['spans'][number] {
   let nearest = spans[0];
-  let nearestDistance = Number.POSITIVE_INFINITY;
+  let nearestDistance = Infinity;
 
   for (const span of spans) {
     if (preferredY >= span.yMin && preferredY <= span.yMax) {

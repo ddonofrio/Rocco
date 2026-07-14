@@ -134,7 +134,7 @@ async function loadAutoCropImage(source: RoccoSpriteAutoCropImageSource): Promis
 function loadImage(uri: string): Promise<HTMLImageElement> {
   const image = new Image();
   const loaded = new Promise<HTMLImageElement>((resolve, reject) => {
-    image.onload = () => resolve(image);
+    image.addEventListener('load', () => resolve(image));
     image.onerror = () => reject(new Error(`Could not load sprite auto-crop image '${uri}'.`));
   });
 

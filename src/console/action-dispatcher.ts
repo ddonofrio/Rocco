@@ -66,8 +66,8 @@ export class ActionDispatcher {
       this.lastLevelId = levelId;
     }
 
-    const exclusive = request.exclusive !== false;
-    if (exclusive && this.tracked.size > 0) {
+    const isExclusive = request.exclusive !== false;
+    if (isExclusive && this.tracked.size > 0) {
       this.logFn(
         'ActionDispatcher',
         `Dropping ${request.owner ?? 'exclusive'} action: another action is still in flight.`,

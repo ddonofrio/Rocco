@@ -91,7 +91,7 @@ describe('RoccoLevelTransitionService', () => {
     });
 
     const commit = vi.fn();
-    const result = await service.run({
+    const isResult = await service.run({
       id: 'restart-target',
       prepare: () => {
         preparedTarget = freshTarget.level;
@@ -105,7 +105,7 @@ describe('RoccoLevelTransitionService', () => {
       },
     });
 
-    expect(result).toBe(true);
+    expect(isResult).toBe(true);
     expect(commit).toHaveBeenCalledTimes(1);
     expect(staleTarget.mount).not.toHaveBeenCalled();
     expect(freshTarget.mount).toHaveBeenCalledTimes(1);
@@ -126,14 +126,14 @@ describe('RoccoLevelTransitionService', () => {
       createMountOptions: () => ({}),
     });
 
-    const result = await service.run({
+    const isResult = await service.run({
       id: 'broken-prepare',
       prepare: () => {
         throw new Error('prepare failed');
       },
     });
 
-    expect(result).toBe(false);
+    expect(isResult).toBe(false);
     expect(activeLevel).toBe(currentLevel.level);
     expect(currentLevel.unmount).not.toHaveBeenCalled();
     expect(currentLevel.mount).not.toHaveBeenCalled();
@@ -157,7 +157,7 @@ describe('RoccoLevelTransitionService', () => {
 
     const rollback = vi.fn();
     const onRolledBack = vi.fn();
-    const result = await service.run({
+    const isResult = await service.run({
       id: 'target-failure',
       prepare: () => ({
         targetLevel: targetLevel.level,
@@ -169,7 +169,7 @@ describe('RoccoLevelTransitionService', () => {
       }),
     });
 
-    expect(result).toBe(false);
+    expect(isResult).toBe(false);
     expect(rollback).toHaveBeenCalledTimes(1);
     expect(targetLevel.unmount).toHaveBeenCalledTimes(1);
     expect(currentLevel.mount).toHaveBeenCalledTimes(1);
@@ -194,7 +194,7 @@ describe('RoccoLevelTransitionService', () => {
       createMountOptions: () => ({}),
     });
 
-    const result = await service.run({
+    const isResult = await service.run({
       id: 'fatal-rollback',
       prepare: () => ({
         targetLevel: targetLevel.level,
@@ -205,7 +205,7 @@ describe('RoccoLevelTransitionService', () => {
       }),
     });
 
-    expect(result).toBe(false);
+    expect(isResult).toBe(false);
     expect(service.currentPhase).toBe('fatal');
     expect(activeLevel).toBeNull();
     expect(state.failedCompositions).toHaveLength(1);

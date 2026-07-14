@@ -132,7 +132,7 @@ export class RoccoGraphicPlaneSDK implements RoccoPlaneSDK {
   removePlane(sceneId: string, planeId: string): void {
     const scene = this.getScene(sceneId);
     const index = scene.planes.findIndex((plane) => plane.id === planeId);
-    if (index < 0) {
+    if (index === -1) {
       throw new Error(`Plane '${planeId}' was not found in scene '${sceneId}'`);
     }
 
@@ -166,10 +166,10 @@ export class RoccoGraphicPlaneSDK implements RoccoPlaneSDK {
     const scene = this.getScene(sceneId);
     const palettes = ensureArray(scene.palettes);
     const index = palettes.findIndex((existing) => existing.id === palette.id);
-    if (index >= 0) {
-      palettes[index] = clone(palette);
-    } else {
+    if (index === -1) {
       palettes.push(clone(palette));
+    } else {
+      palettes[index] = clone(palette);
     }
     scene.palettes = palettes;
   }
@@ -189,10 +189,10 @@ export class RoccoGraphicPlaneSDK implements RoccoPlaneSDK {
     const scene = this.getScene(sceneId);
     const registers = ensureArray(scene.colorRegisterSets);
     const index = registers.findIndex((existing) => existing.id === registerSet.id);
-    if (index >= 0) {
-      registers[index] = clone(registerSet);
-    } else {
+    if (index === -1) {
       registers.push(clone(registerSet));
+    } else {
+      registers[index] = clone(registerSet);
     }
     scene.colorRegisterSets = registers;
   }
@@ -212,10 +212,10 @@ export class RoccoGraphicPlaneSDK implements RoccoPlaneSDK {
     const scene = this.getScene(sceneId);
     const attributeMaps = ensureArray(scene.attributeMaps);
     const index = attributeMaps.findIndex((existing) => existing.id === attributeMap.id);
-    if (index >= 0) {
-      attributeMaps[index] = clone(attributeMap);
-    } else {
+    if (index === -1) {
       attributeMaps.push(clone(attributeMap));
+    } else {
+      attributeMaps[index] = clone(attributeMap);
     }
     scene.attributeMaps = attributeMaps;
   }

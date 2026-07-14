@@ -32,10 +32,10 @@ function createRoot(): HTMLElement {
       bottom: 740,
       width: 1280,
       height: 720,
-      toJSON: () => undefined,
+      toJSON: () => {},
     }),
   });
-  document.body.appendChild(root);
+  document.body.append(root);
   return root;
 }
 
@@ -63,7 +63,7 @@ function dispatchPointer(
 }
 
 afterEach(() => {
-  document.body.innerHTML = '';
+  document.body.replaceChildren();
 });
 
 describe('RoccoCursorHost', () => {

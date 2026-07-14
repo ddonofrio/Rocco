@@ -110,7 +110,7 @@ const BAIT_SHOP_TOILET_RETURN_ENTRY_POSITION = {
     BAIT_SHOP_TOILET_DOOR_GROUND_POINT.y - DEFAULT_SPRITE_GROUND_ANCHOR_Y * BAIT_SHOP_ROCCO_SCALE,
   ),
 } as const;
-const BAIT_SHOP_LOOK_MESSAGE_TTL_MS = 10400;
+const BAIT_SHOP_LOOK_MESSAGE_TTL_MS = 10_400;
 const BAIT_SHOP_ACTION_MENU_ITEM_SIZE = 92;
 const BAIT_SHOP_ACTION_MENU_ORBIT_RADIUS = 88;
 const BAIT_SHOP_ACTION_MENU_ORBIT_SPEED = 0.08;
@@ -380,13 +380,13 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
   }
 
   handleSceneClick(activation: RoccoSceneClickAction) {
-    if (
-      activation.targetInstanceId === BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID &&
-      this.toiletDoorOpen
-    ) {
-      this.walkIntoToilet();
-      return { suppressDefaultPlayerMove: true };
+    if (!(activation.targetInstanceId === BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID &&
+      this.toiletDoorOpen)) {
+    	return;
     }
+
+    this.walkIntoToilet();
+    return { suppressDefaultPlayerMove: true };
   }
 
   handleAction(activation: RoccoActionMenuActivation): void {
@@ -467,8 +467,8 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       return;
     }
 
-    const collected = this.options.onMagazineCollected?.(this.magazineKnown) ?? true;
-    if (!collected) {
+    const isCollected = this.options.onMagazineCollected?.(this.magazineKnown) ?? true;
+    if (!isCollected) {
       return;
     }
 
@@ -541,9 +541,9 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       moveTo: { ...BAIT_SHOP_TOILET_DOOR_GROUND_POINT },
       facing: 'up',
       onReached: () => {
-        const transitioned =
+        const isTransitioned =
           this.onConnectorTransitionRequested?.(BAIT_SHOP_TOILET_CONNECTOR_ID) ?? false;
-        if (!transitioned) {
+        if (!isTransitioned) {
           this.engine?.setInputEnabled(true);
           this.engine?.video.render(0);
         }

@@ -58,7 +58,7 @@ describe('Rocco effects manager', () => {
         if (targetType === 'graphic-plane' && targetId === plane.id) {
           return plane;
         }
-        return undefined;
+        return;
       },
     });
 
@@ -91,7 +91,7 @@ describe('Rocco effects manager', () => {
     registry.register(roccoAutoScrollRuntime);
     const manager = new RoccoDefaultEffectManager({
       registry,
-      resolveTarget: () => undefined,
+      resolveTarget: () => {},
     });
 
     manager.add({
@@ -136,7 +136,7 @@ describe('Rocco effects manager', () => {
         if (targetType === 'graphic-plane' && targetId === plane.id) {
           return plane;
         }
-        return undefined;
+        return;
       },
     });
 
@@ -167,7 +167,7 @@ describe('Rocco effects manager', () => {
   it('throws when removing an effect that does not exist', () => {
     const manager = new RoccoDefaultEffectManager({
       registry: new RoccoDefaultEffectRegistry(),
-      resolveTarget: () => undefined,
+      resolveTarget: () => {},
     });
 
     expect(() => manager.remove('missing-effect')).toThrow("Effect 'missing-effect' was not found");

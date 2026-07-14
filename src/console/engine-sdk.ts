@@ -6,8 +6,8 @@ import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from './video/planes';
 import type { InputMode, InputPolicyLease } from './input/input-policy-stack';
 import type { CompositionSession } from './composition/composition-service';
 import type {
-  CartridgeSaveRepository,
-  CreateSaveRepositoryOptions,
+  CartridgeSaveRepository as CartridgeSaveRepo,
+  CreateSaveRepositoryOptions as CreateSaveRepoOptions,
 } from './persistence/types';
 
 export interface RoccoEnginePersistence {
@@ -21,8 +21,8 @@ export interface RoccoEnginePersistence {
    * quota handling; the cartridge only supplies domain serialization.
    */
   createSaveRepository<TState>(
-    options: CreateSaveRepositoryOptions<TState>,
-  ): CartridgeSaveRepository<TState>;
+    options: CreateSaveRepoOptions<TState>,
+  ): CartridgeSaveRepo<TState>;
 }
 
 export interface RoccoConsoleFlags {

@@ -36,7 +36,7 @@ export class PixiRoccoTitleRenderer {
     }
 
     for (const layerRoot of this.layerRoots.values()) {
-      this.stage.removeChild(layerRoot);
+      layerRoot.removeFromParent();
       layerRoot.destroy({ children: true });
     }
     this.layerRoots.clear();

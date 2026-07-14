@@ -34,20 +34,20 @@ export class AudioAnalyzer {
     let silenceSampleCount = 0;
     
     // Scan through audio in windows
-    for (let i = 0; i < channelData.length; i += windowSize) {
-      const windowEnd = Math.min(i + windowSize, channelData.length);
-      const rms = this.calculateRMS(channelData, i, windowEnd);
+    for (let index = 0; index < channelData.length; index += windowSize) {
+      const windowEnd = Math.min(index + windowSize, channelData.length);
+      const rms = this.calculateRMS(channelData, index, windowEnd);
       
       const isSilent = rms < silenceThreshold;
       
       if (isSilent) {
         if (silenceStart === null) {
-          silenceStart = i / sampleRate;
+          silenceStart = index / sampleRate;
         }
-        silenceSampleCount += windowEnd - i;
+        silenceSampleCount += windowEnd - index;
       } else {
         if (silenceStart !== null && silenceSampleCount >= minSilenceSamples) {
-          const silenceEnd = i / sampleRate;
+          const silenceEnd = index / sampleRate;
           silenceRegions.push({
             startTime: silenceStart,
             endTime: silenceEnd,
@@ -82,8 +82,8 @@ export class AudioAnalyzer {
     let sumSquares = 0;
     let count = 0;
     
-    for (let i = start; i < end; i++) {
-      sumSquares += data[i] * data[i];
+    for (let index = start; index < end; index++) {
+      sumSquares += data[index] * data[index];
       count++;
     }
     

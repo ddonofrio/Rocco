@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../video/planes';
-import type { SaveEnvelopeRow } from './types';
+import type { SaveEnvelopeRow, SceneStoreKey, SaveStoreKey } from './types';
 
 export interface RoccoPlaneSceneRecordRow {
   id: string;
@@ -13,8 +13,8 @@ export interface RoccoPlaneSceneRecordRow {
 
 export class RoccoDatabase extends Dexie {
   scenes!: Table<RoccoPlaneSceneRecordRow, string>;
-  scenes_v4!: Table<RoccoPlaneSceneRecordRow, string>;
-  saves!: Table<SaveEnvelopeRow, string>;
+  scenes_v4!: Table<RoccoPlaneSceneRecordRow, SceneStoreKey>;
+  saves!: Table<SaveEnvelopeRow, SaveStoreKey>;
 
   constructor() {
     super('rocco_db');
@@ -69,25 +69,25 @@ async function migrateLegacyScenes(): Promise<void> {
 
   migrationPromise = (async () => {
     const db = getRoccoDatabase();
-    const hasNewTable = await db.scenes_v4.count();
-    if (hasNewTable > 0) {
-      return;
-    }
-
     const legacy = await db.scenes.toArray();
     if (legacy.length === 0) {
       return;
     }
 
-    await db.scenes_v4.bulkPut(
-      legacy.map((row) => ({
-        id: row.id,
-        cartridgeId: 'legacy',
-        sceneId: row.id,
-        scene: row.scene,
-        updatedAt: row.updatedAt,
-      })),
-    );
+    for (const row of legacy) {
+      const owner = 'rocco-default';
+      const key: SceneStoreKey = [owner, row.id];
+      const exists = await db.scenes_v4.get(key);
+      if (!exists) {
+        await db.scenes_v4.put({
+          id: `${owner}:${row.id}`,
+          cartridgeId: owner,
+          sceneId: row.id,
+          scene: row.scene,
+          updatedAt: row.updatedAt,
+        });
+      }
+    }
   })();
 
   return migrationPromise;
@@ -100,8 +100,8 @@ export async function loadPlaneSceneRecord(
   await migrateLegacyScenes();
   const db = getRoccoDatabase();
 
-  const id = `${cartridgeId}:${sceneId}`;
-  const row = await db.scenes_v4.get(id);
+  const key: SceneStoreKey = [cartridgeId, sceneId];
+  const row = await db.scenes_v4.get(key);
   if (!row) {
     return null;
   }
@@ -120,9 +120,8 @@ export async function savePlaneScene(
   await migrateLegacyScenes();
   const db = getRoccoDatabase();
 
-  const id = `${cartridgeId}:${scene.id}`;
   const record: RoccoPlaneSceneRecordRow = {
-    id,
+    id: `${cartridgeId}:${scene.id}`,
     cartridgeId,
     sceneId: scene.id,
     scene,

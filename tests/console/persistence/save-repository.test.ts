@@ -5,6 +5,7 @@ import type {
   CartridgeSaveProvider,
   SaveEnvelopeRow,
   SaveStore,
+  SaveStoreKey,
 } from '../../../src/console/persistence/types';
 import {
   SaveQuotaExceededError,
@@ -21,13 +22,17 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function serializeKey(key: SaveStoreKey): string {
+  return `${key[0]}:${key[1]}:${key[2]}`;
+}
+
 /** In-memory `SaveStore` with real transaction roll-back semantics. */
 class MemorySaveStore implements SaveStore {
   protected readonly rows = new Map<string, SaveEnvelopeRow>();
 
-  async get(key: string): Promise<SaveEnvelopeRow | undefined> {
+  async get(key: SaveStoreKey): Promise<SaveEnvelopeRow | undefined> {
     await Promise.resolve();
-    const row = this.rows.get(key);
+    const row = this.rows.get(serializeKey(key));
     return row ? clone(row) : undefined;
   }
 
@@ -46,9 +51,9 @@ class MemorySaveStore implements SaveStore {
       .map((row) => clone(row));
   }
 
-  async delete(key: string): Promise<void> {
+  async delete(key: SaveStoreKey): Promise<void> {
     await Promise.resolve();
-    this.rows.delete(key);
+    this.rows.delete(serializeKey(key));
   }
 
   async transaction<T>(work: () => Promise<T>): Promise<T> {
@@ -201,7 +206,7 @@ describe('versioned save repository', () => {
       repo.save('p', 's', { expectedRevision: 5 }),
     ).rejects.toBeInstanceOf(SaveRevisionConflictError);
 
-    const after = await store.get('cart:p:s');
+    const after = await store.get(['cart', 'p', 's']);
     expect(after?.revision).toBe(6);
     expect(after?.payload).toEqual({ level: 99 });
   });
@@ -233,7 +238,7 @@ describe('versioned save repository', () => {
     const reloaded = await repo.load('p', 's');
     expect(reloaded).toEqual({ level: 7, migrated: true });
 
-    const row = await store.get('cart:p:s');
+    const row = await store.get(['cart', 'p', 's']);
     expect(row?.schemaVersion).toBe(2);
   });
 
@@ -369,7 +374,7 @@ describe('versioned save repository', () => {
     });
 
     await expect(repo.save('p', 's')).rejects.toBeInstanceOf(SaveQuotaExceededError);
-    expect(await store.get('cart:p:s')).toBeUndefined();
+    expect(await store.get(['cart', 'p', 's'])).toBeUndefined();
   });
 
   it('rolls back a failed save so no partial row is published', async () => {
@@ -395,7 +400,7 @@ describe('versioned save repository', () => {
 
     await expect(repo.save('p', 's')).rejects.toThrow('commit crash');
 
-    const after = await store.get('cart:p:s');
+    const after = await store.get(['cart', 'p', 's']);
     expect(after?.revision).toBe(4);
     expect(after?.payload).toEqual({ level: 1 });
   });

@@ -1,3 +1,5 @@
+import 'fake-indexeddb/auto';
+
 // jsdom does not implement a real canvas rendering context and logs a noisy
 // "Not implemented: HTMLCanvasElement.prototype.getContext" error whenever the
 // production code touches a canvas. The runtime already treats a missing 2D

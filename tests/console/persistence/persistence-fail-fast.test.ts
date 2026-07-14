@@ -4,8 +4,17 @@ import type { RoccoPlaneScene } from '../../../src/console/video/planes';
 
 const TEST_CARTRIDGE_ID = 'test-cartridge';
 
+type PrimitiveKey = string | number | (string | number)[];
+
 class MockTable<T extends { id: string }> {
   private readonly rows = new Map<string, T>();
+
+  private serializeKey(key: PrimitiveKey): string {
+    if (Array.isArray(key)) {
+      return key.join(':');
+    }
+    return String(key);
+  }
 
   count(): Promise<number> {
     return Promise.resolve(this.rows.size);
@@ -15,8 +24,8 @@ class MockTable<T extends { id: string }> {
     return Promise.resolve([...this.rows.values()].map((row) => structuredClone(row)));
   }
 
-  get(id: string): Promise<T | undefined> {
-    const row = this.rows.get(id);
+  get(key: PrimitiveKey): Promise<T | undefined> {
+    const row = this.rows.get(this.serializeKey(key));
     return Promise.resolve(row ? structuredClone(row) : undefined);
   }
 

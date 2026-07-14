@@ -30,6 +30,21 @@ export interface SaveEnvelopeRow<TPayload = unknown> extends SaveEnvelope<TPaylo
   readonly key: string;
 }
 
+/** Compound primary key for scene rows. */
+export type SceneStoreKey = readonly [cartridgeId: string, sceneId: string];
+
+/** Compound primary key for save rows. */
+export type SaveStoreKey = readonly [
+  cartridgeId: string,
+  profileId: string,
+  slotId: string,
+];
+
+/** Formats a save store key for diagnostics. */
+export function formatSaveKey(key: SaveStoreKey): string {
+  return `${key[0]}:${key[1]}:${key[2]}`;
+}
+
 /** Metadata returned by listing/reading slots, without the domain payload. */
 export interface SaveMetadata {
   readonly cartridgeId: string;
@@ -104,10 +119,10 @@ export interface CreateSaveRepositoryOptions<TState> {
  * without IndexedDB and lets the engine inject a different backend later.
  */
 export interface SaveStore {
-  get(key: string): Promise<SaveEnvelopeRow | undefined>;
+  get(key: SaveStoreKey): Promise<SaveEnvelopeRow | undefined>;
   put(row: SaveEnvelopeRow): Promise<void>;
   queryByProfile(cartridgeId: string, profileId: string): Promise<SaveEnvelopeRow[]>;
-  delete(key: string): Promise<void>;
+  delete(key: SaveStoreKey): Promise<void>;
   /** Runs `work` atomically; a thrown error rolls back every write inside. */
   transaction<T>(work: () => Promise<T>): Promise<T>;
 }

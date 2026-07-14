@@ -11,6 +11,7 @@
 
 import { DexieSaveStore } from './store';
 import {
+  formatSaveKey,
   isQuotaExceededError,
   SaveQuotaExceededError,
   SaveRevisionConflictError,
@@ -22,10 +23,15 @@ import {
   type SaveMetadata,
   type SaveOptions,
   type SaveStore,
+  type SaveStoreKey,
 } from './types';
 
-function buildKey(cartridgeId: string, profileId: string, slotId: string): string {
-  return `${cartridgeId}:${profileId}:${slotId}`;
+function buildKey(
+  cartridgeId: string,
+  profileId: string,
+  slotId: string,
+): SaveStoreKey {
+  return [cartridgeId, profileId, slotId];
 }
 
 function toMetadata(row: SaveEnvelopeRow): SaveMetadata {
@@ -47,8 +53,18 @@ export function createSaveRepository<TState>(
   const { cartridgeId, cartridgeVersion, provider } = options;
   const store: SaveStore = options.store ?? new DexieSaveStore();
 
-  function keyOf(profileId: string, slotId: string): string {
+  function keyOf(profileId: string, slotId: string): SaveStoreKey {
     return buildKey(cartridgeId, profileId, slotId);
+  }
+
+  function validateKeyParts(profileId: string, slotId: string): void {
+    if (!profileId || !slotId) {
+      throw new SaveSchemaError({
+        key: formatSaveKey(keyOf(profileId, slotId)),
+        storedSchemaVersion: 0,
+        supportedSchemaVersion: provider.schemaVersion,
+      });
+    }
   }
 
   /**
@@ -75,6 +91,7 @@ export function createSaveRepository<TState>(
       ...row,
       payload: migrated,
       schemaVersion: provider.schemaVersion,
+      cartridgeVersion,
       updatedAt: Date.now(),
     };
     await store.put(updated);
@@ -86,27 +103,33 @@ export function createSaveRepository<TState>(
     slotId: string,
     saveOptions?: SaveOptions,
   ): Promise<SaveMetadata> {
+    validateKeyParts(profileId, slotId);
     const key = keyOf(profileId, slotId);
     try {
       return await store.transaction(async () => {
         const existing = await store.get(key);
 
-        if (
-          saveOptions?.expectedRevision !== undefined &&
-          existing &&
-          existing.revision !== saveOptions.expectedRevision
-        ) {
-          throw new SaveRevisionConflictError({
-            key,
-            expectedRevision: saveOptions.expectedRevision,
-            actualRevision: existing.revision,
-          });
+        if (saveOptions?.expectedRevision !== undefined) {
+          if (!existing) {
+            throw new SaveRevisionConflictError({
+              key: formatSaveKey(key),
+              expectedRevision: saveOptions.expectedRevision,
+              actualRevision: 0,
+            });
+          }
+          if (existing.revision !== saveOptions.expectedRevision) {
+            throw new SaveRevisionConflictError({
+              key: formatSaveKey(key),
+              expectedRevision: saveOptions.expectedRevision,
+              actualRevision: existing.revision,
+            });
+          }
         }
 
         const now = Date.now();
         const revision = (existing?.revision ?? 0) + 1;
         const row: SaveEnvelopeRow = {
-          key,
+          key: formatSaveKey(key),
           cartridgeId,
           cartridgeVersion,
           schemaVersion: provider.schemaVersion,
@@ -122,7 +145,7 @@ export function createSaveRepository<TState>(
       });
     } catch (error) {
       if (isQuotaExceededError(error)) {
-        throw new SaveQuotaExceededError(key, error);
+        throw new SaveQuotaExceededError(formatSaveKey(key), error);
       }
       throw error;
     }
@@ -142,6 +165,7 @@ export function createSaveRepository<TState>(
   }
 
   async function deleteSlot(profileId: string, slotId: string): Promise<void> {
+    validateKeyParts(profileId, slotId);
     await store.delete(keyOf(profileId, slotId));
   }
 
@@ -149,20 +173,25 @@ export function createSaveRepository<TState>(
     profileId: string,
     slotId: string,
   ): Promise<PortableSaveEnvelope<TState> | null> {
-    const row = await store.get(keyOf(profileId, slotId));
+    const key = keyOf(profileId, slotId);
+    const row = await store.get(key);
     if (!row) {
       return null;
     }
     const payload = await materialize(row);
+    const updatedRow = await store.get(key);
+    if (!updatedRow) {
+      return null;
+    }
     return {
-      cartridgeId: row.cartridgeId,
-      cartridgeVersion: row.cartridgeVersion,
-      schemaVersion: provider.schemaVersion,
-      profileId: row.profileId,
-      slotId: row.slotId,
-      revision: row.revision,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      cartridgeId: updatedRow.cartridgeId,
+      cartridgeVersion: updatedRow.cartridgeVersion,
+      schemaVersion: updatedRow.schemaVersion,
+      profileId: updatedRow.profileId,
+      slotId: updatedRow.slotId,
+      revision: updatedRow.revision,
+      createdAt: updatedRow.createdAt,
+      updatedAt: updatedRow.updatedAt,
       payload,
     };
   }
@@ -170,22 +199,56 @@ export function createSaveRepository<TState>(
   async function importSave(
     envelope: PortableSaveEnvelope<TState>,
   ): Promise<SaveMetadata> {
+    if (envelope.cartridgeId !== cartridgeId) {
+      throw new SaveSchemaError({
+        key: formatSaveKey(keyOf(envelope.profileId, envelope.slotId)),
+        storedSchemaVersion: envelope.schemaVersion,
+        supportedSchemaVersion: provider.schemaVersion,
+      });
+    }
+
+    validateKeyParts(envelope.profileId, envelope.slotId);
     const key = keyOf(envelope.profileId, envelope.slotId);
     const now = Date.now();
+
+    if (envelope.schemaVersion > provider.schemaVersion) {
+      throw new SaveSchemaError({
+        key: formatSaveKey(key),
+        storedSchemaVersion: envelope.schemaVersion,
+        supportedSchemaVersion: provider.schemaVersion,
+      });
+    }
+
+    let payload = envelope.payload;
+    if (envelope.schemaVersion < provider.schemaVersion) {
+      payload = provider.migrateState(envelope.schemaVersion, envelope.payload);
+    }
+
     const existing = await store.get(key);
     const row: SaveEnvelopeRow = {
-      key,
+      key: formatSaveKey(key),
       cartridgeId,
       cartridgeVersion: envelope.cartridgeVersion,
-      schemaVersion: envelope.schemaVersion,
+      schemaVersion: provider.schemaVersion,
       profileId: envelope.profileId,
       slotId: envelope.slotId,
       revision: (existing?.revision ?? 0) + 1,
-      createdAt: envelope.createdAt ?? now,
+      createdAt: existing?.createdAt ?? now,
       updatedAt: now,
-      payload: envelope.payload,
+      payload,
     };
-    await store.put(row);
+
+    try {
+      await store.transaction(async () => {
+        await store.put(row);
+      });
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        throw new SaveQuotaExceededError(formatSaveKey(key), error);
+      }
+      throw error;
+    }
+
     return toMetadata(row);
   }
 

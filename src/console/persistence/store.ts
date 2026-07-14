@@ -9,7 +9,7 @@
 
 import type { RoccoDatabase } from './db';
 import { getRoccoDatabase } from './db';
-import type { SaveEnvelopeRow, SaveStore } from './types';
+import type { SaveEnvelopeRow, SaveStore, SaveStoreKey } from './types';
 
 export class DexieSaveStore implements SaveStore {
   private readonly db: RoccoDatabase;
@@ -18,7 +18,7 @@ export class DexieSaveStore implements SaveStore {
     this.db = db ?? getRoccoDatabase();
   }
 
-  get(key: string): Promise<SaveEnvelopeRow | undefined> {
+  get(key: SaveStoreKey): Promise<SaveEnvelopeRow | undefined> {
     return this.db.saves.get(key);
   }
 
@@ -36,7 +36,7 @@ export class DexieSaveStore implements SaveStore {
       .toArray();
   }
 
-  async delete(key: string): Promise<void> {
+  async delete(key: SaveStoreKey): Promise<void> {
     await this.db.saves.delete(key);
   }
 

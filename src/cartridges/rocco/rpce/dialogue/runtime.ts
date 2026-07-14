@@ -83,12 +83,14 @@ export class RoccoDialogueSession {
       return;
     }
 
-    this.engine.setInputEnabled(false);
     this.phase = 'waiting-npc';
     this.engine.video.messages.say(
       this.npcSpriteInstanceId,
       this.resolveMessageText(start.npcLine),
-      this.createNpcMessageOptions(this.promptTtlMs),
+      {
+        ...this.createNpcMessageOptions(this.promptTtlMs),
+        background: true,
+      },
     );
     this.schedule(
       this.resolveLineDuration(start.npcLine, this.promptTtlMs),
@@ -150,6 +152,7 @@ export class RoccoDialogueSession {
     }
 
     this.clearPendingStepMessage();
+    this.pendingStep.remainingMs = 0;
     this.completePendingStep();
     return true;
   }
@@ -161,7 +164,6 @@ export class RoccoDialogueSession {
     if (this.engine.video.gridMenus.isOpen(this.id)) {
       this.engine.video.gridMenus.closeMenu();
     }
-    this.engine.setInputEnabled(true);
     this.engine.video.render(0);
   }
 
@@ -188,7 +190,6 @@ export class RoccoDialogueSession {
 
   private startChoice(choice: RoccoDialogueChoiceNode): void {
     this.phase = 'waiting-player';
-    this.engine.setInputEnabled(false);
     const playerLineDurationMs = this.resolveLineDuration(choice.playerLine, this.playerLineTtlMs);
     const preReplyDurationMs = Math.max(0, this.hooks?.beforeNpcReply?.(choice) ?? 0);
     this.engine.video.messages.say(
@@ -196,6 +197,7 @@ export class RoccoDialogueSession {
       this.resolveMessageText(choice.playerLine),
       {
         ttlMs: this.playerLineTtlMs,
+        background: true,
       },
     );
     this.schedule(
@@ -220,7 +222,10 @@ export class RoccoDialogueSession {
     this.engine.video.messages.say(
       this.npcSpriteInstanceId,
       this.resolveMessageText(choice.npcLine),
-      this.createNpcMessageOptions(this.npcLineTtlMs),
+      {
+        ...this.createNpcMessageOptions(this.npcLineTtlMs),
+        background: true,
+      },
     );
     this.schedule(
       this.resolveLineDuration(choice.npcLine, this.npcLineTtlMs),
@@ -251,7 +256,6 @@ export class RoccoDialogueSession {
         })),
       }).gridMenu,
     );
-    this.engine.setInputEnabled(true);
     this.engine.video.render(0);
   }
 
@@ -259,7 +263,6 @@ export class RoccoDialogueSession {
     this.pendingStep = undefined;
     this.currentChoices = [];
     this.phase = 'idle';
-    this.engine.setInputEnabled(true);
     this.engine.video.render(0);
   }
 

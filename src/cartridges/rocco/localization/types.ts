@@ -105,6 +105,8 @@ export interface RoccoTextCatalog {
     bataAlreadyOnSelfLine: string;
     cannotUseItemLines: string[];
     keysOnStanArrestLine: string;
+    moneyOnStanSleepingLines: string[];
+    keysOnStanSleepingLines: string[];
     moneyOnStanAcceptedLines: string[];
     moneyOnStanReplyLine: string;
     keysOnBaitBucketLines: string[];

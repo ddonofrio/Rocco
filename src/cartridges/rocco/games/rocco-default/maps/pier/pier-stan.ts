@@ -1,3 +1,4 @@
+import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
@@ -327,13 +328,10 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     }
   }
 
-  handleSceneClick(): void {
-    if (this.engine.isInputEnabled()) {
-      return;
-    }
-
-    if (this.dialogue.advance()) {
-      this.awakeIdleMs = 0;
+  handleSceneClick(_activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
+    if (this.dialogue.isActive() && !this.dialogue.isAwaitingChoice()) {
+      this.dialogue.advance();
+      return { suppressDefaultPlayerMove: true };
     }
   }
 

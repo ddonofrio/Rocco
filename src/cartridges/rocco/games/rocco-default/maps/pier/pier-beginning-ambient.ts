@@ -1,5 +1,5 @@
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
-import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
+import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
@@ -45,8 +45,8 @@ class RoccoPierBeginningAmbientController implements RoccoPierSideAmbientControl
     this.stan.handleGridMenu?.(activation);
   }
 
-  handleSceneClick(activation: RoccoSceneClickAction): void {
-    this.stan.handleSceneClick?.(activation);
+  handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
+    return this.stan.handleSceneClick?.(activation);
   }
 
   unmount(engine: RoccoEngine): void {

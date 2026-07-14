@@ -176,6 +176,17 @@ export function createPierSpecialSceneClickRules(): readonly SpecialInventorySce
         if (!context.engine) {
           return { handled: false };
         }
+
+        if (!context.isStanAwake()) {
+          showRoccoThoughtVariant(
+            context.engine,
+            context.localization.text.inventory.keysOnStanSleepingLines,
+            'pier-stan-keys-sleeping',
+          );
+          context.engine.video.gridMenus.clearCarriedItem();
+          return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
+        }
+
         context.scriptedSequences.startStanPoliceDefeat(context.engine);
         return { handled: true };
       },
@@ -193,6 +204,17 @@ export function createPierSpecialSceneClickRules(): readonly SpecialInventorySce
         if (!engine) {
           return { handled: false };
         }
+
+        if (!context.isStanAwake()) {
+          showRoccoThoughtVariant(
+            engine,
+            context.localization.text.inventory.moneyOnStanSleepingLines,
+            'pier-stan-money-sleeping',
+          );
+          engine.video.gridMenus.clearCarriedItem();
+          return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
+        }
+
         context.inventory.removeItem(ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID);
         context.scriptedSequences.startStanMoneyExchange(engine);
         return { handled: true };

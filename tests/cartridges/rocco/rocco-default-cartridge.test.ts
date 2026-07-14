@@ -1818,7 +1818,7 @@ describe('RoccoDefaultCartridge', () => {
       ),
     );
 
-    expect(state.inputEnabled).toBe(false);
+    expect(state.inputEnabled).toBe(true);
     expect(state.clearedCarriedGridMenuCount).toBe(1);
     expect(state.spriteMessages).toContain(
       `${DEFAULT_STAN_SPRITE_INSTANCE_ID}:say:${localization.text.inventory.keysOnStanArrestLine}`,

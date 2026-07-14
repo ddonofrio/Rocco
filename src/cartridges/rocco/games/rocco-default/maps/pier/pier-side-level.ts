@@ -1,5 +1,5 @@
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
-import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
+import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
 import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
@@ -31,7 +31,7 @@ export interface RoccoPierSideAmbientController {
   update(deltaMs: number): void;
   handleAction?(activation: RoccoActionMenuActivation): void;
   handleGridMenu?(activation: RoccoGridMenuActivation): void;
-  handleSceneClick?(activation: RoccoSceneClickAction): void;
+  handleSceneClick?(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void;
   unmount(engine: RoccoEngine): void;
 }
 
@@ -155,7 +155,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
     this.ambientController?.handleGridMenu?.(activation);
   }
 
-  handleSceneClick(activation: RoccoSceneClickAction): void {
-    this.ambientController?.handleSceneClick?.(activation);
+  handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
+    return this.ambientController?.handleSceneClick?.(activation);
   }
 }

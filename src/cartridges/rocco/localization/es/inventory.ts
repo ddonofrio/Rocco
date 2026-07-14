@@ -24,6 +24,8 @@ export const spanishInventoryText: RoccoTextCatalog['inventory'] = {
     'No se puede usar aqu\u00ed.',
   ],
   keysOnStanArrestLine: 'Polic\u00eda, encontr\u00e9 al ladr\u00f3n.',
+  moneyOnStanSleepingLines: ['Naah, est\u00e1 durmiendo.'],
+  keysOnStanSleepingLines: ['Naah, est\u00e1 durmiendo.'],
   moneyOnStanAcceptedLines: [
     'Gracias. Me viene genial.',
     'Qu\u00e9 pena que no tenga memoria para acordarme ma\u00f1ana de esto.',

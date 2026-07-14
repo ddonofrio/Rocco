@@ -18,15 +18,6 @@ export class RoccoRuntimeDefaultPlayerMovePolicyCoordinator {
     this.getSceneTarget = options.getSceneTarget;
   }
 
-  shouldSuppressDefaultPlayerMove(
-    options: ResolveDefaultPlayerMoveSuppressionOptions,
-  ): boolean {
-    return (
-      this.shouldSuppressFromSceneTarget(options.target) ||
-      this.shouldSuppressFromCartridgeDisposition(options.cartridgeDisposition)
-    );
-  }
-
   private shouldSuppressFromSceneTarget(
     target: RoccoRuntimeResolvedSceneTarget | undefined,
   ): boolean {
@@ -41,5 +32,14 @@ export class RoccoRuntimeDefaultPlayerMovePolicyCoordinator {
     disposition: CartridgeActionDisposition | null,
   ): boolean {
     return disposition?.defaultPlayerMovement === 'suppress';
+  }
+
+  shouldSuppressDefaultPlayerMove(
+    options: ResolveDefaultPlayerMoveSuppressionOptions,
+  ): boolean {
+    return (
+      this.shouldSuppressFromSceneTarget(options.target) ||
+      this.shouldSuppressFromCartridgeDisposition(options.cartridgeDisposition)
+    );
   }
 }

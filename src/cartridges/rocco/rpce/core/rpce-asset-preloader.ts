@@ -19,6 +19,15 @@ export class RpceAssetPreloader {
     this.onProgress = onProgress;
   }
 
+  private increment(count: number): void {
+    this.loaded += count;
+    this.report();
+  }
+
+  private report(): void {
+    this.onProgress(this.getProgress());
+  }
+
   add(count: number): void {
     this.total += count;
     this.report();
@@ -65,14 +74,5 @@ export class RpceAssetPreloader {
       total: this.total,
       percent: Math.min(100, percent),
     };
-  }
-
-  private increment(count: number): void {
-    this.loaded += count;
-    this.report();
-  }
-
-  private report(): void {
-    this.onProgress(this.getProgress());
   }
 }

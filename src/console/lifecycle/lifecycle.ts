@@ -66,6 +66,18 @@ export interface ResourceScope extends DisposableResource {
 export class LifecycleStateMachine {
   private state: LifecycleState = 'new';
 
+  private transition(
+    allowed: readonly LifecycleState[],
+    next: LifecycleState,
+    action: string,
+  ): void {
+    if (!allowed.includes(this.state)) {
+      throw new Error(`Cannot ${action} lifecycle in state '${this.state}'`);
+    }
+
+    this.state = next;
+  }
+
   get current(): LifecycleState {
     return this.state;
   }
@@ -106,17 +118,5 @@ export class LifecycleStateMachine {
 
   markDisposed(): void {
     this.transition(['disposing'], 'disposed', 'mark disposed');
-  }
-
-  private transition(
-    allowed: readonly LifecycleState[],
-    next: LifecycleState,
-    action: string,
-  ): void {
-    if (!allowed.includes(this.state)) {
-      throw new Error(`Cannot ${action} lifecycle in state '${this.state}'`);
-    }
-
-    this.state = next;
   }
 }

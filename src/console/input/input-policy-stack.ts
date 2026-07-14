@@ -60,11 +60,11 @@ export class InputPolicyStackError extends Error {
 }
 
 class InputPolicyLeaseImpl implements InputPolicyLease {
+  private readonly releaseFn: (lease: InputPolicyLeaseImpl) => void;
+  private released = false;
   readonly ownerId: string;
   readonly mode: InputMode;
   readonly acquiredAt: number;
-  private readonly releaseFn: (lease: InputPolicyLeaseImpl) => void;
-  private released = false;
 
   constructor(
     ownerId: string,
@@ -95,6 +95,31 @@ export class InputPolicyStackImpl implements InputPolicyStack {
 
   constructor(now: () => number = () => Date.now()) {
     this.now = now;
+  }
+
+  private releaseLease(lease: InputPolicyLeaseImpl): void {
+    const index = this.leases.indexOf(lease);
+    if (index === -1) {
+      return;
+    }
+    this.leases.splice(index, 1);
+    this.recompute();
+  }
+
+  private recompute(): void {
+    let next: InputMode = 'interactive';
+    for (const lease of this.leases) {
+      if (MODE_RANK[lease.mode] > MODE_RANK[next]) {
+        next = lease.mode;
+      }
+    }
+    if (next === this.effectiveMode) {
+      return;
+    }
+    this.effectiveMode = next;
+    for (const listener of this.listeners) {
+      listener(next);
+    }
   }
 
   acquire({ ownerId, mode }: { ownerId: string; mode: InputMode }): InputPolicyLease {
@@ -144,30 +169,5 @@ export class InputPolicyStackImpl implements InputPolicyStack {
     return () => {
       this.listeners.delete(listener);
     };
-  }
-
-  private releaseLease(lease: InputPolicyLeaseImpl): void {
-    const index = this.leases.indexOf(lease);
-    if (index === -1) {
-      return;
-    }
-    this.leases.splice(index, 1);
-    this.recompute();
-  }
-
-  private recompute(): void {
-    let next: InputMode = 'interactive';
-    for (const lease of this.leases) {
-      if (MODE_RANK[lease.mode] > MODE_RANK[next]) {
-        next = lease.mode;
-      }
-    }
-    if (next === this.effectiveMode) {
-      return;
-    }
-    this.effectiveMode = next;
-    for (const listener of this.listeners) {
-      listener(next);
-    }
   }
 }

@@ -77,12 +77,11 @@ const NETHER_RESET_OFFICE_SECOND_SCENE_DEFINITION: RoccoNetherSceneDefinition = 
 };
 
 export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
+  private readonly localization: RoccoLocalization;
+  private spriteController: RoccoDefaultSpriteController | null = null;
   readonly id = ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID;
   readonly title: string;
   readonly connectors = NETHER_RESET_OFFICE_SECOND_CONNECTORS;
-
-  private readonly localization: RoccoLocalization;
-  private spriteController: RoccoDefaultSpriteController | null = null;
 
   constructor(localization: RoccoLocalization) {
     this.localization = localization;

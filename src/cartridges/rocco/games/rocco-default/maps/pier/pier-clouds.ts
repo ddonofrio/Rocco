@@ -79,22 +79,6 @@ class RoccoFloatingCloudController implements RoccoDefaultCloudController {
     this.engine = engine;
   }
 
-  start(): void {
-    this.applyPosition();
-  }
-
-  update(deltaMs: number): void {
-    const safeDeltaMs = Number.isFinite(deltaMs) ? Math.max(0, deltaMs) : 0;
-    this.elapsedMs += safeDeltaMs;
-    this.x += DEFAULT_CLOUD_SPEED_X * (safeDeltaMs / 1000);
-
-    if (this.x >= DEFAULT_CLOUD_WRAP_RIGHT_X) {
-      this.x = DEFAULT_CLOUD_START_X;
-    }
-
-    this.applyPosition();
-  }
-
   private applyPosition(): void {
     const phase = (this.elapsedMs / DEFAULT_CLOUD_VERTICAL_PERIOD_MS) * Math.PI * 2;
     const y = DEFAULT_CLOUD_BASE_Y + Math.sin(phase) * DEFAULT_CLOUD_VERTICAL_AMPLITUDE;
@@ -112,6 +96,22 @@ class RoccoFloatingCloudController implements RoccoDefaultCloudController {
 
     const progress = Math.min(1, Math.max(0, (this.x - DEFAULT_CLOUD_START_X) / distance));
     return DEFAULT_CLOUD_SPRITE_SCALE * (1 + progress * DEFAULT_CLOUD_SCALE_GROWTH_FACTOR);
+  }
+
+  start(): void {
+    this.applyPosition();
+  }
+
+  update(deltaMs: number): void {
+    const safeDeltaMs = Number.isFinite(deltaMs) ? Math.max(0, deltaMs) : 0;
+    this.elapsedMs += safeDeltaMs;
+    this.x += DEFAULT_CLOUD_SPEED_X * (safeDeltaMs / 1000);
+
+    if (this.x >= DEFAULT_CLOUD_WRAP_RIGHT_X) {
+      this.x = DEFAULT_CLOUD_START_X;
+    }
+
+    this.applyPosition();
   }
 }
 

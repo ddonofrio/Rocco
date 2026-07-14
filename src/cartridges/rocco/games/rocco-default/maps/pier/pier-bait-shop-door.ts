@@ -229,9 +229,11 @@ export async function installDefaultBaitShopDoor(
     volume: BAIT_SHOP_DOOR_SOUND_VOLUME,
     loop: false,
   });
-  await engine.audio.preloadSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID).catch(() => {
+  try {
+    await engine.audio.preloadSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
+  } catch {
     engine.log('Audio', 'Bait shop door opening sound could not be preloaded.');
-  });
+  }
   await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);

@@ -23,14 +23,14 @@ export interface BaitShopBenchJumpControllerHost {
     startOrigin: RoccoPoint;
     endOrigin: RoccoPoint;
   } | null;
-  setInputEnabled(enabled: boolean): void;
-  setWalkConstraint(constrainMovement: boolean): void;
+  setInputEnabled(isEnabled: boolean): void;
+  setWalkConstraint(shouldConstrainMovement: boolean): void;
   stopPlayerMovement(): void;
   setPlayerPosition(origin: RoccoPoint): void;
   playRunAction(direction: RoccoFacingDirection): void;
   playIdleAction(direction: RoccoFacingDirection): void;
   render(): void;
-  onBenchOccupancyChanged(onBench: boolean): void;
+  onBenchOccupancyChanged(isOnBench: boolean): void;
   onJumpUpFinished(): void;
   onJumpDownFinished(options: BaitShopBenchJumpDownOptions): void;
 }
@@ -41,20 +41,35 @@ function lerp(start: number, end: number, progress: number): number {
 
 export class BaitShopBenchJumpController {
   private readonly host: BaitShopBenchJumpControllerHost;
-  private sequence: BaitShopBenchJumpSequence | null = null;
+  private sequence: BaitShopBenchJumpSequence | undefined = undefined;
   private onBench = false;
 
   constructor(host: BaitShopBenchJumpControllerHost) {
     this.host = host;
   }
 
+  private finish(): void {
+    const sequence = this.sequence;
+    this.sequence = undefined;
+    if (!sequence) {
+      this.host.setInputEnabled(true);
+      return;
+    }
+
+    this.host.setPlayerPosition(sequence.endOrigin);
+    this.host.playIdleAction(sequence.landingFacing);
+    this.host.render();
+
+    sequence.onComplete?.();
+  }
+
   reset(): void {
-    this.sequence = null;
+    this.sequence = undefined;
     this.onBench = false;
   }
 
   isActive(): boolean {
-    return this.sequence !== null;
+    return this.sequence !== undefined;
   }
 
   isOnBench(): boolean {
@@ -144,20 +159,5 @@ export class BaitShopBenchJumpController {
     if (this.sequence.elapsedMs >= BAIT_SHOP_BENCH_JUMP_DURATION_MS) {
       this.finish();
     }
-  }
-
-  private finish(): void {
-    const sequence = this.sequence;
-    this.sequence = null;
-    if (!sequence) {
-      this.host.setInputEnabled(true);
-      return;
-    }
-
-    this.host.setPlayerPosition(sequence.endOrigin);
-    this.host.playIdleAction(sequence.landingFacing);
-    this.host.render();
-
-    sequence.onComplete?.();
   }
 }

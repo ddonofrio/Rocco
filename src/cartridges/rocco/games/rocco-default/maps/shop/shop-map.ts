@@ -19,7 +19,7 @@ export interface RoccoDefaultShopMapOptions {
   hasMysteriousKey: () => boolean;
   onMysteriousKeyCollected: () => boolean;
   hasMagazine: () => boolean;
-  onMagazineCollected: (known: boolean) => boolean;
+  onMagazineCollected: (isKnown: boolean) => boolean;
   hasCoralRelic: () => boolean;
   getCoralRelicAssemblyPlan: NonNullable<
     RoccoBaitShopToiletLevelOptions['getCoralRelicAssemblyPlan']

@@ -32,6 +32,20 @@ export class InteractionRegistry {
   private readonly actionRules = new Map<string, InteractionRule>();
   private readonly specialRules = new Map<string, SpecialInventorySceneClickRule>();
 
+  private rulesForKind(
+    kind: InteractionKind,
+    stage: InteractionStage,
+  ): readonly InteractionRule[] {
+    const matching: InteractionRule[] = [];
+    for (const rule of this.actionRules.values()) {
+      if (rule.kind === kind && (rule.stage ?? 'default') === stage) {
+        matching.push(rule);
+      }
+    }
+
+    return matching.toSorted(byDescendingPriorityThenId);
+  }
+
   register(rule: InteractionRule): void {
     this.registerMany([rule]);
   }
@@ -60,11 +74,11 @@ export class InteractionRegistry {
   }
 
   getRules(): readonly InteractionRule[] {
-    return [...this.actionRules.values()].sort(byDescendingPriorityThenId);
+    return collectToSortedArray(this.actionRules.values(), byDescendingPriorityThenId);
   }
 
   getSpecialRules(): readonly SpecialInventorySceneClickRule[] {
-    return [...this.specialRules.values()].sort(byDescendingPriorityThenId);
+    return collectToSortedArray(this.specialRules.values(), byDescendingPriorityThenId);
   }
 
   dispatch(context: InteractionContext, signal: AbortSignal): InteractionDisposition | undefined {
@@ -140,15 +154,6 @@ export class InteractionRegistry {
 
     return { handled: false };
   }
-
-  private rulesForKind(
-    kind: InteractionKind,
-    stage: InteractionStage,
-  ): readonly InteractionRule[] {
-    return [...this.actionRules.values()]
-      .filter((rule) => rule.kind === kind && (rule.stage ?? 'default') === stage)
-      .sort(byDescendingPriorityThenId);
-  }
 }
 
 function byDescendingPriorityThenId(
@@ -160,6 +165,10 @@ function byDescendingPriorityThenId(
   }
 
   return a.id.localeCompare(b.id);
+}
+
+function collectToSortedArray<T>(values: Iterable<T>, compare: (a: T, b: T) => number): T[] {
+  return [...values].toSorted(compare);
 }
 
 /**

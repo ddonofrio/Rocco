@@ -149,17 +149,18 @@ export async function loadOrCreateNetherScene(
   return normalized.scene;
 }
 
-function loadImage(uri: string): Promise<HTMLImageElement> {
+async function loadImage(uri: string): Promise<HTMLImageElement> {
   const image = new Image();
   image.src = uri;
 
   if (typeof image.decode === 'function') {
-    return image.decode().then(() => image);
+    await image.decode();
+    return image;
   }
 
   return new Promise((resolve, reject) => {
     image.addEventListener('load', () => resolve(image));
-    image.onerror = () => reject(new Error(`Could not load image '${uri}'.`));
+    image.addEventListener('error', () => reject(new Error(`Could not load image '${uri}'.`)));
   });
 }
 
@@ -168,7 +169,7 @@ export function resolveNetherWalkMapDepthRange(walkMap: RoccoSpriteWalkMap): {
   nearY: number;
 } {
   let farY = Infinity;
-  let nearY = Number.NEGATIVE_INFINITY;
+  let nearY = -Infinity;
 
   for (const column of walkMap.columns) {
     for (const span of column.spans) {

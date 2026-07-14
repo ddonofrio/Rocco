@@ -30,7 +30,7 @@ export class AudioAnalyzer {
     const minSilenceSamples = Math.floor((minSilenceDurationMs / 1000) * sampleRate);
     
     const silenceRegions: SilenceRegion[] = [];
-    let silenceStart: number | null = null;
+    let silenceStart: number | undefined;
     let silenceSampleCount = 0;
     
     // Scan through audio in windows
@@ -41,12 +41,12 @@ export class AudioAnalyzer {
       const isSilent = rms < silenceThreshold;
       
       if (isSilent) {
-        if (silenceStart === null) {
+        if (silenceStart === undefined) {
           silenceStart = index / sampleRate;
         }
         silenceSampleCount += windowEnd - index;
       } else {
-        if (silenceStart !== null && silenceSampleCount >= minSilenceSamples) {
+        if (silenceStart !== undefined && silenceSampleCount >= minSilenceSamples) {
           const silenceEnd = index / sampleRate;
           silenceRegions.push({
             startTime: silenceStart,
@@ -54,13 +54,13 @@ export class AudioAnalyzer {
             duration: silenceEnd - silenceStart,
           });
         }
-        silenceStart = null;
+        silenceStart = undefined;
         silenceSampleCount = 0;
       }
     }
     
     // Handle trailing silence
-    if (silenceStart !== null && silenceSampleCount >= minSilenceSamples) {
+    if (silenceStart !== undefined && silenceSampleCount >= minSilenceSamples) {
       silenceRegions.push({
         startTime: silenceStart,
         endTime: duration,

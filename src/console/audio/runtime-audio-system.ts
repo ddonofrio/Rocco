@@ -1,8 +1,37 @@
 import type { RoccoAudioSystem, RoccoSoundDefinition, RoccoSoundPlayOptions, SoundHandle } from './types';
 
-interface ActiveSoundNode {
-  source: AudioBufferSourceNode;
-  gain: GainNode;
+interface Deferred<T> {
+  readonly promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+}
+
+interface ActiveSoundPlayback {
+  playbackId: string;
+  soundId: string;
+  source: AudioBufferSourceNode | null;
+  gain: GainNode | null;
+  requestedVolume: number;
+  ended: Deferred<void>;
+  finished: boolean;
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolved = false;
+  let resolvePromise!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve;
+  });
+
+  return {
+    promise,
+    resolve(value) {
+      if (resolved) {
+        return;
+      }
+      resolved = true;
+      resolvePromise(value);
+    },
+  };
 }
 
 function clone<T>(value: T): T {
@@ -25,12 +54,12 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   private readonly definitions = new Map<string, RoccoSoundDefinition>();
   private readonly bufferRevisions = new Map<string, number>();
   private readonly buffers = new Map<string, { revision: number; promise: Promise<AudioBuffer | null> }>();
-  private readonly activeSources = new Map<string, Set<ActiveSoundNode>>();
-  private readonly playGenerations = new Map<string, number>();
-  private readonly soundEndedResolvers = new Map<string, (() => void)[]>();
+  private readonly activePlaybacks = new Map<string, ActiveSoundPlayback>();
+  private readonly soundPlaybackIds = new Map<string, Set<string>>();
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private masterVolume = 1;
+  private nextPlaybackId = 1;
 
   registerSound(definition: RoccoSoundDefinition): void {
     if (this.definitions.has(definition.id)) {
@@ -58,48 +87,50 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   }
 
   playSound(soundId: string, options?: RoccoSoundPlayOptions): SoundHandle {
-    void this.playSoundAsync(soundId, options);
-    return this.createSoundHandle(soundId);
+    if (options?.restart) {
+      this.stopSound(soundId);
+    }
+
+    const playback = this.createPlayback(soundId, options);
+    void this.playSoundAsync(playback, options).catch(() => {
+      this.finishPlayback(playback.playbackId);
+    });
+    return this.createSoundHandle(playback);
   }
 
   setSoundVolume(soundId: string, volume: number): void {
-    const sources = this.activeSources.get(soundId);
-    if (!sources) {
+    const playbackIds = this.soundPlaybackIds.get(soundId);
+    if (!playbackIds) {
       return;
     }
 
     const clampedVolume = clampVolume(volume);
-    for (const entry of sources) {
-      entry.gain.gain.value = clampedVolume;
+    for (const playbackId of playbackIds) {
+      const playback = this.activePlaybacks.get(playbackId);
+      if (!playback) {
+        continue;
+      }
+      playback.requestedVolume = clampedVolume;
+      if (playback.gain) {
+        playback.gain.gain.value = clampedVolume;
+      }
     }
   }
 
   stopSound(soundId: string): void {
-    this.advancePlayGeneration(soundId);
-    const sources = this.activeSources.get(soundId);
-    if (!sources) {
+    const playbackIds = this.soundPlaybackIds.get(soundId);
+    if (!playbackIds) {
       return;
     }
 
-    for (const entry of sources) {
-      try {
-        entry.source.stop();
-      } catch {
-        // The source may have already ended naturally.
-      }
+    for (const playbackId of [...playbackIds]) {
+      this.finishPlayback(playbackId);
     }
-    sources.clear();
-    this.activeSources.delete(soundId);
   }
 
   stopAllSounds(): void {
-    const soundIds = new Set<string>([
-      ...this.definitions.keys(),
-      ...this.activeSources.keys(),
-      ...this.playGenerations.keys(),
-    ]);
-    for (const soundId of soundIds) {
-      this.stopSound(soundId);
+    for (const playbackId of [...this.activePlaybacks.keys()]) {
+      this.finishPlayback(playbackId);
     }
   }
 
@@ -117,8 +148,8 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     this.definitions.clear();
     this.bufferRevisions.clear();
     this.buffers.clear();
-    this.playGenerations.clear();
-    this.soundEndedResolvers.clear();
+    this.activePlaybacks.clear();
+    this.soundPlaybackIds.clear();
     const context = this.context;
     this.context = null;
     this.masterGain = null;
@@ -132,50 +163,77 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     this.applyMasterGainVolume();
   }
 
-  private async playSoundAsync(soundId: string, options?: RoccoSoundPlayOptions): Promise<void> {
+  private createPlayback(
+    soundId: string,
+    options?: RoccoSoundPlayOptions,
+  ): ActiveSoundPlayback {
     const definition = this.definitions.get(soundId);
+    const playback: ActiveSoundPlayback = {
+      playbackId: `sound-playback-${this.nextPlaybackId++}`,
+      soundId,
+      source: null,
+      gain: null,
+      requestedVolume: clampVolume(options?.volume ?? definition?.volume ?? 1),
+      ended: createDeferred<void>(),
+      finished: false,
+    };
+
+    this.activePlaybacks.set(playback.playbackId, playback);
+    let playbackIds = this.soundPlaybackIds.get(soundId);
+    if (!playbackIds) {
+      playbackIds = new Set();
+      this.soundPlaybackIds.set(soundId, playbackIds);
+    }
+    playbackIds.add(playback.playbackId);
+    return playback;
+  }
+
+  private async playSoundAsync(
+    playback: ActiveSoundPlayback,
+    options?: RoccoSoundPlayOptions,
+  ): Promise<void> {
+    const definition = this.definitions.get(playback.soundId);
     const context = this.ensureContext();
-    if (!definition || !context) {
-      return;
+    let started = false;
+
+    try {
+      if (!definition || !context || playback.finished) {
+        return;
+      }
+
+      const buffer = await this.loadBuffer(playback.soundId);
+      if (!buffer || playback.finished) {
+        return;
+      }
+
+      if (context.state === 'suspended') {
+        await context.resume().catch(() => undefined);
+      }
+
+      if (playback.finished || context.state !== 'running') {
+        return;
+      }
+
+      const source = context.createBufferSource();
+      const gain = context.createGain();
+      const masterGain = this.ensureMasterGain();
+      playback.source = source;
+      playback.gain = gain;
+      source.buffer = buffer;
+      source.loop = options?.loop ?? definition.loop ?? false;
+      gain.gain.value = playback.requestedVolume;
+      source.connect(gain);
+      gain.connect(masterGain);
+      source.onended = () => {
+        this.finishPlayback(playback.playbackId);
+      };
+      source.start();
+      started = true;
+    } finally {
+      if (!started) {
+        this.finishPlayback(playback.playbackId);
+      }
     }
-
-    if (options?.restart) {
-      this.stopSound(soundId);
-    }
-
-    const currentGeneration = this.getPlayGeneration(soundId);
-
-    const buffer = await this.loadBuffer(soundId);
-    if (!buffer) {
-      return;
-    }
-
-    if (currentGeneration !== this.getPlayGeneration(soundId)) {
-      return;
-    }
-
-    if (context.state === 'suspended') {
-      await context.resume().catch(() => undefined);
-    }
-
-    if (currentGeneration !== this.getPlayGeneration(soundId)) {
-      return;
-    }
-
-    if (context.state !== 'running') {
-      return;
-    }
-
-    const source = context.createBufferSource();
-    const gain = context.createGain();
-    const masterGain = this.ensureMasterGain();
-    source.buffer = buffer;
-    source.loop = options?.loop ?? definition.loop ?? false;
-    gain.gain.value = clampVolume(options?.volume ?? definition.volume ?? 1);
-    source.connect(gain);
-    gain.connect(masterGain);
-    this.trackSource(soundId, source, gain);
-    source.start();
   }
 
   private async loadBuffer(soundId: string): Promise<AudioBuffer | null> {
@@ -252,67 +310,75 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     this.masterGain.gain.value = this.masterVolume;
   }
 
-  private getPlayGeneration(soundId: string): number {
-    return this.playGenerations.get(soundId) ?? 0;
-  }
-
-  private advancePlayGeneration(soundId: string): void {
-    this.playGenerations.set(soundId, this.getPlayGeneration(soundId) + 1);
-  }
-
-  private trackSource(soundId: string, source: AudioBufferSourceNode, gain: GainNode): void {
-    let sources = this.activeSources.get(soundId);
-    if (!sources) {
-      sources = new Set();
-      this.activeSources.set(soundId, sources);
-    }
-    const entry: ActiveSoundNode = { source, gain };
-    sources.add(entry);
-    source.onended = () => {
-      sources?.delete(entry);
-      if (sources?.size === 0) {
-        this.activeSources.delete(soundId);
-      }
-      this.resolveSoundEnded(soundId);
-    };
-  }
-
-  private createSoundHandle(soundId: string): SoundHandle {
-    let resolveEnded: (() => void) | undefined;
-    const ended = new Promise<void>((resolve) => {
-      resolveEnded = resolve;
-    });
-
-    const registerResolver = () => {
-      if (!resolveEnded) {
-        return;
-      }
-      const resolvers = this.soundEndedResolvers.get(soundId) ?? [];
-      resolvers.push(resolveEnded);
-      this.soundEndedResolvers.set(soundId, resolvers);
-    };
-
-    registerResolver();
-
+  private createSoundHandle(playback: ActiveSoundPlayback): SoundHandle {
     return {
       stop: () => {
-        this.stopSound(soundId);
-        this.resolveSoundEnded(soundId);
+        this.finishPlayback(playback.playbackId);
       },
-      setVolume: (value: number) => this.setSoundVolume(soundId, value),
+      setVolume: (value: number) => this.setPlaybackVolume(playback.playbackId, value),
       get ended() {
-        return ended;
+        return playback.ended.promise;
       },
     };
   }
 
-  private resolveSoundEnded(soundId: string): void {
-    const resolvers = this.soundEndedResolvers.get(soundId);
-    if (resolvers) {
-      for (const resolve of resolvers) {
-        resolve();
-      }
-      this.soundEndedResolvers.delete(soundId);
+  private setPlaybackVolume(playbackId: string, value: number): void {
+    const playback = this.activePlaybacks.get(playbackId);
+    if (!playback) {
+      return;
+    }
+
+    playback.requestedVolume = clampVolume(value);
+    if (playback.gain) {
+      playback.gain.gain.value = playback.requestedVolume;
+    }
+  }
+
+  private finishPlayback(playbackId: string): void {
+    const playback = this.activePlaybacks.get(playbackId);
+    if (!playback || playback.finished) {
+      return;
+    }
+
+    playback.finished = true;
+    this.activePlaybacks.delete(playbackId);
+
+    const playbackIds = this.soundPlaybackIds.get(playback.soundId);
+    playbackIds?.delete(playbackId);
+    if (playbackIds?.size === 0) {
+      this.soundPlaybackIds.delete(playback.soundId);
+    }
+
+    if (playback.source) {
+      playback.source.onended = null;
+      this.stopSource(playback.source);
+      playback.source = null;
+    }
+
+    if (playback.gain) {
+      this.disconnectNode(playback.gain);
+      playback.gain = null;
+    }
+
+    playback.ended.resolve();
+  }
+
+  private stopSource(source: AudioBufferSourceNode): void {
+    try {
+      source.stop();
+    } catch {
+      // The source may have already ended naturally.
+    }
+    this.disconnectNode(source);
+  }
+
+  private disconnectNode(
+    node: Pick<AudioBufferSourceNode, 'disconnect'> | Pick<GainNode, 'disconnect'>,
+  ): void {
+    try {
+      node.disconnect();
+    } catch {
+      // Disconnecting an already released node is harmless.
     }
   }
 }

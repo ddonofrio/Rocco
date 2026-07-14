@@ -45,7 +45,19 @@ export class ResourceScopeDisposalError extends ResourceScopeError {
 }
 
 interface ScopeEntry {
-  readonly disposer: Disposer;
+  disposer: Disposer;
+  active: boolean;
+}
+
+interface OwnedChildEntry {
+  readonly entry: ScopeEntry;
+}
+
+interface ParentOwnership {
+  readonly parent: ResourceScopeImpl;
+  readonly childId: string;
+  readonly entry: ScopeEntry;
+  readonly detachAbortPropagation: () => void;
 }
 
 export interface ResourceScopeOptions {
@@ -59,67 +71,126 @@ export class ResourceScopeImpl implements ResourceScope {
 
   private readonly controller: AbortController;
   private readonly entries: ScopeEntry[] = [];
-  private readonly ownedChildren = new Set<ResourceScopeImpl>();
-  private disposed = false;
+  private readonly ownedChildren = new Map<string, OwnedChildEntry>();
+  private closed = false;
+  private disposePromise: Promise<void> | null = null;
+  private parentOwnership: ParentOwnership | null = null;
 
   constructor(id: string, options: ResourceScopeOptions = {}) {
     this.id = id;
     this.parent = options.parent ?? null;
     this.controller = new AbortController();
     this.signal = this.controller.signal;
+
+    if (options.parent instanceof ResourceScopeImpl) {
+      this.attachToParent(options.parent);
+    }
   }
 
   get isDisposed(): boolean {
-    return this.disposed;
+    return this.closed;
   }
 
   add<T extends DisposableResource>(resource: T): T {
     this.assertOpen();
-    this.entries.push({ disposer: () => resource.dispose() });
+    this.entries.push({ disposer: () => resource.dispose(), active: true });
     return resource;
   }
 
   defer(disposer: Disposer): void {
     this.assertOpen();
-    this.entries.push({ disposer });
+    this.entries.push({ disposer, active: true });
   }
 
   createChild(id: string): ResourceScope {
     this.assertOpen();
-    const child = new ResourceScopeImpl(id, { parent: this });
-    this.ownedChildren.add(child);
-    this.entries.push({
-      disposer: () => child.dispose(),
-    });
-    return child;
+    return new ResourceScopeImpl(id, { parent: this });
   }
 
-  async dispose(): Promise<void> {
-    if (this.disposed) {
-      return;
+  dispose(): Promise<void> {
+    if (this.disposePromise) {
+      return this.disposePromise;
     }
-    this.disposed = true;
+
+    this.disposePromise = this.disposeInternal();
+    return this.disposePromise;
+  }
+
+  private async disposeInternal(): Promise<void> {
+    this.closed = true;
     this.controller.abort();
 
     const failures: ResourceScopeDisposalErrorDetail[] = [];
+    const entries = [...this.entries];
     // LIFO: dispose in reverse registration order.
-    for (let index = this.entries.length - 1; index >= 0; index -= 1) {
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      const entry = entries[index];
+      if (!entry?.active) {
+        continue;
+      }
       try {
-        await this.entries[index]?.disposer();
+        await entry.disposer();
       } catch (error) {
         failures.push({ index, error });
       }
     }
     this.entries.length = 0;
     this.ownedChildren.clear();
+    this.detachFromParent();
 
     if (failures.length > 0) {
       throw new ResourceScopeDisposalError(this.id, failures);
     }
   }
 
+  private attachToParent(parent: ResourceScopeImpl): void {
+    parent.assertOpen();
+    if (parent.ownedChildren.has(this.id)) {
+      throw new ResourceScopeError(
+        `ResourceScope '${parent.id}' already owns a child scope with id '${this.id}'`,
+      );
+    }
+
+    const abortChild = () => {
+      this.controller.abort();
+    };
+    parent.signal.addEventListener('abort', abortChild);
+
+    const entry: ScopeEntry = {
+      disposer: () => this.dispose(),
+      active: true,
+    };
+
+    parent.ownedChildren.set(this.id, { entry });
+    parent.entries.push(entry);
+    this.parentOwnership = {
+      parent,
+      childId: this.id,
+      entry,
+      detachAbortPropagation: () => {
+        parent.signal.removeEventListener('abort', abortChild);
+      },
+    };
+
+    if (parent.signal.aborted) {
+      this.controller.abort();
+    }
+  }
+
+  private detachFromParent(): void {
+    const ownership = this.parentOwnership;
+    if (!ownership) {
+      return;
+    }
+
+    ownership.entry.active = false;
+    ownership.parent.ownedChildren.delete(ownership.childId);
+    ownership.detachAbortPropagation();
+    this.parentOwnership = null;
+  }
+
   private assertOpen(): void {
-    if (this.disposed) {
+    if (this.closed) {
       throw new ResourceScopeClosedError(this.id);
     }
   }

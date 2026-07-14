@@ -78,6 +78,7 @@ export function createPierActionMenuRules(): readonly InteractionRule[] {
   return [
     {
       id: 'pier-bait-shop-door-action',
+      ownerId: 'pier.bait-shop-door-action',
       priority: PIER_DOOR_ACTION_PRIORITY,
       kind: 'action-menu',
       matches: (context) => {
@@ -97,7 +98,7 @@ export function createPierActionMenuRules(): readonly InteractionRule[] {
       execute: (context) => {
         const engine = context.engine;
         if (!engine || !isPierStart(context) || !isActionMenuAction(context.action)) {
-          return undefined;
+          return normalizeDisposition(undefined);
         }
 
         const activation = context.action;
@@ -148,6 +149,7 @@ export function createPierSpecialSceneClickRules(): readonly SpecialInventorySce
   return [
     {
       id: 'pier-bait-shop-door-use',
+      ownerId: 'pier.bait-shop-door-use',
       priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
       matches: (context, carriedItem) =>
         isPierStart(context) &&
@@ -166,6 +168,7 @@ export function createPierSpecialSceneClickRules(): readonly SpecialInventorySce
     },
     {
       id: 'pier-stan-police-defeat',
+      ownerId: 'pier.stan-police-defeat',
       priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
       matches: (context, carriedItem) =>
         isPierStart(context) &&
@@ -173,26 +176,28 @@ export function createPierSpecialSceneClickRules(): readonly SpecialInventorySce
         carriedItem.item.id === ROCCO_INVENTORY_KEYS_ITEM_ID &&
         context.action.targetInstanceId === DEFAULT_STAN_SPRITE_INSTANCE_ID,
       execute: (context) => {
-        if (!context.engine) {
+        const engine = context.engine;
+        if (!engine) {
           return { handled: false };
         }
 
         if (!context.isStanAwake()) {
           showRoccoThoughtVariant(
-            context.engine,
+            engine,
             context.localization.text.inventory.keysOnStanSleepingLines,
             'pier-stan-keys-sleeping',
           );
-          context.engine.video.gridMenus.clearCarriedItem();
+          engine.video.gridMenus.clearCarriedItem();
           return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
         }
 
-        context.scriptedSequences.startStanPoliceDefeat(context.engine);
+        context.scriptedSequences.startStanPoliceDefeat(engine);
         return { handled: true };
       },
     },
     {
       id: 'pier-stan-money',
+      ownerId: 'pier.stan-money',
       priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
       matches: (context, carriedItem) =>
         isPierStart(context) &&
@@ -222,6 +227,7 @@ export function createPierSpecialSceneClickRules(): readonly SpecialInventorySce
     },
     {
       id: 'pier-lab-coat-equip',
+      ownerId: 'pier.lab-coat-equip',
       priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
       matches: (context, carriedItem) =>
         isSceneClickAction(context.action) &&

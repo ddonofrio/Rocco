@@ -156,6 +156,10 @@ export class RoccoInputHandler {
   }
 
   private readonly handleCursorMove = (event: RoccoCursorMoveEvent): void => {
+    if (this.getInputMode() !== 'interactive') {
+      return;
+    }
+
     if (this.videoSystem.gridMenus.isOpen()) {
       if (this.videoSystem.gridMenus.setHoverAt(event.sceneX, event.sceneY)) {
         this.videoSystem.render(0);
@@ -182,6 +186,10 @@ export class RoccoInputHandler {
   };
 
   private readonly handleCursorLeave = (): void => {
+    if (this.getInputMode() !== 'interactive') {
+      return;
+    }
+
     if (this.videoSystem.gridMenus.isOpen()) {
       const activation = this.videoSystem.gridMenus.activateAt(-1, -1);
       if (activation) {

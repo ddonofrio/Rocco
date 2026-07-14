@@ -35,6 +35,7 @@ export interface ResourceScope extends DisposableResource {
   readonly signal: AbortSignal;
   readonly parent: ResourceScope | null;
   readonly isDisposed: boolean;
+  dispose(): Promise<void>;
 
   /**
    * Registers a disposable resource. The resource is disposed in LIFO order
@@ -69,50 +70,53 @@ export class LifecycleStateMachine {
     return this.state;
   }
 
-  /** A fresh instance can initialize, as can one that previously failed. */
+  /** A fresh instance can initialize exactly once. */
   canInitialize(): boolean {
-    return this.state === 'new' || this.state === 'failed';
+    return this.state === 'new';
   }
 
-  /** A disposed runtime is terminal; a new instance must be created. */
+  /** Failed and disposed runtimes are terminal; create a new instance. */
   isTerminal(): boolean {
-    return this.state === 'disposed';
+    return this.state === 'disposed' || this.state === 'failed';
   }
 
   markInitializing(): void {
-    if (this.state === 'initializing') {
-      throw new Error('Lifecycle is already initializing');
-    }
-    if (!this.canInitialize()) {
-      throw new Error(`Cannot initialize lifecycle in state '${this.state}'`);
-    }
-    this.state = 'initializing';
+    this.transition(['new'], 'initializing', 'initialize');
   }
 
   markReady(): void {
-    this.state = 'ready';
+    this.transition(['initializing'], 'ready', 'mark ready');
   }
 
   markFailed(): void {
-    this.state = 'failed';
+    this.transition(['initializing', 'ready', 'stopping'], 'failed', 'fail');
   }
 
   markStopping(): void {
-    this.state = 'stopping';
+    this.transition(['ready'], 'stopping', 'stop');
   }
 
   markStopped(): void {
-    this.state = 'stopped';
+    this.transition(['stopping'], 'stopped', 'mark stopped');
   }
 
   markDisposing(): void {
-    if (this.state === 'disposed' || this.state === 'disposing') {
-      throw new Error(`Cannot begin disposal in state '${this.state}'`);
-    }
-    this.state = 'disposing';
+    this.transition(['new', 'initializing', 'ready', 'stopped'], 'disposing', 'dispose');
   }
 
   markDisposed(): void {
-    this.state = 'disposed';
+    this.transition(['disposing'], 'disposed', 'mark disposed');
+  }
+
+  private transition(
+    allowed: readonly LifecycleState[],
+    next: LifecycleState,
+    action: string,
+  ): void {
+    if (!allowed.includes(this.state)) {
+      throw new Error(`Cannot ${action} lifecycle in state '${this.state}'`);
+    }
+
+    this.state = next;
   }
 }

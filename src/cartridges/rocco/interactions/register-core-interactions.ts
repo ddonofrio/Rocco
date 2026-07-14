@@ -22,6 +22,7 @@ export function createCoreInteractionRules(): readonly InteractionRule[] {
   return [
     {
       id: 'core-developer-player-action',
+      ownerId: 'core.developer.player-action',
       priority: DEVELOPER_PRIORITY,
       kind: 'action-menu',
       matches: (context) =>
@@ -31,13 +32,14 @@ export function createCoreInteractionRules(): readonly InteractionRule[] {
       execute: (context) => {
         const engine = context.engine;
         if (!engine || !isActionMenuAction(context.action)) {
-          return undefined;
+          return normalizeDisposition(undefined);
         }
         return normalizeDisposition(context.developerRuntime.handlePlayerAction(engine, context.action));
       },
     },
     {
       id: 'core-developer-scene-click',
+      ownerId: 'core.developer.scene-click',
       priority: DEVELOPER_PRIORITY,
       kind: 'scene-click',
       stage: 'before-exit-intent',
@@ -48,13 +50,14 @@ export function createCoreInteractionRules(): readonly InteractionRule[] {
       execute: (context) => {
         const engine = context.engine;
         if (!engine || !isSceneClickAction(context.action)) {
-          return undefined;
+          return normalizeDisposition(undefined);
         }
         return normalizeDisposition(context.developerRuntime.handleSceneClick(engine, context.action));
       },
     },
     {
       id: 'core-developer-grid-menu',
+      ownerId: 'core.developer.grid-menu',
       priority: DEVELOPER_PRIORITY,
       kind: 'grid-menu',
       matches: (context) =>
@@ -65,28 +68,30 @@ export function createCoreInteractionRules(): readonly InteractionRule[] {
         if (context.engine && isGridMenuAction(context.action)) {
           context.developerRuntime.handleGridMenuAction(context.engine, context.action);
         }
-        return undefined;
+        return normalizeDisposition(undefined);
       },
     },
     {
       id: 'core-inventory-toggle',
+      ownerId: 'core.inventory-toggle',
       priority: INVENTORY_TOGGLE_PRIORITY,
       kind: 'action-menu',
       matches: (context) => isActionMenuAction(context.action) && isRoccoPlayerInventoryAction(context.action),
       execute: (context) => {
         const engine = context.engine;
         if (!engine) {
-          return undefined;
+          return normalizeDisposition(undefined);
         }
         context.developerRuntime.clearTransientState(engine);
         engine.setInputEnabled(true);
         engine.video.actionMenus.closeMenu();
         context.inventoryRuntime.togglePlayerInventory(engine);
-        return undefined;
+        return normalizeDisposition(undefined);
       },
     },
     {
       id: 'core-self-talk',
+      ownerId: 'core.self-talk',
       priority: SELF_TALK_PRIORITY,
       kind: 'action-menu',
       matches: (context) => {
@@ -103,7 +108,7 @@ export function createCoreInteractionRules(): readonly InteractionRule[] {
       execute: (context) => {
         const engine = context.engine;
         if (!engine) {
-          return undefined;
+          return normalizeDisposition(undefined);
         }
         roccoCartridgeMessageRuntime.think(
           engine,
@@ -117,7 +122,7 @@ export function createCoreInteractionRules(): readonly InteractionRule[] {
           },
         );
         engine.video.render(0);
-        return undefined;
+        return normalizeDisposition(undefined);
       },
     },
   ];

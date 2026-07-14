@@ -21,7 +21,20 @@ type RoccoDialoguePhase =
 interface RoccoDialoguePendingStep {
   remainingMs: number;
   messageSpriteInstanceId?: string;
+  messageId?: string;
   onComplete: () => void;
+}
+
+type RoccoDialogueMessageKind = 'say' | 'think';
+
+interface RoccoDialogueLinearSequence {
+  speaker: 'player' | 'npc';
+  lines: readonly RoccoDialogueLine[];
+  lineIndex: number;
+  messageKind: RoccoDialogueMessageKind;
+  ttlMs: number;
+  messageOptions?: Omit<RoccoSpriteMessageOptions, 'ttlMs'>;
+  onComplete?: () => void;
 }
 
 export interface RoccoDialogueSessionHooks {
@@ -47,6 +60,15 @@ export interface RoccoDialogueConversationStart {
   choices: readonly RoccoDialogueChoiceNode[];
 }
 
+export interface RoccoDialogueLinearSequenceStart {
+  speaker: 'player' | 'npc';
+  lines: readonly RoccoDialogueLine[];
+  lineTtlMs?: number;
+  messageKind?: RoccoDialogueMessageKind;
+  messageOptions?: Omit<RoccoSpriteMessageOptions, 'ttlMs'>;
+  onComplete?: () => void;
+}
+
 export class RoccoDialogueSession {
   private readonly engine: RoccoEngine;
   private readonly id: string;
@@ -58,9 +80,12 @@ export class RoccoDialogueSession {
   private readonly promptTtlMs: number;
   private readonly npcMessageStyle?: Partial<RoccoSpriteMessageStyle>;
   private readonly hooks?: RoccoDialogueSessionHooks;
+  private readonly inputLeaseOwnerId: string;
   private phase: RoccoDialoguePhase = 'idle';
   private currentChoices: readonly RoccoDialogueChoiceNode[] = [];
   private pendingStep: RoccoDialoguePendingStep | undefined;
+  private linearSequence: RoccoDialogueLinearSequence | undefined;
+  private advanceOnlyLease: ReturnType<RoccoEngine['acquireInputLease']> | null = null;
 
   constructor(options: RoccoDialogueSessionOptions) {
     this.id = options.id;
@@ -73,6 +98,7 @@ export class RoccoDialogueSession {
     this.promptTtlMs = Math.max(1, options.promptTtlMs ?? DEFAULT_DIALOGUE_PROMPT_TTL_MS);
     this.npcMessageStyle = options.npcMessageStyle;
     this.hooks = options.hooks;
+    this.inputLeaseOwnerId = `dialogue:${options.id}`;
   }
 
   beginConversation(start: RoccoDialogueConversationStart): void {
@@ -83,7 +109,7 @@ export class RoccoDialogueSession {
       return;
     }
 
-    this.phase = 'waiting-npc';
+    this.setPhase('waiting-npc');
     this.engine.video.messages.say(
       this.npcSpriteInstanceId,
       this.resolveMessageText(start.npcLine),
@@ -129,6 +155,29 @@ export class RoccoDialogueSession {
     return true;
   }
 
+  beginLinearSequence(start: RoccoDialogueLinearSequenceStart): void {
+    this.cancel();
+    if (start.lines.length === 0) {
+      start.onComplete?.();
+      return;
+    }
+
+    this.linearSequence = {
+      speaker: start.speaker,
+      lines: [...start.lines],
+      lineIndex: 0,
+      messageKind: start.messageKind ?? 'say',
+      ttlMs: Math.max(
+        1,
+        start.lineTtlMs ??
+          (start.speaker === 'player' ? this.playerLineTtlMs : this.npcLineTtlMs),
+      ),
+      messageOptions: start.messageOptions,
+      onComplete: start.onComplete,
+    };
+    this.showCurrentLinearSequenceLine();
+  }
+
   update(deltaMs: number): void {
     if (!this.pendingStep || !Number.isFinite(deltaMs) || deltaMs <= 0) {
       return;
@@ -160,7 +209,8 @@ export class RoccoDialogueSession {
   cancel(): void {
     this.pendingStep = undefined;
     this.currentChoices = [];
-    this.phase = 'idle';
+    this.linearSequence = undefined;
+    this.setPhase('idle');
     if (this.engine.video.gridMenus.isOpen(this.id)) {
       this.engine.video.gridMenus.closeMenu();
     }
@@ -189,7 +239,7 @@ export class RoccoDialogueSession {
   }
 
   private startChoice(choice: RoccoDialogueChoiceNode): void {
-    this.phase = 'waiting-player';
+    this.setPhase('waiting-player');
     const playerLineDurationMs = this.resolveLineDuration(choice.playerLine, this.playerLineTtlMs);
     const preReplyDurationMs = Math.max(0, this.hooks?.beforeNpcReply?.(choice) ?? 0);
     this.engine.video.messages.say(
@@ -205,7 +255,7 @@ export class RoccoDialogueSession {
       () => {
         const bridgeDelayMs = Math.max(0, preReplyDurationMs - playerLineDurationMs);
         if (bridgeDelayMs > 0) {
-          this.phase = 'waiting-bridge';
+          this.setPhase('waiting-bridge');
           this.schedule(bridgeDelayMs, () => this.showNpcLine(choice));
           return;
         }
@@ -218,7 +268,7 @@ export class RoccoDialogueSession {
   }
 
   private showNpcLine(choice: RoccoDialogueChoiceNode): void {
-    this.phase = 'waiting-npc';
+    this.setPhase('waiting-npc');
     this.engine.video.messages.say(
       this.npcSpriteInstanceId,
       this.resolveMessageText(choice.npcLine),
@@ -245,7 +295,7 @@ export class RoccoDialogueSession {
 
   private openChoices(choices: readonly RoccoDialogueChoiceNode[]): void {
     this.currentChoices = choices;
-    this.phase = 'awaiting-choice';
+    this.setPhase('awaiting-choice');
     this.engine.video.gridMenus.openMenu(
       createRoccoDialogueChoiceMenu({
         id: this.id,
@@ -262,23 +312,41 @@ export class RoccoDialogueSession {
   private finishConversation(): void {
     this.pendingStep = undefined;
     this.currentChoices = [];
-    this.phase = 'idle';
+    this.setPhase('idle');
     this.engine.video.render(0);
+  }
+
+  private finishLinearSequence(): void {
+    const onComplete = this.linearSequence?.onComplete;
+    this.pendingStep = undefined;
+    this.currentChoices = [];
+    this.linearSequence = undefined;
+    this.setPhase('idle');
+    this.engine.video.render(0);
+    onComplete?.();
   }
 
   private schedule(
     delayMs: number,
     onComplete: () => void,
     messageSpriteInstanceId?: string,
+    messageId?: string,
   ): void {
     this.pendingStep = {
       remainingMs: Math.max(0, delayMs),
       messageSpriteInstanceId,
+      messageId,
       onComplete,
     };
   }
 
   private clearPendingStepMessage(): void {
+    const messageId = this.pendingStep?.messageId;
+    if (messageId) {
+      this.engine.video.messages.removeMessage(messageId);
+      return;
+    }
+
     const spriteInstanceId = this.pendingStep?.messageSpriteInstanceId;
     if (!spriteInstanceId) {
       return;
@@ -295,6 +363,67 @@ export class RoccoDialogueSession {
     const onComplete = this.pendingStep.onComplete;
     this.pendingStep = undefined;
     onComplete();
+  }
+
+  private showCurrentLinearSequenceLine(): void {
+    const sequence = this.linearSequence;
+    if (!sequence) {
+      return;
+    }
+
+    const line = sequence.lines[sequence.lineIndex];
+    if (!line) {
+      this.finishLinearSequence();
+      return;
+    }
+
+    const spriteInstanceId =
+      sequence.speaker === 'player'
+        ? this.playerSpriteInstanceId
+        : this.npcSpriteInstanceId;
+    const messageOptions: RoccoSpriteMessageOptions = {
+      ttlMs: sequence.ttlMs,
+      ...(sequence.messageOptions ?? {}),
+    };
+
+    this.setPhase(sequence.speaker === 'player' ? 'waiting-player' : 'waiting-npc');
+    if (sequence.messageKind === 'think') {
+      this.engine.video.messages.think(
+        spriteInstanceId,
+        this.resolveMessageText(line),
+        messageOptions,
+      );
+    } else {
+      this.engine.video.messages.say(
+        spriteInstanceId,
+        this.resolveMessageText(line),
+        messageOptions,
+      );
+    }
+    this.schedule(
+      this.resolveLineDuration(line, sequence.ttlMs),
+      () => this.advanceLinearSequence(),
+      spriteInstanceId,
+      sequence.messageOptions?.id,
+    );
+    this.engine.video.render(0);
+  }
+
+  private advanceLinearSequence(): void {
+    if (!this.linearSequence) {
+      return;
+    }
+
+    if (this.linearSequence.lineIndex < this.linearSequence.lines.length - 1) {
+      this.linearSequence = {
+        ...this.linearSequence,
+        lineIndex: this.linearSequence.lineIndex + 1,
+      };
+      this.showCurrentLinearSequenceLine();
+      return;
+    }
+
+    this.finishLinearSequence();
   }
 
   private resolveLineDuration(line: RoccoDialogueLine, ttlMs: number): number {
@@ -322,5 +451,27 @@ export class RoccoDialogueSession {
     }
 
     return line.join(' ');
+  }
+
+  private setPhase(phase: RoccoDialoguePhase): void {
+    this.phase = phase;
+    if (phase === 'waiting-player' || phase === 'waiting-bridge' || phase === 'waiting-npc') {
+      this.acquireAdvanceOnlyLease();
+      return;
+    }
+
+    this.releaseAdvanceOnlyLease();
+  }
+
+  private acquireAdvanceOnlyLease(): void {
+    this.advanceOnlyLease ??= this.engine.acquireInputLease(
+      this.inputLeaseOwnerId,
+      'advance-only',
+    );
+  }
+
+  private releaseAdvanceOnlyLease(): void {
+    this.advanceOnlyLease?.dispose();
+    this.advanceOnlyLease = null;
   }
 }

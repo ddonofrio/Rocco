@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { RoccoDatabase } from '../../../src/console/persistence/db';
 import { DexieSaveStore } from '../../../src/console/persistence/store';
@@ -13,6 +13,18 @@ import type { RoccoPlaneScene } from '../../../src/console/video/planes';
 
 interface TestState {
   level: number;
+}
+
+async function resetPersistenceDatabase(): Promise<void> {
+  const { closeRoccoDatabase } = await import('../../../src/console/persistence/db');
+  closeRoccoDatabase();
+
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase('rocco_db');
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error ?? new Error('indexeddb delete failed'));
+    request.onblocked = () => reject(new Error('indexeddb delete blocked'));
+  });
 }
 
 function makeProvider(schemaVersion: number): CartridgeSaveProvider<TestState> {
@@ -51,7 +63,22 @@ function makeScene(overrides: Partial<RoccoPlaneScene> = {}): RoccoPlaneScene {
 }
 
 describe('Dexie persistence with real IndexedDB', () => {
+  beforeEach(async () => {
+    await resetPersistenceDatabase();
+  });
+
   describe('scene store', () => {
+    it('round-trips a scene through savePlaneScene and loadPlaneSceneRecord', async () => {
+      const { loadPlaneSceneRecord, savePlaneScene } = await import('../../../src/console/persistence/db');
+      const scene = makeScene();
+
+      await savePlaneScene('cart', scene);
+
+      const loaded = await loadPlaneSceneRecord('cart', 'scene-1');
+      expect(loaded?.id).toBe('scene-1');
+      expect(loaded?.scene).toEqual(scene);
+    });
+
     it('saves and loads a scene through the real database', async () => {
       const db = new RoccoDatabase();
       const scene = makeScene();
@@ -172,6 +199,80 @@ describe('Dexie persistence with real IndexedDB', () => {
       ).rejects.toBeInstanceOf(SaveSchemaError);
     });
 
+    it('rejects import with invalid revision or timestamps', async () => {
+      const db = new RoccoDatabase();
+      const store = new DexieSaveStore(db);
+      const repo = createSaveRepository<TestState>({
+        cartridgeId: 'cart-a',
+        cartridgeVersion: '1.0.0',
+        provider: makeProvider(1),
+        store,
+      });
+
+      await expect(
+        repo.importSave({
+          cartridgeId: 'cart-a',
+          cartridgeVersion: '1.0.0',
+          schemaVersion: 1,
+          profileId: 'p',
+          slotId: 's',
+          revision: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          payload: { level: 9 },
+        }),
+      ).rejects.toBeInstanceOf(SaveSchemaError);
+
+      await expect(
+        repo.importSave({
+          cartridgeId: 'cart-a',
+          cartridgeVersion: '1.0.0',
+          schemaVersion: 1,
+          profileId: 'p',
+          slotId: 's',
+          revision: 1,
+          createdAt: 10,
+          updatedAt: 5,
+          payload: { level: 9 },
+        }),
+      ).rejects.toBeInstanceOf(SaveSchemaError);
+    });
+
+    it('persists migrated export metadata with bumped revision and current cartridge version', async () => {
+      const db = new RoccoDatabase();
+      const store = new DexieSaveStore(db);
+      const seed: SaveEnvelopeRow = {
+        key: 'cart:p:s',
+        cartridgeId: 'cart',
+        cartridgeVersion: '0.1.0',
+        schemaVersion: 1,
+        profileId: 'p',
+        slotId: 's',
+        revision: 4,
+        createdAt: 10,
+        updatedAt: 10,
+        payload: { level: 7 },
+      };
+      await store.put(seed);
+
+      const repo = createSaveRepository<TestState>({
+        cartridgeId: 'cart',
+        cartridgeVersion: '2.0.0',
+        provider: makeProvider(2),
+        store,
+      });
+
+      const exported = await repo.exportSave('p', 's');
+      expect(exported?.schemaVersion).toBe(2);
+      expect(exported?.cartridgeVersion).toBe('2.0.0');
+      expect(exported?.revision).toBe(5);
+
+      const row = await store.get(['cart', 'p', 's']);
+      expect(row?.schemaVersion).toBe(2);
+      expect(row?.cartridgeVersion).toBe('2.0.0');
+      expect(row?.revision).toBe(5);
+    });
+
     it('rolls back a failed transaction so no partial row is published', async () => {
       const db = new RoccoDatabase();
       const store = new DexieSaveStore(db);
@@ -215,12 +316,7 @@ describe('Dexie persistence with real IndexedDB', () => {
       const { closeRoccoDatabase, loadPlaneSceneRecord } = await import('../../../src/console/persistence/db');
 
       closeRoccoDatabase();
-
-      await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase('rocco_db');
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error ?? new Error('indexeddb delete failed'));
-      });
+      await resetPersistenceDatabase();
 
       const db = new RoccoDatabase();
 

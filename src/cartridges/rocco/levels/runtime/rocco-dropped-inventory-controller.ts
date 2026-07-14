@@ -1,4 +1,5 @@
 ﻿import type {
+  CartridgeActionDisposition,
   RoccoCartridgeActionResult,
   RoccoSceneClickAction,
 } from '../../../../console/cartridges';
@@ -52,6 +53,7 @@ const DROPPED_INVENTORY_ITEM_STOP_DISTANCE = 10;
 const DROPPED_CORAL_RELIC_ACTION_MENU_ID = 'rocco-dropped-coral-relic-action-menu';
 const DROPPED_CORAL_RELIC_LOOK_ACTION_ID = 'look';
 const DROPPED_CORAL_RELIC_STEP_ACTION_ID = 'step';
+const DROPPED_INVENTORY_TARGET_PRIORITY = 32;
 
 export class RoccoDroppedInventoryController {
   private readonly localization: RoccoLocalization;
@@ -183,7 +185,7 @@ export class RoccoDroppedInventoryController {
     engine: RoccoEngine,
     activeLevel: RoccoLevel,
     activation: RoccoSceneClickAction,
-  ): RoccoCartridgeActionResult | false {
+  ): CartridgeActionDisposition | RoccoCartridgeActionResult | false {
     if (!activation.targetInstanceId) {
       return false;
     }
@@ -201,7 +203,10 @@ export class RoccoDroppedInventoryController {
     }
 
     if (this.shouldOpenDroppedCoralRelicMenu(activeLevel, droppedItem.item.id)) {
-      return { suppressDefaultPlayerMove: true };
+      return {
+        consumed: false,
+        defaultPlayerMovement: 'suppress',
+      };
     }
 
     this.startDroppedInventoryPickup(engine, activeLevel, droppedItem);
@@ -540,6 +545,29 @@ export class RoccoDroppedInventoryController {
       },
     });
     engine.video.sceneTargets?.unregisterTarget(targetInstanceId);
+    if (groundSprite.pickable) {
+      const paddingX = groundSprite.clickTargetPadding?.x ?? 0;
+      const paddingY = groundSprite.clickTargetPadding?.y ?? 0;
+      const width = Math.max(1, groundSprite.width * scale);
+      const height = Math.max(1, groundSprite.height * scale);
+      engine.video.sceneTargets?.registerTarget({
+        instanceId: targetInstanceId,
+        definitionId: `${definitionId}:target`,
+        shape: {
+          kind: 'rect',
+          x: droppedItem.groundPoint.x - width / 2 - paddingX,
+          y: droppedItem.groundPoint.y - height - paddingY,
+          width: width + paddingX * 2,
+          height: height + paddingY * 2,
+        },
+        priority: DROPPED_INVENTORY_TARGET_PRIORITY,
+        renderLayer: groundSprite.renderLayer ?? 'world.behind',
+        visibleDescription: {
+          enabled: true,
+          text: droppedItem.item.label,
+        },
+      });
+    }
     this.activeDroppedInventoryRuntimeIds.add(runtimeId);
   }
 
@@ -587,6 +615,7 @@ export class RoccoDroppedInventoryController {
       id: DROPPED_CORAL_RELIC_ACTION_MENU_ID,
       targetInstanceIds: [
         `${DROPPED_INVENTORY_ITEM_SPRITE_INSTANCE_PREFIX}:${activeLevel.id}:${ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID}`,
+        `${DROPPED_INVENTORY_ITEM_TARGET_PREFIX}:${activeLevel.id}:${ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID}`,
       ],
       renderLayer: 'ui.action-menu',
       itemSize: 92,

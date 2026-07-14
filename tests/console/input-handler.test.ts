@@ -368,6 +368,75 @@ describe('RoccoInputHandler', () => {
     expect(goToCalls).toEqual([]);
   });
 
+  it('opens the action menu when a scene click is not consumed by the cartridge', () => {
+    let actionHandler: RoccoCursorActionHandler | undefined;
+    const openMenuCalls: Array<{
+      targetInstanceId: string;
+      targetDefinitionId: string;
+      sceneX: number;
+      sceneY: number;
+    }> = [];
+
+    const handler = new RoccoInputHandler({
+      videoSystem: createVideoSystemMock({
+        resolveSceneTargets() {
+          return {
+            visibleTarget: {
+              kind: 'sprite',
+              instanceId: 'stan',
+              definitionId: 'stan-definition',
+              text: 'Stan',
+            },
+            target: undefined,
+          };
+        },
+        actionMenus: {
+          ...createVideoSystemMock().actionMenus,
+          openMenuForTarget(targetInstanceId, targetDefinitionId, sceneX, sceneY) {
+            openMenuCalls.push({
+              targetInstanceId,
+              targetDefinitionId,
+              sceneX,
+              sceneY,
+            });
+            return true;
+          },
+        },
+      }),
+      audioSystem: asAudioSystem({ unlock() {} }),
+      jukeboxSystem: asJukeboxSystem({ unlock() {} }),
+      viewportHost: asViewportHost({
+        setCursorActionHandler(handler: RoccoCursorActionHandler | undefined) {
+          actionHandler = handler;
+        },
+        setCursorMoveHandler() {},
+        setCursorLeaveHandler() {},
+        setCursorAttachment() {},
+      }),
+      getActiveCartridge: () => ({
+        manifest: { id: 'test-cartridge', title: 'Test', version: '1.0.0' },
+        mount() {},
+        handleAction() {
+          return undefined;
+        },
+      }),
+      getActivePlayerSpriteId: () => 'rocco',
+      log: () => {},
+    });
+
+    handler.mount();
+    actionHandler?.(makeClickEvent(320, 180));
+
+    expect(openMenuCalls).toEqual([
+      {
+        targetInstanceId: 'stan',
+        targetDefinitionId: 'stan-definition',
+        sceneX: 320,
+        sceneY: 180,
+      },
+    ]);
+  });
+
   it('does not allow default player movement while input is advance-only', () => {
     const goToCalls: Array<{
       instanceId: string;
@@ -494,6 +563,85 @@ describe('RoccoInputHandler', () => {
     expect(renderCalls).toBe(1);
   });
 
+  it('does not hit test or update hover state while input is blocked or advance-only', () => {
+    for (const mode of ['blocked', 'advance-only'] as const) {
+      let moveHandler: RoccoCursorMoveHandler | undefined;
+      let resolveSceneTargetsCalls = 0;
+      let renderCalls = 0;
+      const addedTitles: string[] = [];
+
+      const handler = new RoccoInputHandler({
+        videoSystem: createVideoSystemMock({
+          render() {
+            renderCalls += 1;
+          },
+          resolveSceneTargets() {
+            resolveSceneTargetsCalls += 1;
+            return {
+              visibleTarget: {
+                kind: 'scene-target',
+                instanceId: 'shell-city-sign-target',
+                definitionId: 'shell-city-sign',
+                text: 'Shell City',
+              },
+              target: undefined,
+            };
+          },
+          gridMenus: {
+            ...createVideoSystemMock().gridMenus,
+            isOpen() {
+              return true;
+            },
+            setHoverAt() {
+              renderCalls += 100;
+              return true;
+            },
+          },
+        }),
+        audioSystem: asAudioSystem({}),
+        jukeboxSystem: asJukeboxSystem({}),
+        viewportHost: asViewportHost({
+          setCursorActionHandler() {
+            // noop
+          },
+          setCursorMoveHandler(handler: RoccoCursorMoveHandler | undefined) {
+            moveHandler = handler;
+          },
+          setCursorLeaveHandler() {
+            // noop
+          },
+          setCursorAttachment() {
+            // noop
+          },
+          getMetrics() {
+            return {
+              viewportWidth: 960,
+              viewportHeight: 540,
+              designWidth: 960,
+              designHeight: 540,
+              scale: 1,
+              renderWidth: 960,
+              renderHeight: 540,
+              offsetX: 0,
+              offsetY: 0,
+            };
+          },
+        }),
+        getActiveCartridge: () => null,
+        getActivePlayerSpriteId: () => null,
+        getInputMode: () => mode,
+        log: () => {},
+      });
+
+      handler.mount();
+      moveHandler?.(makeMoveEvent(320, 180));
+
+      expect(resolveSceneTargetsCalls).toBe(0);
+      expect(addedTitles).toEqual([]);
+      expect(renderCalls).toBe(0);
+    }
+  });
+
   it('dispatches a grid-menu close activation on cursor leave before clearing the carried item', () => {
     let leaveHandler: RoccoCursorLeaveHandler | undefined;
     let clearCarriedItemCalls = 0;
@@ -605,6 +753,90 @@ describe('RoccoInputHandler', () => {
     expect(clearCarriedItemCalls).toBe(1);
     expect(cursorAttachments).toEqual([undefined]);
     expect(renderCalls).toBe(1);
+  });
+
+  it('does not dismiss menus or clear carried items on cursor leave while input is blocked or advance-only', () => {
+    for (const mode of ['blocked', 'advance-only'] as const) {
+      let leaveHandler: RoccoCursorLeaveHandler | undefined;
+      let clearCarriedItemCalls = 0;
+      let renderCalls = 0;
+      const handledActions: unknown[] = [];
+      const activationCalls: Array<[number, number]> = [];
+
+      const cartridge: RoccoCartridge = {
+        manifest: {
+          id: 'test-cartridge',
+          title: 'Test Cartridge',
+          version: '1.0.0',
+        },
+        mount() {
+          // noop
+        },
+        handleAction(action) {
+          handledActions.push(action);
+        },
+      };
+
+      const handler = new RoccoInputHandler({
+        videoSystem: createVideoSystemMock({
+          render() {
+            renderCalls += 1;
+          },
+          gridMenus: {
+            ...createVideoSystemMock().gridMenus,
+            activateAt(x: number, y: number) {
+              activationCalls.push([x, y]);
+              return {
+                kind: 'grid-menu',
+                definitionId: 'rocco-storage-transfer-menu:test',
+                interaction: 'close',
+                items: [],
+              };
+            },
+            clearCarriedItem() {
+              clearCarriedItemCalls += 1;
+            },
+            isOpen() {
+              return true;
+            },
+          },
+          actionMenus: {
+            ...createVideoSystemMock().actionMenus,
+            isOpen() {
+              return true;
+            },
+          },
+        }),
+        audioSystem: asAudioSystem({}),
+        jukeboxSystem: asJukeboxSystem({}),
+        viewportHost: asViewportHost({
+          setCursorActionHandler() {
+            // noop
+          },
+          setCursorMoveHandler() {
+            // noop
+          },
+          setCursorLeaveHandler(handler: RoccoCursorLeaveHandler | undefined) {
+            leaveHandler = handler;
+          },
+          setCursorAttachment() {
+            // noop
+          },
+        }),
+        getActiveCartridge: () => cartridge,
+        getActivePlayerSpriteId: () => null,
+        getInputMode: () => mode,
+        log: () => {},
+      });
+
+      handler.mount();
+      leaveHandler?.();
+
+      expect(activationCalls).toEqual([]);
+      expect(handledActions).toEqual([]);
+      expect(clearCarriedItemCalls).toBe(0);
+      expect(renderCalls).toBe(0);
+    }
   });
 
   it('syncs carried grid items into the viewport cursor attachment after grid-menu actions', () => {

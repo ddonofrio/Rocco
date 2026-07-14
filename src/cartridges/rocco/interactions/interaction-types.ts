@@ -1,7 +1,9 @@
 import type {
+  RoccoAdvanceSequenceAction,
   CartridgeActionContext,
   CartridgeActionDisposition,
   RoccoCartridgeAction,
+  RoccoCarryUseAction,
   RoccoCartridgeActionResult,
   RoccoSceneClickAction,
 } from '../../../console/cartridges';
@@ -24,7 +26,12 @@ import type {
 import type { RoccoScriptedSequenceController } from '../levels/runtime/rocco-scripted-sequence-controller';
 import type { RoccoLevelTransitionController } from '../levels/runtime/rocco-level-transition-controller';
 
-export type InteractionKind = 'scene-click' | 'action-menu' | 'grid-menu';
+export type InteractionKind =
+  | 'scene-click'
+  | 'action-menu'
+  | 'grid-menu'
+  | 'advance-sequence'
+  | 'carry-use';
 export type InteractionStage = 'default' | 'before-exit-intent';
 
 /**
@@ -56,16 +63,17 @@ export type InteractionDisposition = CartridgeActionDisposition;
  * Distributed interaction rule (audit ROCCO-016 / DOM-002).
  *
  * `matches()` must be a cheap, side-effect-free predicate. `execute()` performs
- * the real work and returns the disposition (or `void` to mean "handled, do not
- * suppress movement", which the dispatcher treats as not consumed).
+ * the real work and may return `undefined` to mean "not consumed", preserving the
+ * pre-refactor contract used by level fallbacks and menu-opening scene clicks.
  */
 export interface InteractionRule {
   readonly id: string;
+  readonly ownerId: string;
   readonly priority: number;
   readonly kind: InteractionKind;
   readonly stage?: InteractionStage;
   matches(context: InteractionContext): boolean;
-  execute(context: InteractionContext, signal: AbortSignal): InteractionDisposition | void;
+  execute(context: InteractionContext, signal: AbortSignal): InteractionDisposition | undefined;
 }
 
 /**
@@ -77,9 +85,14 @@ export interface InteractionRule {
  */
 export interface SpecialInventorySceneClickRule {
   readonly id: string;
+  readonly ownerId: string;
   readonly priority: number;
   matches(context: InteractionContext, carriedItem: RoccoGridMenuCarriedItem): boolean;
-  execute(context: InteractionContext, carriedItem: RoccoGridMenuCarriedItem): RoccoInventoryRuntimeSceneClickResolution;
+  execute(
+    context: InteractionContext,
+    carriedItem: RoccoGridMenuCarriedItem,
+    signal: AbortSignal,
+  ): RoccoInventoryRuntimeSceneClickResolution;
 }
 
 export class DuplicateInteractionRuleError extends Error {
@@ -105,6 +118,16 @@ export function isGridMenuAction(action: RoccoCartridgeAction): action is RoccoG
   return 'kind' in action && action.kind === 'grid-menu';
 }
 
+export function isAdvanceSequenceAction(
+  action: RoccoCartridgeAction,
+): action is RoccoAdvanceSequenceAction {
+  return 'kind' in action && action.kind === 'advance-sequence';
+}
+
+export function isCarryUseAction(action: RoccoCartridgeAction): action is RoccoCarryUseAction {
+  return 'kind' in action && action.kind === 'carry-use';
+}
+
 export function isActionMenuAction(
   action: RoccoCartridgeAction,
 ): action is RoccoActionMenuActivation {
@@ -113,7 +136,7 @@ export function isActionMenuAction(
 
 export function normalizeDisposition(
   result: boolean | CartridgeActionDisposition | RoccoCartridgeActionResult | void | null | undefined,
-): InteractionDisposition | void {
+): InteractionDisposition | undefined {
   if (result === undefined || result === null) {
     return undefined;
   }
@@ -133,6 +156,14 @@ export function normalizeDisposition(
 }
 
 export function resolveInteractionKind(action: RoccoCartridgeAction): InteractionKind {
+  if (isAdvanceSequenceAction(action)) {
+    return 'advance-sequence';
+  }
+
+  if (isCarryUseAction(action)) {
+    return 'carry-use';
+  }
+
   if (isSceneClickAction(action)) {
     return 'scene-click';
   }

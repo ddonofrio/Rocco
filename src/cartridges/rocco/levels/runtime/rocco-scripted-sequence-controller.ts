@@ -75,6 +75,7 @@ export class RoccoScriptedSequenceController {
   private baitShopDoorEntry: BaitShopDoorEntrySequence | null = null;
   private stanMoneyExchange: StanMoneyExchangeSequence | null = null;
   private pendingBaitShopDoorUse: RoccoPendingBaitShopDoorUse | null = null;
+  private blockingInputLease: ReturnType<RoccoEngine['acquireInputLease']> | null = null;
 
   constructor(options: RoccoScriptedSequenceControllerOptions) {
     this.options = options;
@@ -122,6 +123,7 @@ export class RoccoScriptedSequenceController {
     this.baitShopDoorEntry = null;
     this.stanMoneyExchange = null;
     this.pendingBaitShopDoorUse = null;
+    this.releaseBlockingInputLease();
     this.clearStanPoliceDefeatPresentation(engine);
   }
 
@@ -130,7 +132,7 @@ export class RoccoScriptedSequenceController {
       phase: 'speaking',
       elapsedMs: 0,
     };
-    engine.setInputEnabled(false);
+    this.acquireBlockingInputLease(engine);
     engine.video.gridMenus.clearCarriedItem();
     engine.video.gridMenus.closeMenu();
     engine.video.actionMenus.closeMenu();
@@ -159,7 +161,7 @@ export class RoccoScriptedSequenceController {
       phase: 'stan-speaking',
       elapsedMs: 0,
     };
-    engine.setInputEnabled(false);
+    this.acquireBlockingInputLease(engine);
     engine.video.gridMenus.clearCarriedItem();
     engine.video.gridMenus.closeMenu();
     engine.video.actionMenus.closeMenu();
@@ -288,6 +290,8 @@ export class RoccoScriptedSequenceController {
     engine: RoccoEngine,
     groundPoint = this.options.resolvePlayerGroundPoint(),
   ): void {
+    this.acquireBlockingInputLease(engine);
+
     if (!groundPoint) {
       this.baitShopDoorEntry = {
         phase: 'transitioning',
@@ -297,7 +301,6 @@ export class RoccoScriptedSequenceController {
       return;
     }
 
-    engine.setInputEnabled(false);
     engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
       direction: 'up',
       restart: true,
@@ -408,6 +411,7 @@ export class RoccoScriptedSequenceController {
       await this.options.onEnterBaitShopRequested();
     } finally {
       this.baitShopDoorEntry = null;
+      this.releaseBlockingInputLease();
     }
   }
 
@@ -455,7 +459,7 @@ export class RoccoScriptedSequenceController {
 
   private finishStanMoneyExchange(engine: RoccoEngine): void {
     this.stanMoneyExchange = null;
-    engine.setInputEnabled(true);
+    this.releaseBlockingInputLease();
     engine.video.render(0);
   }
 
@@ -504,8 +508,17 @@ export class RoccoScriptedSequenceController {
   private finishStanPoliceDefeat(engine: RoccoEngine): void {
     this.stanPoliceDefeat = null;
     this.clearStanPoliceDefeatPresentation(engine);
-    engine.setInputEnabled(true);
+    this.releaseBlockingInputLease();
     this.options.onRestartRequested?.();
+  }
+
+  private acquireBlockingInputLease(engine: RoccoEngine): void {
+    this.blockingInputLease ??= engine.acquireInputLease('scripted-sequence', 'blocked');
+  }
+
+  private releaseBlockingInputLease(): void {
+    this.blockingInputLease?.dispose();
+    this.blockingInputLease = null;
   }
 
   private addStanPoliceDefeatFadePrimitive(engine: RoccoEngine, alpha: number): void {

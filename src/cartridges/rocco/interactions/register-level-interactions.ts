@@ -1,11 +1,16 @@
 import type { InteractionContext, InteractionRule } from './interaction-types';
-import { isSceneClickAction, normalizeDisposition } from './interaction-types';
+import { normalizeDisposition } from './interaction-types';
 import type { RoccoActionMenuActivation } from '../../../console/video/action-menu';
 import type { RoccoSceneClickAction } from '../../../console/cartridges';
 import type { RoccoGridMenuActivation, RoccoGridMenuCarriedItem } from '../../../console/video/grid-menu';
 import type { RoccoLevel } from '../levels/rocco-level-types';
 
 const LEVEL_PRIORITY = 0;
+const ADVANCE_SEQUENCE_SCENE_CLICK: RoccoSceneClickAction = {
+  kind: 'scene-click',
+  sceneX: 0,
+  sceneY: 0,
+};
 
 interface LevelInventorySceneClickHandler {
   handleInventorySceneClick(
@@ -32,16 +37,18 @@ export function createLevelInteractionRules(): readonly InteractionRule[] {
   return [
     {
       id: 'level-action-menu',
+      ownerId: 'level.action-menu',
       priority: LEVEL_PRIORITY,
       kind: 'action-menu',
       matches: () => true,
       execute: (context) => {
         context.activeLevel?.handleAction(context.action as RoccoActionMenuActivation);
-        return undefined;
+        return normalizeDisposition(undefined);
       },
     },
     {
       id: 'level-scene-click',
+      ownerId: 'level.scene-click',
       priority: LEVEL_PRIORITY,
       kind: 'scene-click',
       matches: () => true,
@@ -53,13 +60,25 @@ export function createLevelInteractionRules(): readonly InteractionRule[] {
     },
     {
       id: 'level-grid-menu',
+      ownerId: 'level.grid-menu',
       priority: LEVEL_PRIORITY,
       kind: 'grid-menu',
       matches: () => true,
       execute: (context) => {
         context.activeLevel?.handleGridMenu?.(context.action as RoccoGridMenuActivation);
-        return undefined;
+        return normalizeDisposition(undefined);
       },
+    },
+    {
+      id: 'level-advance-sequence',
+      ownerId: 'level.advance-sequence',
+      priority: LEVEL_PRIORITY,
+      kind: 'advance-sequence',
+      matches: () => true,
+      execute: (context) =>
+        normalizeDisposition(
+          context.activeLevel?.handleSceneClick?.(ADVANCE_SEQUENCE_SCENE_CLICK),
+        ),
     },
   ];
 }
@@ -71,11 +90,12 @@ export function createLevelInteractionRules(): readonly InteractionRule[] {
  */
 export function tryLevelInventorySceneClick(
   context: InteractionContext,
+  activation: RoccoSceneClickAction,
   carriedItem: RoccoGridMenuCarriedItem,
 ): boolean {
   const activeLevel = context.activeLevel;
-  if (!activeLevel || !isSceneClickAction(context.action) || !hasInventorySceneClickHandler(activeLevel)) {
+  if (!activeLevel || !hasInventorySceneClickHandler(activeLevel)) {
     return false;
   }
-  return activeLevel.handleInventorySceneClick(context.action, carriedItem);
+  return activeLevel.handleInventorySceneClick(activation, carriedItem);
 }

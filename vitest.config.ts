@@ -1,6 +1,12 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      'virtual:pwa-register': resolve(__dirname, 'tests/mocks/virtual-pwa-register.ts'),
+    },
+  },
   test: {
     dir: 'tests',
     include: ['**/*.test.ts'],

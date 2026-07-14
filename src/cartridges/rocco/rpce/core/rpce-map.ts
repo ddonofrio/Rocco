@@ -11,9 +11,19 @@ export interface RpceLevelConnection {
   b: RpceLevelConnectionEndpoint;
 }
 
+export type RpceScriptedConnectionKind = 'scripted' | 'portal' | 'teleport';
+
+export interface RpceScriptedConnection {
+  id: string;
+  source: RpceLevelConnectionEndpoint;
+  target: RpceLevelConnectionEndpoint;
+  kind?: RpceScriptedConnectionKind;
+}
+
 export interface RpceLevelDefinition<TLevel extends RpceLevel = RpceLevel> {
   id: string;
   title?: string;
+  connectorIds?: readonly string[];
   createLevel?: () => TLevel;
 }
 
@@ -22,6 +32,7 @@ export interface RpceMapDefinition<TLevel extends RpceLevel = RpceLevel> {
   title: string;
   levels: readonly RpceLevelDefinition<TLevel>[];
   connections: readonly RpceLevelConnection[];
+  scriptedConnections?: readonly RpceScriptedConnection[];
   initialLevelId?: string;
   developerOnly?: boolean;
 }
@@ -47,6 +58,7 @@ export interface RpceGameDefinition<
    * the bait-shop toilet portal into the Nether entry).
    */
   connections?: readonly RpceLevelConnection[];
+  scriptedConnections?: readonly RpceScriptedConnection[];
   hooks?: RpceGameRuntimeHooks;
   createRuntimeController: (
     options: TControllerOptions,

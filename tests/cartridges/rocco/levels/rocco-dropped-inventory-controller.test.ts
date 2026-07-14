@@ -16,6 +16,10 @@ interface DroppedEngineState {
   thoughtMessages: string[];
   removedSpriteIds: string[];
   unregisteredTargetIds: string[];
+  registeredTargets: Array<{
+    instanceId: string;
+    shape: { kind: string; x: number; y: number; width: number; height: number };
+  }>;
   renderCalls: number;
   registeredActionMenuIds: string[];
   carriedItem: { itemId: string } | undefined;
@@ -56,6 +60,7 @@ function createDroppedInventoryEngine(): { engine: RoccoEngine; state: DroppedEn
     thoughtMessages: [],
     removedSpriteIds: [],
     unregisteredTargetIds: [],
+    registeredTargets: [],
     renderCalls: 0,
     registeredActionMenuIds: [],
     carriedItem: undefined,
@@ -87,6 +92,12 @@ function createDroppedInventoryEngine(): { engine: RoccoEngine; state: DroppedEn
         setPosition: () => {},
       },
       sceneTargets: {
+        registerTarget: (definition: {
+          instanceId: string;
+          shape: { kind: string; x: number; y: number; width: number; height: number };
+        }) => {
+          state.registeredTargets.push(definition);
+        },
         unregisterTarget: (instanceId: string) => {
           state.unregisteredTargetIds.push(instanceId);
         },
@@ -197,6 +208,22 @@ describe('RoccoDroppedInventoryController', () => {
     controller.syncActiveLevelPresentation(engine, level);
 
     expect(state.registeredActionMenuIds).toContain('rocco-dropped-coral-relic-action-menu');
+    expect(state.registeredTargets).toContainEqual(
+      expect.objectContaining({
+        instanceId: 'rocco-dropped-inventory-target:bait-shop-toilet:rocco-coral-relic',
+        shape: expect.objectContaining({
+          kind: 'rect',
+          width: expect.any(Number),
+          height: expect.any(Number),
+        }),
+      }),
+    );
+    const target = state.registeredTargets.find(
+      (entry) =>
+        entry.instanceId === 'rocco-dropped-inventory-target:bait-shop-toilet:rocco-coral-relic',
+    );
+    expect(target?.shape.width).toBeGreaterThan(17);
+    expect(target?.shape.height).toBeGreaterThan(24);
   });
 
   it('shows the coral relic look line on look action during toilet urgency', () => {

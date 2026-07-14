@@ -60,6 +60,7 @@ import {
 import { roccoCartridgeMessageRuntime } from '../rpce/dialogue';
 import {
   type RoccoLevel,
+  type RoccoLevelMountOptions,
   type RoccoLevelRestartRequest,
 } from './rocco-level-types';
 import {
@@ -72,7 +73,7 @@ import {
 } from '../games/rocco-default/maps/shop';
 import { createRoccoInteractionRegistry } from '../interactions';
 import { RoccoDeveloperRuntimeController } from './runtime/rocco-developer-runtime-controller';
-import { RoccoLevelRegistry, type RoccoPreparedLevelMapReset } from './runtime/rocco-level-registry';
+import { RoccoLevelRegistry } from './runtime/rocco-level-registry';
 import {
   RoccoLevelTransitionController,
   type RoccoResolvedLevelTransition,
@@ -142,11 +143,18 @@ interface RoccoLevelManagerTransitionSnapshot {
   pendingNetherEntrySnapshot: RoccoNetherEntrySnapshot | null;
   netherEntrySnapshot: RoccoNetherEntrySnapshot | null;
   activeSceneId: string | null;
+  activeMountState: RoccoLevelManagerMountStateSnapshot | null;
 }
 
 interface RoccoLevelManagerPlayerSnapshot {
   position: RoccoPoint;
   facing: RoccoFacingDirection;
+}
+
+interface RoccoLevelManagerMountStateSnapshot {
+  entryConnectorId?: string;
+  entryPosition?: RoccoPoint;
+  forceArrivalSequence?: boolean;
 }
 
 export class RoccoLevelManager {
@@ -175,6 +183,7 @@ export class RoccoLevelManager {
   private readonly localization: RoccoLocalization;
   private roccoAppearance: RoccoPlayerAppearance = DEFAULT_ROCCO_PLAYER_APPEARANCE;
   private netherEntrySnapshot: RoccoNetherEntrySnapshot | null = null;
+  private activeMountState: RoccoLevelManagerMountStateSnapshot | null = null;
 
   private get inventory(): RoccoInventory {
     return this.inventoryRuntime.getPlayerInventory();
@@ -344,8 +353,10 @@ export class RoccoLevelManager {
     this.inventoryRuntime.resetRuntimeState();
     this.netherEntrySnapshot = null;
     const level = this.levelRegistry.requireLevel(this.compiledGame.initialLevelId ?? 'pier');
+    const mountState = this.createMountStateSnapshot();
     this.activeLevel = level;
-    const scene = await level.mount(engine, this.createLevelMountOptions(), preloader);
+    const scene = await level.mount(engine, this.buildRuntimeMountOptions(mountState), preloader);
+    this.activeMountState = mountState;
     installRoccoPlayerActionMenu(engine, this.localization);
     this.syncActiveLevelDroppedInventoryPresentation();
     this.updateStatus(scene);
@@ -372,6 +383,7 @@ export class RoccoLevelManager {
     this.engine.video.gridMenus.closeMenu();
     this.engine.video.gridMenus.clearCarriedItem();
     this.activeLevel = null;
+    this.activeMountState = null;
     this.engine = null;
   }
 
@@ -466,15 +478,52 @@ export class RoccoLevelManager {
     this.netherEntrySnapshot = this.cloneNetherEntrySnapshot(snapshot);
   }
 
-  private applyNetherEntrySnapshot(
-    snapshot: RoccoNetherEntrySnapshot | null,
-    preparedReset?: RoccoPreparedLevelMapReset | null,
-  ): void {
-    this.clearNetherDroppedInventoryItems();
-    preparedReset?.commit();
-    if (!preparedReset) {
-      this.levelRegistry.resetMap('nether');
+  private cloneMountStateSnapshot(
+    snapshot: RoccoLevelManagerMountStateSnapshot | null,
+  ): RoccoLevelManagerMountStateSnapshot | null {
+    if (!snapshot) {
+      return null;
     }
+
+    return {
+      entryConnectorId: snapshot.entryConnectorId,
+      entryPosition: snapshot.entryPosition ? { ...snapshot.entryPosition } : undefined,
+      forceArrivalSequence: snapshot.forceArrivalSequence,
+    };
+  }
+
+  private createMountStateSnapshot(
+    options: Pick<
+      RoccoLevelMountOptions,
+      'entryConnectorId' | 'entryPosition' | 'forceArrivalSequence'
+    > = {},
+  ): RoccoLevelManagerMountStateSnapshot {
+    return {
+      entryConnectorId: options.entryConnectorId,
+      entryPosition: options.entryPosition ? { ...options.entryPosition } : undefined,
+      forceArrivalSequence: options.forceArrivalSequence,
+    };
+  }
+
+  private buildRuntimeMountOptions(
+    mountState: RoccoLevelManagerMountStateSnapshot | null = null,
+  ): RoccoLevelMountOptions {
+    return {
+      ...this.createLevelMountOptions(),
+      ...(mountState ? this.cloneMountStateSnapshot(mountState) ?? {} : {}),
+    };
+  }
+
+  private applySuccessfulTransitionTarget(
+    level: RoccoLevel,
+    mountState: RoccoLevelManagerMountStateSnapshot,
+  ): void {
+    this.activeLevel = level;
+    this.activeMountState = this.cloneMountStateSnapshot(mountState);
+  }
+
+  private applyNetherEntrySnapshot(snapshot: RoccoNetherEntrySnapshot | null): void {
+    this.clearNetherDroppedInventoryItems();
 
     if (!snapshot) {
       return;
@@ -495,6 +544,7 @@ export class RoccoLevelManager {
       pendingNetherEntrySnapshot: this.cloneNetherEntrySnapshot(this.pendingNetherEntrySnapshot),
       netherEntrySnapshot: this.cloneNetherEntrySnapshot(this.netherEntrySnapshot),
       activeSceneId: this.activeSceneId,
+      activeMountState: this.cloneMountStateSnapshot(this.activeMountState),
     };
   }
 
@@ -513,6 +563,7 @@ export class RoccoLevelManager {
     );
     this.netherEntrySnapshot = this.cloneNetherEntrySnapshot(snapshot.netherEntrySnapshot);
     this.activeSceneId = snapshot.activeSceneId;
+    this.activeMountState = this.cloneMountStateSnapshot(snapshot.activeMountState);
   }
 
   private clearNetherDroppedInventoryItems(): void {
@@ -616,27 +667,30 @@ export class RoccoLevelManager {
   private async remountCurrentLevelWithSnapshot(
     engine: RoccoEngine,
     currentLevel: RoccoLevel,
+    mountState: RoccoLevelManagerMountStateSnapshot | null,
     playerSnapshot: RoccoLevelManagerPlayerSnapshot | null,
   ): Promise<RoccoPlaneScene | null> {
     const scene = await currentLevel.mount(
       engine,
-      this.createLevelMountOptions(),
+      this.buildRuntimeMountOptions(mountState),
       new RoccoAssetPreloader(),
     );
-    if (!playerSnapshot || this.isNetherLevelId(currentLevel.id)) {
+    if (!playerSnapshot) {
       return scene;
     }
 
-    engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
-    engine.video.sprites.setPosition(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      playerSnapshot.position.x,
-      playerSnapshot.position.y,
-      {
-        constrainToWalkMap: false,
-      },
-    );
-    engine.video.sprites.setFacing(DEFAULT_SPRITE_INSTANCE_ID, playerSnapshot.facing);
+    if (engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
+      engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+      engine.video.sprites.setPosition(
+        DEFAULT_SPRITE_INSTANCE_ID,
+        playerSnapshot.position.x,
+        playerSnapshot.position.y,
+        {
+          constrainToWalkMap: false,
+        },
+      );
+      engine.video.sprites.setFacing(DEFAULT_SPRITE_INSTANCE_ID, playerSnapshot.facing);
+    }
     return scene;
   }
 
@@ -652,47 +706,59 @@ export class RoccoLevelManager {
     const targetLevelId = levelId;
     const rollbackSnapshot = this.createLevelManagerTransitionSnapshot();
     const playerSnapshot = this.capturePlayerSnapshot();
+    const mountStateSnapshot = this.cloneMountStateSnapshot(this.activeMountState);
     const enteringNetherSnapshot = this.isEnteringNether(this.activeLevel.id, targetLevelId)
       ? this.createNetherEntrySnapshot()
       : null;
     return this.levelTransitionService.run({
       id: `switch-to-${targetLevelId}`,
-      prepare: () => ({
-        targetLevel: this.levelRegistry.requireLevel(targetLevelId),
-        mountOptions: {
-          ...this.createLevelMountOptions(),
+      prepare: () => {
+        const targetLevel = this.levelRegistry.requireLevel(targetLevelId);
+        const targetMountState = this.createMountStateSnapshot({
           entryConnectorId,
-        },
-        commit: (engine) => {
-          this.developerRuntime.clearTransientState(engine);
-          this.transitions.clearPendingExitIntent();
-          this.clearActiveLevelDroppedInventoryPresentation();
-          this.pendingNetherEntrySnapshot = this.cloneNetherEntrySnapshot(enteringNetherSnapshot);
-        },
-        rollback: (engine) => {
-          this.restoreLevelManagerTransitionSnapshot(rollbackSnapshot, engine);
-        },
-        remountCurrentLevel: (engine, currentLevel) =>
-          this.remountCurrentLevelWithSnapshot(engine, currentLevel, playerSnapshot),
-        onCommitted: (_engine, scene) => {
-          if (enteringNetherSnapshot) {
-            this.captureNetherEntrySnapshot(enteringNetherSnapshot);
-          }
-          this.pendingNetherEntrySnapshot = null;
-          this.syncActiveLevelDroppedInventoryPresentation();
-          this.updateStatus(scene);
-          if (targetLevelId === ROCCO_PIER_START_LEVEL_ID && entryConnectorId === 'shop-exit') {
-            _engine.audio.playSound('rocco-bait-shop-door-closing-sound', {
-              restart: true,
-              volume: 0.21,
-            });
-          }
-        },
-        onRolledBack: (_engine, _currentLevel, restoredScene) => {
-          this.syncActiveLevelDroppedInventoryPresentation();
-          this.updateStatus(restoredScene);
-        },
-      }),
+        });
+        return {
+          targetLevel,
+          mountOptions: this.buildRuntimeMountOptions(targetMountState),
+          commit: (engine) => {
+            this.developerRuntime.clearTransientState(engine);
+            this.transitions.clearPendingExitIntent();
+            this.clearActiveLevelDroppedInventoryPresentation();
+            this.pendingNetherEntrySnapshot = this.cloneNetherEntrySnapshot(enteringNetherSnapshot);
+          },
+          publish: () => {
+            this.applySuccessfulTransitionTarget(targetLevel, targetMountState);
+          },
+          rollback: (engine) => {
+            this.restoreLevelManagerTransitionSnapshot(rollbackSnapshot, engine);
+          },
+          remountCurrentLevel: (engine, currentLevel) =>
+            this.remountCurrentLevelWithSnapshot(
+              engine,
+              currentLevel,
+              mountStateSnapshot,
+              playerSnapshot,
+            ),
+          onCommitted: (_engine, scene) => {
+            if (enteringNetherSnapshot) {
+              this.captureNetherEntrySnapshot(enteringNetherSnapshot);
+            }
+            this.pendingNetherEntrySnapshot = null;
+            this.syncActiveLevelDroppedInventoryPresentation();
+            this.updateStatus(scene);
+            if (targetLevelId === ROCCO_PIER_START_LEVEL_ID && entryConnectorId === 'shop-exit') {
+              _engine.audio.playSound('rocco-bait-shop-door-closing-sound', {
+                restart: true,
+                volume: 0.21,
+              });
+            }
+          },
+          onRolledBack: (_engine, _currentLevel, restoredScene) => {
+            this.syncActiveLevelDroppedInventoryPresentation();
+            this.updateStatus(restoredScene);
+          },
+        };
+      },
     });
   }
 
@@ -704,6 +770,7 @@ export class RoccoLevelManager {
     const targetLevelId = transition.targetEndpoint.levelId;
     const rollbackSnapshot = this.createLevelManagerTransitionSnapshot();
     const playerSnapshot = this.capturePlayerSnapshot();
+    const mountStateSnapshot = this.cloneMountStateSnapshot(this.activeMountState);
     const enteringNetherSnapshot = this.isEnteringNether(this.activeLevel.id, targetLevelId)
       ? this.createNetherEntrySnapshot()
       : null;
@@ -713,13 +780,14 @@ export class RoccoLevelManager {
         const entryPosition = transition.connector.preservePlayerPosition
           ? this.resolveMirroredPlayerPosition()
           : undefined;
+        const targetLevel = this.levelRegistry.requireLevel(targetLevelId);
+        const targetMountState = this.createMountStateSnapshot({
+          entryConnectorId: transition.targetEndpoint.connectorId,
+          entryPosition,
+        });
         return {
-          targetLevel: this.levelRegistry.requireLevel(targetLevelId),
-          mountOptions: {
-            entryConnectorId: transition.targetEndpoint.connectorId,
-            entryPosition,
-            ...this.createLevelMountOptions(),
-          },
+          targetLevel,
+          mountOptions: this.buildRuntimeMountOptions(targetMountState),
           commit: (engine) => {
             this.developerRuntime.clearTransientState(engine);
             this.transitions.clearPendingExitIntent();
@@ -728,11 +796,19 @@ export class RoccoLevelManager {
               enteringNetherSnapshot,
             );
           },
+          publish: () => {
+            this.applySuccessfulTransitionTarget(targetLevel, targetMountState);
+          },
           rollback: (engine) => {
             this.restoreLevelManagerTransitionSnapshot(rollbackSnapshot, engine);
           },
           remountCurrentLevel: (engine, currentLevel) =>
-            this.remountCurrentLevelWithSnapshot(engine, currentLevel, playerSnapshot),
+            this.remountCurrentLevelWithSnapshot(
+              engine,
+              currentLevel,
+              mountStateSnapshot,
+              playerSnapshot,
+            ),
           onCommitted: (_engine, scene) => {
             if (enteringNetherSnapshot) {
               this.captureNetherEntrySnapshot(enteringNetherSnapshot);
@@ -881,49 +957,63 @@ export class RoccoLevelManager {
     const targetLevelId = request.levelId;
     const rollbackSnapshot = this.createLevelManagerTransitionSnapshot();
     const playerSnapshot = this.capturePlayerSnapshot();
+    const mountStateSnapshot = this.cloneMountStateSnapshot(this.activeMountState);
     const netherReset = this.isNetherLevelId(targetLevelId)
       ? this.levelRegistry.prepareMapReset('nether')
       : null;
     await this.levelTransitionService.run({
       id: `restart-${targetLevelId}`,
-      prepare: () => ({
-        targetLevel: netherReset?.requireLevel(targetLevelId) ?? this.levelRegistry.requireLevel(targetLevelId),
-        mountOptions: {
+      prepare: () => {
+        const targetLevel =
+          netherReset?.requireLevel(targetLevelId) ?? this.levelRegistry.requireLevel(targetLevelId);
+        const targetMountState = this.createMountStateSnapshot({
           entryConnectorId: request.entryConnectorId,
           entryPosition: request.entryPosition,
           forceArrivalSequence: request.forceArrivalSequence,
-          ...this.createLevelMountOptions(),
-        },
-        commit: (engine) => {
-          this.developerRuntime.clearTransientState(engine);
-          this.transitions.reset();
-          this.clearActiveLevelDroppedInventoryPresentation();
-          this.droppedInventory.resetRuntimeState();
-          this.scriptedSequences.resetRuntimeState(engine);
-          this.inventoryRuntime.resetRuntimeState();
-          if (this.isNetherLevelId(targetLevelId)) {
-            this.applyNetherEntrySnapshot(rollbackSnapshot.netherEntrySnapshot, netherReset);
-          }
-          engine.video.gridMenus.clearCarriedItem();
-          engine.video.gridMenus.closeMenu();
-          engine.video.actionMenus.closeMenu();
-          engine.video.messages.clearMessages();
-        },
-        rollback: (engine) => {
-          netherReset?.rollback();
-          this.restoreLevelManagerTransitionSnapshot(rollbackSnapshot, engine);
-        },
-        remountCurrentLevel: (engine, currentLevel) =>
-          this.remountCurrentLevelWithSnapshot(engine, currentLevel, playerSnapshot),
-        onCommitted: (_engine, scene) => {
-          this.syncActiveLevelDroppedInventoryPresentation();
-          this.updateStatus(scene);
-        },
-        onRolledBack: (_engine, _currentLevel, restoredScene) => {
-          this.syncActiveLevelDroppedInventoryPresentation();
-          this.updateStatus(restoredScene);
-        },
-      }),
+        });
+        return {
+          targetLevel,
+          mountOptions: this.buildRuntimeMountOptions(targetMountState),
+          commit: (engine) => {
+            this.developerRuntime.clearTransientState(engine);
+            this.transitions.reset();
+            this.clearActiveLevelDroppedInventoryPresentation();
+            this.droppedInventory.resetRuntimeState();
+            this.scriptedSequences.resetRuntimeState(engine);
+            this.inventoryRuntime.resetRuntimeState();
+            if (this.isNetherLevelId(targetLevelId)) {
+              this.applyNetherEntrySnapshot(rollbackSnapshot.netherEntrySnapshot);
+            }
+          },
+          publish: (engine) => {
+            netherReset?.commit();
+            this.applySuccessfulTransitionTarget(targetLevel, targetMountState);
+            engine.video.gridMenus.clearCarriedItem();
+            engine.video.gridMenus.closeMenu();
+            engine.video.actionMenus.closeMenu();
+            engine.video.messages.clearMessages();
+          },
+          rollback: (engine) => {
+            netherReset?.rollback();
+            this.restoreLevelManagerTransitionSnapshot(rollbackSnapshot, engine);
+          },
+          remountCurrentLevel: (engine, currentLevel) =>
+            this.remountCurrentLevelWithSnapshot(
+              engine,
+              currentLevel,
+              mountStateSnapshot,
+              playerSnapshot,
+            ),
+          onCommitted: (_engine, scene) => {
+            this.syncActiveLevelDroppedInventoryPresentation();
+            this.updateStatus(scene);
+          },
+          onRolledBack: (_engine, _currentLevel, restoredScene) => {
+            this.syncActiveLevelDroppedInventoryPresentation();
+            this.updateStatus(restoredScene);
+          },
+        };
+      },
     });
   }
 
@@ -1091,30 +1181,43 @@ export class RoccoLevelManager {
 
     const rollbackSnapshot = this.createLevelManagerTransitionSnapshot();
     const playerSnapshot = this.capturePlayerSnapshot();
+    const mountStateSnapshot = this.cloneMountStateSnapshot(this.activeMountState);
     await this.levelTransitionService.run({
       id: 'enter-bait-shop',
-      prepare: () => ({
-        targetLevel: this.levelRegistry.requireLevel(ROCCO_BAIT_SHOP_LEVEL_ID),
-        mountOptions: this.createLevelMountOptions(),
-        commit: (engine) => {
-          this.developerRuntime.clearTransientState(engine);
-          this.transitions.clearPendingExitIntent();
-          this.clearActiveLevelDroppedInventoryPresentation();
-        },
-        rollback: (engine) => {
-          this.restoreLevelManagerTransitionSnapshot(rollbackSnapshot, engine);
-        },
-        remountCurrentLevel: (engine, currentLevel) =>
-          this.remountCurrentLevelWithSnapshot(engine, currentLevel, playerSnapshot),
-        onCommitted: (_engine, scene) => {
-          this.syncActiveLevelDroppedInventoryPresentation();
-          this.updateStatus(scene);
-        },
-        onRolledBack: (_engine, _currentLevel, restoredScene) => {
-          this.syncActiveLevelDroppedInventoryPresentation();
-          this.updateStatus(restoredScene);
-        },
-      }),
+      prepare: () => {
+        const targetLevel = this.levelRegistry.requireLevel(ROCCO_BAIT_SHOP_LEVEL_ID);
+        const targetMountState = this.createMountStateSnapshot();
+        return {
+          targetLevel,
+          mountOptions: this.buildRuntimeMountOptions(targetMountState),
+          commit: (engine) => {
+            this.developerRuntime.clearTransientState(engine);
+            this.transitions.clearPendingExitIntent();
+            this.clearActiveLevelDroppedInventoryPresentation();
+          },
+          publish: () => {
+            this.applySuccessfulTransitionTarget(targetLevel, targetMountState);
+          },
+          rollback: (engine) => {
+            this.restoreLevelManagerTransitionSnapshot(rollbackSnapshot, engine);
+          },
+          remountCurrentLevel: (engine, currentLevel) =>
+            this.remountCurrentLevelWithSnapshot(
+              engine,
+              currentLevel,
+              mountStateSnapshot,
+              playerSnapshot,
+            ),
+          onCommitted: (_engine, scene) => {
+            this.syncActiveLevelDroppedInventoryPresentation();
+            this.updateStatus(scene);
+          },
+          onRolledBack: (_engine, _currentLevel, restoredScene) => {
+            this.syncActiveLevelDroppedInventoryPresentation();
+            this.updateStatus(restoredScene);
+          },
+        };
+      },
     });
   }
 }

@@ -4,32 +4,192 @@ import { registerSW } from 'virtual:pwa-register';
 import { GameRuntime } from './console/runtime';
 import { viewport } from './console/video';
 
-registerSW({ immediate: true });
-
-const appRoot = document.querySelector<HTMLDivElement>('#app');
-if (!appRoot) {
-  throw new Error('Could not find #app');
+function describeUnknownError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
-const viewportHost = new viewport.RoccoViewportHost({
-  root: appRoot,
-  designWidth: 960,
-  designHeight: 540,
-  backgroundColor: '#11130f',
-});
-viewportHost.mount();
+function writeBrowserLog(channel: string, message: string): void {
+  const formattedMessage = `[ROCCO:${channel}] ${message}`;
+  if (/error|fatal|fail/i.test(channel) || /error|fatal|fail/i.test(message)) {
+    console.error(formattedMessage);
+    return;
+  }
 
-const runtime = new GameRuntime({
-  mount: viewportHost.getStageElement(),
-  viewportHost,
-  developerModeEnabled: false,
-  onDisplayProfileChange: (profile) => {
-    viewportHost.setDisplayProfile(profile);
-  },
-});
-await runtime.init();
+  console.info(formattedMessage);
+}
 
-window.addEventListener('beforeunload', () => {
-  void runtime.dispose();
-  viewportHost.unmount();
+function ensureBootErrorOverlay(host: HTMLElement): {
+  overlay: HTMLDivElement;
+  title: HTMLHeadingElement;
+  detail: HTMLParagraphElement;
+} {
+  let overlay = host.querySelector<HTMLDivElement>('[data-rocco-boot-error="true"]');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.dataset.roccoBootError = 'true';
+    overlay.style.position = host === document.body ? 'fixed' : 'absolute';
+    overlay.style.inset = '0';
+    overlay.style.zIndex = '999999';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.padding = '24px';
+    overlay.style.background =
+      'linear-gradient(180deg, rgba(15, 19, 15, 0.96) 0%, rgba(24, 11, 11, 0.96) 100%)';
+
+    const panel = document.createElement('div');
+    panel.style.width = 'min(560px, 100%)';
+    panel.style.padding = '24px';
+    panel.style.border = '1px solid rgba(248, 113, 113, 0.35)';
+    panel.style.borderRadius = '12px';
+    panel.style.background = 'rgba(17, 19, 15, 0.92)';
+    panel.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.45)';
+
+    const title = document.createElement('h1');
+    title.dataset.roccoBootTitle = 'true';
+    title.style.margin = '0 0 12px';
+    title.style.color = '#fca5a5';
+    title.style.fontFamily = 'Cascadia Mono, Lucida Console, monospace';
+    title.style.fontSize = '20px';
+    title.style.lineHeight = '1.35';
+
+    const detail = document.createElement('p');
+    detail.dataset.roccoBootDetail = 'true';
+    detail.style.margin = '0 0 16px';
+    detail.style.whiteSpace = 'pre-wrap';
+    detail.style.color = '#e5e7eb';
+    detail.style.fontFamily = 'Cascadia Mono, Lucida Console, monospace';
+    detail.style.fontSize = '14px';
+    detail.style.lineHeight = '1.5';
+
+    const retryButton = document.createElement('button');
+    retryButton.dataset.roccoBootRetry = 'true';
+    retryButton.type = 'button';
+    retryButton.textContent = 'Reload';
+    retryButton.style.padding = '10px 14px';
+    retryButton.style.border = '1px solid rgba(252, 165, 165, 0.45)';
+    retryButton.style.borderRadius = '8px';
+    retryButton.style.background = '#2a1717';
+    retryButton.style.color = '#fef2f2';
+    retryButton.style.cursor = 'pointer';
+    retryButton.addEventListener('click', () => {
+      window.location.reload();
+    });
+
+    panel.append(title, detail, retryButton);
+    overlay.append(panel);
+    host.appendChild(overlay);
+  }
+
+  const title = overlay.querySelector<HTMLHeadingElement>('[data-rocco-boot-title="true"]');
+  const detail = overlay.querySelector<HTMLParagraphElement>('[data-rocco-boot-detail="true"]');
+  if (!title || !detail) {
+    throw new Error('Boot error overlay is missing required children.');
+  }
+
+  return { overlay, title, detail };
+}
+
+function renderBootError(host: HTMLElement, titleText: string, error: unknown): void {
+  const { overlay, title, detail } = ensureBootErrorOverlay(host);
+  overlay.style.display = 'flex';
+  title.textContent = titleText;
+  detail.textContent = describeUnknownError(error);
+}
+
+function clearBootError(host: HTMLElement): void {
+  const overlay = host.querySelector<HTMLDivElement>('[data-rocco-boot-error="true"]');
+  overlay?.remove();
+}
+
+function installGlobalErrorHandlers(
+  onLog: (channel: string, message: string) => void,
+  onFatalError: (title: string, error: unknown) => void,
+): () => void {
+  const handleWindowError = (event: ErrorEvent): void => {
+    const location = event.filename
+      ? ` at ${event.filename}:${event.lineno}:${event.colno}`
+      : '';
+    const error = event.error ?? event.message;
+    onLog('System', `Unhandled error${location}: ${describeUnknownError(error)}`);
+    onFatalError('A runtime error occurred.', error);
+  };
+
+  const handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
+    onLog('System', `Unhandled promise rejection: ${describeUnknownError(event.reason)}`);
+    onFatalError('A runtime error occurred.', event.reason);
+  };
+
+  window.addEventListener('error', handleWindowError);
+  window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+  return () => {
+    window.removeEventListener('error', handleWindowError);
+    window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+  };
+}
+
+async function bootstrapRoccoApp(): Promise<void> {
+  registerSW({ immediate: true });
+
+  const appRoot = document.querySelector<HTMLDivElement>('#app');
+  if (!appRoot) {
+    throw new Error('Could not find #app');
+  }
+
+  const viewportHost = new viewport.RoccoViewportHost({
+    root: appRoot,
+    designWidth: 960,
+    designHeight: 540,
+    backgroundColor: '#11130f',
+  });
+  viewportHost.mount();
+
+  const log = (channel: string, message: string): void => {
+    writeBrowserLog(channel, message);
+  };
+  const renderFatalError = (title: string, error: unknown): void => {
+    renderBootError(viewportHost.getRootElement(), title, error);
+  };
+  const removeGlobalErrorHandlers = installGlobalErrorHandlers(log, renderFatalError);
+
+  let runtime: GameRuntime | null = null;
+  window.addEventListener(
+    'beforeunload',
+    () => {
+      removeGlobalErrorHandlers();
+      void runtime?.dispose();
+      viewportHost.unmount();
+    },
+    { once: true },
+  );
+
+  try {
+    runtime = new GameRuntime({
+      mount: viewportHost.getStageElement(),
+      viewportHost,
+      developerModeEnabled: false,
+      onDisplayProfileChange: (profile) => {
+        viewportHost.setDisplayProfile(profile);
+      },
+      onLog: log,
+    });
+    await runtime.init();
+    clearBootError(viewportHost.getRootElement());
+  } catch (error) {
+    log('System', `Boot failed: ${describeUnknownError(error)}`);
+    renderFatalError('ROCCO could not start.', error);
+    if (runtime) {
+      try {
+        await runtime.dispose();
+      } catch (disposeError) {
+        log('System', `Boot cleanup failed: ${describeUnknownError(disposeError)}`);
+      }
+    }
+  }
+}
+
+void bootstrapRoccoApp().catch((error) => {
+  writeBrowserLog('System', `Bootstrap failed before mount: ${describeUnknownError(error)}`);
+  renderBootError(document.querySelector<HTMLElement>('#app') ?? document.body, 'ROCCO could not start.', error);
 });

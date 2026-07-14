@@ -10,6 +10,7 @@ import {
   createRoccoInteractionRegistry,
   type InteractionContext,
   type InteractionRegistry,
+  isAdvanceSequenceAction,
   isSceneClickAction,
 } from '../../interactions';
 import type { RoccoInventory } from '../../inventory';
@@ -68,8 +69,11 @@ export class RoccoSceneActionRouter {
     activation: RoccoCartridgeAction,
     context?: CartridgeActionContext,
   ): CartridgeActionDisposition | void {
-    if (this.options.scriptedSequences.hasBlockingSequence()) {
-      return;
+    if (this.options.scriptedSequences.hasBlockingSequence() && !isAdvanceSequenceAction(activation)) {
+      return {
+        consumed: true,
+        defaultPlayerMovement: 'suppress',
+      };
     }
 
     const engine = this.options.getEngine();
@@ -92,7 +96,11 @@ export class RoccoSceneActionRouter {
     carriedItem: RoccoGridMenuCarriedItem,
   ): RoccoInventoryRuntimeSceneClickResolution {
     const context = this.buildContext(activation, undefined);
-    return this.registry.dispatchSpecialInventorySceneClick(context, carriedItem);
+    return this.registry.dispatchSpecialInventorySceneClick(
+      context,
+      carriedItem,
+      new AbortController().signal,
+    );
   }
 
   private handleSceneClick(

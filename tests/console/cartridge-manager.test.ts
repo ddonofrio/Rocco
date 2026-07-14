@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RoccoBuiltinCartridgeConfig } from '../../src/cartridges';
 import type { RoccoCartridge } from '../../src/console/cartridges';
 import type { RoccoConsoleFlags } from '../../src/console/engine-sdk';
+import { createResourceScope } from '../../src/console/lifecycle';
 
 interface TestMenuResult {
   selectedId: string;
@@ -219,5 +220,134 @@ describe('RoccoCartridgeManager', () => {
 
     expect(mountedDeveloperModeEnabled).toBe(false);
     expect(engine.getConsoleFlags().developerModeEnabled).toBe(false);
+  });
+
+  it('publishes the active cartridge only after mount and start complete', async () => {
+    const engine = createTestEngine(false);
+    let resolveMount!: () => void;
+    let resolveStart!: () => void;
+    let notifyMountReached!: () => void;
+    let notifyStartReached!: () => void;
+    const mountReached = new Promise<void>((resolve) => {
+      notifyMountReached = resolve;
+    });
+    const startReached = new Promise<void>((resolve) => {
+      notifyStartReached = resolve;
+    });
+
+    testState.registrations = [
+      createTestConfig('game', () =>
+        createTestCartridge('game', {
+          mount: async () => {
+            notifyMountReached();
+            await new Promise<void>((resolve) => {
+              resolveMount = resolve;
+            });
+          },
+          start: async () => {
+            notifyStartReached();
+            await new Promise<void>((resolve) => {
+              resolveStart = resolve;
+            });
+          },
+        })),
+    ];
+
+    const manager = new RoccoCartridgeManager();
+    const loadPromise = manager.loadAndMount({
+      app: {} as Application,
+      engine: engine as never,
+      configuredCartridgeId: 'game',
+    });
+
+    expect(manager.getActiveCartridge()).toBeNull();
+
+    await mountReached;
+    resolveMount();
+    await startReached;
+    expect(manager.getActiveCartridge()).toBeNull();
+
+    resolveStart();
+    await loadPromise;
+
+    expect(manager.getActiveCartridge()?.manifest.id).toBe('game');
+  });
+
+  it('does not publish a partially mounted cartridge and cleans stop, dispose, and scope in order', async () => {
+    const engine = createTestEngine(false);
+    const scope = createResourceScope('cartridge:game');
+    const order: string[] = [];
+
+    testState.registrations = [
+      createTestConfig('game', () =>
+        createTestCartridge('game', {
+          mount: ({ sdk }) => {
+            sdk?.scope.defer(() => {
+              order.push('scope');
+            });
+            throw new Error('mount failed');
+          },
+          stop: () => {
+            order.push('stop');
+          },
+          dispose: () => {
+            order.push('dispose');
+          },
+        })),
+    ];
+
+    const manager = new RoccoCartridgeManager();
+
+    await expect(
+      manager.loadAndMount({
+        app: {} as Application,
+        engine: engine as never,
+        configuredCartridgeId: 'game',
+        cartridgeScope: scope,
+      }),
+    ).rejects.toThrow('mount failed');
+
+    expect(manager.getActiveCartridge()).toBeNull();
+    expect(order).toEqual(['stop', 'dispose', 'scope']);
+  });
+
+  it('continues cleanup and aggregates failures during dispose', async () => {
+    const engine = createTestEngine(false);
+    const scope = createResourceScope('cartridge:game');
+    const order: string[] = [];
+
+    scope.defer(() => {
+      order.push('scope');
+      throw new Error('scope failed');
+    });
+
+    testState.registrations = [
+      createTestConfig('game', () =>
+        createTestCartridge('game', {
+          mount() {
+            // noop
+          },
+          stop: () => {
+            order.push('stop');
+            throw new Error('stop failed');
+          },
+          dispose: () => {
+            order.push('dispose');
+            throw new Error('dispose failed');
+          },
+        })),
+    ];
+
+    const manager = new RoccoCartridgeManager();
+    await manager.loadAndMount({
+      app: {} as Application,
+      engine: engine as never,
+      configuredCartridgeId: 'game',
+      cartridgeScope: scope,
+    });
+
+    await expect(manager.dispose()).rejects.toBeInstanceOf(AggregateError);
+    expect(order).toEqual(['stop', 'dispose', 'scope']);
+    expect(manager.getActiveCartridge()).toBeNull();
   });
 });

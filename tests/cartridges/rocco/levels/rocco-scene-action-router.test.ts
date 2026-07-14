@@ -186,7 +186,7 @@ describe('RoccoSceneActionRouter', () => {
       isStanAwake: () => false,
     });
 
-    router.handleAction({
+    const result = router.handleAction({
       targetInstanceId: 'prop',
       targetDefinitionId: 'prop-definition',
       definitionId: 'menu',
@@ -194,10 +194,165 @@ describe('RoccoSceneActionRouter', () => {
       itemId: 'look',
     });
 
+    expect(result).toEqual({ consumed: true, defaultPlayerMovement: 'suppress' });
     expect(scriptedSequences.hasPendingBaitShopDoorUse).not.toHaveBeenCalled();
     expect(transitions.updatePendingExitIntent).not.toHaveBeenCalled();
     expect(droppedInventory.handleSceneClick).not.toHaveBeenCalled();
     expect(developerRuntime.handlePlayerAction).not.toHaveBeenCalled();
     expect(levelAction).not.toHaveBeenCalled();
+  });
+
+  it('routes advance-sequence through the active level even while a blocking scripted sequence is active', () => {
+    const levelSceneClick = vi.fn(() => ({
+      suppressDefaultPlayerMove: true,
+    }));
+    const activeLevel = createLevel({
+      handleSceneClick: levelSceneClick,
+    });
+    const router = new RoccoSceneActionRouter({
+      localization: createRoccoLocalization('en'),
+      inventory: new RoccoInventory(),
+      transitions: {
+        updatePendingExitIntent: vi.fn(),
+      } as never,
+      inventoryRuntime: {
+        shouldHandleSceneCarriedItem: vi.fn(() => false),
+        handleCarriedItemSceneClick: vi.fn(),
+        handleGridMenuAction: vi.fn(() => false),
+        togglePlayerInventory: vi.fn(),
+      } as never,
+      droppedInventory: {
+        canHandleSceneClick: vi.fn(() => false),
+        handleSceneClick: vi.fn(() => false),
+        canHandleActionMenu: vi.fn(() => false),
+        handleActionMenu: vi.fn(() => false),
+      } as never,
+      scriptedSequences: {
+        hasBlockingSequence: vi.fn(() => true),
+        hasPendingBaitShopDoorUse: vi.fn(() => false),
+        cancelPendingBaitShopDoorUse: vi.fn(),
+        startStanPoliceDefeat: vi.fn(),
+        startStanMoneyExchange: vi.fn(),
+        startBaitShopDoorUse: vi.fn(),
+      } as never,
+      developerRuntime: {
+        canHandleSceneClick: vi.fn(() => false),
+        handleSceneClick: vi.fn(() => false),
+        canHandleGridMenuAction: vi.fn(() => false),
+        handleGridMenuAction: vi.fn(() => false),
+        canHandlePlayerAction: vi.fn(() => false),
+        handlePlayerAction: vi.fn(() => false),
+        clearTransientState: vi.fn(),
+      } as never,
+      getEngine: () => null,
+      getActiveLevel: () => activeLevel,
+      getRoccoAppearance: () => DEFAULT_ROCCO_PLAYER_APPEARANCE,
+      setRoccoAppearance: vi.fn(),
+      isStanIdentified: () => false,
+      isStanAwake: () => false,
+    });
+
+    const result = router.handleAction({
+      kind: 'advance-sequence',
+    });
+
+    expect(result).toEqual({ consumed: true, defaultPlayerMovement: 'suppress' });
+    expect(levelSceneClick).toHaveBeenCalledWith({
+      kind: 'scene-click',
+      sceneX: 0,
+      sceneY: 0,
+    });
+  });
+
+  it('routes carry-use with the carried-item payload instead of re-reading grid menu state', () => {
+    const carriedItem = {
+      definitionId: ROCCO_INVENTORY_MENU_ID,
+      item: {
+        id: 'rocco-bata',
+        label: 'Lab coat',
+      },
+    };
+    const inventoryRuntime = {
+      shouldHandleSceneCarriedItem: vi.fn((item) => item === carriedItem),
+      handleCarriedItemSceneClick: vi.fn(() => ({ suppressDefaultPlayerMove: true })),
+      handleGridMenuAction: vi.fn(() => false),
+      togglePlayerInventory: vi.fn(),
+    };
+    const router = new RoccoSceneActionRouter({
+      localization: createRoccoLocalization('en'),
+      inventory: new RoccoInventory(),
+      transitions: {
+        updatePendingExitIntent: vi.fn(),
+      } as never,
+      inventoryRuntime: inventoryRuntime as never,
+      droppedInventory: {
+        canHandleSceneClick: vi.fn(() => false),
+        handleSceneClick: vi.fn(() => false),
+        canHandleActionMenu: vi.fn(() => false),
+        handleActionMenu: vi.fn(() => false),
+      } as never,
+      scriptedSequences: {
+        hasBlockingSequence: vi.fn(() => false),
+        hasPendingBaitShopDoorUse: vi.fn(() => false),
+        cancelPendingBaitShopDoorUse: vi.fn(),
+        startStanPoliceDefeat: vi.fn(),
+        startStanMoneyExchange: vi.fn(),
+        startBaitShopDoorUse: vi.fn(),
+      } as never,
+      developerRuntime: {
+        canHandleSceneClick: vi.fn(() => false),
+        handleSceneClick: vi.fn(() => false),
+        canHandleGridMenuAction: vi.fn(() => false),
+        handleGridMenuAction: vi.fn(() => false),
+        canHandlePlayerAction: vi.fn(() => false),
+        handlePlayerAction: vi.fn(() => false),
+        clearTransientState: vi.fn(),
+      } as never,
+      getEngine: () =>
+        ({
+          video: {
+            gridMenus: {
+              getCarriedItem: () => undefined,
+            },
+          },
+        }) as unknown as RoccoEngine,
+      getActiveLevel: () => null,
+      getRoccoAppearance: () => DEFAULT_ROCCO_PLAYER_APPEARANCE,
+      setRoccoAppearance: vi.fn(),
+      isStanIdentified: () => false,
+      isStanAwake: () => false,
+    });
+
+    const result = router.handleAction({
+      kind: 'carry-use',
+      gridMenuActivation: {
+        kind: 'grid-menu',
+        definitionId: ROCCO_INVENTORY_MENU_ID,
+        interaction: 'carry',
+        items: [],
+      },
+      sceneClick: {
+        kind: 'scene-click',
+        sceneX: 160,
+        sceneY: 220,
+        targetInstanceId: 'stan',
+        targetDefinitionId: 'stan-definition',
+      },
+      carriedItem,
+    });
+
+    expect(result).toEqual({ consumed: true, defaultPlayerMovement: 'suppress' });
+    expect(inventoryRuntime.shouldHandleSceneCarriedItem).toHaveBeenCalledWith(carriedItem);
+    expect(inventoryRuntime.handleCarriedItemSceneClick).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        kind: 'scene-click',
+        sceneX: 160,
+        sceneY: 220,
+        targetInstanceId: 'stan',
+        targetDefinitionId: 'stan-definition',
+      },
+      carriedItem,
+    );
   });
 });

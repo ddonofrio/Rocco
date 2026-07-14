@@ -25,4 +25,31 @@ describe('GameRuntime', () => {
     expect(audioDestroy).toHaveBeenCalledTimes(1);
     expect(jukeboxDestroy).toHaveBeenCalledTimes(1);
   });
+
+  it('disposes composition sessions through the runtime scope', async () => {
+    const runtime = new GameRuntime({
+      mount: document.createElement('div'),
+    });
+
+    const session = runtime.beginCompositionSession('test-owner', {
+      message: 'LOADING 0%',
+    });
+
+    expect(session.status).toBe('active');
+
+    await runtime.dispose();
+
+    expect(session.status).toBe('disposed');
+  });
+
+  it('falls back to the browser console when no log sink is configured', () => {
+    const runtime = new GameRuntime({
+      mount: document.createElement('div'),
+    });
+    const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    runtime.log('System', 'hello');
+
+    expect(consoleInfo).toHaveBeenCalledWith('[ROCCO:System] hello');
+  });
 });

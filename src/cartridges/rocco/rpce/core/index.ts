@@ -19,6 +19,8 @@ export {
   type RpceLevelConnectionEndpoint,
   type RpceLevelDefinition,
   type RpceMapDefinition,
+  type RpceScriptedConnection,
+  type RpceScriptedConnectionKind,
 } from './rpce-map';
 export { RpceTransitionController, type RpceResolvedLevelTransition } from './rpce-transition-controller';
 export {

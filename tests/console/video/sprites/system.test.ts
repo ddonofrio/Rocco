@@ -210,6 +210,27 @@ describe('RoccoSpriteSystemSDK', () => {
     expect(system.listSprites()).toHaveLength(1);
   });
 
+  it('returns the constrained stored sprite when definition navigation snaps creation to a walk map', () => {
+    const system = new RoccoSpriteSystemSDK();
+    system.registerWalkMap(createFlatWalkMap());
+    system.loadSpriteDefinition({
+      ...createTestDefinition(),
+      groundAnchor: { x: 0, y: 0 },
+      navigation: {
+        walkMapId: 'test-walk-map',
+        groundAnchor: { x: 0, y: 0 },
+      },
+    });
+
+    const sprite = system.createSpriteFromDefinition('hero', {
+      transform: { x: 50, y: 5, scaleX: 1, scaleY: 1, rotation: 0 },
+    });
+
+    const stored = system.getSprite(sprite.id);
+    expect(sprite.transform.y).toBe(20);
+    expect(stored).toEqual(sprite);
+  });
+
   it('supports setPosition and translate', () => {
     const system = new RoccoSpriteSystemSDK();
     system.loadSpriteDefinition(createTestDefinition());

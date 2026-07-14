@@ -74,11 +74,28 @@ export function createCartridgeSdkV1(
         engine.acquireInputLease(ownerId, mode),
       getInputMode: () => engine.getInputMode(),
     },
-    storage: engine.persistence,
+    storage: {
+      loadPlaneSceneRecord: (sceneId) =>
+        engine.persistence.loadPlaneSceneRecord(manifest.id, sceneId),
+      savePlaneScene: (scene) => engine.persistence.savePlaneScene(manifest.id, scene),
+      createSaveRepository: (repositoryOptions) =>
+        engine.persistence.createSaveRepository({
+          ...repositoryOptions,
+          cartridgeId: manifest.id,
+          cartridgeVersion: manifest.version,
+        }),
+    },
     logger: {
       log: (channel, message) => engine.log(channel, message),
       setStatus: (status) => engine.setStatus(status),
     },
+    loadPlaneScene: (scene) => engine.loadPlaneScene(scene),
+    serializePlaneScene: (sceneId) => engine.serializePlaneScene(sceneId),
+    setPlayerSprite: (instanceId) => engine.setPlayerSprite(instanceId),
+    getPlayerSprite: () => engine.getPlayerSprite(),
+    isDeveloperModeEnabled: () => engine.isDeveloperModeEnabled?.() ?? false,
+    getConsoleFlags: () => engine.getConsoleFlags?.(),
+    setConsoleFlags: (patch) => engine.setConsoleFlags?.(patch),
     beginCompositionSession: (ownerId, options) =>
       engine.beginCompositionSession(ownerId, options),
     scope,

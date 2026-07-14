@@ -1,5 +1,6 @@
 import type { InteractionRule } from './interaction-types';
 import {
+  isCarryUseAction,
   isGridMenuAction,
   isSceneClickAction,
   normalizeDisposition,
@@ -19,6 +20,7 @@ export function createInventoryInteractionRules(): readonly InteractionRule[] {
   return [
     {
       id: 'inventory-carried-scene-click',
+      ownerId: 'inventory.carried-scene-click',
       priority: CARRIED_ITEM_SCENE_CLICK_PRIORITY,
       kind: 'scene-click',
       matches: (context) => {
@@ -31,21 +33,47 @@ export function createInventoryInteractionRules(): readonly InteractionRule[] {
       execute: (context) => {
         const engine = context.engine;
         if (!engine || !isSceneClickAction(context.action)) {
-          return undefined;
+          return normalizeDisposition(undefined);
         }
         const activation = context.action;
         const carriedItem = engine.video.gridMenus.getCarriedItem();
         if (!context.inventoryRuntime.shouldHandleSceneCarriedItem(carriedItem)) {
-          return undefined;
+          return normalizeDisposition(undefined);
         }
-        if (tryLevelInventorySceneClick(context, carriedItem)) {
-          return undefined;
+        if (tryLevelInventorySceneClick(context, activation, carriedItem)) {
+          return normalizeDisposition(undefined);
         }
-        return normalizeDisposition(context.inventoryRuntime.handleCarriedItemSceneClick(engine, activation));
+        return normalizeDisposition(
+          context.inventoryRuntime.handleCarriedItemSceneClick(engine, activation, carriedItem),
+        );
+      },
+    },
+    {
+      id: 'inventory-carry-use',
+      ownerId: 'inventory.carry-use',
+      priority: CARRIED_ITEM_SCENE_CLICK_PRIORITY,
+      kind: 'carry-use',
+      matches: (context) =>
+        isCarryUseAction(context.action) &&
+        context.inventoryRuntime.shouldHandleSceneCarriedItem(context.action.carriedItem),
+      execute: (context) => {
+        const engine = context.engine;
+        if (!engine || !isCarryUseAction(context.action)) {
+          return normalizeDisposition(undefined);
+        }
+        const activation = context.action.sceneClick;
+        const carriedItem = context.action.carriedItem;
+        if (tryLevelInventorySceneClick(context, activation, carriedItem)) {
+          return normalizeDisposition(undefined);
+        }
+        return normalizeDisposition(
+          context.inventoryRuntime.handleCarriedItemSceneClick(engine, activation, carriedItem),
+        );
       },
     },
     {
       id: 'inventory-grid-menu',
+      ownerId: 'inventory.grid-menu',
       priority: INVENTORY_GRID_MENU_PRIORITY,
       kind: 'grid-menu',
       matches: (context) =>
@@ -56,7 +84,7 @@ export function createInventoryInteractionRules(): readonly InteractionRule[] {
         if (context.engine && isGridMenuAction(context.action)) {
           context.inventoryRuntime.handleGridMenuAction(context.engine, context.action);
         }
-        return undefined;
+        return normalizeDisposition(undefined);
       },
     },
   ];

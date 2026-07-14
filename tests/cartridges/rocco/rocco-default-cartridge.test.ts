@@ -503,6 +503,33 @@ interface EngineMockState {
 }
 
 function createEngineMock(state: EngineMockState): RoccoEngine {
+  let legacyInputEnabled = state.inputEnabled;
+  const activeInputLeases: Array<{
+    ownerId: string;
+    mode: 'interactive' | 'advance-only' | 'blocked';
+  }> = [];
+
+  const recomputeInputMode = (): 'interactive' | 'advance-only' | 'blocked' => {
+    if (!legacyInputEnabled) {
+      return 'blocked';
+    }
+
+    if (activeInputLeases.some((lease) => lease.mode === 'blocked')) {
+      return 'blocked';
+    }
+
+    if (activeInputLeases.some((lease) => lease.mode === 'advance-only')) {
+      return 'advance-only';
+    }
+
+    return 'interactive';
+  };
+
+  const syncLegacyInputState = (): void => {
+    state.inputEnabled = recomputeInputMode() === 'interactive';
+    state.isSpriteMovingValue = !state.inputEnabled;
+  };
+
   const sprites: RoccoSpriteSystem = {
     registerWalkMap(walkMap: RoccoSpriteWalkMap) {
       state.registeredWalkMapIds.push(walkMap.id);
@@ -1154,28 +1181,39 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
 
     // Input control
     setInputEnabled(enabled: boolean) {
-      state.inputEnabled = enabled;
-      state.isSpriteMovingValue = !enabled; // block movement when input disabled
+      legacyInputEnabled = enabled;
+      syncLegacyInputState();
     },
     isInputEnabled() {
-      return state.inputEnabled;
+      return recomputeInputMode() === 'interactive';
     },
     isDeveloperModeEnabled() {
       return true;
     },
     acquireInputLease(ownerId: string, mode: 'interactive' | 'advance-only' | 'blocked') {
-      state.inputLeases.push({ ownerId, mode });
+      const leaseRecord = { ownerId, mode };
+      activeInputLeases.push(leaseRecord);
+      state.inputLeases.push(leaseRecord);
+      syncLegacyInputState();
       return {
         ownerId,
         mode,
         acquiredAt: 0,
         dispose() {
-          // noop
+          const activeIndex = activeInputLeases.indexOf(leaseRecord);
+          if (activeIndex >= 0) {
+            activeInputLeases.splice(activeIndex, 1);
+          }
+          const stateIndex = state.inputLeases.indexOf(leaseRecord);
+          if (stateIndex >= 0) {
+            state.inputLeases.splice(stateIndex, 1);
+          }
+          syncLegacyInputState();
         },
       };
     },
     getInputMode() {
-      return state.inputEnabled ? 'interactive' : 'blocked';
+      return recomputeInputMode();
     },
 
     // Logging and status
@@ -1196,7 +1234,11 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
         id: `composition-${state.compositionSessions.length}`,
         ownerId,
         message: null,
+        mode: 'exclusive' as const,
         status: 'active' as const,
+        completed: null,
+        total: null,
+        error: null,
         report() {
           // noop
         },
@@ -1418,7 +1460,7 @@ describe('RoccoDefaultCartridge', () => {
     );
     expect(state.movedSpriteActions).toEqual([DEFAULT_SPRITE_RUN_ACTION_ID]);
     expect(listPlayedSpriteAnimationsFor(state, DEFAULT_SPRITE_INSTANCE_ID)).toEqual([]);
-    expect(state.inputEnabled).toBe(true);
+    expect(state.inputEnabled).toBe(false);
     expect(state.displayProfileCalls).toBe(0);
     expect(state.statusMessages[0]?.includes(cartridge.manifest.title)).toBe(true);
     expect(state.registeredPlaylistIds).toEqual(['rocco-game-music']);

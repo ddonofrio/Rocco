@@ -24,12 +24,14 @@ describe('LifecycleStateMachine', () => {
     expect(machine.canInitialize()).toBe(false);
   });
 
-  it('allows re-initialization only from the failed state', () => {
+  it('treats failed as a terminal state', () => {
     const machine = new LifecycleStateMachine();
 
     machine.markInitializing();
     machine.markFailed();
-    expect(machine.canInitialize()).toBe(true);
+    expect(machine.canInitialize()).toBe(false);
+    expect(machine.isTerminal()).toBe(true);
+    expect(() => machine.markInitializing()).toThrow();
   });
 
   it('marks a disposed runtime as terminal', () => {
@@ -41,6 +43,19 @@ describe('LifecycleStateMachine', () => {
     machine.markDisposed();
     expect(machine.isTerminal()).toBe(true);
     expect(machine.canInitialize()).toBe(false);
+  });
+
+  it('supports the stop path before disposal', () => {
+    const machine = new LifecycleStateMachine();
+
+    machine.markInitializing();
+    machine.markReady();
+    machine.markStopping();
+    machine.markStopped();
+    machine.markDisposing();
+    machine.markDisposed();
+
+    expect(machine.current).toBe('disposed');
   });
 
   it('rejects concurrent initialization', () => {
@@ -57,6 +72,13 @@ describe('LifecycleStateMachine', () => {
     machine.markReady();
     machine.markDisposing();
     expect(() => machine.markInitializing()).toThrow();
+  });
+
+  it('rejects invalid completion transitions', () => {
+    const machine = new LifecycleStateMachine();
+
+    expect(() => machine.markReady()).toThrow();
+    expect(() => machine.markDisposed()).toThrow();
   });
 
   it('rejects beginning disposal from a disposed state', () => {

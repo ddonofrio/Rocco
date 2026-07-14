@@ -36,10 +36,20 @@ interface RoccoCollectedBootSetup {
   bootSettings: RoccoCartridgeBootSetting[];
 }
 
+function combineErrors(message: string, errors: readonly unknown[]): unknown {
+  if (errors.length === 0) {
+    return null;
+  }
+  if (errors.length === 1) {
+    return errors[0];
+  }
+
+  return new AggregateError(errors, message);
+}
+
 export class RoccoCartridgeManager {
   private activeCartridge: RoccoCartridge | null = null;
   private cartridgeScope: ResourceScope | null = null;
-  private ownsScope = false;
 
   async loadAndMount(options: CartridgeManagerOptions): Promise<RoccoCartridge> {
     const { app, engine, configuredCartridgeId } = options;
@@ -85,21 +95,28 @@ export class RoccoCartridgeManager {
     }
 
     const cartridge = (await loader.loadById(selectedId)) ?? (await loader.loadDefault());
-    this.activeCartridge = cartridge;
     const manifest = selectedConfig?.manifest ?? cartridge.manifest;
 
     assertCartridgeSdkCompatibility(manifest);
 
     const scope = options.cartridgeScope ?? createResourceScope(`cartridge:${selectedId}`);
-    this.cartridgeScope = scope;
-    this.ownsScope = !options.cartridgeScope;
-
     const sdk = createCartridgeSdkV1({ engine, scope, manifest });
-    await cartridge.mount({ engine, locale: selectedLocale, sdk });
-    if (cartridge.start) {
-      await cartridge.start();
+    try {
+      await cartridge.mount({ engine, locale: selectedLocale, sdk });
+      if (cartridge.start) {
+        await cartridge.start();
+      }
+    } catch (error) {
+      const cleanupError = await this.cleanupCartridgeResources(cartridge, scope, selectedId);
+      const combinedError = combineErrors(
+        `Failed to mount cartridge '${selectedId}' cleanly.`,
+        [error, cleanupError].filter((item) => item !== null),
+      );
+      throw combinedError ?? error;
     }
 
+    this.activeCartridge = cartridge;
+    this.cartridgeScope = scope;
     return cartridge;
   }
 
@@ -112,19 +129,20 @@ export class RoccoCartridgeManager {
   }
 
   async dispose(): Promise<void> {
-    if (this.activeCartridge?.stop) {
-      await this.activeCartridge.stop();
-    }
-    if (this.activeCartridge?.dispose) {
-      await this.activeCartridge.dispose();
-    }
-    this.activeCartridge = null;
+    const activeCartridge = this.activeCartridge;
+    const cartridgeScope = this.cartridgeScope;
+    const cleanupError = await this.cleanupCartridgeResources(
+      activeCartridge,
+      cartridgeScope,
+      activeCartridge?.manifest.id ?? 'unknown',
+    );
 
-    if (this.ownsScope && this.cartridgeScope) {
-      await this.cartridgeScope.dispose();
-    }
+    this.activeCartridge = null;
     this.cartridgeScope = null;
-    this.ownsScope = false;
+
+    if (cleanupError) {
+      throw cleanupError;
+    }
   }
 
   private loadInitialLocales(
@@ -217,5 +235,39 @@ export class RoccoCartridgeManager {
     } catch {
       return;
     }
+  }
+
+  private async cleanupCartridgeResources(
+    cartridge: RoccoCartridge | null,
+    scope: ResourceScope | null,
+    cartridgeId: string,
+  ): Promise<unknown | null> {
+    const failures: unknown[] = [];
+
+    if (cartridge?.stop) {
+      try {
+        await cartridge.stop();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    if (cartridge?.dispose) {
+      try {
+        await cartridge.dispose();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    if (scope) {
+      try {
+        await scope.dispose();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    return combineErrors(`Cartridge '${cartridgeId}' cleanup failed.`, failures);
   }
 }

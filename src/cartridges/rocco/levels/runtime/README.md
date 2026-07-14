@@ -12,7 +12,7 @@ These files are not generic console systems. They are the legacy compatibility p
 - `rocco-scene-action-router.ts` - Builds the interaction context, runs the staged interaction registry dispatch, keeps the blocking-sequence guard, and updates exit intent at the correct point in the scene-click pipeline.
 - `rocco-inventory-runtime-controller.ts` - Owns player inventory storage, storage-transfer sessions, carried-item routing, item fusion coordination, and world-drop handoff.
 - `rocco-dropped-inventory-controller.ts` - Owns per-level dropped-item state, dropped-item presentation, and pickup flow.
-- `rocco-scripted-sequence-controller.ts` - Owns blocking scripted sequences such as the Stan police defeat, Stan money exchange, and bait-shop door entry choreography.
+- `rocco-scripted-sequence-controller.ts` - Owns blocking scripted sequences such as the Stan police defeat, Stan money exchange, and bait-shop door entry choreography, including the sequence-owned blocking input lease that is released when the sequence completes, cancels, or resets.
 - `rocco-developer-runtime-controller.ts` - Owns developer-only menus, jump placement state, runtime event overrides, and sprite-cycle preview mode.
 
 ## Responsibility Split

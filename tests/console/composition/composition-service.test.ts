@@ -17,6 +17,7 @@ describe('CompositionServiceImpl', () => {
     const service = new CompositionServiceImpl();
     const session = service.begin({ ownerId: 'level-transition', message: 'LOADING 0%' });
     expect(session.ownerId).toBe('level-transition');
+    expect(session.mode).toBe('exclusive');
     expect(session.status).toBe('active');
     expect(service.getActiveMessage()).toBe('LOADING 0%');
   });
@@ -59,9 +60,22 @@ describe('CompositionServiceImpl', () => {
   it('marks failure and keeps diagnostics', () => {
     const service = new CompositionServiceImpl();
     const session = service.begin({ ownerId: 'owner', message: 'LOADING' });
+    session.report({ completed: 50, total: 100, message: 'LOADING 50%' });
     session.fail(new Error('boom'));
     expect(session.status).toBe('failed');
+    expect(session.completed).toBe(50);
+    expect(session.total).toBe(100);
+    expect(session.error).toMatchObject({ name: 'Error', message: 'boom' });
     expect(service.getActiveStatus()).toBe('failed');
+    expect(service.getActiveSessionInfo()).toMatchObject({
+      message: 'LOADING 50%',
+      status: 'failed',
+      completed: 50,
+      total: 100,
+      error: {
+        message: 'boom',
+      },
+    });
   });
 
   it('reports progress only while active', () => {
@@ -101,5 +115,26 @@ describe('CompositionServiceImpl', () => {
 
     session.dispose();
     expect(listener).toHaveBeenCalledTimes(3);
+  });
+
+  it('prefers the newest exclusive session over later shared ones', () => {
+    const service = new CompositionServiceImpl();
+    service.begin({ ownerId: 'shared-a', mode: 'shared', message: 'SHARED A' });
+    const exclusive = service.begin({ ownerId: 'exclusive', mode: 'exclusive', message: 'EXCLUSIVE' });
+    service.begin({ ownerId: 'shared-b', mode: 'shared', message: 'SHARED B' });
+
+    expect(service.getActiveSessionInfo()).toMatchObject({
+      ownerId: 'exclusive',
+      mode: 'exclusive',
+      message: 'EXCLUSIVE',
+    });
+
+    exclusive.dispose();
+
+    expect(service.getActiveSessionInfo()).toMatchObject({
+      ownerId: 'shared-b',
+      mode: 'shared',
+      message: 'SHARED B',
+    });
   });
 });

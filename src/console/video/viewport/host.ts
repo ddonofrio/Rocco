@@ -60,6 +60,7 @@ export class RoccoViewportHost {
   private panState = { active: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 };
   private panPointerId: number | null = null;
   private metrics: RoccoViewportMetrics;
+  private hostListenersAttached = false;
 
   constructor(options: RoccoViewportHostOptions) {
     if (!Number.isFinite(options.designWidth) || options.designWidth <= 0) {
@@ -86,11 +87,6 @@ export class RoccoViewportHost {
     this.hostElement.style.backgroundColor = this.backgroundColor;
     this.hostElement.style.touchAction = 'none';
     this.hostElement.style.userSelect = 'none';
-    this.hostElement.addEventListener('pointerdown', this.onPointerDown);
-    this.hostElement.addEventListener('pointermove', this.onPointerMove);
-    this.hostElement.addEventListener('pointerup', this.onPointerUp);
-    this.hostElement.addEventListener('pointercancel', this.onPointerUp);
-    this.hostElement.addEventListener('lostpointercapture', this.onPointerUp);
 
     this.stageElement = document.createElement('div');
     this.stageElement.dataset.roccoViewportStage = 'true';
@@ -144,6 +140,7 @@ export class RoccoViewportHost {
     }
 
     this.applyRootStyles();
+    this.attachHostListeners();
     this.hostElement.appendChild(this.stageElement);
     this.displayProfileRenderer.mount();
     this.buildBadgeRenderer.mount();
@@ -165,11 +162,7 @@ export class RoccoViewportHost {
     this.displayProfileRenderer.unmount();
     this.buildBadgeRenderer.unmount();
     this.stageElement.remove();
-    this.hostElement.removeEventListener('pointerdown', this.onPointerDown);
-    this.hostElement.removeEventListener('pointermove', this.onPointerMove);
-    this.hostElement.removeEventListener('pointerup', this.onPointerUp);
-    this.hostElement.removeEventListener('pointercancel', this.onPointerUp);
-    this.hostElement.removeEventListener('lostpointercapture', this.onPointerUp);
+    this.detachHostListeners();
 
     if (this.ownsRootElement) {
       this.rootElement.remove();
@@ -298,6 +291,32 @@ export class RoccoViewportHost {
     this.rootElement.style.height = '100%';
     this.rootElement.style.overflow = 'hidden';
     this.rootElement.style.backgroundColor = this.backgroundColor;
+  }
+
+  private attachHostListeners(): void {
+    if (this.hostListenersAttached) {
+      return;
+    }
+
+    this.hostElement.addEventListener('pointerdown', this.onPointerDown);
+    this.hostElement.addEventListener('pointermove', this.onPointerMove);
+    this.hostElement.addEventListener('pointerup', this.onPointerUp);
+    this.hostElement.addEventListener('pointercancel', this.onPointerUp);
+    this.hostElement.addEventListener('lostpointercapture', this.onPointerUp);
+    this.hostListenersAttached = true;
+  }
+
+  private detachHostListeners(): void {
+    if (!this.hostListenersAttached) {
+      return;
+    }
+
+    this.hostElement.removeEventListener('pointerdown', this.onPointerDown);
+    this.hostElement.removeEventListener('pointermove', this.onPointerMove);
+    this.hostElement.removeEventListener('pointerup', this.onPointerUp);
+    this.hostElement.removeEventListener('pointercancel', this.onPointerUp);
+    this.hostElement.removeEventListener('lostpointercapture', this.onPointerUp);
+    this.hostListenersAttached = false;
   }
 
   private readonly onWindowResize = (): void => {

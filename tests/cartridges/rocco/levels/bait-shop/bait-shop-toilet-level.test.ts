@@ -187,6 +187,10 @@ function createEngineMock(state: TestState): RoccoEngine {
           state.openedGridMenuDefinitions.push(definition);
           state.activeGridMenuDefinitionId = definition.id;
         },
+        isOpen: (definitionId?: string) =>
+          definitionId
+            ? state.activeGridMenuDefinitionId === definitionId
+            : state.activeGridMenuDefinitionId !== undefined,
         closeMenu: () => {
           state.closedGridMenuCount += 1;
           state.activeGridMenuDefinitionId = undefined;
@@ -538,6 +542,29 @@ describe('RoccoBaitShopToiletLevel', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('does not consume seated toilet clicks so the seated action menu can open', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = createState();
+    const engine = createEngineMock(state);
+    const level = new RoccoBaitShopToiletLevel(localization, {
+      hasMagazine: () => true,
+    });
+
+    await level.mount(engine);
+    finishSitSequence(level, state);
+
+    expect(state.registeredActionMenuIds).toContain(ROCCO_PLAYER_ACTION_MENU_ID);
+    expect(
+      level.handleSceneClick({
+        kind: 'scene-click',
+        sceneX: 0,
+        sceneY: 0,
+        targetInstanceId: TOILET_INSTANCE_ID,
+        targetDefinitionId: 'rocco-bait-shop-toilet',
+      }),
+    ).toBeUndefined();
   });
 
   it('keeps the portal pending until Rocco leaves the overlap zone and then transitions on contact', async () => {

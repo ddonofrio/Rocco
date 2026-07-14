@@ -13,6 +13,7 @@ import type {
 } from '../../../../../../console/video/sprites';
 import type { RoccoLocalization } from '../../localization';
 import {
+  RoccoDialogueSession,
   createRoccoDialogueChoiceMenu,
   roccoCartridgeMessageRuntime,
   resolveRoccoDialogueChoice,
@@ -158,6 +159,8 @@ const NETHER_SECURITY_CAMERA_SPRITE_DEFINITION_ID =
   'rocco-nether-console-hardware-spawn-security-camera';
 const NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID =
   'rocco-nether-console-hardware-spawn-security-camera-instance';
+const NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID =
+  'rocco-nether-console-hardware-spawn-security-camera-target';
 const NETHER_SECURITY_CAMERA_IMAGE_ID_PREFIX =
   'rocco-nether-console-hardware-spawn-security-camera-image';
 const NETHER_SECURITY_CAMERA_FRAME_ID_PREFIX =
@@ -262,6 +265,13 @@ const NETHER_SECURITY_CAMERA_POSITION = {
 } as const;
 const NETHER_SECURITY_CAMERA_ROTATION = (-3 * Math.PI) / 180;
 const NETHER_SECURITY_CAMERA_TINT = '#cccccc';
+const NETHER_SECURITY_CAMERA_SHAPE = {
+  kind: 'rect' as const,
+  x: NETHER_SECURITY_CAMERA_POSITION.x,
+  y: NETHER_SECURITY_CAMERA_POSITION.y,
+  width: NETHER_SECURITY_CAMERA_TARGET_WIDTH,
+  height: NETHER_SECURITY_CAMERA_TARGET_HEIGHT,
+};
 const NETHER_SECURITY_LEFT_SIDE_TRIGGER_MAX_X = Math.floor(DEFAULT_DESIGN_WIDTH / 2);
 const NETHER_SECURITY_LEFT_SIDE_TRIGGER_DELAY_MS = 3000;
 const NETHER_SECURITY_ALERT_MESSAGE_ID = 'rocco-nether-security-alert-message';
@@ -471,7 +481,10 @@ function createNetherSecurityCameraActionMenuDefinition(
 ): RoccoActionMenuDefinition {
   return {
     id: NETHER_SECURITY_CAMERA_ACTION_MENU_ID,
-    targetInstanceIds: [NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID],
+    targetInstanceIds: [
+      NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID,
+      NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID,
+    ],
     renderLayer: 'ui.action-menu',
     itemSize: NETHER_SECURITY_CAMERA_ACTION_MENU_ITEM_SIZE,
     orbitRadius: NETHER_SECURITY_CAMERA_ACTION_MENU_ORBIT_RADIUS,
@@ -804,12 +817,6 @@ interface NetherIntercomChoice {
   triggersDefeat?: boolean;
 }
 
-interface NetherIntercomPendingStep {
-  remainingMs: number;
-  messageSpriteInstanceId?: string;
-  onComplete: () => void;
-}
-
 const NETHER_CONNECTORS: readonly RoccoLevelConnector[] = [
   {
     id: NETHER_ENTRY_CONNECTOR_ID,
@@ -878,13 +885,13 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
   private options: RoccoLevelMountOptions = {};
   private spriteController: RoccoDefaultSpriteController | null = null;
   private scriptedInteractionController: RoccoScriptedSceneInteractionController | null = null;
+  private intercomDialogue: RoccoDialogueSession | null = null;
   private onRestartRequested: ((request?: RoccoLevelRestartRequest) => void) | null = null;
   private arrivalSequence: NetherArrivalSequence | null = null;
   private securityDefeatSequence: NetherSecurityDefeatSequence | null = null;
   private intercomStage: NetherIntercomStage = 'first-contact';
   private intercomPhase: NetherIntercomPhase = 'idle';
   private intercomCurrentChoices: readonly NetherIntercomChoice[] = [];
-  private intercomPendingStep: NetherIntercomPendingStep | undefined;
   private arrivalSequencePlayed = false;
   private leftSideExposureElapsedMs = 0;
   private perspectiveFarY = 0;
@@ -925,7 +932,14 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.intercomStage = 'first-contact';
     this.intercomPhase = 'idle';
     this.intercomCurrentChoices = [];
-    this.intercomPendingStep = undefined;
+    this.intercomDialogue = new RoccoDialogueSession({
+      id: NETHER_INTERCOMUNICADOR_DIALOGUE_MENU_ID,
+      engine,
+      playerSpriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
+      npcSpriteInstanceId: NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID,
+      playerLineTtlMs: NETHER_INTERCOMUNICADOR_PLAYER_TTL_MS,
+      npcLineTtlMs: NETHER_INTERCOMUNICADOR_REPLY_TTL_MS,
+    });
     this.leftSideExposureElapsedMs = 0;
     this.perspectiveFarY = 0;
     this.smokeScale = 1;
@@ -1126,12 +1140,14 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     engine.video.actionMenus.unregisterMenu(NETHER_INTERCOMUNICADOR_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(NETHER_NOISY_MACHINE_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(NETHER_SHELF_ACTION_MENU_ID);
+    this.intercomDialogue?.cancel();
     engine.video.sprites.removeSprite(NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID);
     engine.video.sprites.removeSprite(NETHER_PIPE_SMOKE_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(NETHER_PIPE_SMOKE_SECOND_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(NETHER_ARRIVAL_PORTAL_INSTANCE_ID);
     engine.video.sprites.removeSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_INTERCOMUNICADOR_TARGET_INSTANCE_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_SHELF_TARGET_INSTANCE_ID);
@@ -1146,7 +1162,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.intercomStage = 'first-contact';
     this.intercomPhase = 'idle';
     this.intercomCurrentChoices = [];
-    this.intercomPendingStep = undefined;
+    this.intercomDialogue = null;
     this.leftSideExposureElapsedMs = 0;
     this.perspectiveFarY = 0;
     this.smokeScale = 1;
@@ -1192,14 +1208,17 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
 
     this.spriteController?.update(deltaMs);
     this.scriptedInteractionController?.update();
-    this.updateIntercomConversation(deltaMs);
+    this.intercomDialogue?.update(deltaMs);
     this.updateLeftSideSecurityWatch(deltaMs);
   }
 
   handleAction(activation: RoccoActionMenuActivation): void {
     if (
       !this.engine ||
-      activation.targetInstanceId !== NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID
+      (
+        activation.targetInstanceId !== NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID &&
+        activation.targetInstanceId !== NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID
+      )
     ) {
       if (
         this.engine &&
@@ -1261,6 +1280,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       return;
     }
 
+    this.intercomDialogue?.cancel();
     this.startIntercomChoice(choice);
   }
 
@@ -1273,16 +1293,19 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       return { suppressDefaultPlayerMove: true };
     }
 
-    if (activation.targetInstanceId === NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID) {
-      return { suppressDefaultPlayerMove: true };
+    if (
+      activation.targetInstanceId === NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID ||
+      activation.targetInstanceId === NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID
+    ) {
+      return;
     }
 
     if (activation.targetInstanceId === NETHER_INTERCOMUNICADOR_TARGET_INSTANCE_ID) {
-      return { suppressDefaultPlayerMove: true };
+      return;
     }
 
     if (activation.targetInstanceId === NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID) {
-      return { suppressDefaultPlayerMove: true };
+      return;
     }
 
     if (activation.targetInstanceId === NETHER_SHELF_TARGET_INSTANCE_ID) {
@@ -1292,13 +1315,15 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
           shelfText.emptyLookLines,
           NETHER_SHELF_LOOK_HISTORY_KEY,
         );
+        return { suppressDefaultPlayerMove: true };
       }
-      return { suppressDefaultPlayerMove: true };
+      return;
     }
   }
 
   private installSecurityCamera(engine: RoccoEngine): void {
     engine.video.actionMenus.unregisterMenu(NETHER_SECURITY_CAMERA_ACTION_MENU_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID);
     engine.video.sprites.removeSprite(NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID);
     engine.video.sprites.createSpriteFromDefinition(NETHER_SECURITY_CAMERA_SPRITE_DEFINITION_ID, {
       id: NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID,
@@ -1316,6 +1341,17 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       collisionEnabled: false,
       tint: NETHER_SECURITY_CAMERA_TINT,
       ignoreMessages: true,
+    });
+    engine.video.sceneTargets?.registerTarget({
+      instanceId: NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID,
+      definitionId: 'rocco-nether-console-hardware-spawn-security-camera',
+      shape: NETHER_SECURITY_CAMERA_SHAPE,
+      priority: 22,
+      suppressDefaultPlayerMove: true,
+      visibleDescription: {
+        enabled: true,
+        text: resolveNetherSecurityCameraText(this.localization).description,
+      },
     });
     engine.video.actionMenus.registerMenu(
       createNetherSecurityCameraActionMenuDefinition(this.localization),
@@ -1559,22 +1595,16 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
   }
 
   private startIntercomChoice(choice: NetherIntercomChoice): void {
-    if (!this.engine) {
+    if (!this.engine || !this.intercomDialogue) {
       return;
     }
 
     this.intercomPhase = 'waiting-player';
-    this.engine.setInputEnabled(false);
-    this.engine.video.messages.say(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      this.resolveIntercomMessageText(choice.playerLine),
-      {
-        ttlMs: NETHER_INTERCOMUNICADOR_PLAYER_TTL_MS,
-      },
-    );
-    this.scheduleIntercomStep(
-      this.resolveIntercomLineDuration(choice.playerLine, NETHER_INTERCOMUNICADOR_PLAYER_TTL_MS),
-      () => {
+    this.intercomDialogue.beginLinearSequence({
+      speaker: 'player',
+      lines: [choice.playerLine],
+      lineTtlMs: NETHER_INTERCOMUNICADOR_PLAYER_TTL_MS,
+      onComplete: () => {
         if (choice.triggersDefeat) {
           this.resetIntercomConversationState();
           this.startSecurityDefeatSequence({
@@ -1593,63 +1623,52 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
 
         this.finishIntercomChoice(choice);
       },
-      DEFAULT_SPRITE_INSTANCE_ID,
-    );
+    });
     this.engine.video.render(0);
   }
 
   private showIntercomNpcLine(choice: NetherIntercomChoice): void {
-    if (!this.engine || choice.npcLine === undefined) {
+    if (!this.engine || !this.intercomDialogue || choice.npcLine === undefined) {
       return;
     }
 
     this.intercomPhase = 'waiting-npc';
-    this.engine.video.messages.say(
-      this.resolveIntercomSpeakerInstanceId(),
-      this.resolveIntercomMessageText(choice.npcLine),
-      {
-        ttlMs: NETHER_INTERCOMUNICADOR_REPLY_TTL_MS,
+    this.intercomDialogue.beginLinearSequence({
+      speaker: 'npc',
+      lines: [choice.npcLine],
+      lineTtlMs: NETHER_INTERCOMUNICADOR_REPLY_TTL_MS,
+      messageOptions: {
         side: 'left',
         offset: NETHER_INTERCOMUNICADOR_MESSAGE_OFFSET,
         maxWidth: NETHER_INTERCOMUNICADOR_MESSAGE_MAX_WIDTH,
         style: NETHER_SECURITY_SPEECH_STYLE,
       },
-    );
-    this.scheduleIntercomStep(
-      this.resolveIntercomLineDuration(choice.npcLine, NETHER_INTERCOMUNICADOR_REPLY_TTL_MS),
-      () => {
+      onComplete: () => {
         if (choice.thoughtLine !== undefined) {
           this.showIntercomThought(choice);
           return;
         }
-
         this.finishIntercomChoice(choice);
       },
-      this.resolveIntercomSpeakerInstanceId(),
-    );
+    });
     this.engine.video.render(0);
   }
 
   private showIntercomThought(choice: NetherIntercomChoice): void {
-    if (!this.engine || choice.thoughtLine === undefined) {
+    if (!this.engine || !this.intercomDialogue || choice.thoughtLine === undefined) {
       return;
     }
 
     this.intercomPhase = 'waiting-thought';
-    this.engine.video.messages.think(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      this.resolveIntercomMessageText(choice.thoughtLine),
-      {
-        ttlMs: NETHER_INTERCOMUNICADOR_THOUGHT_TTL_MS,
-      },
-    );
-    this.scheduleIntercomStep(
-      this.resolveIntercomLineDuration(choice.thoughtLine, NETHER_INTERCOMUNICADOR_THOUGHT_TTL_MS),
-      () => {
+    this.intercomDialogue.beginLinearSequence({
+      speaker: 'player',
+      lines: [choice.thoughtLine],
+      lineTtlMs: NETHER_INTERCOMUNICADOR_THOUGHT_TTL_MS,
+      messageKind: 'think',
+      onComplete: () => {
         this.finishIntercomChoice(choice);
       },
-      DEFAULT_SPRITE_INSTANCE_ID,
-    );
+    });
     this.engine.video.render(0);
   }
 
@@ -1665,119 +1684,25 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     }
 
     this.resetIntercomConversationState();
-    this.engine.setInputEnabled(true);
     this.engine.video.render(0);
-  }
-
-  private scheduleIntercomStep(
-    delayMs: number,
-    onComplete: () => void,
-    messageSpriteInstanceId?: string,
-  ): void {
-    this.intercomPendingStep = {
-      remainingMs: Math.max(0, delayMs),
-      messageSpriteInstanceId,
-      onComplete,
-    };
-  }
-
-  private updateIntercomConversation(deltaMs: number): void {
-    if (!this.intercomPendingStep || !Number.isFinite(deltaMs) || deltaMs <= 0) {
-      return;
-    }
-
-    let remainingDeltaMs = deltaMs;
-    while (this.intercomPendingStep && remainingDeltaMs > 0) {
-      if (this.intercomPendingStep.remainingMs > remainingDeltaMs) {
-        this.intercomPendingStep.remainingMs -= remainingDeltaMs;
-        return;
-      }
-
-      remainingDeltaMs -= this.intercomPendingStep.remainingMs;
-      this.completeIntercomPendingStep();
-    }
   }
 
   private advanceIntercomConversation(): boolean {
-    if (!this.engine || !this.intercomPendingStep || this.intercomPhase === 'idle') {
+    if (
+      !this.intercomDialogue ||
+      this.intercomPhase === 'idle' ||
+      this.intercomPhase === 'awaiting-choice'
+    ) {
       return false;
     }
 
-    if (this.intercomPhase === 'awaiting-choice') {
-      return false;
-    }
-
-    const spriteInstanceId = this.intercomPendingStep.messageSpriteInstanceId;
-    if (!spriteInstanceId) {
-      this.completeIntercomPendingStep();
-      return true;
-    }
-
-    const messageId = `${spriteInstanceId}:active-message`;
-    const message = this.engine.video.messages
-      .listMessages()
-      .find((candidate) => candidate.id === messageId);
-    if (!message) {
-      this.completeIntercomPendingStep();
-      return true;
-    }
-
-    const remainingLines = message.lines.slice(message.lineIndex + 1);
-    if (remainingLines.length === 0) {
-      this.engine.video.messages.removeMessage(messageId);
-      this.completeIntercomPendingStep();
-      this.engine.video.render(0);
-      return true;
-    }
-
-    this.engine.video.messages.showMessage({
-      id: message.id,
-      spriteInstanceId: message.spriteInstanceId,
-      mode: message.mode,
-      text: remainingLines,
-      background: message.background,
-      ttlMs: message.durationMs,
-      side: message.side,
-      offset: message.offset,
-      renderLayer: message.renderLayer,
-      zIndex: message.zIndex,
-      maxWidth: message.maxWidth,
-      style: message.style,
-    });
-    this.intercomPendingStep = {
-      ...this.intercomPendingStep,
-      remainingMs: remainingLines.length * message.durationMs,
-    };
-    this.engine.video.render(0);
-    return true;
-  }
-
-  private completeIntercomPendingStep(): void {
-    if (!this.intercomPendingStep) {
-      return;
-    }
-
-    const onComplete = this.intercomPendingStep.onComplete;
-    this.intercomPendingStep = undefined;
-    onComplete();
+    return this.intercomDialogue.advance();
   }
 
   private resetIntercomConversationState(): void {
+    this.intercomDialogue?.cancel();
     this.intercomPhase = 'idle';
     this.intercomCurrentChoices = [];
-    this.intercomPendingStep = undefined;
-  }
-
-  private resolveIntercomLineDuration(line: RoccoDialogueLine, ttlMs: number): number {
-    return (typeof line === 'string' ? 1 : Math.max(1, line.length)) * ttlMs;
-  }
-
-  private resolveIntercomMessageText(line: RoccoDialogueLine): string | string[] {
-    if (typeof line === 'string') {
-      return line;
-    }
-
-    return [...line];
   }
 
   private resolveIntercomMenuLabel(line: RoccoDialogueLine): string {

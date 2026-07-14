@@ -1,11 +1,43 @@
 import { AudioAnalyzer, type AudioAnalysisResult } from './audio-analyzer';
 import type { PlaylistHandle, RoccoJukeboxPlaylist, RoccoJukeboxSystem, RoccoJukeboxTrack } from './types';
 
+interface Deferred<T> {
+  readonly promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+}
+
+interface ActivePlaylistPlayback {
+  playbackId: string;
+  playlistId: string;
+  generation: number;
+  ended: Deferred<void>;
+  finished: boolean;
+}
+
 interface TrackState {
   track: RoccoJukeboxTrack;
   buffer: AudioBuffer;
   analysis: AudioAnalysisResult;
   currentSegmentIndex: number;
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolved = false;
+  let resolvePromise!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve;
+  });
+
+  return {
+    promise,
+    resolve(value) {
+      if (resolved) {
+        return;
+      }
+      resolved = true;
+      resolvePromise(value);
+    },
+  };
 }
 
 function clampVolume(value: number): number {
@@ -18,7 +50,7 @@ function clampVolume(value: number): number {
 export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
   private readonly playlists = new Map<string, RoccoJukeboxPlaylist>();
   private context: AudioContext | null = null;
-  private currentPlaylistId: string | null = null;
+  private activePlayback: ActivePlaylistPlayback | null = null;
   private trackStates: TrackState[] = [];
   private currentTrackIndex = 0;
   private isPlayingFlag = false;
@@ -29,8 +61,9 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
   private readonly cleanupTimeoutIds = new Set<number>();
   private masterVolume = 1;
   private playlistVolume = 1;
-  private generation = 0;
   private loadController: AbortController | null = null;
+  private nextPlaybackGeneration = 1;
+  private nextPlaybackId = 1;
 
   registerPlaylist(playlist: RoccoJukeboxPlaylist): void {
     if (this.playlists.has(playlist.id)) {
@@ -40,7 +73,7 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
   }
 
   unregisterPlaylist(playlistId: string): void {
-    if (this.currentPlaylistId === playlistId) {
+    if (this.activePlayback?.playlistId === playlistId) {
       this.stopPlaylist();
     }
     this.playlists.delete(playlistId);
@@ -52,42 +85,46 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
       throw new Error(`Playlist '${playlistId}' not found`);
     }
 
-    if (this.currentPlaylistId === playlistId && this.isPlayingFlag) {
-      return this.createPlaylistHandle();
+    if (this.activePlayback?.playlistId === playlistId && this.isPlayingFlag) {
+      return this.createPlaylistHandle(this.activePlayback);
     }
 
     this.stopPlaylist();
-
-    this.loadController?.abort('superseded');
-    this.loadController = new AbortController();
-    const currentGeneration = ++this.generation;
-    const signal = this.loadController.signal;
 
     const context = this.ensureContext();
     if (!context) {
       throw new Error('AudioContext not available');
     }
 
-    if (signal.aborted) {
-      return this.createPlaylistHandle();
+    const playback = this.createPlayback(playlistId);
+    this.activePlayback = playback;
+    this.loadController = new AbortController();
+    const signal = this.loadController.signal;
+
+    if (signal.aborted || !this.isActivePlayback(playback)) {
+      return this.createPlaylistHandle(playback);
     }
 
     if (context.state === 'suspended') {
       await context.resume().catch(() => undefined);
     }
 
-    if (signal.aborted || currentGeneration !== this.generation) {
-      return this.createPlaylistHandle();
+    if (signal.aborted || !this.isActivePlayback(playback)) {
+      return this.createPlaylistHandle(playback);
     }
 
-    this.currentPlaylistId = playlistId;
+    if (context.state !== 'running') {
+      this.endPlayback(playback);
+      return this.createPlaylistHandle(playback);
+    }
+
     this.playlistVolume = clampVolume(playlist.globalVolume ?? 1);
     this.applyMasterGainVolume();
 
     this.trackStates = [];
     for (const track of playlist.tracks) {
-      if (signal.aborted || currentGeneration !== this.generation) {
-        return this.createPlaylistHandle();
+      if (signal.aborted || !this.isActivePlayback(playback)) {
+        return this.createPlaylistHandle(playback);
       }
 
       const buffer = await this.loadTrack(track, context, signal);
@@ -95,8 +132,8 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
         continue;
       }
 
-      if (signal.aborted || currentGeneration !== this.generation) {
-        return this.createPlaylistHandle();
+      if (signal.aborted || !this.isActivePlayback(playback)) {
+        return this.createPlaylistHandle(playback);
       }
 
       const analysis = AudioAnalyzer.analyzeBuffer(
@@ -113,50 +150,56 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
       });
     }
 
+    if (!this.isActivePlayback(playback)) {
+      return this.createPlaylistHandle(playback);
+    }
+
     if (this.trackStates.length === 0) {
-      throw new Error('No tracks could be loaded');
+      this.endPlayback(playback);
+      return this.createPlaylistHandle(playback);
     }
 
     this.isPlayingFlag = true;
     this.currentTrackIndex = 0;
-    this.scheduleNextSegment(currentGeneration);
-    return this.createPlaylistHandle();
+    this.scheduleNextSegment(playback);
+    return this.createPlaylistHandle(playback);
   }
 
-  private createPlaylistHandle(): PlaylistHandle {
-    const getIsPlaying = (): boolean => this.isPlayingFlag;
-
+  private createPlayback(playlistId: string): ActivePlaylistPlayback {
     return {
-      stop: () => this.stopPlaylist(),
-      setVolume: (value: number) => this.setVolume(value),
+      playbackId: `jukebox-playback-${this.nextPlaybackId++}`,
+      playlistId,
+      generation: this.nextPlaybackGeneration++,
+      ended: createDeferred<void>(),
+      finished: false,
+    };
+  }
+
+  private createPlaylistHandle(playback: ActivePlaylistPlayback): PlaylistHandle {
+    return {
+      stop: () => {
+        if (this.isActivePlayback(playback)) {
+          this.stopPlaylist();
+        }
+      },
+      setVolume: (value: number) => {
+        if (this.isActivePlayback(playback)) {
+          this.setVolume(value);
+        }
+      },
       get ended() {
-        let resolveEnded: (() => void) | undefined;
-        const ended = new Promise<void>((resolve) => {
-          resolveEnded = resolve;
-        });
-
-        const checkEnded = () => {
-          if (!getIsPlaying() && resolveEnded) {
-            resolveEnded();
-          }
-        };
-
-        const interval = setInterval(() => {
-          checkEnded();
-          if (!getIsPlaying() && resolveEnded) {
-            clearInterval(interval);
-          }
-        }, 100);
-        checkEnded();
-
-        return ended;
+        return playback.ended.promise;
       },
     };
   }
 
   stopPlaylist(): void {
+    if (this.activePlayback) {
+      this.endPlayback(this.activePlayback);
+      return;
+    }
+
     this.isPlayingFlag = false;
-    this.currentPlaylistId = null;
     this.trackStates = [];
     this.currentTrackIndex = 0;
 
@@ -212,13 +255,14 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     }
   }
 
-  private scheduleNextSegment(currentGeneration: number): void {
-    if (!this.isPlayingFlag || !this.context || this.trackStates.length === 0) {
+  private scheduleNextSegment(playback: ActivePlaylistPlayback): void {
+    if (!this.isActivePlayback(playback) || !this.context || this.trackStates.length === 0) {
       return;
     }
 
-    const playlist = this.currentPlaylistId ? this.playlists.get(this.currentPlaylistId) : null;
+    const playlist = this.playlists.get(playback.playlistId);
     if (!playlist) {
+      this.endPlayback(playback);
       return;
     }
 
@@ -248,28 +292,29 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
         continue;
       }
 
-      this.playSegment(trackState, segment, safeFadeDuration);
+      this.playSegment(playback, trackState, segment, safeFadeDuration);
 
       const timeUntilNextSchedule = Math.max(0, (segmentDuration - safeFadeDuration) * 1000);
       this.scheduleTimeoutId = window.setTimeout(() => {
-        if (currentGeneration !== this.generation) {
+        if (!this.isActivePlayback(playback)) {
           return;
         }
         trackState.currentSegmentIndex++;
-        this.scheduleNextSegment(currentGeneration);
+        this.scheduleNextSegment(playback);
       }, timeUntilNextSchedule);
       return;
     }
 
-    this.stopPlaylist();
+    this.endPlayback(playback);
   }
 
   private playSegment(
+    playback: ActivePlaylistPlayback,
     trackState: TrackState,
     segment: { start: number; end: number },
     fadeDuration: number,
   ): void {
-    if (!this.context) {
+    if (!this.context || !this.isActivePlayback(playback)) {
       return;
     }
 
@@ -321,7 +366,11 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     }
   }
 
-  private async loadTrack(track: RoccoJukeboxTrack, context: AudioContext, signal: AbortSignal): Promise<AudioBuffer | null> {
+  private async loadTrack(
+    track: RoccoJukeboxTrack,
+    context: AudioContext,
+    signal: AbortSignal,
+  ): Promise<AudioBuffer | null> {
     try {
       const response = await fetch(track.uri, { signal });
       if (!response.ok) {
@@ -384,10 +433,55 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
     }
     try {
       source.stop();
-      source.disconnect();
     } catch {
       // May already be stopped
     }
+    try {
+      source.disconnect();
+    } catch {
+      // Disconnecting an already released source is harmless.
+    }
+  }
+
+  private isActivePlayback(playback: ActivePlaylistPlayback): boolean {
+    return this.activePlayback?.playbackId === playback.playbackId && !playback.finished;
+  }
+
+  private endPlayback(playback: ActivePlaylistPlayback): void {
+    if (!this.isActivePlayback(playback)) {
+      playback.finished = true;
+      playback.ended.resolve();
+      return;
+    }
+
+    playback.finished = true;
+    this.activePlayback = null;
+    this.isPlayingFlag = false;
+    this.trackStates = [];
+    this.currentTrackIndex = 0;
+
+    if (this.scheduleTimeoutId !== null) {
+      clearTimeout(this.scheduleTimeoutId);
+      this.scheduleTimeoutId = null;
+    }
+    this.clearCleanupTimeouts();
+
+    this.stopSource(this.currentSource);
+    this.currentSource = null;
+    if (this.currentGain) {
+      try {
+        this.currentGain.disconnect();
+      } catch {
+        // Disconnecting an already released gain is harmless.
+      }
+    }
+    this.currentGain = null;
+    this.playlistVolume = 1;
+    this.applyMasterGainVolume();
+
+    this.loadController?.abort('stop');
+    this.loadController = null;
+    playback.ended.resolve();
   }
 
   private clonePlaylist(playlist: RoccoJukeboxPlaylist): RoccoJukeboxPlaylist {

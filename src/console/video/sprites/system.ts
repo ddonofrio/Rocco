@@ -224,7 +224,7 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
   ): RoccoSpriteInstance {
     const created = this.store.createInstanceFromDefinition(definitionId, options);
     this.createSprite(created);
-    return clone(created);
+    return this.getSprite(created.id) ?? clone(created);
   }
 
   removeSprite(instanceId: string): void {

@@ -240,6 +240,8 @@ describe('versioned save repository', () => {
 
     const row = await store.get(['cart', 'p', 's']);
     expect(row?.schemaVersion).toBe(2);
+    expect(row?.cartridgeVersion).toBe('0.1.0');
+    expect(row?.revision).toBe(3);
   });
 
   it('throws SaveSchemaError when the stored schema is newer than supported', async () => {
@@ -350,18 +352,62 @@ describe('versioned save repository', () => {
     const envelope = await repoA.exportSave('p', 's');
     expect(envelope).not.toBeNull();
     expect(envelope?.schemaVersion).toBe(2);
+    expect(envelope?.cartridgeVersion).toBe('0.1.0');
+    expect(envelope?.revision).toBe(3);
     expect(envelope?.payload).toEqual({ level: 4, migrated: true });
 
     const storeB = new MemorySaveStore();
     const repoB = createSaveRepository({
       cartridgeId: 'cart',
-      cartridgeVersion: '0.1.0',
+      cartridgeVersion: '2.0.0',
       provider: makeProvider(2, { level: 0 }),
       store: storeB,
     });
 
-    await repoB.importSave(envelope!);
+    const imported = await repoB.importSave(envelope!);
+    expect(imported.revision).toBe(4);
+    expect(imported.cartridgeVersion).toBe('2.0.0');
     expect(await repoB.load('p', 's')).toEqual({ level: 4, migrated: true });
+  });
+
+  it('rejects invalid import metadata before publishing', async () => {
+    const store = new MemorySaveStore();
+    const repo = createSaveRepository({
+      cartridgeId: 'cart',
+      cartridgeVersion: '0.1.0',
+      provider: makeProvider(1, { level: 1 }),
+      store,
+    });
+
+    await expect(
+      repo.importSave({
+        cartridgeId: 'cart',
+        cartridgeVersion: '0.1.0',
+        schemaVersion: 1,
+        profileId: '',
+        slotId: 's',
+        revision: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        payload: { level: 1 },
+      }),
+    ).rejects.toBeInstanceOf(SaveSchemaError);
+
+    await expect(
+      repo.importSave({
+        cartridgeId: 'cart',
+        cartridgeVersion: '0.1.0',
+        schemaVersion: 1,
+        profileId: 'p',
+        slotId: 's',
+        revision: 0,
+        createdAt: 1,
+        updatedAt: 1,
+        payload: { level: 1 },
+      }),
+    ).rejects.toBeInstanceOf(SaveSchemaError);
+
+    expect(await store.get(['cart', 'p', 's'])).toBeUndefined();
   });
 
   it('surfaces quota errors as SaveQuotaExceededError', async () => {

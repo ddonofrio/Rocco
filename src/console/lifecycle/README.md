@@ -17,9 +17,11 @@ new → initializing → ready → stopping → stopped → disposing → dispos
 
 `GameRuntime` owns one `LifecycleStateMachine` (`lifecycle.ts`). `init()` and
 `dispose()` are idempotent, a failed `init()` rolls back partial resources and
-leaves the runtime in `failed`, and a `disposed` runtime is terminal (construct
-a new instance to run again). The render tick is skipped unless the state is
-`ready`, so no update runs after disposal begins.
+leaves the runtime in terminal `failed`, so both `failed` and `disposed`
+require constructing a new instance. Concurrent `init()` and `dispose()` calls
+share the same in-flight promise instead of racing a second lifecycle
+transition. The render tick is skipped unless the state is `ready`, so no
+update runs after disposal begins.
 
 ## ResourceScope
 
@@ -43,8 +45,11 @@ RuntimeScope
 ```
 
 `GameRuntime` builds the root `RuntimeScope` and the first child
-`CartridgeScope` and registers every subsystem disposer in reverse of the
-required stop order, so LIFO disposal matches the LIF-001 stop sequence:
+`CartridgeScope`. The root scope runs `cartridgeManager.dispose()` before it
+lets the cartridge child scope tear down cartridge-owned resources, so cartridge
+`stop()` and `dispose()` still run while cartridge resources remain available.
+After that, the remaining root-scope disposers run in reverse of the required
+stop order, so LIFO disposal matches the LIF-001 stop sequence:
 
 ```text
 1. stop ticker + remove resize listener

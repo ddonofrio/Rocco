@@ -18,6 +18,7 @@ export function createDroppedInventoryInteractionRules(): readonly InteractionRu
   return [
     {
       id: 'dropped-scene-click',
+      ownerId: 'dropped.scene-click',
       priority: DROPPED_SCENE_CLICK_PRIORITY,
       kind: 'scene-click',
       stage: 'before-exit-intent',
@@ -33,13 +34,14 @@ export function createDroppedInventoryInteractionRules(): readonly InteractionRu
         const engine = context.engine;
         const activeLevel = context.activeLevel;
         if (!engine || !activeLevel || !isSceneClickAction(context.action)) {
-          return undefined;
+          return normalizeDisposition(undefined);
         }
         return normalizeDisposition(context.droppedInventory.handleSceneClick(engine, activeLevel, context.action));
       },
     },
     {
       id: 'dropped-coral-relic-action-menu',
+      ownerId: 'dropped.coral-relic-action-menu',
       priority: DROPPED_CORAL_RELIC_ACTION_MENU_PRIORITY,
       kind: 'action-menu',
       matches: (context) => {
@@ -54,7 +56,7 @@ export function createDroppedInventoryInteractionRules(): readonly InteractionRu
         const engine = context.engine;
         const activeLevel = context.activeLevel;
         if (!engine || !activeLevel || !isActionMenuAction(context.action)) {
-          return undefined;
+          return normalizeDisposition(undefined);
         }
 
         return normalizeDisposition(

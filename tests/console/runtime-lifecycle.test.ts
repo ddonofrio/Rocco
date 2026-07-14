@@ -31,6 +31,56 @@ describe('GameRuntime lifecycle', () => {
     expect(runtime.lifecycleState).toBe('disposed');
   });
 
+  it('returns the same promise for concurrent init calls', async () => {
+    const runtime = createRuntime();
+    let rejectInit!: (error: Error) => void;
+    vi.spyOn(Application.prototype, 'init').mockImplementation(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectInit = reject;
+        }),
+    );
+
+    const firstInit = runtime.init();
+    const secondInit = runtime.init();
+
+    expect(firstInit).toBe(secondInit);
+
+    rejectInit(new Error('no-webgl'));
+
+    await expect(firstInit).rejects.toThrow('no-webgl');
+    expect(runtime.lifecycleState).toBe('failed');
+  });
+
+  it('returns the same promise for concurrent dispose calls and waits for cleanup', async () => {
+    const runtime = createRuntime();
+    let resolveCleanup!: () => void;
+    runtime.scope.defer(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveCleanup = resolve;
+        }),
+    );
+
+    const firstDispose = runtime.dispose();
+    const secondDispose = runtime.dispose();
+
+    expect(firstDispose).toBe(secondDispose);
+
+    let settled = false;
+    void secondDispose.then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    resolveCleanup();
+
+    await expect(firstDispose).resolves.toBeUndefined();
+    expect(settled).toBe(true);
+    expect(runtime.lifecycleState).toBe('disposed');
+  });
+
   it('does not run the update loop after disposal begins', async () => {
     const runtime = createRuntime();
     const videoUpdate = vi.spyOn(runtime.video, 'update');
@@ -69,12 +119,12 @@ describe('GameRuntime lifecycle', () => {
     expect(initSpy).toHaveBeenCalled();
   });
 
-  it('allows a fresh init after a failed one because the scope is recreated', async () => {
+  it('rejects init after a previous failure', async () => {
     const runtime = createRuntime();
     vi.spyOn(Application.prototype, 'init').mockRejectedValueOnce(new Error('no-webgl'));
 
     await expect(runtime.init()).rejects.toThrow('no-webgl');
     expect(runtime.lifecycleState).toBe('failed');
-    expect(() => runtime.scope.isDisposed).not.toThrow();
+    await expect(runtime.init()).rejects.toThrow(/failed/i);
   });
 });

@@ -1,4 +1,10 @@
-import type { RpceLevelConnection, RpceLevelConnectionEndpoint, RpceMapDefinition } from './rpce-map';
+import type {
+  RpceLevelConnection,
+  RpceLevelConnectionEndpoint,
+  RpceLevelDefinition,
+  RpceMapDefinition,
+  RpceScriptedConnection,
+} from './rpce-map';
 import type { RpceLevel } from './rpce-level';
 
 /**
@@ -13,6 +19,7 @@ export interface RpceGameGraph<TLevel extends RpceLevel = RpceLevel> {
   readonly initialMapId?: string;
   readonly maps: readonly RpceMapDefinition<TLevel>[];
   readonly connections?: readonly RpceLevelConnection[];
+  readonly scriptedConnections?: readonly RpceScriptedConnection[];
 }
 
 export type RpceGameCompilationCode =
@@ -24,6 +31,7 @@ export type RpceGameCompilationCode =
   | 'missing-initial-level'
   | 'missing-map-initial-level'
   | 'duplicate-connection'
+  | 'ambiguous-connection-endpoint'
   | 'self-loop-connection';
 
 export class RpceGameCompilationError extends Error {
@@ -54,13 +62,14 @@ export interface RpceCompiledLevel<TLevel extends RpceLevel = RpceLevel> {
   readonly mapId: string;
   readonly title: string;
   readonly developerOnly: boolean;
+  readonly connectorIds: readonly string[];
   readonly createLevel: (() => TLevel) | null;
 }
 
 export interface RpceCompiledMap {
   readonly id: string;
   readonly title: string;
-  readonly initialLevelId: string | null;
+  readonly initialLevelId: string;
   readonly developerOnly: boolean;
   readonly levelIds: readonly string[];
 }
@@ -68,8 +77,8 @@ export interface RpceCompiledMap {
 export interface RpceCompiledGame<TLevel extends RpceLevel = RpceLevel> {
   readonly id: string;
   readonly title: string;
-  readonly initialMapId: string | null;
-  readonly initialLevelId: string | null;
+  readonly initialMapId: string;
+  readonly initialLevelId: string;
   readonly mapsById: ReadonlyMap<string, RpceCompiledMap>;
   readonly levelsById: ReadonlyMap<string, RpceCompiledLevel<TLevel>>;
   readonly transitionsByEndpoint: ReadonlyMap<RpceEndpointKey, RpceCompiledEndpoint>;
@@ -78,6 +87,11 @@ export interface RpceCompiledGame<TLevel extends RpceLevel = RpceLevel> {
     levelId: string,
     connectorId: string,
   ): RpceLevelConnectionEndpoint | null;
+}
+
+interface RpceCollectedConnections {
+  readonly connections: readonly RpceLevelConnection[];
+  readonly scriptedConnections: readonly RpceScriptedConnection[];
 }
 
 export class RpceGameCompiler {
@@ -92,30 +106,30 @@ export class RpceGameCompiler {
       this.registerMap(map, mapsById, levelsById);
     }
 
-    const allConnections = this.collectConnections(definition);
-    this.registerConnections(allConnections, mapsById, levelsById, transitionsByEndpoint);
+    const { connections, scriptedConnections } = this.collectConnections(definition);
+    this.registerConnections(connections, levelsById, transitionsByEndpoint);
+    this.registerScriptedConnections(scriptedConnections, levelsById, transitionsByEndpoint);
 
     const initialMapId = this.resolveInitialMapId(definition, mapsById);
-    const initialLevelId = initialMapId
-      ? this.resolveInitialLevelId(initialMapId, mapsById)
-      : null;
+    const initialLevelId = this.resolveInitialLevelId(initialMapId, mapsById);
 
-    const reachableLevelIds = this.computeReachableLevelIds(
-      initialLevelId,
-      transitionsByEndpoint,
-    );
+    const reachableLevelIds = this.computeReachableLevelIds(initialLevelId, transitionsByEndpoint);
+    const readonlyMapsById = new ReadonlyMapView(mapsById);
+    const readonlyLevelsById = new ReadonlyMapView(levelsById);
+    const readonlyTransitionsByEndpoint = new ReadonlyMapView(transitionsByEndpoint);
+    const readonlyReachableLevelIds = new ReadonlySetView(reachableLevelIds);
 
     const game: RpceCompiledGame<TLevel> = {
       id: definition.id,
       title: definition.title,
       initialMapId,
       initialLevelId,
-      mapsById,
-      levelsById,
-      transitionsByEndpoint,
-      reachableLevelIds,
+      mapsById: readonlyMapsById,
+      levelsById: readonlyLevelsById,
+      transitionsByEndpoint: readonlyTransitionsByEndpoint,
+      reachableLevelIds: readonlyReachableLevelIds,
       resolveConnectedEndpoint: (levelId, connectorId) =>
-        transitionsByEndpoint.get(rpceEndpointKey(levelId, connectorId))?.target ?? null,
+        readonlyTransitionsByEndpoint.get(rpceEndpointKey(levelId, connectorId))?.target ?? null,
     };
 
     return game;
@@ -127,10 +141,7 @@ export class RpceGameCompiler {
     levelsById: Map<string, RpceCompiledLevel<TLevel>>,
   ): void {
     if (mapsById.has(map.id)) {
-      throw new RpceGameCompilationError(
-        'duplicate-map-id',
-        `Duplicate map id '${map.id}'.`,
-      );
+      throw new RpceGameCompilationError('duplicate-map-id', `Duplicate map id '${map.id}'.`);
     }
 
     const levelIds: string[] = [];
@@ -143,17 +154,28 @@ export class RpceGameCompiler {
         );
       }
 
+      const connectorIds = this.collectConnectorIds(level);
+      this.assertUniqueConnectorIds(level.id, connectorIds);
+
       levelIds.push(level.id);
       levelsById.set(level.id, {
         id: level.id,
         mapId: map.id,
         title: level.title ?? level.id,
         developerOnly: Boolean(map.developerOnly),
+        connectorIds: Object.freeze([...connectorIds]),
         createLevel: typeof level.createLevel === 'function' ? level.createLevel : null,
       });
     }
 
-    if (map.initialLevelId !== undefined && !levelIds.includes(map.initialLevelId)) {
+    if (!map.initialLevelId) {
+      throw new RpceGameCompilationError(
+        'missing-initial-level',
+        `Map '${map.id}' declares no initialLevelId.`,
+      );
+    }
+
+    if (!levelIds.includes(map.initialLevelId)) {
       throw new RpceGameCompilationError(
         'missing-map-initial-level',
         `Map '${map.id}' initialLevelId '${map.initialLevelId}' is not one of its levels.`,
@@ -163,32 +185,66 @@ export class RpceGameCompiler {
     mapsById.set(map.id, {
       id: map.id,
       title: map.title,
-      initialLevelId: map.initialLevelId ?? null,
+      initialLevelId: map.initialLevelId,
       developerOnly: Boolean(map.developerOnly),
-      levelIds,
+      levelIds: Object.freeze([...levelIds]),
     });
+  }
+
+  private collectConnectorIds<TLevel extends RpceLevel>(
+    level: RpceLevelDefinition<TLevel>,
+  ): readonly string[] {
+    if (level.connectorIds) {
+      return [...level.connectorIds];
+    }
+
+    if (typeof level.createLevel !== 'function') {
+      return [];
+    }
+
+    try {
+      return level.createLevel().connectors.map((connector) => connector.id);
+    } catch {
+      return [];
+    }
+  }
+
+  private assertUniqueConnectorIds(levelId: string, connectorIds: readonly string[]): void {
+    const seen = new Set<string>();
+    for (const connectorId of connectorIds) {
+      if (seen.has(connectorId)) {
+        throw new RpceGameCompilationError(
+          'duplicate-connector-id',
+          `Level '${levelId}' declares duplicate connector id '${connectorId}'.`,
+        );
+      }
+
+      seen.add(connectorId);
+    }
   }
 
   private collectConnections<TLevel extends RpceLevel>(
     definition: RpceGameGraph<TLevel>,
-  ): readonly RpceLevelConnection[] {
+  ): RpceCollectedConnections {
     const connections: RpceLevelConnection[] = [];
+    const scriptedConnections: RpceScriptedConnection[] = [];
+
     for (const map of definition.maps) {
-      for (const connection of map.connections) {
-        connections.push(connection);
-      }
+      connections.push(...map.connections);
+      scriptedConnections.push(...(map.scriptedConnections ?? []));
     }
 
-    for (const connection of definition.connections ?? []) {
-      connections.push(connection);
-    }
+    connections.push(...(definition.connections ?? []));
+    scriptedConnections.push(...(definition.scriptedConnections ?? []));
 
-    return connections;
+    return {
+      connections,
+      scriptedConnections,
+    };
   }
 
   private registerConnections<TLevel extends RpceLevel>(
     connections: readonly RpceLevelConnection[],
-    mapsById: Map<string, RpceCompiledMap>,
     levelsById: Map<string, RpceCompiledLevel<TLevel>>,
     transitionsByEndpoint: Map<RpceEndpointKey, RpceCompiledEndpoint>,
   ): void {
@@ -218,8 +274,31 @@ export class RpceGameCompiler {
         );
       }
 
-      this.indexEndpoint(connection.a, connection.b, mapsById, transitionsByEndpoint);
-      this.indexEndpoint(connection.b, connection.a, mapsById, transitionsByEndpoint);
+      this.indexEndpoint(connection.a, connection.b, levelsById, transitionsByEndpoint);
+      this.indexEndpoint(connection.b, connection.a, levelsById, transitionsByEndpoint);
+    }
+  }
+
+  private registerScriptedConnections<TLevel extends RpceLevel>(
+    scriptedConnections: readonly RpceScriptedConnection[],
+    levelsById: Map<string, RpceCompiledLevel<TLevel>>,
+    transitionsByEndpoint: Map<RpceEndpointKey, RpceCompiledEndpoint>,
+  ): void {
+    for (const connection of scriptedConnections) {
+      this.assertEndpointExists(connection.source, levelsById);
+      this.assertEndpointExists(connection.target, levelsById);
+
+      if (
+        connection.source.levelId === connection.target.levelId &&
+        connection.source.connectorId === connection.target.connectorId
+      ) {
+        throw new RpceGameCompilationError(
+          'self-loop-connection',
+          `Scripted connection '${connection.id}' loops to itself at '${connection.source.levelId}/${connection.source.connectorId}'.`,
+        );
+      }
+
+      this.indexEndpoint(connection.source, connection.target, levelsById, transitionsByEndpoint);
     }
   }
 
@@ -227,22 +306,52 @@ export class RpceGameCompiler {
     endpoint: RpceLevelConnectionEndpoint,
     levelsById: Map<string, RpceCompiledLevel<TLevel>>,
   ): void {
-    if (!levelsById.has(endpoint.levelId)) {
+    const level = levelsById.get(endpoint.levelId);
+    if (!level) {
       throw new RpceGameCompilationError(
         'missing-connection-endpoint',
         `Connection references unknown level '${endpoint.levelId}'.`,
       );
     }
+
+    if (level.connectorIds.length === 0) {
+      return;
+    }
+
+    if (!level.connectorIds.includes(endpoint.connectorId)) {
+      throw new RpceGameCompilationError(
+        'missing-connection-endpoint',
+        `Connection references unknown connector '${endpoint.connectorId}' on level '${endpoint.levelId}'.`,
+      );
+    }
   }
 
-  private indexEndpoint(
+  private indexEndpoint<TLevel extends RpceLevel>(
     source: RpceLevelConnectionEndpoint,
     target: RpceLevelConnectionEndpoint,
-    mapsById: Map<string, RpceCompiledMap>,
+    levelsById: Map<string, RpceCompiledLevel<TLevel>>,
     transitionsByEndpoint: Map<RpceEndpointKey, RpceCompiledEndpoint>,
   ): void {
     const key = rpceEndpointKey(source.levelId, source.connectorId);
-    const mapId = mapsById.get(source.levelId)?.id ?? source.levelId;
+    const existing = transitionsByEndpoint.get(key);
+    if (existing) {
+      if (
+        existing.target.levelId === target.levelId &&
+        existing.target.connectorId === target.connectorId
+      ) {
+        throw new RpceGameCompilationError(
+          'duplicate-connection',
+          `Duplicate connection from '${source.levelId}/${source.connectorId}' to '${target.levelId}/${target.connectorId}'.`,
+        );
+      }
+
+      throw new RpceGameCompilationError(
+        'ambiguous-connection-endpoint',
+        `Endpoint '${source.levelId}/${source.connectorId}' points to both '${existing.target.levelId}/${existing.target.connectorId}' and '${target.levelId}/${target.connectorId}'.`,
+      );
+    }
+
+    const mapId = levelsById.get(source.levelId)?.mapId ?? source.levelId;
     transitionsByEndpoint.set(key, {
       mapId,
       levelId: source.levelId,
@@ -255,10 +364,7 @@ export class RpceGameCompiler {
     a: RpceLevelConnectionEndpoint,
     b: RpceLevelConnectionEndpoint,
   ): string {
-    const keys = [
-      rpceEndpointKey(a.levelId, a.connectorId),
-      rpceEndpointKey(b.levelId, b.connectorId),
-    ];
+    const keys = [rpceEndpointKey(a.levelId, a.connectorId), rpceEndpointKey(b.levelId, b.connectorId)];
     keys.sort();
     return keys.join('|');
   }
@@ -266,7 +372,7 @@ export class RpceGameCompiler {
   private resolveInitialMapId(
     definition: RpceGameGraph,
     mapsById: Map<string, RpceCompiledMap>,
-  ): string | null {
+  ): string {
     const initialMapId = definition.initialMapId;
     if (!initialMapId) {
       throw new RpceGameCompilationError(
@@ -288,9 +394,9 @@ export class RpceGameCompiler {
   private resolveInitialLevelId(
     initialMapId: string,
     mapsById: Map<string, RpceCompiledMap>,
-  ): string | null {
+  ): string {
     const initialMap = mapsById.get(initialMapId);
-    if (!initialMap || !initialMap.initialLevelId) {
+    if (!initialMap?.initialLevelId) {
       throw new RpceGameCompilationError(
         'missing-initial-level',
         `Initial map '${initialMapId}' declares no initialLevelId.`,
@@ -301,14 +407,10 @@ export class RpceGameCompiler {
   }
 
   private computeReachableLevelIds(
-    initialLevelId: string | null,
+    initialLevelId: string,
     transitionsByEndpoint: ReadonlyMap<RpceEndpointKey, RpceCompiledEndpoint>,
-  ): ReadonlySet<string> {
+  ): Set<string> {
     const reachable = new Set<string>();
-    if (!initialLevelId) {
-      return reachable;
-    }
-
     const queue: string[] = [initialLevelId];
     reachable.add(initialLevelId);
 
@@ -331,6 +433,92 @@ export class RpceGameCompiler {
   }
 }
 
+class ReadonlyMapView<K, V> implements ReadonlyMap<K, V> {
+  private readonly source: ReadonlyMap<K, V>;
+
+  constructor(source: ReadonlyMap<K, V>) {
+    this.source = source;
+  }
+
+  get size(): number {
+    return this.source.size;
+  }
+
+  get(key: K): V | undefined {
+    return this.source.get(key);
+  }
+
+  has(key: K): boolean {
+    return this.source.has(key);
+  }
+
+  entries(): ReturnType<Map<K, V>['entries']> {
+    return this.source.entries();
+  }
+
+  keys(): ReturnType<Map<K, V>['keys']> {
+    return this.source.keys();
+  }
+
+  values(): ReturnType<Map<K, V>['values']> {
+    return this.source.values();
+  }
+
+  forEach(
+    callbackfn: (value: V, key: K, map: ReadonlyMap<K, V>) => void,
+    thisArg?: unknown,
+  ): void {
+    this.source.forEach((value, key) => {
+      callbackfn.call(thisArg, value, key, this);
+    });
+  }
+
+  [Symbol.iterator](): ReturnType<Map<K, V>['entries']> {
+    return this.source[Symbol.iterator]();
+  }
+}
+
+class ReadonlySetView<T> implements ReadonlySet<T> {
+  private readonly source: ReadonlySet<T>;
+
+  constructor(source: ReadonlySet<T>) {
+    this.source = source;
+  }
+
+  get size(): number {
+    return this.source.size;
+  }
+
+  has(value: T): boolean {
+    return this.source.has(value);
+  }
+
+  entries(): ReturnType<Set<T>['entries']> {
+    return this.source.entries();
+  }
+
+  keys(): ReturnType<Set<T>['keys']> {
+    return this.source.keys();
+  }
+
+  values(): ReturnType<Set<T>['values']> {
+    return this.source.values();
+  }
+
+  forEach(
+    callbackfn: (value: T, value2: T, set: ReadonlySet<T>) => void,
+    thisArg?: unknown,
+  ): void {
+    this.source.forEach((value) => {
+      callbackfn.call(thisArg, value, value, this);
+    });
+  }
+
+  [Symbol.iterator](): ReturnType<Set<T>['values']> {
+    return this.source[Symbol.iterator]();
+  }
+}
+
 export function createConnectedEndpointResolver(
   connections: readonly RpceLevelConnection[],
 ): (levelId: string, connectorId: string) => RpceLevelConnectionEndpoint | null {
@@ -348,4 +536,3 @@ export function createConnectedEndpointResolver(
     return null;
   };
 }
-

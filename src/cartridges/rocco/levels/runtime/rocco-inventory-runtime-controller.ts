@@ -299,8 +299,8 @@ export class RoccoInventoryRuntimeController {
   handleCarriedItemSceneClick(
     engine: RoccoEngine,
     activation: RoccoSceneClickAction,
+    carriedItem = engine.video.gridMenus.getCarriedItem(),
   ): RoccoCartridgeActionResult | void {
-    const carriedItem = engine.video.gridMenus.getCarriedItem();
     if (!this.shouldHandleSceneCarriedItem(carriedItem)) {
       return;
     }

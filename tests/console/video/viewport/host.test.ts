@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { RoccoViewportHost } from '../../../../src/console/video/viewport/host';
 
@@ -18,6 +18,7 @@ function setViewportSize(width: number, height: number): void {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   document.body.innerHTML = '';
 });
 
@@ -251,6 +252,53 @@ describe('RoccoViewportHost', () => {
 
     expect(actionFired).toBe(true);
 
+    host.unmount();
+  });
+
+  it('re-attaches pointer listeners after mount -> unmount -> mount', () => {
+    setViewportSize(375, 812);
+
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+
+    const host = new RoccoViewportHost({
+      root,
+      designWidth: 960,
+      designHeight: 540,
+    });
+    const hostElement = host.getRootElement();
+    const addEventListenerSpy = vi.spyOn(hostElement, 'addEventListener');
+
+    host.mount();
+    host.unmount();
+    host.mount();
+
+    const pointerDownCalls = addEventListenerSpy.mock.calls.filter(
+      ([eventName]) => eventName === 'pointerdown',
+    );
+    expect(pointerDownCalls).toHaveLength(4);
+
+    hostElement.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        clientX: 100,
+        clientY: 100,
+        button: 0,
+        pointerId: 7,
+      }),
+    );
+    hostElement.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 180,
+        clientY: 120,
+        pointerId: 7,
+      }),
+    );
+
+    const metrics = host.getMetrics();
+    expect(metrics.scaleMode).toBe('cover');
+    expect(metrics.offsetX).not.toBeCloseTo((375 - metrics.renderWidth) / 2, 5);
+
+    hostElement.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7 }));
     host.unmount();
   });
 });

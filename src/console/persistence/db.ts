@@ -3,6 +3,14 @@ import Dexie, { type Table } from 'dexie';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../video/planes';
 import type { SaveEnvelopeRow, SceneStoreKey, SaveStoreKey } from './types';
 
+interface RoccoLegacyPlaneSceneRecordRow {
+  id: string;
+  cartridgeId?: string;
+  sceneId?: string;
+  scene: RoccoPlaneScene;
+  updatedAt: number;
+}
+
 export interface RoccoPlaneSceneRecordRow {
   id: string;
   cartridgeId: string;
@@ -12,7 +20,7 @@ export interface RoccoPlaneSceneRecordRow {
 }
 
 export class RoccoDatabase extends Dexie {
-  scenes!: Table<RoccoPlaneSceneRecordRow, string>;
+  scenes!: Table<RoccoLegacyPlaneSceneRecordRow, string>;
   scenes_v4!: Table<RoccoPlaneSceneRecordRow, SceneStoreKey>;
   saves!: Table<SaveEnvelopeRow, SaveStoreKey>;
 
@@ -74,23 +82,35 @@ async function migrateLegacyScenes(): Promise<void> {
       return;
     }
 
-    for (const row of legacy) {
-      const owner = 'rocco-default';
-      const key: SceneStoreKey = [owner, row.id];
-      const exists = await db.scenes_v4.get(key);
-      if (!exists) {
-        await db.scenes_v4.put({
-          id: `${owner}:${row.id}`,
-          cartridgeId: owner,
-          sceneId: row.id,
-          scene: row.scene,
-          updatedAt: row.updatedAt,
-        });
+    await db.transaction('rw', db.scenes, db.scenes_v4, async () => {
+      for (const row of legacy) {
+        const owner = resolveLegacySceneOwner(row);
+        const sceneId = row.sceneId || row.id;
+        const key: SceneStoreKey = [owner, sceneId];
+        const exists = await db.scenes_v4.get(key);
+        if (!exists) {
+          await db.scenes_v4.put({
+            id: `${owner}:${sceneId}`,
+            cartridgeId: owner,
+            sceneId,
+            scene: row.scene,
+            updatedAt: row.updatedAt,
+          });
+        }
       }
-    }
+    });
   })();
 
   return migrationPromise;
+}
+
+function resolveLegacySceneOwner(row: RoccoLegacyPlaneSceneRecordRow): string {
+  const owner = row.cartridgeId?.trim();
+  if (owner) {
+    return owner;
+  }
+
+  return 'rocco-default';
 }
 
 export async function loadPlaneSceneRecord(

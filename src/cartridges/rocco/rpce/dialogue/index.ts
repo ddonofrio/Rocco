@@ -8,6 +8,7 @@ export {
 export {
   RoccoDialogueSession,
   type RoccoDialogueConversationStart,
+  type RoccoDialogueLinearSequenceStart,
   type RoccoDialogueSessionHooks,
   type RoccoDialogueSessionOptions,
 } from './runtime';

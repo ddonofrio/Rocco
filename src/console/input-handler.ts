@@ -325,12 +325,14 @@ export class RoccoInputHandler {
     const cartridgeActionResult = this.actionDispatcher.dispatch(sceneClickAction, {
       owner: 'scene-click',
     });
+    const sceneClickConsumed = cartridgeActionResult.consumed === true;
     const suppressDefaultPlayerMove = this.defaultPlayerMovePolicy.shouldSuppressDefaultPlayerMove({
       target: actionTarget,
       cartridgeDisposition: cartridgeActionResult,
     });
 
     if (
+      !sceneClickConsumed &&
       visibleTarget &&
       this.videoSystem.actionMenus.openMenuForTarget(
         visibleTarget.instanceId,

@@ -444,7 +444,6 @@ export class RoccoDeveloperRuntimeController {
     }
 
     this.developerJumpPending = true;
-    engine.setInputEnabled(false);
     this.options.refreshStatus();
     engine.video.render(0);
   }
@@ -643,7 +642,6 @@ export class RoccoDeveloperRuntimeController {
 
     const player = engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
     this.developerJumpPending = false;
-    engine.setInputEnabled(true);
     engine.video.actionMenus.closeMenu();
     engine.video.gridMenus.closeMenu();
     engine.video.messages.clearMessages();
@@ -693,7 +691,6 @@ export class RoccoDeveloperRuntimeController {
       size: DEVELOPER_SPRITE_CYCLE_CURSOR_SIZE,
       opacity: 0.96,
     });
-    engine.setInputEnabled(false);
     this.options.refreshStatus();
     engine.video.render(0);
   }
@@ -708,7 +705,6 @@ export class RoccoDeveloperRuntimeController {
 
     if (!activation.targetInstanceId) {
       this.deactivateSpriteCycleMode(engine);
-      engine.setInputEnabled(true);
       this.options.refreshStatus();
       engine.video.render(0);
       return true;
@@ -717,7 +713,6 @@ export class RoccoDeveloperRuntimeController {
     const sprite = engine.video.sprites.getSprite(activation.targetInstanceId);
     if (!sprite) {
       this.deactivateSpriteCycleMode(engine);
-      engine.setInputEnabled(true);
       this.options.refreshStatus();
       engine.video.render(0);
       return true;

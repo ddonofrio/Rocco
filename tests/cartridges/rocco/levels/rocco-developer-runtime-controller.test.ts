@@ -363,7 +363,7 @@ describe('RoccoDeveloperRuntimeController', () => {
 
     expect(switchToLevel).toHaveBeenCalledWith(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID);
     expect(controller.isJumpPending).toBe(true);
-    expect(state.inputEnabledChanges.at(-1)).toBe(false);
+    expect(state.inputEnabledChanges).toEqual([]);
   });
 
   it('restores the original sprite animation state when cycle-sprite mode is cancelled', () => {

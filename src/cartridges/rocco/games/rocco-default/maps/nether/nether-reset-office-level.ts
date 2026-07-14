@@ -85,7 +85,7 @@ const NETHER_RESET_OFFICE_SCENE_DEFINITION: RoccoNetherSceneDefinition = {
 
 export class RoccoNetherResetOfficeLevel implements RoccoLevel {
   private readonly localization: RoccoLocalization;
-  private spriteController: RoccoDefaultSpriteController | null = null;
+  private spriteController: RoccoDefaultSpriteController | undefined = undefined;
   readonly id = ROCCO_NETHER_RESET_OFFICE_LEVEL_ID;
   readonly title: string;
   readonly connectors = NETHER_RESET_OFFICE_CONNECTORS;
@@ -100,7 +100,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
-    this.spriteController = null;
+    this.spriteController = undefined;
 
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
     const initialPosition = entryConnector
@@ -144,7 +144,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     engine.video.messages.clearMessages();
     uninstallDefaultSprite(engine);
     engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
-    this.spriteController = null;
+    this.spriteController = undefined;
     engine.video.render(0);
   }
 

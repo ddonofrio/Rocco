@@ -42,8 +42,8 @@ export interface RoccoEngine {
   serializePlaneScene(sceneId: string): RoccoPlaneScene;
 
   // Player state
-  setPlayerSprite(instanceId: string | null): void;
-  getPlayerSprite(): string | null;
+  setPlayerSprite(instanceId: string | undefined): void;
+  getPlayerSprite(): string | undefined;
 
   // Input control
   /**

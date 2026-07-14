@@ -195,22 +195,23 @@ function clampUnit(value: number): number {
 }
 
 function randomBetween(min: number, max: number): number {
-  return min + Math.random() * Math.max(0, max - min);
+  const randomUnit = crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
+  return min + randomUnit * Math.max(0, max - min);
 }
 
 export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
-  readonly id = ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID;
-  readonly title: string;
-  readonly connectors = NETHER_END_OF_HALLWAY_CONNECTORS;
-
   private readonly localization: RoccoLocalization;
-  private engine: RoccoEngine | null = null;
-  private spriteController: RoccoDefaultSpriteController | null = null;
+  private engine: RoccoEngine | undefined = undefined;
+  private spriteController: RoccoDefaultSpriteController | undefined = undefined;
   private lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
   private lightsNoiseOpacity = NETHER_LIGHTS_MIN_OPACITY;
   private lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;
   private lightsNoiseTargetRemainingMs = 0;
   private sceneReady = false;
+
+  readonly id = ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID;
+  readonly title: string;
+  readonly connectors = NETHER_END_OF_HALLWAY_CONNECTORS;
 
   constructor(localization: RoccoLocalization) {
     this.localization = localization;
@@ -223,7 +224,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.engine = engine;
-    this.spriteController = null;
+    this.spriteController = undefined;
     this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
     this.lightsNoiseOpacity = randomBetween(NETHER_LIGHTS_MIN_OPACITY, NETHER_LIGHTS_NOISE_MAX_OPACITY);
     this.lightsNoiseTargetOpacity = this.lightsNoiseOpacity;
@@ -251,9 +252,11 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       volume: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_VOLUME,
       loop: true,
     });
-    await preloader?.preloadSound(engine, NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID).catch(() => {
+    try {
+      await preloader?.preloadSound(engine, NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
+    } catch {
       engine.log('Audio', 'Nether ambient steam machine sound could not be preloaded.');
-    });
+    }
     engine.loadPlaneScene(scene);
     this.lightsOverlayOpacity = this.lightsNoiseOpacity;
     engine.video.planes.updatePlane(
@@ -316,8 +319,8 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     engine.audio.unregisterSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
     uninstallDefaultSprite(engine);
     engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
-    this.engine = null;
-    this.spriteController = null;
+    this.engine = undefined;
+    this.spriteController = undefined;
     this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
     this.lightsNoiseOpacity = NETHER_LIGHTS_MIN_OPACITY;
     this.lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;

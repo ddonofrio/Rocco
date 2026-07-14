@@ -38,7 +38,7 @@ interface InputHandlerOptions {
   jukeboxSystem: RoccoJukeboxSystem;
   viewportHost?: RoccoViewportHost;
   getActiveCartridge: () => RoccoCartridge | null;
-  getActivePlayerSpriteId: () => string | null;
+  getActivePlayerSpriteId: () => string | undefined;
   actionDispatcher?: ActionDispatcher;
   log: (channel: string, message: string) => void;
   /**
@@ -54,7 +54,7 @@ export class RoccoInputHandler {
   private readonly audioSystem: RoccoRuntimeAudioSystem;
   private readonly jukeboxSystem: RoccoJukeboxSystem;
   private readonly viewportHost?: RoccoViewportHost;
-  private readonly getActivePlayerSpriteId: () => string | null;
+  private readonly getActivePlayerSpriteId: () => string | undefined;
   private readonly actionDispatcher: ActionDispatcher;
   private readonly logFn: (channel: string, message: string) => void;
   private readonly defaultPlayerMovePolicy: RoccoRuntimeDefaultPlayerMovePolicyCoordinator;

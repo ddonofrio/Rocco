@@ -318,7 +318,7 @@ export async function installDefaultSprite(
 }
 
 export function uninstallDefaultSprite(engine: RoccoEngine): void {
-  engine.setPlayerSprite(null);
+  engine.setPlayerSprite(undefined);
   engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
   engine.video.render(0);
 }

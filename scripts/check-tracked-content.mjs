@@ -7,8 +7,11 @@ import { TextDecoder } from 'node:util';
 
 const scriptFilePath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptFilePath), '..');
-const localWorkspaceDir = '.local';
-const localWorkspaceGlob = localWorkspaceDir + '/**';
+const localWorkspaceDirectory = '.local';
+const localWorkspaceGlob = localWorkspaceDirectory + '/**';
+const gitExecutable = process.platform === 'win32'
+  ? String.raw`C:\Program Files\Git\bin\git.exe`
+  : '/usr/bin/git';
 const localPathPattern = /(^|[^A-Za-z0-9_-])(?:\.\/)?\.local[\\/]/;
 const utf8FatalDecoder = new TextDecoder('utf-8', { fatal: true });
 const suspiciousMojibakeLeadPattern = /[\u{C2}\u{C3}\u{E2}\u{80}-\u{9F}\u{FFFD}]/u;
@@ -22,7 +25,7 @@ const allowlist = [
     ruleId: 'local-only-path',
     matches: (line) => {
       const trimmedLine = line.trim();
-      return trimmedLine === localWorkspaceDir || trimmedLine === `${localWorkspaceDir}/`;
+      return trimmedLine === localWorkspaceDirectory || trimmedLine === `${localWorkspaceDirectory}/`;
     },
   },
   {
@@ -106,7 +109,7 @@ function trackedFileExistsInWorktree(filePath) {
 }
 
 function readTrackedTextFiles() {
-  const gitOutput = execFileSync('git', ['-C', repoRoot, 'ls-files', '-z']);
+  const gitOutput = execFileSync(gitExecutable, ['-C', repoRoot, 'ls-files', '-z']);
   const trackedFiles = gitOutput
     .toString('utf8')
     .split('\0')
@@ -117,7 +120,7 @@ function readTrackedTextFiles() {
     return [];
   }
 
-  const attributeOutput = execFileSync('git', ['-C', repoRoot, 'check-attr', '-z', '--stdin', 'text'], {
+  const attributeOutput = execFileSync(gitExecutable, ['-C', repoRoot, 'check-attr', '-z', '--stdin', 'text'], {
     input: `${trackedFiles.join('\0')}\0`,
   });
   const attributeTokens = attributeOutput.toString('utf8').split('\0');
@@ -126,10 +129,10 @@ function readTrackedTextFiles() {
   for (let index = 0; index + 2 < attributeTokens.length; index += 3) {
     const filePath = attributeTokens[index];
     const attributeName = attributeTokens[index + 1];
-    const attributeValue = attributeTokens[index + 2];
     if (attributeName !== 'text') {
       continue;
     }
+    const attributeValue = attributeTokens[index + 2];
     if (attributeValue !== 'unset') {
       textFiles.push(filePath);
     }
@@ -279,7 +282,7 @@ function tryRepairMojibake(text) {
       score: countSuspiciousCodePoints(candidate.repairedText),
     }))
     .filter((candidate) => candidate.score < originalScore)
-    .sort((left, right) => left.score - right.score || left.encoding.localeCompare(right.encoding));
+    .toSorted((left, right) => left.score - right.score || left.encoding.localeCompare(right.encoding));
 
   return candidates[0] ?? null;
 }
@@ -295,9 +298,9 @@ function truncateForMessage(text, maxLength = 96) {
 function collectReplacementCharacterFailures(filePath, fileContent) {
   const failures = [];
   const lines = fileContent.split(/\r?\n/);
-  lines.forEach((line, lineIndex) => {
+  for (const [lineIndex, line] of lines.entries()) {
     if (!line.includes(replacementCharacter)) {
-      return;
+      continue;
     }
     failures.push(
       createFailure(
@@ -307,7 +310,7 @@ function collectReplacementCharacterFailures(filePath, fileContent) {
         'contains a literal Unicode replacement character; text data is already lossy',
       ),
     );
-  });
+  }
   return failures;
 }
 
@@ -357,7 +360,7 @@ function scanFile(filePath) {
   const lines = fileContent.split(/\r?\n/);
   const failures = [];
 
-  lines.forEach((line, lineIndex) => {
+  for (const [lineIndex, line] of lines.entries()) {
     const workspacePathMatch = findWorkspacePathMatch(line);
     if (workspacePathMatch) {
       failures.push(
@@ -380,10 +383,12 @@ function scanFile(filePath) {
         ),
       );
     }
-  });
+  }
 
-  failures.push(...collectReplacementCharacterFailures(filePath, fileContent));
-  failures.push(...collectMojibakeRepairFailures(filePath, fileContent, tryRepairMojibake(fileContent)));
+  failures.push(
+    ...collectReplacementCharacterFailures(filePath, fileContent),
+    ...collectMojibakeRepairFailures(filePath, fileContent, tryRepairMojibake(fileContent)),
+  );
 
   return failures;
 }

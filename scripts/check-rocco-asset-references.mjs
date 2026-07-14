@@ -69,59 +69,65 @@ function isInsideDirectory(rootPath, candidatePath) {
   );
 }
 
+function collectNewUrlAssetFailures(filePath, sourceFile, source, failures) {
+  newUrlAssetPattern.lastIndex = 0;
+  for (const match of source.matchAll(newUrlAssetPattern)) {
+    const assetPath = match[2];
+    if (!assetPath || !isTrackedAssetPath(assetPath)) {
+      continue;
+    }
+
+    const resolvedPath = path.resolve(path.dirname(filePath), assetPath);
+    if (!isInsideDirectory(roccoSourceRoot, resolvedPath)) {
+      failures.push(
+        `${sourceFile} references '${assetPath}' outside 'src/cartridges/rocco'`,
+      );
+      continue;
+    }
+
+    if (!existsSync(resolvedPath)) {
+      failures.push(
+        `${sourceFile} references missing asset '${assetPath}'`,
+      );
+    }
+  }
+}
+
+function collectBaseUrlAssetFailures(filePath, sourceFile, source, failures) {
+  baseUrlAssetPattern.lastIndex = 0;
+  for (const match of source.matchAll(baseUrlAssetPattern)) {
+    const assetPath = match[1];
+    if (!assetPath || !isTrackedAssetPath(assetPath)) {
+      continue;
+    }
+
+    const resolvedPath = path.join(repoRoot, 'public', ...assetPath.split('/'));
+    if (!isInsideDirectory(roccoPublicRoot, resolvedPath)) {
+      failures.push(
+        `${sourceFile} references public asset '${assetPath}' outside 'public/cartridges/rocco'`,
+      );
+      continue;
+    }
+
+    if (!existsSync(resolvedPath)) {
+      failures.push(
+        `${sourceFile} references missing public asset '${assetPath}'`,
+      );
+    }
+  }
+}
+
 function collectFailures() {
   const failures = [];
 
   for (const filePath of listTypeScriptFiles(roccoSourceRoot)) {
     const sourceFile = toRepoRelativePath(filePath);
     const source = readFileSync(filePath, 'utf8');
-
-    newUrlAssetPattern.lastIndex = 0;
-    for (const match of source.matchAll(newUrlAssetPattern)) {
-      const assetPath = match[2];
-      if (!assetPath || !isTrackedAssetPath(assetPath)) {
-        continue;
-      }
-
-      const resolvedPath = path.resolve(path.dirname(filePath), assetPath);
-      if (!isInsideDirectory(roccoSourceRoot, resolvedPath)) {
-        failures.push(
-          `${sourceFile} references '${assetPath}' outside 'src/cartridges/rocco'`,
-        );
-        continue;
-      }
-
-      if (!existsSync(resolvedPath)) {
-        failures.push(
-          `${sourceFile} references missing asset '${assetPath}'`,
-        );
-      }
-    }
-
-    baseUrlAssetPattern.lastIndex = 0;
-    for (const match of source.matchAll(baseUrlAssetPattern)) {
-      const assetPath = match[1];
-      if (!assetPath || !isTrackedAssetPath(assetPath)) {
-        continue;
-      }
-
-      const resolvedPath = path.join(repoRoot, 'public', ...assetPath.split('/'));
-      if (!isInsideDirectory(roccoPublicRoot, resolvedPath)) {
-        failures.push(
-          `${sourceFile} references public asset '${assetPath}' outside 'public/cartridges/rocco'`,
-        );
-        continue;
-      }
-
-      if (!existsSync(resolvedPath)) {
-        failures.push(
-          `${sourceFile} references missing public asset '${assetPath}'`,
-        );
-      }
-    }
+    collectNewUrlAssetFailures(filePath, sourceFile, source, failures);
+    collectBaseUrlAssetFailures(filePath, sourceFile, source, failures);
   }
 
-  return failures.sort((left, right) => left.localeCompare(right));
+  return failures.toSorted((left, right) => left.localeCompare(right));
 }
 
 function main() {

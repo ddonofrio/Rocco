@@ -279,7 +279,7 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     return this.planeSDK.resolvePlane(sceneId, planeId);
   }
 
-  setActivePlayerSprite(instanceId: string | null): void {
+  setActivePlayerSprite(instanceId: string | undefined): void {
     this.activePlayerSpriteId = instanceId;
   }
 

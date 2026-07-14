@@ -210,8 +210,8 @@ export interface CartridgeSdkV1 {
   readonly capabilities: readonly CartridgeCapability[];
   loadPlaneScene(scene: RoccoPlaneScene): void;
   serializePlaneScene(sceneId: string): RoccoPlaneScene;
-  setPlayerSprite(instanceId: string | null): void;
-  getPlayerSprite(): string | null;
+  setPlayerSprite(instanceId: string | undefined): void;
+  getPlayerSprite(): string | undefined;
   isDeveloperModeEnabled(): boolean;
   getConsoleFlags(): RoccoConsoleFlags | undefined;
   setConsoleFlags(patch: Partial<RoccoConsoleFlags>): void;

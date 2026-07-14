@@ -115,7 +115,7 @@ export class GameRuntime implements RoccoEngine {
   private readonly cartridgeManager = new RoccoCartridgeManager();
   private inputHandler: RoccoInputHandler | null = null;
   private activePlaneSceneId: string | null = null;
-  private activePlayerSpriteId: string | null = null;
+  private activePlayerSpriteId: string | undefined = undefined;
   private statusMessage = 'Engine bootstrapping cartridge...';
   private compositionOverlay: Container | null = null;
   private compositionBackground: Graphics | null = null;
@@ -362,7 +362,7 @@ export class GameRuntime implements RoccoEngine {
 
     this.inputHandler = null;
     this.activePlaneSceneId = null;
-    this.activePlayerSpriteId = null;
+    this.activePlayerSpriteId = undefined;
     this.legacyCompositionSession = null;
     this.legacyInputLocks.clear();
     this.legacyInputRefCounts.clear();
@@ -387,7 +387,7 @@ export class GameRuntime implements RoccoEngine {
     return this.video.planes.serializeScene(sceneId);
   }
 
-  setPlayerSprite(instanceId: string | null): void {
+  setPlayerSprite(instanceId: string | undefined): void {
     this.activePlayerSpriteId = instanceId;
     this.video.setActivePlayerSprite(instanceId);
     if (instanceId && this.activePlayerSpriteId === instanceId) {
@@ -398,7 +398,7 @@ export class GameRuntime implements RoccoEngine {
     }
   }
 
-  getPlayerSprite(): string | null {
+  getPlayerSprite(): string | undefined {
     return this.activePlayerSpriteId;
   }
 

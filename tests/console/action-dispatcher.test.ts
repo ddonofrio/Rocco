@@ -43,7 +43,7 @@ describe('ActionDispatcher', () => {
     expect(disposition).toEqual({ consumed: true, defaultPlayerMovement: 'suppress' });
   });
 
-  it('treats an undefined result as not consumed and allows movement', () => {
+  it('treats an undefined result as not consumed and allows default movement', () => {
     const cartridge = makeCartridge(() => undefined);
 
     const dispatcher = new ActionDispatcher({
@@ -78,6 +78,26 @@ describe('ActionDispatcher', () => {
     expect(log).toHaveBeenCalledWith(
       'ActionDispatcher',
       expect.stringContaining('boom'),
+    );
+  });
+
+  it('suppresses default movement when handleAction throws', () => {
+    const log = vi.fn();
+    const cartridge = makeCartridge(() => {
+      throw new Error('handler failure');
+    });
+
+    const dispatcher = new ActionDispatcher({
+      getActiveCartridge: () => cartridge,
+      getActiveLevelId: () => 'level-1',
+      log,
+    });
+
+    const disposition = dispatcher.dispatch({ kind: 'scene-click', sceneX: 0, sceneY: 0 });
+    expect(disposition).toEqual({ consumed: true, defaultPlayerMovement: 'suppress' });
+    expect(log).toHaveBeenCalledWith(
+      'ActionDispatcher',
+      expect.stringContaining('handler failure'),
     );
   });
 
@@ -157,8 +177,8 @@ describe('ActionDispatcher', () => {
     dispatcher.dispose();
     expect(captured?.aborted).toBe(true);
     expect(dispatcher.dispatch({ kind: 'scene-click', sceneX: 0, sceneY: 0 })).toEqual({
-      consumed: false,
-      defaultPlayerMovement: 'allow',
+      consumed: true,
+      defaultPlayerMovement: 'suppress',
     });
   });
 });

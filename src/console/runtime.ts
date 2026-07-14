@@ -71,8 +71,8 @@ export class GameRuntime implements RoccoEngine {
   private readonly inputPolicy = new InputPolicyStackImpl();
   private readonly compositionService = new CompositionServiceImpl();
   private compositionListener: Disposer | null = null;
-  private legacyInputLockCount = 0;
-  private legacyInputLease: InputPolicyLease | null = null;
+  private readonly legacyInputLocks = new Map<string, InputPolicyLease>();
+  private readonly legacyInputRefCounts = new Map<string, number>();
   private legacyCompositionSession: CompositionSession | null = null;
   private soundProfile: RoccoSoundProfile = { ...defaultSoundProfile };
   private consoleFlags: RoccoConsoleFlags;
@@ -284,21 +284,34 @@ export class GameRuntime implements RoccoEngine {
 
   /**
    * @deprecated Retained for legacy per-level callers until level decomposition
-   * (audit Phase 4). Backed by a ref-counted `'legacy-input'` lease so it still
-   * composes with `acquireInputLease` callers. Use `acquireInputLease` instead.
+   * (audit Phase 4). Use `acquireInputLease` instead. Backed internally by
+   * per-owner ref-counted leases, so it still participates in the composed
+   * policy stack and each caller only releases its own lock.
    */
-  setInputEnabled(enabled: boolean): void {
+  setInputEnabled(enabled: boolean, ownerId = 'legacy-input'): void {
     if (!enabled) {
-      this.legacyInputLockCount += 1;
-      if (this.legacyInputLockCount === 1 && !this.legacyInputLease) {
-        this.legacyInputLease = this.inputPolicy.acquire({ ownerId: 'legacy-input', mode: 'blocked' });
+      const current = this.legacyInputRefCounts.get(ownerId) ?? 0;
+      this.legacyInputRefCounts.set(ownerId, current + 1);
+      if (current === 0) {
+        this.legacyInputLocks.set(
+          ownerId,
+          this.inputPolicy.acquire({ ownerId, mode: 'blocked' }),
+        );
       }
       return;
     }
-    this.legacyInputLockCount = Math.max(0, this.legacyInputLockCount - 1);
-    if (this.legacyInputLockCount === 0 && this.legacyInputLease) {
-      this.legacyInputLease.dispose();
-      this.legacyInputLease = null;
+
+    const current = this.legacyInputRefCounts.get(ownerId) ?? 0;
+    const next = Math.max(0, current - 1);
+    if (next === 0) {
+      this.legacyInputRefCounts.delete(ownerId);
+      const lease = this.legacyInputLocks.get(ownerId);
+      if (lease) {
+        lease.dispose();
+        this.legacyInputLocks.delete(ownerId);
+      }
+    } else {
+      this.legacyInputRefCounts.set(ownerId, next);
     }
   }
 

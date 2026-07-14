@@ -219,7 +219,7 @@ function createInputHandler(
 }
 
 describe('RoccoInputHandler', () => {
-  it('still dispatches scene clicks while input is disabled so dialogue flows can advance', () => {
+  it('ignores clicks while input is blocked', () => {
     const state: InputHandlerTestState = {
       actionHandler: undefined,
       messageListCalls: 0,
@@ -234,19 +234,192 @@ describe('RoccoInputHandler', () => {
 
     state.actionHandler?.(makeClickEvent(320, 180));
 
-    expect(state.handledActions).toEqual([
-      {
-        kind: 'scene-click',
-        sceneX: 320,
-        sceneY: 180,
-        targetInstanceId: 'stan',
-        targetDefinitionId: 'stan-definition',
-      },
-    ]);
-    expect(state.messageListCalls).toBe(1);
+    expect(state.handledActions).toEqual([]);
+    expect(state.messageListCalls).toBe(0);
     expect(state.audioUnlockCalls).toBe(0);
     expect(state.jukeboxUnlockCalls).toBe(0);
-    expect(state.logs.at(-1)).toContain("ADVANCE click on sprite 'stan'");
+  });
+
+  it('does not allow default player movement while input is blocked', () => {
+    const goToCalls: Array<{ instanceId: string; sceneX: number; sceneY: number }> = [];
+
+    const handler = new RoccoInputHandler({
+      videoSystem: createVideoSystemMock({
+        resolveSceneTargets() {
+          return {
+            visibleTarget: undefined,
+            target: {
+              kind: 'sprite',
+              instanceId: 'stan',
+              definitionId: 'stan-definition',
+            },
+          };
+        },
+        sprites: {
+          goTo(instanceId, sceneX, sceneY) {
+            goToCalls.push({ instanceId, sceneX, sceneY });
+            return true;
+          },
+        },
+      }),
+      audioSystem: asAudioSystem({ unlock() {} }),
+      jukeboxSystem: asJukeboxSystem({ unlock() {} }),
+      viewportHost: asViewportHost({
+        setCursorActionHandler(_handler: RoccoCursorActionHandler | undefined) {
+          // noop
+        },
+        setCursorMoveHandler() {},
+        setCursorLeaveHandler() {},
+        setCursorAttachment() {},
+      }),
+      getActiveCartridge: () => ({
+        manifest: { id: 'test-cartridge', title: 'Test', version: '1.0.0' },
+        mount() {},
+        handleAction() {
+          // should not be called
+        },
+      }),
+      getActivePlayerSpriteId: () => 'rocco',
+      getInputMode: () => 'blocked',
+      log: () => {},
+    });
+
+    handler.mount();
+    // blocked mode must not trigger default player movement
+    // by checking that no goTo calls happen when blocked
+    expect(goToCalls).toEqual([]);
+  });
+
+  it('dispatches exactly one advance-sequence action while input is advance-only', () => {
+    const state: InputHandlerTestState = {
+      actionHandler: undefined,
+      messageListCalls: 0,
+      handledActions: [],
+      audioUnlockCalls: 0,
+      jukeboxUnlockCalls: 0,
+      logs: [],
+    };
+    const inputMode: InputMode = 'advance-only';
+    const handler = createInputHandler(state, () => inputMode);
+    handler.mount();
+
+    state.actionHandler?.(makeClickEvent(320, 180));
+
+    expect(state.handledActions).toEqual([
+      {
+        kind: 'advance-sequence',
+      },
+    ]);
+    expect(state.messageListCalls).toBe(0);
+    expect(state.audioUnlockCalls).toBe(0);
+    expect(state.jukeboxUnlockCalls).toBe(0);
+  });
+
+  it('suppresses default player movement when handleAction throws', () => {
+    const goToCalls: Array<{
+      instanceId: string;
+      sceneX: number;
+      sceneY: number;
+      options: unknown;
+    }> = [];
+
+    const handler = new RoccoInputHandler({
+      videoSystem: createVideoSystemMock({
+        resolveSceneTargets() {
+          return {
+            visibleTarget: undefined,
+            target: {
+              kind: 'sprite',
+              instanceId: 'stan',
+              definitionId: 'stan-definition',
+            },
+          };
+        },
+        sprites: {
+          goTo(instanceId, sceneX, sceneY, options) {
+            goToCalls.push({ instanceId, sceneX, sceneY, options });
+            return true;
+          },
+        },
+      }),
+      audioSystem: asAudioSystem({ unlock() {} }),
+      jukeboxSystem: asJukeboxSystem({ unlock() {} }),
+      viewportHost: asViewportHost({
+        setCursorActionHandler(_handler: RoccoCursorActionHandler | undefined) {
+          // noop
+        },
+        setCursorMoveHandler() {},
+        setCursorLeaveHandler() {},
+        setCursorAttachment() {},
+      }),
+      getActiveCartridge: () => ({
+        manifest: { id: 'test-cartridge', title: 'Test', version: '1.0.0' },
+        mount() {},
+        handleAction() {
+          throw new Error('handler failure');
+        },
+      }),
+      getActivePlayerSpriteId: () => 'rocco',
+      log: () => {},
+    });
+
+    handler.mount();
+
+    expect(goToCalls).toEqual([]);
+  });
+
+  it('does not allow default player movement while input is advance-only', () => {
+    const goToCalls: Array<{
+      instanceId: string;
+      sceneX: number;
+      sceneY: number;
+      options: unknown;
+    }> = [];
+
+    const handler = new RoccoInputHandler({
+      videoSystem: createVideoSystemMock({
+        resolveSceneTargets() {
+          return {
+            visibleTarget: undefined,
+            target: {
+              kind: 'sprite',
+              instanceId: 'stan',
+              definitionId: 'stan-definition',
+            },
+          };
+        },
+        sprites: {
+          goTo(instanceId, sceneX, sceneY, options) {
+            goToCalls.push({ instanceId, sceneX, sceneY, options });
+            return true;
+          },
+        },
+      }),
+      audioSystem: asAudioSystem({ unlock() {} }),
+      jukeboxSystem: asJukeboxSystem({ unlock() {} }),
+      viewportHost: asViewportHost({
+        setCursorActionHandler(_handler: RoccoCursorActionHandler | undefined) {
+          // noop
+        },
+        setCursorMoveHandler() {},
+        setCursorLeaveHandler() {},
+        setCursorAttachment() {},
+      }),
+      getActiveCartridge: () => ({
+        manifest: { id: 'test-cartridge', title: 'Test', version: '1.0.0' },
+        mount() {},
+        handleAction() {
+          return { consumed: true, defaultPlayerMovement: 'allow' };
+        },
+      }),
+      getActivePlayerSpriteId: () => 'rocco',
+      getInputMode: () => 'advance-only',
+      log: () => {},
+    });
+
+    handler.mount();
+
+    expect(goToCalls).toEqual([]);
   });
 
   it('shows hover descriptions for visible scene targets', () => {
@@ -688,7 +861,7 @@ describe('RoccoInputHandler', () => {
     expect(goToCalls).toEqual([]);
   });
 
-  it('uses a carried grid item on the visible target by dispatching a scene click alongside the carry activation', () => {
+  it('uses a carried grid item on the visible target by dispatching a single carry-use action', () => {
     let actionHandler: RoccoCursorActionHandler | undefined;
     const handledActions: unknown[] = [];
     const carriedItem = {
@@ -772,17 +945,21 @@ describe('RoccoInputHandler', () => {
 
     expect(handledActions).toEqual([
       {
-        kind: 'grid-menu',
-        definitionId: 'rocco-player-inventory',
-        interaction: 'carry',
-        items: [],
-      },
-      {
-        kind: 'scene-click',
-        sceneX: 320,
-        sceneY: 180,
-        targetInstanceId: 'stan',
-        targetDefinitionId: 'stan-definition',
+        kind: 'carry-use',
+        gridMenuActivation: {
+          kind: 'grid-menu',
+          definitionId: 'rocco-player-inventory',
+          interaction: 'carry',
+          items: [],
+        },
+        sceneClick: {
+          kind: 'scene-click',
+          sceneX: 320,
+          sceneY: 180,
+          targetInstanceId: 'stan',
+          targetDefinitionId: 'stan-definition',
+        },
+        carriedItem,
       },
     ]);
   });

@@ -51,7 +51,7 @@ export class ActionDispatcher {
 
   dispatch(action: RoccoCartridgeAction, request: DispatchOptions = {}): CartridgeActionDisposition {
     if (this.disposed) {
-      return { consumed: false, defaultPlayerMovement: 'allow' };
+      return { consumed: true, defaultPlayerMovement: 'suppress' };
     }
 
     const levelId = this.getActiveLevelId();
@@ -72,12 +72,12 @@ export class ActionDispatcher {
         'ActionDispatcher',
         `Dropping ${request.owner ?? 'exclusive'} action: another action is still in flight.`,
       );
-      return { consumed: false, defaultPlayerMovement: 'allow' };
+      return { consumed: true, defaultPlayerMovement: 'suppress' };
     }
 
     const cartridge = this.getActiveCartridge();
     if (!cartridge || typeof cartridge.handleAction !== 'function') {
-      return { consumed: false, defaultPlayerMovement: 'allow' };
+      return { consumed: true, defaultPlayerMovement: 'suppress' };
     }
 
     const actionId = createActionId();
@@ -96,10 +96,14 @@ export class ActionDispatcher {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logFn('ActionDispatcher', `handleAction for '${cartridge.manifest.id}' failed: ${message}`);
+      return { consumed: true, defaultPlayerMovement: 'suppress' };
+    }
+
+    if (!raw) {
       return { consumed: false, defaultPlayerMovement: 'allow' };
     }
 
-    const disposition = raw ?? { consumed: false, defaultPlayerMovement: 'allow' };
+    const disposition = raw;
 
     if (disposition.completion) {
       this.tracked.set(actionId, {

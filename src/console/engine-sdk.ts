@@ -58,11 +58,11 @@ export interface RoccoEngine {
 
   /**
    * @deprecated Retained for legacy per-level callers until level decomposition
-   * (audit Phase 4). Use `acquireInputLease` instead. Backed internally by a
-   * ref-counted `'legacy-input'` lease, so it still participates in the composed
-   * policy stack.
+   * (audit Phase 4). Use `acquireInputLease` instead. Backed internally by
+   * per-owner ref-counted leases, so it still participates in the composed
+   * policy stack and each caller only releases its own lock.
    */
-  setInputEnabled(enabled: boolean): void;
+  setInputEnabled(enabled: boolean, ownerId?: string): void;
 
   /**
    * @deprecated Use `getInputMode() === 'interactive'`.

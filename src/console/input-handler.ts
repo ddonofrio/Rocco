@@ -1,7 +1,12 @@
 import type { RoccoRuntimeVideoSystem } from './video';
 import type { RoccoCursorActionEvent, RoccoCursorMoveEvent } from './video/cursor';
 import type { RoccoViewportHost } from './video/viewport';
-import type { RoccoCartridge, RoccoSceneClickAction } from './cartridges';
+import type {
+  RoccoCartridge,
+  RoccoSceneClickAction,
+  RoccoAdvanceSequenceAction,
+  RoccoCarryUseAction,
+} from './cartridges';
 import type { RoccoRuntimeAudioSystem } from './audio';
 import type { RoccoJukeboxSystem } from './audio/jukebox';
 import { ActionDispatcher } from './action-dispatcher';
@@ -96,16 +101,14 @@ export class RoccoInputHandler {
     const x = Math.round(event.sceneX);
     const y = Math.round(event.sceneY);
 
-    // Runtime sequences can still consume clicks as "advance" inputs while normal interaction is disabled.
-    if (this.getInputMode() !== 'interactive') {
-      if (this.hasProtectedForegroundMessages()) {
-        this.logFn(
-          'Cursor',
-          `IGNORE advance click at (${x}, ${y}) while dialogue is still protected.`,
-        );
-        return;
-      }
-      this.handleDisabledCursorAction(event, x, y);
+    const inputMode = this.getInputMode();
+
+    if (inputMode === 'blocked') {
+      return;
+    }
+
+    if (inputMode === 'advance-only') {
+      this.handleAdvanceOnlyCursorAction(event, x, y);
       return;
     }
 
@@ -139,39 +142,17 @@ export class RoccoInputHandler {
     this.handleSceneCursorAction(event, x, y);
   };
 
-  private handleDisabledCursorAction(
-    event: RoccoCursorActionEvent,
+  private handleAdvanceOnlyCursorAction(
+    _event: RoccoCursorActionEvent,
     roundedX: number,
     roundedY: number,
   ): void {
-    const targets = this.videoSystem.resolveSceneTargets(event.sceneX, event.sceneY);
-    const sceneClickAction: RoccoSceneClickAction = {
-      kind: 'scene-click',
-      sceneX: event.sceneX,
-      sceneY: event.sceneY,
-      targetInstanceId: targets.visibleTarget?.instanceId ?? targets.target?.instanceId,
-      targetDefinitionId: targets.visibleTarget?.definitionId ?? targets.target?.definitionId,
+    const advanceAction: RoccoAdvanceSequenceAction = {
+      kind: 'advance-sequence',
     };
 
-    this.actionDispatcher.dispatch(sceneClickAction, { owner: 'disabled-advance' });
-
-    if (targets.visibleTarget) {
-      this.logFn(
-        'Cursor',
-        `ADVANCE click on ${targets.visibleTarget.kind} '${targets.visibleTarget.instanceId}' at (${roundedX}, ${roundedY}) while input is disabled.`,
-      );
-      return;
-    }
-
-    if (targets.target) {
-      this.logFn(
-        'Cursor',
-        `ADVANCE click on ${targets.target.kind} '${targets.target.instanceId}' at (${roundedX}, ${roundedY}) while input is disabled.`,
-      );
-      return;
-    }
-
-    this.logFn('Cursor', `ADVANCE click at (${roundedX}, ${roundedY}) while input is disabled.`);
+    this.actionDispatcher.dispatch(advanceAction, { owner: 'advance-only' });
+    this.logFn('Cursor', `ADVANCE click at (${roundedX}, ${roundedY}).`);
   }
 
   private readonly handleCursorMove = (event: RoccoCursorMoveEvent): void => {
@@ -225,7 +206,6 @@ export class RoccoInputHandler {
     const activation = this.videoSystem.gridMenus.activateAt(event.sceneX, event.sceneY);
     this.inputPresentation.setHoverDescription(undefined);
     if (activation) {
-      this.actionDispatcher.dispatch(activation, { owner: 'grid-menu' });
       if (activation.interaction === 'carry') {
         const carriedItem = this.videoSystem.gridMenus.getCarriedItem();
         const targets = this.videoSystem.resolveSceneTargets(event.sceneX, event.sceneY);
@@ -238,13 +218,24 @@ export class RoccoInputHandler {
             targetInstanceId: actionTarget.instanceId,
             targetDefinitionId: actionTarget.definitionId,
           };
-          this.actionDispatcher.dispatch(sceneClickAction, { owner: 'grid-menu-carry-use' });
+          const carryUseAction: RoccoCarryUseAction = {
+            kind: 'carry-use',
+            gridMenuActivation: activation,
+            sceneClick: sceneClickAction,
+            carriedItem,
+          };
+          this.actionDispatcher.dispatch(carryUseAction, { owner: 'grid-menu-carry-use' });
           this.logFn(
             'GridMenu',
             `USE carried grid item '${carriedItem.item.id}' on ${actionTarget.kind} '${actionTarget.instanceId}' directly from grid menu.`,
           );
+          this.inputPresentation.syncCarriedCursorAttachment();
+          this.videoSystem.render(0);
+          return true;
         }
       }
+
+      this.actionDispatcher.dispatch(activation, { owner: 'grid-menu' });
       this.logFn(
         'GridMenu',
         `ACTION '${activation.interaction}'${activation.itemId ? ` for '${activation.itemId}'` : ''} on grid menu '${activation.definitionId}'.`,

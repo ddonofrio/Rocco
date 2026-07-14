@@ -1,6 +1,6 @@
 import type { RoccoConsoleFlags, RoccoEngine } from '../engine-sdk';
 import type { RoccoActionMenuActivation } from '../video/action-menu';
-import type { RoccoGridMenuActivation } from '../video/grid-menu';
+import type { RoccoGridMenuActivation, RoccoGridMenuCarriedItem } from '../video/grid-menu';
 import type { CartridgeSdkV1 } from './sdk-v1';
 
 export interface RoccoSceneClickAction {
@@ -11,10 +11,23 @@ export interface RoccoSceneClickAction {
   targetDefinitionId?: string;
 }
 
+export interface RoccoAdvanceSequenceAction {
+  kind: 'advance-sequence';
+}
+
+export interface RoccoCarryUseAction {
+  kind: 'carry-use';
+  gridMenuActivation: RoccoGridMenuActivation;
+  sceneClick: RoccoSceneClickAction;
+  carriedItem: RoccoGridMenuCarriedItem;
+}
+
 export type RoccoCartridgeAction =
   | RoccoActionMenuActivation
   | RoccoSceneClickAction
-  | RoccoGridMenuActivation;
+  | RoccoGridMenuActivation
+  | RoccoAdvanceSequenceAction
+  | RoccoCarryUseAction;
 
 export interface CartridgeActionContext {
   readonly signal: AbortSignal;

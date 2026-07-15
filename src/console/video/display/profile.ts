@@ -105,6 +105,35 @@ export class RoccoDisplayProfileRenderer {
     this.overlayElement.append(this.frameElement, this.meshElement, this.glassElement);
   }
 
+  private resolveStageFilter(profile: RoccoDisplayProfile): string {
+    const isBrightness = Math.abs(profile.brightness - 1) < 0.001;
+    const isContrast = Math.abs(profile.contrast - 1) < 0.001;
+    if (isBrightness && isContrast) {
+      return 'none';
+    }
+
+    return `brightness(${profile.brightness.toFixed(2)}) contrast(${profile.contrast.toFixed(2)})`;
+  }
+
+  private resolveCornerRadius(metrics: RoccoViewportMetrics): number {
+    const smallestSide = Math.min(metrics.renderWidth, metrics.renderHeight);
+    return Math.max(12, Math.min(34, smallestSide * 0.045));
+  }
+
+  private resolveMeshOpacity(metrics: RoccoViewportMetrics): number {
+    return Math.min(0.36, Math.max(0.22, 0.24 + metrics.scale * 0.04));
+  }
+
+  private createLayerElement(name: string): HTMLDivElement {
+    const element = document.createElement('div');
+    element.dataset.roccoDisplayLayer = name;
+    element.style.position = 'absolute';
+    element.style.inset = '0';
+    element.style.pointerEvents = 'none';
+    element.style.backgroundRepeat = 'repeat';
+    return element;
+  }
+
   mount(): void {
     if (this.mounted) {
       return;
@@ -202,34 +231,5 @@ export class RoccoDisplayProfileRenderer {
 
   getProfile(): RoccoDisplayProfile {
     return { ...this.profile };
-  }
-
-  private resolveStageFilter(profile: RoccoDisplayProfile): string {
-    const isBrightness = Math.abs(profile.brightness - 1) < 0.001;
-    const isContrast = Math.abs(profile.contrast - 1) < 0.001;
-    if (isBrightness && isContrast) {
-      return 'none';
-    }
-
-    return `brightness(${profile.brightness.toFixed(2)}) contrast(${profile.contrast.toFixed(2)})`;
-  }
-
-  private resolveCornerRadius(metrics: RoccoViewportMetrics): number {
-    const smallestSide = Math.min(metrics.renderWidth, metrics.renderHeight);
-    return Math.max(12, Math.min(34, smallestSide * 0.045));
-  }
-
-  private resolveMeshOpacity(metrics: RoccoViewportMetrics): number {
-    return Math.min(0.36, Math.max(0.22, 0.24 + metrics.scale * 0.04));
-  }
-
-  private createLayerElement(name: string): HTMLDivElement {
-    const element = document.createElement('div');
-    element.dataset.roccoDisplayLayer = name;
-    element.style.position = 'absolute';
-    element.style.inset = '0';
-    element.style.pointerEvents = 'none';
-    element.style.backgroundRepeat = 'repeat';
-    return element;
   }
 }

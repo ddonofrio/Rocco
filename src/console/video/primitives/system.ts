@@ -1,11 +1,7 @@
 import type { RoccoPrimitive, RoccoPrimitiveSystem } from './types';
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 export class RoccoPrimitiveSystemSDK implements RoccoPrimitiveSystem {
@@ -29,6 +25,8 @@ export class RoccoPrimitiveSystemSDK implements RoccoPrimitiveSystem {
   }
 
   listPrimitives(): RoccoPrimitive[] {
+    // `Array.from` trips unicorn/prefer-spread; Iterator helper needs ES2024 lib.
+    // eslint-disable-next-line unicorn/prefer-iterator-to-array
     return [...this.primitives.values()].map((primitive) => clone(primitive));
   }
 }

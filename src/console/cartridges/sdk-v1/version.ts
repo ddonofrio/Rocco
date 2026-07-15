@@ -15,10 +15,10 @@ interface ParsedVersion {
   patch: number;
 }
 
-function parseVersion(version: string): ParsedVersion | null {
+function parseVersion(version: string): ParsedVersion | undefined {
   const match = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(version.trim());
   if (!match) {
-    return null;
+    return undefined;
   }
 
   return {
@@ -47,6 +47,7 @@ function compare(a: ParsedVersion, b: ParsedVersion): number {
  * - `^1.2.3` — `major` locked, `minor`/`patch` may increase.
  * - `~1.2.3` — `major.minor` locked, `patch` may increase.
  */
+// eslint-disable-next-line unicorn/consistent-boolean-name
 export function satisfies(range: string, version: string): boolean {
   const target = parseVersion(version);
   const required = parseVersion(range.replace(/^[=^~]/, ''));

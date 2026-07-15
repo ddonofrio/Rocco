@@ -62,7 +62,7 @@ export interface RoccoEngine {
    * per-owner ref-counted leases, so it still participates in the composed
    * policy stack and each caller only releases its own lock.
    */
-  setInputEnabled(enabled: boolean, ownerId?: string): void;
+  setInputEnabled(isEnabled: boolean, ownerId?: string): void;
 
   /**
    * @deprecated Use `getInputMode() === 'interactive'`.

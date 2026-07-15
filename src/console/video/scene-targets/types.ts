@@ -35,7 +35,7 @@ export interface RoccoSceneTargetSystem {
   clearTargets(): void;
   getTarget(instanceId: string): RoccoSceneTargetDefinition | undefined;
   listTargets(): RoccoSceneTargetDefinition[];
-  setEnabled(instanceId: string, enabled: boolean): void;
+  setEnabled(instanceId: string, isEnabled: boolean): void;
   setVisibleDescription(
     instanceId: string,
     visibleDescription?: Partial<RoccoSpriteVisibleDescription>,

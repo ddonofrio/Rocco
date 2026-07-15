@@ -3,7 +3,7 @@ export { RoccoDefaultEffectRegistry } from './registry';
 export { makeGraphicPlaneAutoScrollEffect, roccoAutoScrollRuntime } from './runtimes/auto-scroll';
 export type {
   RoccoAutoScrollEffect,
-  RoccoAutoScrollParams,
+  RoccoAutoScrollParameters,
   RoccoGraphicPlaneAutoScrollEffectOptions,
 } from './runtimes/auto-scroll';
 export type * from './types';

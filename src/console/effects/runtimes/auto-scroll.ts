@@ -4,13 +4,13 @@ import { wrapValue } from '../../video/planes/wrap';
 
 export type RoccoAutoScrollUnits = 'pixels-per-second' | 'pixels-per-frame';
 
-export interface RoccoAutoScrollParams {
+export interface RoccoAutoScrollParameters {
   velocityX: number;
   velocityY: number;
   units?: RoccoAutoScrollUnits;
 }
 
-export interface RoccoAutoScrollEffect extends RoccoEffect<RoccoAutoScrollParams> {
+export interface RoccoAutoScrollEffect extends RoccoEffect<RoccoAutoScrollParameters> {
   kind: 'auto-scroll';
   targetType: 'graphic-plane';
 }
@@ -41,7 +41,7 @@ export function makeGraphicPlaneAutoScrollEffect(
   };
 }
 
-export const roccoAutoScrollRuntime: RoccoEffectRuntime<RoccoGraphicPlane, RoccoAutoScrollParams> = {
+export const roccoAutoScrollRuntime: RoccoEffectRuntime<RoccoGraphicPlane, RoccoAutoScrollParameters> = {
   kind: 'auto-scroll',
   targetType: 'graphic-plane',
   apply(target, parameters, context) {

@@ -64,6 +64,8 @@ export class UniqueRegistry<TId extends string, TValue> {
   }
 
   list(): readonly TValue[] {
+    // `Array.from` trips unicorn/prefer-spread; Iterator helper needs ES2024 lib.
+    // eslint-disable-next-line unicorn/prefer-iterator-to-array
     return [...this.entries.values()].map((entry) => entry.value);
   }
 

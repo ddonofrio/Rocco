@@ -6,11 +6,7 @@ import type {
 } from '../types';
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 export class RoccoBuiltinCartridgeProvider implements RoccoCartridgeProvider {
@@ -32,6 +28,9 @@ export class RoccoBuiltinCartridgeProvider implements RoccoCartridgeProvider {
 
   list(): Promise<RoccoCartridgeManifest[]> {
     return Promise.resolve(
+      // `Array.from` would trip unicorn/prefer-spread; the Iterator helper
+      // form needs the ES2024 lib which this project does not target.
+      // eslint-disable-next-line unicorn/prefer-iterator-to-array
       [...this.registrations.values()].map((registration) => clone(registration.manifest)),
     );
   }

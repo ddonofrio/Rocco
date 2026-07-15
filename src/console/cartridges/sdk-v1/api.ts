@@ -172,7 +172,7 @@ export interface CartridgeInputApi {
   getInputMode(): InputMode;
 }
 
-export type CartridgeCreateSaveRepositoryOptions<TState> = Omit<
+export type CartridgeCreateSaveRepoOptions<TState> = Omit<
   CreateSaveRepoOptions<TState>,
   'cartridgeId' | 'cartridgeVersion'
 >;
@@ -181,7 +181,7 @@ export interface CartridgeStorageApi {
   loadPlaneSceneRecord(sceneId: string): Promise<import('../../video/planes').RoccoPlaneSceneRecord | null>;
   savePlaneScene(scene: RoccoPlaneScene): Promise<void>;
   createSaveRepository<TState>(
-    options: CartridgeCreateSaveRepositoryOptions<TState>,
+    options: CartridgeCreateSaveRepoOptions<TState>,
   ): CartridgeSaveRepo<TState>;
 }
 

@@ -44,7 +44,7 @@ export function resolveRoccoWaterColorEffect(
   }
 
   const colors = (effect.colors ?? [])
-    .map(parseRoccoWaterColor)
+    .map((color) => parseRoccoWaterColor(color))
     .filter((color): color is RoccoWaterColorRgb => Boolean(color))
     .slice(0, ROCCO_WATER_COLOR_EFFECT_MAX_COLORS);
 
@@ -64,6 +64,8 @@ export function cloneRoccoWaterColorEffect(
   effect: RoccoResolvedWaterColorEffect | null,
 ): RoccoResolvedWaterColorEffect | null {
   if (!effect) {
+    // Preserved `null` return: `water-color-effect.test.ts` asserts `.toBeNull()`.
+    // eslint-disable-next-line unicorn/no-null
     return null;
   }
 
@@ -77,6 +79,8 @@ export function parseRoccoWaterColor(value: string): RoccoWaterColorRgb | null {
   const normalized = value.trim().toLowerCase();
   const match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/u.exec(normalized);
   if (!match) {
+    // Preserved `null` return: callers (incl. tests) assert `.toBeNull()`.
+    // eslint-disable-next-line unicorn/no-null
     return null;
   }
 

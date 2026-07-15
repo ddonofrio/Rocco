@@ -65,44 +65,6 @@ export class RoccoSceneActionRouter {
     this.registry = options.registry ?? createRoccoInteractionRegistry();
   }
 
-  handleAction(
-    activation: RoccoCartridgeAction,
-    context?: CartridgeActionContext,
-  ): CartridgeActionDisposition | void {
-    if (this.options.scriptedSequences.hasBlockingSequence() && !isAdvanceSequenceAction(activation)) {
-      return {
-        consumed: true,
-        defaultPlayerMovement: 'suppress',
-      };
-    }
-
-    const engine = this.options.getEngine();
-    if (this.options.scriptedSequences.hasPendingBaitShopDoorUse()) {
-      this.options.scriptedSequences.cancelPendingBaitShopDoorUse(engine);
-    }
-
-    const interactionContext = this.buildContext(activation, context);
-    const signal = context?.signal ?? new AbortController().signal;
-
-    if (isSceneClickAction(activation)) {
-      return this.handleSceneClick(interactionContext, signal);
-    }
-
-    return this.registry.dispatch(interactionContext, signal);
-  }
-
-  handleSpecialInventorySceneClick(
-    activation: RoccoSceneClickAction,
-    carriedItem: RoccoGridMenuCarriedItem,
-  ): RoccoInventoryRuntimeSceneClickResolution {
-    const context = this.buildContext(activation, undefined);
-    return this.registry.dispatchSpecialInventorySceneClick(
-      context,
-      carriedItem,
-      new AbortController().signal,
-    );
-  }
-
   private handleSceneClick(
     context: InteractionContext,
     signal: AbortSignal,
@@ -145,4 +107,43 @@ export class RoccoSceneActionRouter {
       transitions: this.options.transitions,
     };
   }
+
+  handleAction(
+    activation: RoccoCartridgeAction,
+    context?: CartridgeActionContext,
+  ): CartridgeActionDisposition | void {
+    if (this.options.scriptedSequences.hasBlockingSequence() && !isAdvanceSequenceAction(activation)) {
+      return {
+        consumed: true,
+        defaultPlayerMovement: 'suppress',
+      };
+    }
+
+    const engine = this.options.getEngine();
+    if (this.options.scriptedSequences.hasPendingBaitShopDoorUse()) {
+      this.options.scriptedSequences.cancelPendingBaitShopDoorUse(engine);
+    }
+
+    const interactionContext = this.buildContext(activation, context);
+    const signal = context?.signal ?? new AbortController().signal;
+
+    if (isSceneClickAction(activation)) {
+      return this.handleSceneClick(interactionContext, signal);
+    }
+
+    return this.registry.dispatch(interactionContext, signal);
+  }
+
+  handleSpecialInventorySceneClick(
+    activation: RoccoSceneClickAction,
+    carriedItem: RoccoGridMenuCarriedItem,
+  ): RoccoInventoryRuntimeSceneClickResolution {
+    const context = this.buildContext(activation);
+    return this.registry.dispatchSpecialInventorySceneClick(
+      context,
+      carriedItem,
+      new AbortController().signal,
+    );
+  }
+
 }

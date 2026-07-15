@@ -223,7 +223,7 @@ export function createRoccoSpriteCollisionHelper(
       const rightWorld = toWorldShape(rightInstance, rightDefinition, rightFrame, rightShape);
 
       if (leftWorld.kind === 'rect' && rightWorld.kind === 'rect') {
-        return intersectsRectRect(leftWorld.rect, rightWorld.rect);
+        return isRectRectIntersecting(leftWorld.rect, rightWorld.rect);
       }
       if (leftWorld.kind === 'circle' && rightWorld.kind === 'circle') {
         const dx = leftWorld.circle.x - rightWorld.circle.x;
@@ -232,25 +232,21 @@ export function createRoccoSpriteCollisionHelper(
         return dx * dx + dy * dy <= radius * radius;
       }
       if (leftWorld.kind === 'circle' && rightWorld.kind === 'rect') {
-        return intersectsCircleRect(leftWorld.circle, rightWorld.rect);
+        return isCircleRectIntersecting(leftWorld.circle, rightWorld.rect);
       }
       if (leftWorld.kind === 'rect' && rightWorld.kind === 'circle') {
-        return intersectsCircleRect(rightWorld.circle, leftWorld.rect);
+        return isCircleRectIntersecting(rightWorld.circle, leftWorld.rect);
       }
 
       const leftBounds = toBounds(leftWorld);
       const rightBounds = toBounds(rightWorld);
-      return intersectsRectRect(leftBounds, rightBounds);
+      return isRectRectIntersecting(leftBounds, rightBounds);
     },
   };
 }
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -357,7 +353,7 @@ function isPointInPolygon(point: RoccoPoint, points: readonly RoccoPoint[]): boo
   return isInside;
 }
 
-function intersectsRectRect(left: WorldRect, right: WorldRect): boolean {
+function isRectRectIntersecting(left: WorldRect, right: WorldRect): boolean {
   return (
     left.x < right.x + right.width &&
     left.x + left.width > right.x &&
@@ -366,7 +362,7 @@ function intersectsRectRect(left: WorldRect, right: WorldRect): boolean {
   );
 }
 
-function intersectsCircleRect(circle: WorldCircle, rect: WorldRect): boolean {
+function isCircleRectIntersecting(circle: WorldCircle, rect: WorldRect): boolean {
   const closestX = clamp(circle.x, rect.x, rect.x + rect.width);
   const closestY = clamp(circle.y, rect.y, rect.y + rect.height);
   const dx = circle.x - closestX;
@@ -389,8 +385,8 @@ function toBounds(shape: WorldShape): WorldRect {
 
   let minX = Infinity;
   let minY = Infinity;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
+  let maxX =   -Infinity;
+  let maxY =   -Infinity;
   for (const point of shape.polygon.points) {
     minX = Math.min(minX, point.x);
     minY = Math.min(minY, point.y);

@@ -98,8 +98,8 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
   private readonly walkMapColumnIndexes = new Map<string, Map<number, RoccoSpriteWalkMapColumn>>();
   private readonly alphaMasks = new Map<string, SpriteAlphaMask>();
   private readonly pendingAlphaMaskLoads = new Map<string, Promise<void>>();
-  private readonly visibleBoundsCache = new Map<string, SpriteVisibleBounds | null>();
-  private readonly autoAdjustReferenceHeightCache = new Map<string, number | null>();
+  private readonly visibleBoundsCache = new Map<string, SpriteVisibleBounds | undefined>();
+  private readonly autoAdjustReferenceHeightCache = new Map<string, number | undefined>();
   private readonly visualHelper = createRoccoSpriteVisualHelper({
     alphaMasks: this.alphaMasks,
     pendingAlphaMaskLoads: this.pendingAlphaMaskLoads,

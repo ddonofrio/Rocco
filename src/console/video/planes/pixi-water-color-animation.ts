@@ -34,14 +34,14 @@ export interface PreparedWaterColorImageNode {
 
 export function resolvePlaneWaterColorEffect(
   plane: RoccoGraphicPlane,
-): RoccoResolvedWaterColorEffect | null {
+): RoccoResolvedWaterColorEffect | undefined {
   const rawEffect = plane.metadata?.waterColorEffect;
   if (!rawEffect || typeof rawEffect !== 'object') {
-    return null;
+    return undefined;
   }
 
   const resolved = resolveRoccoWaterColorEffect(rawEffect);
-  return resolved.enabled ? resolved : null;
+  return resolved.enabled ? resolved : undefined;
 }
 
 export async function prepareWaterColorImageNode(

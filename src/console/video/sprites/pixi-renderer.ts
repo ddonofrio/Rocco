@@ -282,7 +282,7 @@ export class PixiRoccoSpriteRenderer {
   private hashToColor(seed: string, alpha: number): string {
     let hash = 0;
     for (let index = 0; index < seed.length; index += 1) {
-      hash = (hash << 5) - hash + seed.codePointAt(index);
+      hash = (hash << 5) - hash + (seed.codePointAt(index) ?? 0);
       hash = Math.trunc(hash);
     }
 

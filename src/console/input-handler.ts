@@ -394,12 +394,14 @@ export class RoccoInputHandler {
       return false;
     }
 
-    this.movePlayerToScenePoint({
-      playerSpriteId,
-      event,
-      isSuppressDefaultPlayerMove,
-      actionTarget: visibleTarget.instanceId === playerSpriteId ? undefined : visibleTarget,
-    });
+    if (visibleTarget.instanceId !== playerSpriteId) {
+      this.movePlayerToScenePoint({
+        playerSpriteId,
+        event,
+        isSuppressDefaultPlayerMove,
+        actionTarget: visibleTarget,
+      });
+    }
     this.inputPresentation.setHoverDescription(undefined);
     this.videoSystem.render(0);
     this.logFn(

@@ -9,14 +9,10 @@ import type {
 const EPSILON = 0.0001;
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
-function pointInPolygon(point: RoccoPoint, points: readonly RoccoPoint[]): boolean {
+function isPointInPolygon(point: RoccoPoint, points: readonly RoccoPoint[]): boolean {
   let isInside = false;
   for (let index = 0, index_ = points.length - 1; index < points.length; index_ = index++) {
     const xi = points[index]?.x ?? 0;
@@ -60,7 +56,7 @@ function isPointInTarget(definition: RoccoSceneTargetDefinition, point: RoccoPoi
     return dx * dx + dy * dy <= shape.radius * shape.radius;
   }
 
-  return pointInPolygon(point, shape.points);
+  return isPointInPolygon(point, shape.points);
 }
 
 function resolveVisibleDescription(
@@ -110,16 +106,18 @@ export class RoccoSceneTargetSystemSDK implements RoccoSceneTargetSystem {
   }
 
   listTargets(): RoccoSceneTargetDefinition[] {
+    // `Array.from` trips unicorn/prefer-spread; Iterator helper needs ES2024 lib.
+    // eslint-disable-next-line unicorn/prefer-iterator-to-array
     return [...this.targets.values()].map((target) => clone(target));
   }
 
-  setEnabled(instanceId: string, enabled: boolean): void {
+  setEnabled(instanceId: string, isEnabled: boolean): void {
     const target = this.targets.get(instanceId);
     if (!target) {
       return;
     }
 
-    target.enabled = enabled;
+    target.enabled = isEnabled;
   }
 
   setVisibleDescription(

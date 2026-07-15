@@ -359,7 +359,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
         node.viewportMask.destroy();
         node.viewportMask = undefined;
       }
-      root.mask = undefined;
+      root.mask = null;
       return;
     }
 

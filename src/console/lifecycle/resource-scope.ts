@@ -65,19 +65,22 @@ export interface ResourceScopeOptions {
 }
 
 export class ResourceScopeImpl implements ResourceScope {
-  readonly id: string;
-  readonly parent: ResourceScope | null;
-  readonly signal: AbortSignal;
-
   private readonly controller: AbortController;
   private readonly entries: ScopeEntry[] = [];
   private readonly ownedChildren = new Map<string, OwnedChildEntry>();
   private closed = false;
-  private disposePromise: Promise<void> | null = null;
-  private parentOwnership: ParentOwnership | null = null;
+  private disposePromise: Promise<void> | undefined = undefined;
+  private parentOwnership: ParentOwnership | undefined = undefined;
+
+  readonly id: string;
+  readonly parent: ResourceScope | null;
+  readonly signal: AbortSignal;
 
   constructor(id: string, options: ResourceScopeOptions = {}) {
     this.id = id;
+    // `options.parent` is `ResourceScope | null | undefined` (optional prop);
+    // the `?? null` maps the absent case to `null` to keep the `| null` contract.
+    // eslint-disable-next-line unicorn/no-null
     this.parent = options.parent ?? null;
     this.controller = new AbortController();
     this.signal = this.controller.signal;
@@ -87,35 +90,6 @@ export class ResourceScopeImpl implements ResourceScope {
     }
   }
 
-  get isDisposed(): boolean {
-    return this.closed;
-  }
-
-  add<T extends DisposableResource>(resource: T): T {
-    this.assertOpen();
-    this.entries.push({ disposer: () => resource.dispose(), active: true });
-    return resource;
-  }
-
-  defer(disposer: Disposer): void {
-    this.assertOpen();
-    this.entries.push({ disposer, active: true });
-  }
-
-  createChild(id: string): ResourceScope {
-    this.assertOpen();
-    return new ResourceScopeImpl(id, { parent: this });
-  }
-
-  dispose(): Promise<void> {
-    if (this.disposePromise) {
-      return this.disposePromise;
-    }
-
-    this.disposePromise = this.disposeInternal();
-    return this.disposePromise;
-  }
-
   private async disposeInternal(): Promise<void> {
     this.closed = true;
     this.controller.abort();
@@ -123,7 +97,7 @@ export class ResourceScopeImpl implements ResourceScope {
     const failures: ResourceScopeDisposalErrorDetail[] = [];
     const entries = [...this.entries];
     // LIFO: dispose in reverse registration order.
-    for (let index = entries.length - 1; index >= 0; index -= 1) {
+    for (let index = entries.length -1; index >=0; index -=1) {
       const entry = entries[index];
       if (!entry?.active) {
         continue;
@@ -134,11 +108,11 @@ export class ResourceScopeImpl implements ResourceScope {
         failures.push({ index, error });
       }
     }
-    this.entries.length = 0;
+    this.entries.length =0;
     this.ownedChildren.clear();
     this.detachFromParent();
 
-    if (failures.length > 0) {
+    if (failures.length >0) {
       throw new ResourceScopeDisposalError(this.id, failures);
     }
   }
@@ -186,13 +160,42 @@ export class ResourceScopeImpl implements ResourceScope {
     ownership.entry.active = false;
     ownership.parent.ownedChildren.delete(ownership.childId);
     ownership.detachAbortPropagation();
-    this.parentOwnership = null;
+    this.parentOwnership = undefined;
   }
 
   private assertOpen(): void {
     if (this.closed) {
       throw new ResourceScopeClosedError(this.id);
     }
+  }
+
+  get isDisposed(): boolean {
+    return this.closed;
+  }
+
+  add<T extends DisposableResource>(resource: T): T {
+    this.assertOpen();
+    this.entries.push({ disposer: () => resource.dispose(), active: true });
+    return resource;
+  }
+
+  defer(disposer: Disposer): void {
+    this.assertOpen();
+    this.entries.push({ disposer, active: true });
+  }
+
+  createChild(id: string): ResourceScope {
+    this.assertOpen();
+    return new ResourceScopeImpl(id, { parent: this });
+  }
+
+  dispose(): Promise<void> {
+    if (this.disposePromise) {
+      return this.disposePromise;
+    }
+
+    this.disposePromise = this.disposeInternal();
+    return this.disposePromise;
   }
 }
 

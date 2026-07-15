@@ -1,7 +1,6 @@
 import type {
   RoccoAttributeEntry,
   RoccoAttributeMap,
-  RoccoColor,
   RoccoColorModel,
   RoccoColorRegisterSet,
   RoccoGraphicPlane,
@@ -200,7 +199,7 @@ export class RoccoGraphicPlaneSDK implements RoccoPlaneSDK {
     scene.palettes = palettes;
   }
 
-  updatePalette(sceneId: string, paletteId: string, colors: RoccoColor[]): void {
+  updatePalette(sceneId: string, paletteId: string, colors: string[]): void {
     const scene = this.getScene(sceneId);
     const palettes = ensureArray(scene.palettes);
     const palette = palettes.find((item) => item.id === paletteId);
@@ -223,7 +222,7 @@ export class RoccoGraphicPlaneSDK implements RoccoPlaneSDK {
     scene.colorRegisterSets = registers;
   }
 
-  updateColorRegister(sceneId: string, registerSetId: string, key: string, color: RoccoColor): void {
+  updateColorRegister(sceneId: string, registerSetId: string, key: string, color: string): void {
     const scene = this.getScene(sceneId);
     const registers = ensureArray(scene.colorRegisterSets);
     const registerSet = registers.find((item) => item.id === registerSetId);

@@ -88,7 +88,7 @@ export function createLevelInteractionRules(): readonly InteractionRule[] {
  * level's optional `handleInventorySceneClick` without the router importing
  * level-specific types.
  */
-export function tryLevelInventorySceneClick(
+export function isLevelInventorySceneClick(
   context: InteractionContext,
   activation: RoccoSceneClickAction,
   carriedItem: RoccoGridMenuCarriedItem,

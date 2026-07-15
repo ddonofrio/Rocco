@@ -4,7 +4,7 @@ export {
   type RpceAssetPreloaderProgressCallback,
 } from './rpce-asset-preloader';
 export {
-  containsRpceLevelRectPoint,
+  isRpceLevelRectPoint,
   findRpceLevelConnector,
   type RpceLevel,
   type RpceLevelConnector,

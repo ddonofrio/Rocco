@@ -15,7 +15,7 @@ export interface RoccoNonRepeatingLineSelectionOptions {
   count: number;
   random?: () => number;
   state?: RoccoNonRepeatingLineSelectionState;
-  avoidImmediateRepeat?: boolean;
+  isAvoidImmediateRepeat?: boolean;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -31,7 +31,7 @@ function normalizeIndexes(indexes: readonly number[], maxExclusive: number): num
   const normalized: number[] = [];
 
   for (const index of indexes) {
-    if (!Number.isInteger(index) || index < 0 || index >= maxExclusive || seen.has(index)) {
+    if (!Number.isSafeInteger(index) || index < 0 || index >= maxExclusive || seen.has(index)) {
       continue;
     }
 
@@ -46,13 +46,13 @@ function refillIndexes(
   totalCount: number,
   usedIndexes: readonly number[],
   lastSelectedIndex: number | undefined,
-  avoidImmediateRepeat: boolean,
+  isAvoidImmediateRepeat: boolean,
 ): number[] {
   let indexes = Array.from({ length: totalCount }, (_, index) => index).filter(
     (index) => !usedIndexes.includes(index),
   );
 
-  if (avoidImmediateRepeat && lastSelectedIndex !== undefined && indexes.length > 1) {
+  if (isAvoidImmediateRepeat && lastSelectedIndex !== undefined && indexes.length > 1) {
     const filtered = indexes.filter((index) => index !== lastSelectedIndex);
     if (filtered.length > 0) {
       indexes = filtered;
@@ -79,7 +79,7 @@ export function selectNonRepeatingLines(
       : undefined;
   const pickedIndexes: number[] = [];
   const random = options.random ?? Math.random;
-  const isAvoidImmediateRepeat = options.avoidImmediateRepeat ?? true;
+  const isAvoidImmediateRepeat = options.isAvoidImmediateRepeat ?? true;
 
   while (pickedIndexes.length < requestedCount && totalCount > 0) {
     if (remainingIndexes.length === 0) {
@@ -97,11 +97,7 @@ export function selectNonRepeatingLines(
     }
 
     const poolIndex = Math.floor(random() * remainingIndexes.length);
-    const [pickedIndex] = remainingIndexes.splice(poolIndex, 1);
-    if (pickedIndex === undefined) {
-      break;
-    }
-
+    const pickedIndex = remainingIndexes.splice(poolIndex, 1)[0];
     pickedIndexes.push(pickedIndex);
   }
 

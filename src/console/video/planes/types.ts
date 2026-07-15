@@ -1,4 +1,3 @@
-export type RoccoColor = string;
 export type RoccoPlaneBlendMode = 'normal' | 'add' | 'multiply' | 'screen';
 
 export type RoccoPixelFormat =
@@ -67,13 +66,13 @@ export interface RoccoAttributeMap {
 
 export interface RoccoPalette {
   id: string;
-  colors: RoccoColor[];
+  colors: string[];
   transparentIndex?: number;
 }
 
 export interface RoccoColorRegisterSet {
   id: string;
-  colors: Record<string, RoccoColor>;
+  colors: Record<string, string>;
 }
 
 export type RoccoPlaneSourceKind =
@@ -86,7 +85,7 @@ export type RoccoPlaneSourceKind =
 
 export interface RoccoSolidSource {
   kind: 'solid';
-  color: RoccoColor;
+  color: string;
 }
 
 export interface RoccoImageSource {
@@ -171,7 +170,7 @@ export interface RoccoColorRegistersModel {
 
 export interface RoccoTintColorModel {
   kind: 'tint';
-  color: RoccoColor;
+  color: string;
   strength: number;
 }
 
@@ -231,7 +230,7 @@ export interface RoccoPlaneScene {
   colorRegisterSets?: RoccoColorRegisterSet[];
   attributeMaps?: RoccoAttributeMap[];
 
-  clearColor?: RoccoColor;
+  clearColor?: string;
 }
 
 export interface RoccoPlaneSceneRecord {
@@ -256,10 +255,10 @@ export interface RoccoPlaneSDK {
   getTile(sceneId: string, tilemapId: string, x: number, y: number): RoccoTileCell | undefined;
 
   registerPalette(sceneId: string, palette: RoccoPalette): void;
-  updatePalette(sceneId: string, paletteId: string, colors: RoccoColor[]): void;
+  updatePalette(sceneId: string, paletteId: string, colors: string[]): void;
 
   registerColorRegisterSet(sceneId: string, registerSet: RoccoColorRegisterSet): void;
-  updateColorRegister(sceneId: string, registerSetId: string, key: string, color: RoccoColor): void;
+  updateColorRegister(sceneId: string, registerSetId: string, key: string, color: string): void;
 
   registerAttributeMap(sceneId: string, attributeMap: RoccoAttributeMap): void;
   setAttribute(

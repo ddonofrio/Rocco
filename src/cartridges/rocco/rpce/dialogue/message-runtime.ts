@@ -12,7 +12,7 @@ import {
 export interface RoccoCartridgeMessageLineSelection {
   count: number;
   historyKey?: string;
-  avoidImmediateRepeat?: boolean;
+  isAvoidImmediateRepeat?: boolean;
   random?: () => number;
 }
 
@@ -21,6 +21,26 @@ export class RoccoCartridgeMessageRuntime {
     string,
     RoccoNonRepeatingLineSelectionState
   >();
+
+  private resolveText(
+    text: RoccoSpriteMessageText,
+    message: Pick<RoccoSpriteMessageRequest, 'spriteInstanceId' | 'mode'>,
+    selection?: RoccoCartridgeMessageLineSelection,
+  ): string[] {
+    if (!selection) {
+      return Array.isArray(text) ? text : [text];
+    }
+
+    const lines = normalizeLines(text);
+    if (lines.length <= 1) {
+      return lines;
+    }
+
+    const historyKey =
+      selection.historyKey ?? `${message.spriteInstanceId}:${message.mode}:${lines.join('\u{1E}')}`;
+    const selected = this.selectLines(lines, historyKey, selection);
+    return selected.length === 1 ? [selected[0] ?? ''] : selected;
+  }
 
   showMessage(
     engine: RoccoEngine,
@@ -86,30 +106,10 @@ export class RoccoCartridgeMessageRuntime {
       count: selection.count,
       random: selection.random,
       state: this.selectionStateByHistoryKey.get(historyKey),
-      avoidImmediateRepeat: selection.avoidImmediateRepeat,
+      isAvoidImmediateRepeat: selection.isAvoidImmediateRepeat,
     });
     this.selectionStateByHistoryKey.set(historyKey, selectionResult.state);
     return selectionResult.lines.length > 0 ? selectionResult.lines : normalizedLines;
-  }
-
-  private resolveText(
-    text: RoccoSpriteMessageText,
-    message: Pick<RoccoSpriteMessageRequest, 'spriteInstanceId' | 'mode'>,
-    selection?: RoccoCartridgeMessageLineSelection,
-  ): RoccoSpriteMessageText {
-    if (!selection) {
-      return text;
-    }
-
-    const lines = normalizeLines(text);
-    if (lines.length <= 1) {
-      return lines;
-    }
-
-    const historyKey =
-      selection.historyKey ?? `${message.spriteInstanceId}:${message.mode}:${lines.join('\u{1E}')}`;
-    const selected = this.selectLines(lines, historyKey, selection);
-    return selected.length === 1 ? selected[0] ?? '' : selected;
   }
 }
 

@@ -65,6 +65,49 @@ export class RoccoSceneActionRouter {
     this.registry = options.registry ?? createRoccoInteractionRegistry();
   }
 
+  private buildContext(
+    activation: RoccoCartridgeAction,
+    context?: CartridgeActionContext,
+  ): InteractionContext {
+    return {
+      action: activation,
+      cartridgeContext: context,
+      engine: this.options.getEngine(),
+      activeLevel: this.options.getActiveLevel(),
+      inventory: this.options.inventory,
+      localization: this.localization,
+      getRoccoAppearance: this.options.getRoccoAppearance,
+      setRoccoAppearance: this.options.setRoccoAppearance,
+      isStanIdentified: this.options.isStanIdentified,
+      isStanAwake: this.options.isStanAwake,
+      inventoryRuntime: this.options.inventoryRuntime,
+      droppedInventory: this.options.droppedInventory,
+      developerRuntime: this.options.developerRuntime,
+      scriptedSequences: this.options.scriptedSequences,
+      transitions: this.options.transitions,
+    };
+  }
+
+  private handleSceneClick(
+    context: InteractionContext,
+    signal: AbortSignal,
+  ): CartridgeActionDisposition | void {
+    if (!isSceneClickAction(context.action)) {
+      return undefined;
+    }
+
+    const preExitIntent = this.registry.dispatchDetailed(context, signal, {
+      kind: 'scene-click',
+      stage: 'before-exit-intent',
+    });
+    if (preExitIntent.matched) {
+      return preExitIntent.disposition;
+    }
+
+    this.options.transitions.updatePendingExitIntent(context.activeLevel, context.action);
+    return this.registry.dispatch(context, signal);
+  }
+
   handleAction(
     activation: RoccoCartridgeAction,
     context?: CartridgeActionContext,
@@ -95,54 +138,11 @@ export class RoccoSceneActionRouter {
     activation: RoccoSceneClickAction,
     carriedItem: RoccoGridMenuCarriedItem,
   ): RoccoInventoryRuntimeSceneClickResolution {
-    const context = this.buildContext(activation, undefined);
+    const context = this.buildContext(activation);
     return this.registry.dispatchSpecialInventorySceneClick(
       context,
       carriedItem,
       new AbortController().signal,
     );
-  }
-
-  private handleSceneClick(
-    context: InteractionContext,
-    signal: AbortSignal,
-  ): CartridgeActionDisposition | void {
-    if (!isSceneClickAction(context.action)) {
-      return undefined;
-    }
-
-    const preExitIntent = this.registry.dispatchDetailed(context, signal, {
-      kind: 'scene-click',
-      stage: 'before-exit-intent',
-    });
-    if (preExitIntent.matched) {
-      return preExitIntent.disposition;
-    }
-
-    this.options.transitions.updatePendingExitIntent(context.activeLevel, context.action);
-    return this.registry.dispatch(context, signal);
-  }
-
-  private buildContext(
-    activation: RoccoCartridgeAction,
-    context?: CartridgeActionContext,
-  ): InteractionContext {
-    return {
-      action: activation,
-      cartridgeContext: context,
-      engine: this.options.getEngine(),
-      activeLevel: this.options.getActiveLevel(),
-      inventory: this.options.inventory,
-      localization: this.localization,
-      getRoccoAppearance: this.options.getRoccoAppearance,
-      setRoccoAppearance: this.options.setRoccoAppearance,
-      isStanIdentified: this.options.isStanIdentified,
-      isStanAwake: this.options.isStanAwake,
-      inventoryRuntime: this.options.inventoryRuntime,
-      droppedInventory: this.options.droppedInventory,
-      developerRuntime: this.options.developerRuntime,
-      scriptedSequences: this.options.scriptedSequences,
-      transitions: this.options.transitions,
-    };
   }
 }

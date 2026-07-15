@@ -58,7 +58,7 @@ export class RpceGameRuntime<TControllerOptions, TMountResult = unknown>
     return this.controller.handleAction(action, context);
   }
 
-  getActiveLevelId(): string | null {
-    return this.controller.getActiveLevelId?.() ?? null;
+  getActiveLevelId(): string | undefined {
+    return this.controller.getActiveLevelId?.() ?? undefined;
   }
 }

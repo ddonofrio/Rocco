@@ -85,7 +85,7 @@ export class RoccoDialogueSession {
   private currentChoices: readonly RoccoDialogueChoiceNode[] = [];
   private pendingStep: RoccoDialoguePendingStep | undefined;
   private linearSequence: RoccoDialogueLinearSequence | undefined;
-  private advanceOnlyLease: ReturnType<RoccoEngine['acquireInputLease']> | null = null;
+  private advanceOnlyLease: ReturnType<RoccoEngine['acquireInputLease']> | undefined = undefined;
 
   constructor(options: RoccoDialogueSessionOptions) {
     this.id = options.id;
@@ -99,143 +99,6 @@ export class RoccoDialogueSession {
     this.npcMessageStyle = options.npcMessageStyle;
     this.hooks = options.hooks;
     this.inputLeaseOwnerId = `dialogue:${options.id}`;
-  }
-
-  beginConversation(start: RoccoDialogueConversationStart): void {
-    this.cancel();
-    this.currentChoices = start.choices;
-    if (start.npcLine === undefined) {
-      this.openChoices(this.currentChoices);
-      return;
-    }
-
-    this.setPhase('waiting-npc');
-    this.engine.video.messages.say(
-      this.npcSpriteInstanceId,
-      this.resolveMessageText(start.npcLine),
-      {
-        ...this.createNpcMessageOptions(this.promptTtlMs),
-        background: true,
-      },
-    );
-    this.schedule(
-      this.resolveLineDuration(start.npcLine, this.promptTtlMs),
-      () => {
-        this.openChoices(this.currentChoices);
-      },
-      this.npcSpriteInstanceId,
-    );
-    this.engine.video.render(0);
-  }
-
-  handleGridMenu(activation: RoccoGridMenuActivation): boolean {
-    if (this.phase !== 'awaiting-choice') {
-      return false;
-    }
-
-    const menu = createRoccoDialogueChoiceMenu({
-      id: this.id,
-      y: this.menuY,
-      choices: this.currentChoices.map((choice) => ({
-        id: choice.id,
-        text: this.resolveMenuLabel(choice.playerLine),
-      })),
-    });
-    const selected = resolveRoccoDialogueChoice(menu, activation);
-    if (!selected) {
-      return false;
-    }
-
-    const choice = this.currentChoices.find((candidate) => candidate.id === selected.id);
-    if (!choice) {
-      return false;
-    }
-
-    this.startChoice(choice);
-    return true;
-  }
-
-  beginLinearSequence(start: RoccoDialogueLinearSequenceStart): void {
-    this.cancel();
-    if (start.lines.length === 0) {
-      start.onComplete?.();
-      return;
-    }
-
-    this.linearSequence = {
-      speaker: start.speaker,
-      lines: [...start.lines],
-      lineIndex: 0,
-      messageKind: start.messageKind ?? 'say',
-      ttlMs: Math.max(
-        1,
-        start.lineTtlMs ??
-          (start.speaker === 'player' ? this.playerLineTtlMs : this.npcLineTtlMs),
-      ),
-      messageOptions: start.messageOptions,
-      onComplete: start.onComplete,
-    };
-    this.showCurrentLinearSequenceLine();
-  }
-
-  update(deltaMs: number): void {
-    if (!this.pendingStep || !Number.isFinite(deltaMs) || deltaMs <= 0) {
-      return;
-    }
-
-    let remainingDeltaMs = deltaMs;
-    while (this.pendingStep && remainingDeltaMs > 0) {
-      if (this.pendingStep.remainingMs > remainingDeltaMs) {
-        this.pendingStep.remainingMs -= remainingDeltaMs;
-        return;
-      }
-
-      remainingDeltaMs -= this.pendingStep.remainingMs;
-      this.completePendingStep();
-    }
-  }
-
-  advance(): boolean {
-    if (!this.pendingStep || this.phase === 'idle' || this.phase === 'awaiting-choice') {
-      return false;
-    }
-
-    this.clearPendingStepMessage();
-    this.pendingStep.remainingMs = 0;
-    this.completePendingStep();
-    return true;
-  }
-
-  cancel(): void {
-    this.pendingStep = undefined;
-    this.currentChoices = [];
-    this.linearSequence = undefined;
-    this.setPhase('idle');
-    if (this.engine.video.gridMenus.isOpen(this.id)) {
-      this.engine.video.gridMenus.closeMenu();
-    }
-    this.engine.video.render(0);
-  }
-
-  isActive(): boolean {
-    return this.phase !== 'idle';
-  }
-
-  isAwaitingChoice(): boolean {
-    return this.phase === 'awaiting-choice';
-  }
-
-  reopenChoices(): boolean {
-    if (this.phase !== 'awaiting-choice' || this.currentChoices.length === 0) {
-      return false;
-    }
-
-    if (this.engine.video.gridMenus.isOpen(this.id)) {
-      return true;
-    }
-
-    this.openChoices(this.currentChoices);
-    return true;
   }
 
   private startChoice(choice: RoccoDialogueChoiceNode): void {
@@ -430,9 +293,9 @@ export class RoccoDialogueSession {
     return (typeof line === 'string' ? 1 : Math.max(1, line.length)) * ttlMs;
   }
 
-  private resolveMessageText(line: RoccoDialogueLine): string | string[] {
+  private resolveMessageText(line: RoccoDialogueLine): string[] {
     if (typeof line === 'string') {
-      return line;
+      return [line];
     }
 
     return [...line];
@@ -455,7 +318,7 @@ export class RoccoDialogueSession {
 
   private setPhase(phase: RoccoDialoguePhase): void {
     this.phase = phase;
-    if (phase === 'waiting-player' || phase === 'waiting-bridge' || phase === 'waiting-npc') {
+    if (['waiting-player', 'waiting-bridge', 'waiting-npc'].includes(phase)) {
       this.acquireAdvanceOnlyLease();
       return;
     }
@@ -472,6 +335,143 @@ export class RoccoDialogueSession {
 
   private releaseAdvanceOnlyLease(): void {
     this.advanceOnlyLease?.dispose();
-    this.advanceOnlyLease = null;
+    this.advanceOnlyLease = undefined;
+  }
+
+  beginConversation(start: RoccoDialogueConversationStart): void {
+    this.cancel();
+    this.currentChoices = start.choices;
+    if (start.npcLine === undefined) {
+      this.openChoices(this.currentChoices);
+      return;
+    }
+
+    this.setPhase('waiting-npc');
+    this.engine.video.messages.say(
+      this.npcSpriteInstanceId,
+      this.resolveMessageText(start.npcLine),
+      {
+        ...this.createNpcMessageOptions(this.promptTtlMs),
+        background: true,
+      },
+    );
+    this.schedule(
+      this.resolveLineDuration(start.npcLine, this.promptTtlMs),
+      () => {
+        this.openChoices(this.currentChoices);
+      },
+      this.npcSpriteInstanceId,
+    );
+    this.engine.video.render(0);
+  }
+
+  handleGridMenu(activation: RoccoGridMenuActivation): boolean {
+    if (this.phase !== 'awaiting-choice') {
+      return false;
+    }
+
+    const menu = createRoccoDialogueChoiceMenu({
+      id: this.id,
+      y: this.menuY,
+      choices: this.currentChoices.map((choice) => ({
+        id: choice.id,
+        text: this.resolveMenuLabel(choice.playerLine),
+      })),
+    });
+    const selected = resolveRoccoDialogueChoice(menu, activation);
+    if (!selected) {
+      return false;
+    }
+
+    const choice = this.currentChoices.find((candidate) => candidate.id === selected.id);
+    if (!choice) {
+      return false;
+    }
+
+    this.startChoice(choice);
+    return true;
+  }
+
+  beginLinearSequence(start: RoccoDialogueLinearSequenceStart): void {
+    this.cancel();
+    if (start.lines.length === 0) {
+      start.onComplete?.();
+      return;
+    }
+
+    this.linearSequence = {
+      speaker: start.speaker,
+      lines: [...start.lines],
+      lineIndex: 0,
+      messageKind: start.messageKind ?? 'say',
+      ttlMs: Math.max(
+        1,
+        start.lineTtlMs ??
+          (start.speaker === 'player' ? this.playerLineTtlMs : this.npcLineTtlMs),
+      ),
+      messageOptions: start.messageOptions,
+      onComplete: start.onComplete,
+    };
+    this.showCurrentLinearSequenceLine();
+  }
+
+  update(deltaMs: number): void {
+    if (!this.pendingStep || !Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return;
+    }
+
+    let remainingDeltaMs = deltaMs;
+    while (this.pendingStep && remainingDeltaMs > 0) {
+      if (this.pendingStep.remainingMs > remainingDeltaMs) {
+        this.pendingStep.remainingMs -= remainingDeltaMs;
+        return;
+      }
+
+      remainingDeltaMs -= this.pendingStep.remainingMs;
+      this.completePendingStep();
+    }
+  }
+
+  advance(): boolean {
+    if (!this.pendingStep || this.phase === 'idle' || this.phase === 'awaiting-choice') {
+      return false;
+    }
+
+    this.clearPendingStepMessage();
+    this.pendingStep.remainingMs = 0;
+    this.completePendingStep();
+    return true;
+  }
+
+  cancel(): void {
+    this.pendingStep = undefined;
+    this.currentChoices = [];
+    this.linearSequence = undefined;
+    this.setPhase('idle');
+    if (this.engine.video.gridMenus.isOpen(this.id)) {
+      this.engine.video.gridMenus.closeMenu();
+    }
+    this.engine.video.render(0);
+  }
+
+  isActive(): boolean {
+    return this.phase !== 'idle';
+  }
+
+  isAwaitingChoice(): boolean {
+    return this.phase === 'awaiting-choice';
+  }
+
+  reopenChoices(): boolean {
+    if (this.phase !== 'awaiting-choice' || this.currentChoices.length === 0) {
+      return false;
+    }
+
+    if (this.engine.video.gridMenus.isOpen(this.id)) {
+      return true;
+    }
+
+    this.openChoices(this.currentChoices);
+    return true;
   }
 }

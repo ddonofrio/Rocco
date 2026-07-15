@@ -4,7 +4,6 @@ import type {
   CartridgeActionDisposition,
   RoccoCartridgeAction,
   RoccoCarryUseAction,
-  RoccoCartridgeActionResult,
   RoccoSceneClickAction,
 } from '../../../console/cartridges';
 import type { RoccoEngine } from '../../../console/engine-sdk';
@@ -135,7 +134,7 @@ export function isActionMenuAction(
 }
 
 export function normalizeDisposition(
-  result: boolean | CartridgeActionDisposition | RoccoCartridgeActionResult | void | null | undefined,
+  result: boolean | void | null | undefined | CartridgeActionDisposition | { suppressDefaultPlayerMove?: boolean },
 ): InteractionDisposition | undefined {
   if (result === undefined || result === null) {
     return undefined;

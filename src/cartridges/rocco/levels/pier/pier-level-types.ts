@@ -1,5 +1,5 @@
 export {
-  containsRoccoLevelRectPoint as containsPierRectPoint,
+  isRoccoLevelRectPoint as containsPierRectPoint,
   findRoccoLevelConnector as findPierConnector,
 } from '../rocco-level-types';
 export type {

@@ -1,7 +1,7 @@
 import type { RoccoSceneClickAction } from '../../../../console/cartridges';
 import type { RoccoPoint } from '../../../../console/video/sprites';
 import {
-  containsRpceLevelRectPoint,
+  isRpceLevelRectPoint,
   findRpceLevelConnector,
   type RpceLevel,
   type RpceLevelConnector,
@@ -129,7 +129,7 @@ export class RpceTransitionController {
 
     return level.connectors.find(
       (connector) =>
-        connector.exitArea && containsRpceLevelRectPoint(connector.exitArea, playerGround),
+        connector.exitArea && isRpceLevelRectPoint(connector.exitArea, playerGround),
     );
   }
 
@@ -139,7 +139,7 @@ export class RpceTransitionController {
   ): RpceLevelConnector | undefined {
     return level.connectors.find(
       (connector) =>
-        connector.exitArea && containsRpceLevelRectPoint(connector.exitArea, scenePoint),
+        connector.exitArea && isRpceLevelRectPoint(connector.exitArea, scenePoint),
     );
   }
 

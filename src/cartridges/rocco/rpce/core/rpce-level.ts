@@ -1,4 +1,4 @@
-import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../console/cartridges';
+import type { RoccoSceneClickAction } from '../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../console/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../console/video/grid-menu';
@@ -58,10 +58,10 @@ export interface RpceLevel {
   update(deltaMs: number): void;
   handleAction(activation: RoccoActionMenuActivation): void;
   handleGridMenu?(activation: RoccoGridMenuActivation): void;
-  handleSceneClick?(action: RoccoSceneClickAction): RoccoCartridgeActionResult | void;
+  handleSceneClick?(action: RoccoSceneClickAction): void;
 }
 
-export function containsRpceLevelRectPoint(rect: RpceLevelRect, point: RoccoPoint): boolean {
+export function isRpceLevelRectPoint(rect: RpceLevelRect, point: RoccoPoint): boolean {
   return (
     point.x >= rect.x &&
     point.x <= rect.x + rect.width &&

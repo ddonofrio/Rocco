@@ -5,7 +5,7 @@ import {
   isSceneClickAction,
   normalizeDisposition,
 } from './interaction-types';
-import { tryLevelInventorySceneClick } from './register-level-interactions';
+import { isLevelInventorySceneClick } from './register-level-interactions';
 
 const CARRIED_ITEM_SCENE_CLICK_PRIORITY = 100;
 const INVENTORY_GRID_MENU_PRIORITY = 500;
@@ -40,7 +40,7 @@ export function createInventoryInteractionRules(): readonly InteractionRule[] {
         if (!context.inventoryRuntime.shouldHandleSceneCarriedItem(carriedItem)) {
           return normalizeDisposition(undefined);
         }
-        if (tryLevelInventorySceneClick(context, activation, carriedItem)) {
+        if (isLevelInventorySceneClick(context, activation, carriedItem)) {
           return normalizeDisposition(undefined);
         }
         return normalizeDisposition(
@@ -63,7 +63,7 @@ export function createInventoryInteractionRules(): readonly InteractionRule[] {
         }
         const activation = context.action.sceneClick;
         const carriedItem = context.action.carriedItem;
-        if (tryLevelInventorySceneClick(context, activation, carriedItem)) {
+        if (isLevelInventorySceneClick(context, activation, carriedItem)) {
           return normalizeDisposition(undefined);
         }
         return normalizeDisposition(

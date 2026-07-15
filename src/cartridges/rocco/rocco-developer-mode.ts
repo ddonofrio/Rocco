@@ -220,7 +220,7 @@ function createRoccoDeveloperInventoryOptions(
   inventory: RoccoInventory,
 ): readonly RoccoDeveloperInventoryOption[] {
   const currentMagazineLabel =
-    inventory.listItems().find((item) => item.id === ROCCO_INVENTORY_MAGAZINE_ITEM_ID)?.label ?? null;
+    inventory.listItems().find((item) => item.id === ROCCO_INVENTORY_MAGAZINE_ITEM_ID)?.label ?? undefined;
 
   return [
     {

@@ -7,8 +7,8 @@
  * (`[cartridgeId+profileId]`) are both efficient.
  */
 
-import type { RoccoDatabase } from './db';
-import { getRoccoDatabase } from './db';
+import type { RoccoDatabase } from './database';
+import { getRoccoDatabase } from './database';
 import type { SaveEnvelopeRow, SaveStore, SaveStoreKey } from './types';
 
 export class DexieSaveStore implements SaveStore {

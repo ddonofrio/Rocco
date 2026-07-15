@@ -74,7 +74,7 @@ vi.mock('dexie', () => ({
 }));
 
 async function importPersistenceModule() {
-  return import('../../../src/console/persistence/db');
+  return import('../../../src/console/persistence/database');
 }
 
 beforeEach(() => {

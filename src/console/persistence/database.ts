@@ -32,8 +32,10 @@ export class RoccoDatabase extends Dexie {
       planeAssets: 'id, kind, updatedAt',
     });
     this.version(3).stores({
+      // eslint-disable-next-line unicorn/no-null -- Dexie uses `null` to drop an object store on upgrade.
       saves: null,
       scenes: 'id, updatedAt',
+      // eslint-disable-next-line unicorn/no-null -- Dexie uses `null` to drop an object store on upgrade.
       planeAssets: null,
     });
     this.version(4).stores({
@@ -45,7 +47,10 @@ export class RoccoDatabase extends Dexie {
   }
 }
 
-let database: RoccoDatabase | null = null;
+const databaseState = {
+  instance: undefined as RoccoDatabase | undefined,
+  migrationPromise: undefined as Promise<void> | undefined,
+};
 
 /**
  * Lazily opens the singleton IndexedDB database. Recreated after
@@ -53,29 +58,27 @@ let database: RoccoDatabase | null = null;
  * dispose and reopened transparently (audit ROCCO-014: resource close).
  */
 export function getRoccoDatabase(): RoccoDatabase {
-  if (!database) {
-    database = new RoccoDatabase();
+  if (!databaseState.instance) {
+    databaseState.instance = new RoccoDatabase();
   }
-  return database;
+  return databaseState.instance;
 }
 
 /** Closes the singleton database, releasing the IndexedDB connection. */
 export function closeRoccoDatabase(): void {
-  if (database) {
-    database.close();
-    database = null;
+  if (databaseState.instance) {
+    databaseState.instance.close();
+    databaseState.instance = undefined;
   }
-  migrationPromise = null;
+  databaseState.migrationPromise = undefined;
 }
 
-let migrationPromise: Promise<void> | null = null;
-
 async function migrateLegacyScenes(): Promise<void> {
-  if (migrationPromise) {
-    return migrationPromise;
+  if (databaseState.migrationPromise) {
+    return databaseState.migrationPromise;
   }
 
-  migrationPromise = (async () => {
+  databaseState.migrationPromise = (async () => {
     const database_ = getRoccoDatabase();
     const legacy = await database_.scenes.toArray();
     if (legacy.length === 0) {
@@ -101,7 +104,7 @@ async function migrateLegacyScenes(): Promise<void> {
     });
   })();
 
-  return migrationPromise;
+  return databaseState.migrationPromise;
 }
 
 function resolveLegacySceneOwner(row: RoccoLegacyPlaneSceneRecordRow): string {
@@ -123,6 +126,7 @@ export async function loadPlaneSceneRecord(
   const key: SceneStoreKey = [cartridgeId, sceneId];
   const row = await database_.scenes_v4.get(key);
   if (!row) {
+    // eslint-disable-next-line unicorn/no-null -- public contract returns `| null` to keep SDK callers stable.
     return null;
   }
 

@@ -238,8 +238,8 @@ export class RoccoLevelManager {
       onMysteriousKeyCollected: () =>
         this.tryAddItemToInventory(createRoccoMysteriousKeyInventoryItem(this.localization)),
       hasMagazine: () => this.inventory.hasItem(ROCCO_INVENTORY_MAGAZINE_ITEM_ID),
-      onMagazineCollected: (known) =>
-        this.tryAddItemToInventory(createRoccoMagazineInventoryItem(this.localization, known)),
+      onMagazineCollected: (isKnown) =>
+        this.tryAddItemToInventory(createRoccoMagazineInventoryItem(this.localization, isKnown)),
       hasCoralRelic: () =>
         this.hasAccessibleInventoryItem(
           ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,

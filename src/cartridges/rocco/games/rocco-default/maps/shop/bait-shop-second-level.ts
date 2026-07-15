@@ -60,7 +60,7 @@ export const BAIT_SHOP_SECOND_SCENE_ID = 'rocco-bait-shop-second-scene';
 export interface RoccoBaitShopSecondLevelOptions {
   hasMagazine?: () => boolean;
   hasMysteriousKey?: () => boolean;
-  onMagazineCollected?: (known: boolean) => boolean;
+  onMagazineCollected?: (isKnown: boolean) => boolean;
 }
 
 const BAIT_SHOP_RETURN_CONNECTOR_ID = 'south';
@@ -267,10 +267,10 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
 
   private readonly localization: RoccoLocalization;
   private readonly options: RoccoBaitShopSecondLevelOptions;
-  private engine: RoccoEngine | null = null;
-  private spriteController: RoccoDefaultSpriteController | null = null;
-  private scriptedInteractionController: RoccoScriptedSceneInteractionController | null = null;
-  private onConnectorTransitionRequested: ((connectorId: string) => boolean) | null = null;
+  private engine: RoccoEngine | undefined = undefined;
+  private spriteController: RoccoDefaultSpriteController | undefined = undefined;
+  private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined = undefined;
+  private onConnectorTransitionRequested: ((connectorId: string) => boolean) | undefined = undefined;
   private toiletDoorOpen = false;
   private toiletDoorKnown = false;
   private magazineKnown = false;
@@ -292,9 +292,9 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.engine = engine;
-    this.spriteController = null;
-    this.scriptedInteractionController = null;
-    this.onConnectorTransitionRequested = options.onConnectorTransitionRequested ?? null;
+    this.spriteController = undefined;
+    this.scriptedInteractionController = undefined;
+    this.onConnectorTransitionRequested = options.onConnectorTransitionRequested ?? undefined;
     if (options.entryConnectorId === BAIT_SHOP_TOILET_CONNECTOR_ID) {
       this.toiletDoorOpen = false;
       this.toiletDoorKnown = true;
@@ -360,10 +360,10 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     this.shouldPlayDoorClosingSound = false;
     uninstallDefaultSprite(engine);
     uninstallBaitShopWalkMap(engine);
-    this.engine = null;
-    this.spriteController = null;
-    this.scriptedInteractionController = null;
-    this.onConnectorTransitionRequested = null;
+    this.engine = undefined;
+    this.spriteController = undefined;
+    this.scriptedInteractionController = undefined;
+    this.onConnectorTransitionRequested = undefined;
     engine.video.render(0);
   }
 

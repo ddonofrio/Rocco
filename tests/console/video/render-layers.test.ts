@@ -7,7 +7,7 @@ describe('video render layers', () => {
     expect(defaultRoccoRenderLayers.length).toBeGreaterThan(0);
 
     const zIndexes = defaultRoccoRenderLayers.map((layer) => layer.zIndex);
-    const sorted = [...zIndexes].sort((left, right) => left - right);
+    const sorted = [...zIndexes].toSorted((left, right) => left - right);
     expect(zIndexes).toEqual(sorted);
   });
 });

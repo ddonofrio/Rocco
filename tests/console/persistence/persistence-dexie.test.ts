@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { RoccoDatabase } from '../../../src/console/persistence/db';
+import { RoccoDatabase } from '../../../src/console/persistence/database';
 import { DexieSaveStore } from '../../../src/console/persistence/store';
 import { createSaveRepository as createSaveRepo } from '../../../src/console/persistence/save-repository';
 import type {
@@ -16,7 +16,7 @@ interface TestState {
 }
 
 async function resetPersistenceDatabase(): Promise<void> {
-  const { closeRoccoDatabase } = await import('../../../src/console/persistence/db');
+  const { closeRoccoDatabase } = await import('../../../src/console/persistence/database');
   closeRoccoDatabase();
 
   await new Promise<void>((resolve, reject) => {
@@ -69,7 +69,7 @@ describe('Dexie persistence with real IndexedDB', () => {
 
   describe('scene store', () => {
     it('round-trips a scene through savePlaneScene and loadPlaneSceneRecord', async () => {
-      const { loadPlaneSceneRecord, savePlaneScene } = await import('../../../src/console/persistence/db');
+      const { loadPlaneSceneRecord, savePlaneScene } = await import('../../../src/console/persistence/database');
       const scene = makeScene();
 
       await savePlaneScene('cart', scene);
@@ -313,7 +313,7 @@ describe('Dexie persistence with real IndexedDB', () => {
 
   describe('legacy scene migration', () => {
     it('migrates partial legacy rows and resumes pending ones', async () => {
-      const { closeRoccoDatabase, loadPlaneSceneRecord } = await import('../../../src/console/persistence/db');
+      const { closeRoccoDatabase, loadPlaneSceneRecord } = await import('../../../src/console/persistence/database');
 
       closeRoccoDatabase();
       await resetPersistenceDatabase();

@@ -11,10 +11,20 @@ interface TestMenuResult {
   selectedLocale?: string;
 }
 
+interface PromiseWithResolversResult<T> {
+  promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+  reject(reason?: unknown): void;
+}
+
 type TestMenuShowHandler = (
   manifests: unknown,
   options: unknown,
 ) => TestMenuResult | Promise<TestMenuResult>;
+
+const promiseConstructor = Promise as PromiseConstructor & {
+  withResolvers<T>(): PromiseWithResolversResult<T>;
+};
 
 const testState = vi.hoisted(() => ({
   registrations: [] as RoccoBuiltinCartridgeConfig[],
@@ -58,9 +68,9 @@ interface TestEngine {
   log: ReturnType<typeof vi.fn>;
 }
 
-function createTestEngine(initialDeveloperModeEnabled = false): TestEngine {
+function createTestEngine(isDeveloperModeEnabled = false): TestEngine {
   let consoleFlags: RoccoConsoleFlags = {
-    developerModeEnabled: initialDeveloperModeEnabled,
+    developerModeEnabled: isDeveloperModeEnabled,
   };
 
   return {
@@ -164,7 +174,7 @@ describe('RoccoCartridgeManager', () => {
 
   it('mounts the selected cartridge with the latest boot-setting flag value', async () => {
     const engine = createTestEngine(false);
-    let mountedDeveloperModeEnabled: boolean | null = null;
+    let mountedDeveloperModeEnabled: boolean | undefined;
 
     testState.registrations = [
       createTestConfig('setup-tool', () =>
@@ -193,7 +203,7 @@ describe('RoccoCartridgeManager', () => {
         createTestCartridge('game', {
           mount: ({ engine: mountEngine }) => {
             mountedDeveloperModeEnabled =
-              mountEngine.getConsoleFlags?.().developerModeEnabled ?? null;
+              mountEngine.getConsoleFlags?.().developerModeEnabled;
           },
         })),
     ];
@@ -228,27 +238,35 @@ describe('RoccoCartridgeManager', () => {
     let resolveStart!: () => void;
     let notifyMountReached!: () => void;
     let notifyStartReached!: () => void;
-    const mountReached = new Promise<void>((resolve) => {
-      notifyMountReached = resolve;
-    });
-    const startReached = new Promise<void>((resolve) => {
-      notifyStartReached = resolve;
-    });
+    const mountReachedDeferred = promiseConstructor.withResolvers<void>();
+    const startReachedDeferred = promiseConstructor.withResolvers<void>();
+    const mountReached = mountReachedDeferred.promise;
+    const startReached = startReachedDeferred.promise;
+    notifyMountReached = () => {
+      mountReachedDeferred.resolve();
+    };
+    notifyStartReached = () => {
+      startReachedDeferred.resolve();
+    };
 
     testState.registrations = [
       createTestConfig('game', () =>
         createTestCartridge('game', {
           mount: async () => {
+            const mountDeferred = promiseConstructor.withResolvers<void>();
             notifyMountReached();
-            await new Promise<void>((resolve) => {
-              resolveMount = resolve;
-            });
+            resolveMount = () => {
+              mountDeferred.resolve();
+            };
+            await mountDeferred.promise;
           },
           start: async () => {
+            const startDeferred = promiseConstructor.withResolvers<void>();
             notifyStartReached();
-            await new Promise<void>((resolve) => {
-              resolveStart = resolve;
-            });
+            resolveStart = () => {
+              startDeferred.resolve();
+            };
+            await startDeferred.promise;
           },
         })),
     ];
@@ -260,12 +278,12 @@ describe('RoccoCartridgeManager', () => {
       configuredCartridgeId: 'game',
     });
 
-    expect(manager.getActiveCartridge()).toBeNull();
+    expect(manager.getActiveCartridge()).toBeUndefined();
 
     await mountReached;
     resolveMount();
     await startReached;
-    expect(manager.getActiveCartridge()).toBeNull();
+    expect(manager.getActiveCartridge()).toBeUndefined();
 
     resolveStart();
     await loadPromise;
@@ -307,7 +325,7 @@ describe('RoccoCartridgeManager', () => {
       }),
     ).rejects.toThrow('mount failed');
 
-    expect(manager.getActiveCartridge()).toBeNull();
+    expect(manager.getActiveCartridge()).toBeUndefined();
     expect(order).toEqual(['stop', 'dispose', 'scope']);
   });
 
@@ -348,6 +366,6 @@ describe('RoccoCartridgeManager', () => {
 
     await expect(manager.dispose()).rejects.toBeInstanceOf(AggregateError);
     expect(order).toEqual(['stop', 'dispose', 'scope']);
-    expect(manager.getActiveCartridge()).toBeNull();
+    expect(manager.getActiveCartridge()).toBeUndefined();
   });
 });

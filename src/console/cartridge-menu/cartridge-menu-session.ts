@@ -41,6 +41,32 @@ export class RoccoCartridgeMenuSession {
   private soundProfileValue = resolveRoccoSoundProfile();
   private bootSettingsValue: readonly RoccoCartridgeBootSetting[] = [];
 
+  private alignScrollToSelection(visibleItems: number): void {
+    if (this.selectedIndexValue < this.scrollOffsetValue) {
+      this.scrollOffsetValue = this.selectedIndexValue;
+      return;
+    }
+
+    const safeVisibleItems = Math.max(1, visibleItems);
+    if (this.selectedIndexValue >= this.scrollOffsetValue + safeVisibleItems) {
+      this.scrollOffsetValue = this.selectedIndexValue - safeVisibleItems + 1;
+    }
+  }
+
+  private clampIndex(index: number, length: number): number {
+    if (length <= 0) {
+      return 0;
+    }
+
+    return Math.max(0, Math.min(length - 1, index));
+  }
+
+  private moveInCycle<T extends string>(values: readonly T[], current: T, delta: -1 | 1): T {
+    const currentIndex = Math.max(0, values.indexOf(current));
+    const nextIndex = (currentIndex + delta + values.length) % values.length;
+    return values[nextIndex] ?? current;
+  }
+
   begin(
     manifests: readonly RoccoCartridgeManifest[],
     options: RoccoCartridgeMenuSessionOptions = {},
@@ -266,31 +292,5 @@ export class RoccoCartridgeMenuSession {
       ...localizedManifest,
       localizations: manifest.localizations,
     };
-  }
-
-  private alignScrollToSelection(visibleItems: number): void {
-    const safeVisibleItems = Math.max(1, visibleItems);
-    if (this.selectedIndexValue < this.scrollOffsetValue) {
-      this.scrollOffsetValue = this.selectedIndexValue;
-      return;
-    }
-
-    if (this.selectedIndexValue >= this.scrollOffsetValue + safeVisibleItems) {
-      this.scrollOffsetValue = this.selectedIndexValue - safeVisibleItems + 1;
-    }
-  }
-
-  private clampIndex(index: number, length: number): number {
-    if (length <= 0) {
-      return 0;
-    }
-
-    return Math.max(0, Math.min(length - 1, index));
-  }
-
-  private moveInCycle<T extends string>(values: readonly T[], current: T, delta: -1 | 1): T {
-    const currentIndex = Math.max(0, values.indexOf(current));
-    const nextIndex = (currentIndex + delta + values.length) % values.length;
-    return values[nextIndex] ?? current;
   }
 }

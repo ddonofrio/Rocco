@@ -1,6 +1,5 @@
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
-import type { RoccoCartridgeActionResult } from '../../../../../../console/cartridges';
 import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
@@ -126,216 +125,25 @@ export const ROCCO_PIER_MIDDLE_CONNECTORS: readonly RoccoLevelConnector[] = [
 ];
 
 export class RoccoPierMiddleLevel implements RoccoLevel {
+  private readonly localization: RoccoLocalization;
+  private spriteController: RoccoDefaultSpriteController | undefined;
+  private cloudController: RoccoDefaultCloudController | undefined;
+  private keysController: RoccoDefaultKeysController | undefined;
+  private pelikanController: RoccoDefaultPelikanController | undefined;
+  private baitBucketController: RoccoDefaultBaitBucketController | undefined;
+  private engine: RoccoEngine | undefined;
+  private feedingInteractionsInstalled = false;
+  private feedingLookSelectionState: RoccoNonRepeatingLineSelectionState | undefined;
+  private pendingPelikanTakeoffMs: number | undefined;
+  private options: RoccoLevelMountOptions = {};
+  private readonly levelState = createInitialMiddleLevelState();
   readonly id = ROCCO_PIER_MIDDLE_LEVEL_ID;
   readonly title: string;
   readonly connectors = ROCCO_PIER_MIDDLE_CONNECTORS;
-  private readonly localization: RoccoLocalization;
-
-  private spriteController: RoccoDefaultSpriteController | null = null;
-  private cloudController: RoccoDefaultCloudController | null = null;
-  private keysController: RoccoDefaultKeysController | null = null;
-  private pelikanController: RoccoDefaultPelikanController | null = null;
-  private baitBucketController: RoccoDefaultBaitBucketController | null = null;
-  private engine: RoccoEngine | null = null;
-  private feedingInteractionsInstalled = false;
-  private feedingLookSelectionState: RoccoNonRepeatingLineSelectionState | null = null;
-  private pendingPelikanTakeoffMs: number | null = null;
-  private options: RoccoLevelMountOptions = {};
-  private readonly levelState = createInitialMiddleLevelState();
 
   constructor(localization: RoccoLocalization = createRoccoLocalization()) {
     this.localization = localization;
     this.title = localization.text.levels.middle;
-  }
-
-  async mount(
-    engine: RoccoEngine,
-    options: RoccoLevelMountOptions = {},
-    preloader?: RoccoAssetPreloader,
-  ): Promise<RoccoPlaneScene> {
-    this.engine = engine;
-    this.options = options;
-    this.spriteController = null;
-    this.cloudController = null;
-    this.keysController = null;
-    this.pelikanController = null;
-    this.baitBucketController = null;
-    this.feedingInteractionsInstalled = false;
-    this.feedingLookSelectionState = null;
-    this.pendingPelikanTakeoffMs = null;
-    uninstallDefaultFeedingLookActionMenu(engine);
-
-    const scene = await loadOrCreatePierScene(engine, {
-      sceneId: PIER_MIDDLE_SCENE_ID,
-      backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X,
-    });
-    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
-    engine.loadPlaneScene(scene);
-    await installDefaultWalkMap(engine, {
-      backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X,
-    }, preloader);
-
-    await preloader?.preloadAssetUrls(engine, [
-      roccoDefaultActionMenuAssetUrls.grab,
-      roccoDefaultActionMenuAssetUrls.kick,
-      roccoDefaultActionMenuAssetUrls.look,
-      roccoDefaultActionMenuAssetUrls.talk,
-    ]).catch(() => {
-      engine.log('Assets', 'Some action menu icons could not be preloaded.');
-    });
-
-    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
-    const spriteInstallOptions = entryConnector
-      ? {
-          initialFacing: entryConnector.entryFacing,
-          initialPosition: entryConnector.entryPoint,
-          playIntro: false,
-        }
-      : undefined;
-
-    const initialKeysState = this.resolveInitialKeysState();
-    const [
-      cloudController,
-      baitBucketController,
-      keysController,
-      pelikanController,
-      spriteController,
-    ] = await Promise.all([
-      installDefaultCloud(engine, preloader),
-      installDefaultBaitBucket(engine, {
-        localization: this.localization,
-        initialState: {
-          dropped: this.levelState.baitBucketDropped,
-        },
-        onDropped: () => {
-          this.levelState.baitBucketDropped = true;
-        },
-      }, preloader),
-      installDefaultKeys(engine, {
-        localization: this.localization,
-        initialState: initialKeysState,
-        onCollectRequested: () => this.options.onKeysCollectRequested?.() ?? true,
-        onCollected: () => {
-          this.levelState.keysStatus = 'collected';
-          this.options.onKeysCollected?.();
-        },
-      }, preloader),
-      installDefaultPelikan(engine, {
-        localization: this.localization,
-        initialState: this.levelState.pelikanState,
-        onTakeoff: () => {
-          this.levelState.keysStatus = 'revealed';
-          this.levelState.keysX = DEFAULT_KEYS_X;
-          this.levelState.keysY = DEFAULT_KEYS_Y;
-          this.keysController?.revealAt(DEFAULT_KEYS_X, DEFAULT_KEYS_Y);
-        },
-      }, preloader),
-      installDefaultSprite(engine, {
-        ...spriteInstallOptions,
-        appearance: options.roccoAppearance,
-        localization: this.localization,
-      }, preloader),
-    ]);
-
-    this.cloudController = cloudController;
-    this.baitBucketController = baitBucketController;
-    this.keysController = keysController;
-    this.pelikanController = pelikanController;
-    this.spriteController = spriteController;
-
-    if (this.levelState.pelikanState === 'feeding') {
-      this.installFeedingInteractionsIfReady();
-    } else {
-      installDefaultActionMenu(engine, this.localization);
-    }
-
-    return scene;
-  }
-
-  unmount(engine: RoccoEngine): void {
-    this.keysController?.cancel();
-    engine.video.actionMenus.closeMenu();
-    engine.video.messages.clearMessages();
-    uninstallDefaultFeedingLookActionMenu(engine);
-    uninstallDefaultBaitBucket(engine);
-    uninstallDefaultKeys(engine);
-    uninstallDefaultPelikan(engine);
-    uninstallDefaultCloud(engine);
-    uninstallDefaultSprite(engine);
-    uninstallDefaultWalkMap(engine);
-    this.spriteController = null;
-    this.cloudController = null;
-    this.keysController = null;
-    this.pelikanController = null;
-    this.baitBucketController = null;
-    this.feedingInteractionsInstalled = false;
-    this.pendingPelikanTakeoffMs = null;
-    this.engine = null;
-    engine.video.render(0);
-  }
-
-  update(deltaMs: number): void {
-    this.cloudController?.update(deltaMs);
-    this.baitBucketController?.update(deltaMs);
-    this.keysController?.update(deltaMs);
-    this.pelikanController?.update(this.resolvePelikanDeltaMs(deltaMs));
-    this.syncStateFromControllers();
-    this.installFeedingInteractionsIfReady();
-    this.spriteController?.update(deltaMs);
-  }
-
-  handleAction(activation: RoccoActionMenuActivation): void {
-    this.baitBucketController?.handleAction(activation);
-    this.keysController?.handleAction(activation);
-    if (this.handleFeedingLookAction(activation)) {
-      return;
-    }
-
-    if (activation.targetInstanceId !== DEFAULT_PELIKAN_SPRITE_INSTANCE_ID || !this.engine) {
-      return;
-    }
-
-    if (showDefaultPelikanSimpleReaction(this.engine, activation.actionId, this.localization)) {
-      return;
-    }
-
-    if (activation.actionId !== 'talk') {
-      return;
-    }
-
-    if (this.baitBucketController?.isDropped()) {
-      if (this.pendingPelikanTakeoffMs !== null) {
-        return;
-      }
-
-      this.engine.video.messages.say(
-        DEFAULT_SPRITE_INSTANCE_ID,
-        this.localization.text.middleLevel.pelikanFeedingLine,
-        {
-          ttlMs: DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS,
-        },
-      );
-      this.pendingPelikanTakeoffMs = DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS;
-      this.engine.video.render(0);
-      return;
-    }
-
-    showDefaultPelikanTalkReaction(this.engine, this.localization);
-  }
-
-  handleSceneClick(): RoccoCartridgeActionResult | void {
-    const controller = this.spriteController;
-    if (!this.engine || !controller?.isIntroActive()) {
-      return;
-    }
-
-    if (controller.isIntroSpeaking()) {
-      controller.advanceIntro();
-    } else {
-      controller.cancelIntro();
-    }
-
-    return { suppressDefaultPlayerMove: true };
   }
 
   private installFeedingInteractionsIfReady(): void {
@@ -424,7 +232,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   }
 
   private resolvePelikanDeltaMs(deltaMs: number): number {
-    if (this.pendingPelikanTakeoffMs === null) {
+    if (this.pendingPelikanTakeoffMs === undefined) {
       return deltaMs;
     }
 
@@ -435,8 +243,200 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     }
 
     const leftoverDeltaMs = Math.max(0, -this.pendingPelikanTakeoffMs);
-    this.pendingPelikanTakeoffMs = null;
+    this.pendingPelikanTakeoffMs = undefined;
     this.pelikanController?.startBaitFeedingSequence();
     return leftoverDeltaMs;
+  }
+
+  async mount(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
+    this.engine = engine;
+    this.options = options;
+    this.spriteController = undefined;
+    this.cloudController = undefined;
+    this.keysController = undefined;
+    this.pelikanController = undefined;
+    this.baitBucketController = undefined;
+    this.feedingInteractionsInstalled = false;
+    this.feedingLookSelectionState = undefined;
+    this.pendingPelikanTakeoffMs = undefined;
+    uninstallDefaultFeedingLookActionMenu(engine);
+
+    const scene = await loadOrCreatePierScene(engine, {
+      sceneId: PIER_MIDDLE_SCENE_ID,
+      backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X,
+    });
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+    engine.loadPlaneScene(scene);
+    await installDefaultWalkMap(engine, {
+      backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X,
+    }, preloader);
+
+    try {
+      await preloader?.preloadAssetUrls(engine, [
+        roccoDefaultActionMenuAssetUrls.grab,
+        roccoDefaultActionMenuAssetUrls.kick,
+        roccoDefaultActionMenuAssetUrls.look,
+        roccoDefaultActionMenuAssetUrls.talk,
+      ]);
+    } catch {
+      engine.log('Assets', 'Some action menu icons could not be preloaded.');
+    }
+
+    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
+    const spriteInstallOptions = entryConnector
+      ? {
+          initialFacing: entryConnector.entryFacing,
+          initialPosition: entryConnector.entryPoint,
+          playIntro: false,
+        }
+      : undefined;
+
+    const initialKeysState = this.resolveInitialKeysState();
+    const [
+      cloudController,
+      baitBucketController,
+      keysController,
+      pelikanController,
+      spriteController,
+    ] = await Promise.all([
+      installDefaultCloud(engine, preloader),
+      installDefaultBaitBucket(engine, {
+        localization: this.localization,
+        initialState: {
+          dropped: this.levelState.baitBucketDropped,
+        },
+        onDropped: () => {
+          this.levelState.baitBucketDropped = true;
+        },
+      }, preloader),
+      installDefaultKeys(engine, {
+        localization: this.localization,
+        initialState: initialKeysState,
+        onCollectRequested: () => this.options.onKeysCollectRequested?.() ?? true,
+        onCollected: () => {
+          this.levelState.keysStatus = 'collected';
+          this.options.onKeysCollected?.();
+        },
+      }, preloader),
+      installDefaultPelikan(engine, {
+        localization: this.localization,
+        initialState: this.levelState.pelikanState,
+        onTakeoff: () => {
+          this.levelState.keysStatus = 'revealed';
+          this.levelState.keysX = DEFAULT_KEYS_X;
+          this.levelState.keysY = DEFAULT_KEYS_Y;
+          this.keysController?.revealAt(DEFAULT_KEYS_X, DEFAULT_KEYS_Y);
+        },
+      }, preloader),
+      installDefaultSprite(engine, {
+        ...spriteInstallOptions,
+        appearance: options.roccoAppearance,
+        localization: this.localization,
+      }, preloader),
+    ]);
+
+    this.cloudController = cloudController;
+    this.baitBucketController = baitBucketController;
+    this.keysController = keysController;
+    this.pelikanController = pelikanController;
+    this.spriteController = spriteController;
+
+    if (this.levelState.pelikanState === 'feeding') {
+      this.installFeedingInteractionsIfReady();
+    } else {
+      installDefaultActionMenu(engine, this.localization);
+    }
+
+    return scene;
+  }
+
+  unmount(engine: RoccoEngine): void {
+    this.keysController?.cancel();
+    engine.video.actionMenus.closeMenu();
+    engine.video.messages.clearMessages();
+    uninstallDefaultFeedingLookActionMenu(engine);
+    uninstallDefaultBaitBucket(engine);
+    uninstallDefaultKeys(engine);
+    uninstallDefaultPelikan(engine);
+    uninstallDefaultCloud(engine);
+    uninstallDefaultSprite(engine);
+    uninstallDefaultWalkMap(engine);
+    this.spriteController = undefined;
+    this.cloudController = undefined;
+    this.keysController = undefined;
+    this.pelikanController = undefined;
+    this.baitBucketController = undefined;
+    this.feedingInteractionsInstalled = false;
+    this.pendingPelikanTakeoffMs = undefined;
+    this.engine = undefined;
+    engine.video.render(0);
+  }
+
+  update(deltaMs: number): void {
+    this.cloudController?.update(deltaMs);
+    this.baitBucketController?.update(deltaMs);
+    this.keysController?.update(deltaMs);
+    this.pelikanController?.update(this.resolvePelikanDeltaMs(deltaMs));
+    this.syncStateFromControllers();
+    this.installFeedingInteractionsIfReady();
+    this.spriteController?.update(deltaMs);
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    this.baitBucketController?.handleAction(activation);
+    this.keysController?.handleAction(activation);
+    if (this.handleFeedingLookAction(activation)) {
+      return;
+    }
+
+    if (activation.targetInstanceId !== DEFAULT_PELIKAN_SPRITE_INSTANCE_ID || !this.engine) {
+      return;
+    }
+
+    if (showDefaultPelikanSimpleReaction(this.engine, activation.actionId, this.localization)) {
+      return;
+    }
+
+    if (activation.actionId !== 'talk') {
+      return;
+    }
+
+    if (this.baitBucketController?.isDropped()) {
+      if (this.pendingPelikanTakeoffMs !== undefined) {
+        return;
+      }
+
+      this.engine.video.messages.say(
+        DEFAULT_SPRITE_INSTANCE_ID,
+        this.localization.text.middleLevel.pelikanFeedingLine,
+        {
+          ttlMs: DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS,
+        },
+      );
+      this.pendingPelikanTakeoffMs = DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS;
+      this.engine.video.render(0);
+      return;
+    }
+
+    showDefaultPelikanTalkReaction(this.engine, this.localization);
+  }
+
+  handleSceneClick() {
+    const controller = this.spriteController;
+    if (!this.engine || !controller?.isIntroActive()) {
+      return;
+    }
+
+    if (controller.isIntroSpeaking()) {
+      controller.advanceIntro();
+    } else {
+      controller.cancelIntro();
+    }
+
+    return { suppressDefaultPlayerMove: true };
   }
 }

@@ -4,7 +4,7 @@ import type { RoccoSpriteDefinition, RoccoSpriteInstance } from './sprites';
 const DEFAULT_PLANE_RENDER_LAYER = 'background.main';
 
 interface RuntimePlaneDepthResolutionContext {
-  activePlayerSpriteId: string | null;
+  activePlayerSpriteId: string | undefined;
   getSprite: (instanceId: string) => RoccoSpriteInstance | undefined;
   getSpriteDefinition: (definitionId: string) => RoccoSpriteDefinition | undefined;
 }

@@ -36,11 +36,7 @@ import type { RoccoVideoDisplayModule, RoccoVideoPlaneModule, RoccoVideoSystem, 
 import type { RoccoViewportHost } from './viewport';
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 const DEFAULT_DESIGN_WIDTH = 960;
@@ -78,13 +74,14 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
   private readonly titleSystem = new RoccoTitleSystemSDK();
   private readonly titleRenderer: PixiRoccoTitleRenderer;
   private readonly zoomController = new RoccoVideoZoomController();
+  private readonly onDisplayProfileChange: ((profile: Partial<RoccoDisplayProfile>) => void) | undefined;
   private renderLayers: RoccoRenderLayer[];
   private displayProfile: RoccoDisplayProfile = { ...defaultDisplayProfile };
   private viewportHost: RoccoViewportHost | undefined;
 
-  private stage: Container | null = null;
-  private activePlaneSceneId: string | null = null;
-  private activePlayerSpriteId: string | null = null;
+  private stage: Container | undefined;
+  private activePlaneSceneId: string | undefined;
+  private activePlayerSpriteId: string | undefined;
 
   readonly planes: RoccoVideoPlaneModule = {
     loadScene: (scene) => {
@@ -122,8 +119,6 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
   };
   readonly zoom: RoccoVideoZoomModule = this.zoomController;
 
-  private readonly onDisplayProfileChange: ((profile: Partial<RoccoDisplayProfile>) => void) | undefined;
-
   constructor(options?: RoccoRuntimeVideoSystemOptions) {
     this.renderLayers = sortRoccoRenderLayers(options?.renderLayers ?? defaultRoccoRenderLayers);
     this.viewportHost = options?.viewportHost;
@@ -150,6 +145,98 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.titleRenderer = new PixiRoccoTitleRenderer({
       resolveRenderLayerZIndex: (renderLayer) => this.resolveRenderLayerZIndex(renderLayer),
     });
+  }
+
+  private ensurePlaneSceneMounted(sceneId: string): void {
+    if (!this.stage) {
+      this.activePlaneSceneId = sceneId;
+      return;
+    }
+
+    if (this.activePlaneSceneId === sceneId) {
+      return;
+    }
+
+    if (this.activePlaneSceneId) {
+      this.planeRenderer.unmount(this.activePlaneSceneId);
+    }
+
+    this.planeRenderer.mount(sceneId, this.stage);
+    this.activePlaneSceneId = sceneId;
+  }
+
+  private syncActivePlaneScene(): void {
+    const scene = this.getResolvedActivePlaneScene();
+    if (!scene) {
+      return;
+    }
+
+    this.planeRenderer.sync(scene);
+  }
+
+  private resolveRuntimePlaneScene(scene: RoccoPlaneScene): RoccoPlaneScene {
+    return resolveRuntimePlaneSceneFromSprites({
+      scene,
+      activePlayerSpriteId: this.activePlayerSpriteId,
+      getSprite: (instanceId) => this.spriteSystem.getSprite(instanceId),
+      getSpriteDefinition: (definitionId) => this.spriteSystem.getSpriteDefinition(definitionId),
+    });
+  }
+
+  private getResolvedActivePlaneScene(): RoccoPlaneScene | undefined {
+    if (!this.activePlaneSceneId) {
+      return undefined;
+    }
+
+    return this.resolveRuntimePlaneScene(this.planeSDK.serializeScene(this.activePlaneSceneId));
+  }
+
+  private syncSprites(renderables = this.spriteSystem.listRenderableSprites()): void {
+    this.spriteRenderer.sync(renderables);
+  }
+
+  private syncActionMenu(): void {
+    this.actionMenuRenderer.sync(this.actionMenuSystem.getRenderableMenu());
+  }
+
+  private syncGridMenu(): void {
+    this.gridMenuRenderer.sync(this.gridMenuSystem.getRenderableMenu());
+  }
+
+  private syncMessages(
+    spriteRenderables = this.spriteSystem.listRenderableSprites(),
+    messageAnchorRenderables = this.spriteSystem.listRenderableSprites({
+      includeTransparent: true,
+    }),
+  ): void {
+    this.messageRenderer.sync(
+      this.messageSystem.listRenderableMessages(
+        messageAnchorRenderables,
+        this.resolveDesignSize(),
+      ),
+      spriteRenderables,
+    );
+  }
+
+  private syncPrimitives(): void {
+    this.primitiveRenderer.sync(this.primitiveSystem.listPrimitives());
+  }
+
+  private syncTitles(): void {
+    this.titleRenderer.sync(this.titleSystem.listTitles());
+  }
+
+  private resolveRenderLayerZIndex(renderLayer: string): number {
+    const layer = this.renderLayers.find((item) => item.id === renderLayer);
+    return layer?.zIndex ?? 0;
+  }
+
+  private resolveDesignSize(): { width: number; height: number } {
+    const metrics = this.viewportHost?.getMetrics();
+    return {
+      width: metrics?.designWidth ?? DEFAULT_DESIGN_WIDTH,
+      height: metrics?.designHeight ?? DEFAULT_DESIGN_HEIGHT,
+    };
   }
 
   mount(stage: Container): void {
@@ -193,7 +280,7 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.titleRenderer.unmount();
     this.zoomController.clear();
     this.zoomController.apply(this.stage);
-    this.stage = null;
+    this.stage = undefined;
   }
 
   destroy(): void {
@@ -208,7 +295,8 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.sceneTargetSystem.clearTargets();
     this.planeAlphaMasks.clear();
     this.pendingPlaneAlphaMaskLoads.clear();
-    this.activePlaneSceneId = null;
+    this.activePlaneSceneId = undefined;
+    this.activePlayerSpriteId = undefined;
   }
 
   setRenderLayerOrder(layers: RoccoRenderLayer[]): void {
@@ -328,97 +416,5 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     this.syncTitles();
     this.planeRenderer.render(delta);
     this.zoomController.apply(this.stage);
-  }
-
-  private ensurePlaneSceneMounted(sceneId: string): void {
-    if (!this.stage) {
-      this.activePlaneSceneId = sceneId;
-      return;
-    }
-
-    if (this.activePlaneSceneId === sceneId) {
-      return;
-    }
-
-    if (this.activePlaneSceneId) {
-      this.planeRenderer.unmount(this.activePlaneSceneId);
-    }
-
-    this.planeRenderer.mount(sceneId, this.stage);
-    this.activePlaneSceneId = sceneId;
-  }
-
-  private syncActivePlaneScene(): void {
-    const scene = this.getResolvedActivePlaneScene();
-    if (!scene) {
-      return;
-    }
-
-    this.planeRenderer.sync(scene);
-  }
-
-  private resolveRuntimePlaneScene(scene: RoccoPlaneScene): RoccoPlaneScene {
-    return resolveRuntimePlaneSceneFromSprites({
-      scene,
-      activePlayerSpriteId: this.activePlayerSpriteId,
-      getSprite: (instanceId) => this.spriteSystem.getSprite(instanceId),
-      getSpriteDefinition: (definitionId) => this.spriteSystem.getSpriteDefinition(definitionId),
-    });
-  }
-
-  private getResolvedActivePlaneScene(): RoccoPlaneScene | undefined {
-    if (!this.activePlaneSceneId) {
-      return undefined;
-    }
-
-    return this.resolveRuntimePlaneScene(this.planeSDK.serializeScene(this.activePlaneSceneId));
-  }
-
-  private syncSprites(renderables = this.spriteSystem.listRenderableSprites()): void {
-    this.spriteRenderer.sync(renderables);
-  }
-
-  private syncActionMenu(): void {
-    this.actionMenuRenderer.sync(this.actionMenuSystem.getRenderableMenu());
-  }
-
-  private syncGridMenu(): void {
-    this.gridMenuRenderer.sync(this.gridMenuSystem.getRenderableMenu());
-  }
-
-  private syncMessages(
-    spriteRenderables = this.spriteSystem.listRenderableSprites(),
-    messageAnchorRenderables = this.spriteSystem.listRenderableSprites({
-      includeTransparent: true,
-    }),
-  ): void {
-    this.messageRenderer.sync(
-      this.messageSystem.listRenderableMessages(
-        messageAnchorRenderables,
-        this.resolveDesignSize(),
-      ),
-      spriteRenderables,
-    );
-  }
-
-  private syncPrimitives(): void {
-    this.primitiveRenderer.sync(this.primitiveSystem.listPrimitives());
-  }
-
-  private syncTitles(): void {
-    this.titleRenderer.sync(this.titleSystem.listTitles());
-  }
-
-  private resolveRenderLayerZIndex(renderLayer: string): number {
-    const layer = this.renderLayers.find((item) => item.id === renderLayer);
-    return layer?.zIndex ?? 0;
-  }
-
-  private resolveDesignSize(): { width: number; height: number } {
-    const metrics = this.viewportHost?.getMetrics();
-    return {
-      width: metrics?.designWidth ?? DEFAULT_DESIGN_WIDTH,
-      height: metrics?.designHeight ?? DEFAULT_DESIGN_HEIGHT,
-    };
   }
 }

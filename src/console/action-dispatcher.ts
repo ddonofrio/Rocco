@@ -6,8 +6,8 @@ import type {
 } from './cartridges';
 
 export interface ActionDispatcherOptions {
-  getActiveCartridge: () => RoccoCartridge | null;
-  getActiveLevelId: () => string | null;
+  getActiveCartridge: () => RoccoCartridge | null | undefined;
+  getActiveLevelId: () => string | null | undefined;
   log: (channel: string, message: string) => void;
 }
 
@@ -26,7 +26,8 @@ function createActionId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  return `action-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const highResolutionNow = globalThis.performance?.now().toFixed(3) ?? '0';
+  return `action-${Date.now()}-${highResolutionNow}`;
 }
 
 /**
@@ -35,13 +36,13 @@ function createActionId(): string {
  * exclusive actions, and cancels in-flight work on scene change or unmount.
  */
 export class ActionDispatcher {
-  private readonly getActiveCartridge: () => RoccoCartridge | null;
-  private readonly getActiveLevelId: () => string | null;
+  private readonly getActiveCartridge: () => RoccoCartridge | null | undefined;
+  private readonly getActiveLevelId: () => string | null | undefined;
   private readonly logFn: (channel: string, message: string) => void;
   private generation = 0;
   private disposed = false;
   private readonly tracked = new Map<string, TrackedAction>();
-  private lastLevelId: string | null = null;
+  private lastLevelId: string | undefined;
 
   constructor(options: ActionDispatcherOptions) {
     this.getActiveCartridge = options.getActiveCartridge;
@@ -49,12 +50,34 @@ export class ActionDispatcher {
     this.logFn = options.log;
   }
 
+  private async watchCompletion(
+    actionId: string,
+    completion: Promise<void>,
+    controller: AbortController,
+    ownerLabel: string,
+  ): Promise<void> {
+    try {
+      await completion;
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      this.logFn(
+        'ActionDispatcher',
+        `Action '${actionId}' (${ownerLabel}) completion failed: ${message}`,
+      );
+    } finally {
+      this.tracked.delete(actionId);
+    }
+  }
+
   dispatch(action: RoccoCartridgeAction, request: DispatchOptions = {}): CartridgeActionDisposition {
     if (this.disposed) {
       return { consumed: true, defaultPlayerMovement: 'suppress' };
     }
 
-    const levelId = this.getActiveLevelId();
+    const levelId = this.getActiveLevelId() ?? undefined;
     if (levelId !== this.lastLevelId) {
       if (this.tracked.size > 0) {
         this.logFn(
@@ -111,21 +134,11 @@ export class ActionDispatcher {
         startedAt: Date.now(),
         owner: request.owner,
       });
-      disposition.completion.then(
-        () => {
-          this.tracked.delete(actionId);
-        },
-        (error: unknown) => {
-          this.tracked.delete(actionId);
-          if (controller.signal.aborted) {
-            return;
-          }
-          const message = error instanceof Error ? error.message : String(error);
-          this.logFn(
-            'ActionDispatcher',
-            `Action '${actionId}' (${request.owner ?? cartridge.manifest.id}) completion failed: ${message}`,
-          );
-        },
+      void this.watchCompletion(
+        actionId,
+        disposition.completion,
+        controller,
+        request.owner ?? cartridge.manifest.id,
       );
     }
 

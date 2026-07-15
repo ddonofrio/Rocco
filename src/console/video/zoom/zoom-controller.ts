@@ -61,7 +61,7 @@ export class RoccoVideoZoomController implements RoccoVideoZoomModule {
   private enabled = false;
   private stageWasModified = false;
   private transform: RoccoVideoZoomTransform = identityTransform();
-  private animation: RoccoVideoZoomActiveAnimation | null = null;
+  private animation: RoccoVideoZoomActiveAnimation | undefined;
 
   getTransform(): RoccoVideoZoomTransform {
     return cloneTransform(this.transform);
@@ -72,18 +72,18 @@ export class RoccoVideoZoomController implements RoccoVideoZoomModule {
   }
 
   isAnimating(): boolean {
-    return this.animation !== null;
+    return this.animation !== undefined;
   }
 
   setTransform(transform: RoccoVideoZoomTransform): void {
     this.enabled = true;
-    this.animation = null;
+    this.animation = undefined;
     this.transform = cloneTransform(transform);
   }
 
   clear(): void {
     this.enabled = false;
-    this.animation = null;
+    this.animation = undefined;
     this.transform = identityTransform();
   }
 
@@ -93,14 +93,14 @@ export class RoccoVideoZoomController implements RoccoVideoZoomModule {
     options: RoccoVideoZoomAnimationOptions = {},
   ): void {
     this.enabled = true;
-    const easing = options.easing ?? 'ease-in-out';
     if (durationMs <= 0) {
       this.transform = cloneTransform(transform);
-      this.animation = null;
+      this.animation = undefined;
       options.onComplete?.();
       return;
     }
 
+    const easing = options.easing ?? 'ease-in-out';
     this.animation = {
       from: cloneTransform(this.transform),
       to: cloneTransform(transform),
@@ -129,12 +129,12 @@ export class RoccoVideoZoomController implements RoccoVideoZoomModule {
     };
 
     if (raw >= 1) {
-      this.animation = null;
+      this.animation = undefined;
       animation.onComplete?.();
     }
   }
 
-  apply(stage: Container | null): void {
+  apply(stage: Container | undefined): void {
     if (!stage) {
       return;
     }

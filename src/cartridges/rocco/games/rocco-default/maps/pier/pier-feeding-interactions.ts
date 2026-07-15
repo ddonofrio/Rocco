@@ -68,7 +68,7 @@ export function isDefaultFeedingLookTarget(instanceId: string): boolean {
 
 export function pickDefaultFeedingLookLine(
   random: () => number,
-  state: RoccoNonRepeatingLineSelectionState | null,
+  state: RoccoNonRepeatingLineSelectionState | undefined,
   lines: readonly string[],
 ): RoccoDefaultFeedingLookSelection {
   const selection = selectNonRepeatingLines({

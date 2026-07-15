@@ -1,4 +1,5 @@
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { InputPolicyLease } from '../../../../../../console/input';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { roccoDefaultKeysSoundUrl } from '../../sprites';
@@ -34,6 +35,7 @@ const KEYS_COLLECT_ARC_HEIGHT = 76;
 const KEYS_COLLECT_SCALE_BOOST = 0.38;
 const KEYS_SOUND_ID = 'rocco-keys-sound';
 const KEYS_SOUND_VOLUME = 0.8;
+const KEYS_COLLECT_INPUT_LEASE_ID = 'pier-keys-collect';
 
 export interface RoccoDefaultKeysController {
   update(deltaMs: number): void;
@@ -78,6 +80,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   private roccoBaseX = 0;
   private roccoBaseY = 0;
   private revealed = false;
+  private collectInputLease: InputPolicyLease | undefined;
 
   constructor(engine: RoccoEngine, options?: RoccoDefaultKeysControllerOptions) {
     this.engine = engine;
@@ -85,94 +88,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     this.onCollectRequested = options?.onCollectRequested;
     this.onCollected = options?.onCollected;
     this.restoreState(options?.initialState ?? { status: 'hidden' });
-  }
-
-  update(deltaMs: number): void {
-    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
-      return;
-    }
-
-    if (this.state === 'approaching-grab') {
-      this.updateApproach();
-      return;
-    }
-
-    if (this.state === 'collecting') {
-      this.updateCollecting(deltaMs);
-    }
-  }
-
-  handleAction(activation: RoccoActionMenuActivation): void {
-    if (activation.targetInstanceId !== DEFAULT_KEYS_SPRITE_INSTANCE_ID) {
-      return;
-    }
-
-    if (this.handleSimpleAction(activation.actionId)) {
-      return;
-    }
-
-    if (activation.actionId !== KEYS_GRAB_ACTION_ID || this.state !== 'revealed') {
-      return;
-    }
-
-    if (this.onCollectRequested?.() === false) {
-      return;
-    }
-
-    // Block input immediately to prevent interruption during sequence
-    this.engine.setInputEnabled(false);
-
-    // If Rocco is already moving (from the menu click), wait for him to arrive
-    // Otherwise, start the approach
-    if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
-      this.state = 'approaching-grab';
-      const keys = this.engine.video.sprites.getSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
-      if (keys) {
-        this.keysX = keys.transform.x;
-        this.keysY = keys.transform.y;
-      }
-      this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
-      this.engine.video.render(0);
-    } else {
-      this.startGrabApproach();
-    }
-  }
-
-  revealAt(x: number, y: number): void {
-    if (this.revealed) {
-      return;
-    }
-
-    this.revealed = true;
-    this.state = 'revealed';
-    this.keysX = x;
-    this.keysY = y;
-    this.engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
-    this.engine.video.sprites.createSpriteFromDefinition(DEFAULT_KEYS_SPRITE_DEFINITION_ID, {
-      id: DEFAULT_KEYS_SPRITE_INSTANCE_ID,
-      transform: {
-        x,
-        y,
-        scaleX: DEFAULT_KEYS_SPRITE_SCALE,
-        scaleY: DEFAULT_KEYS_SPRITE_SCALE,
-        rotation: 0,
-        presentation: {
-          pitchDegrees: DEFAULT_KEYS_PRESENTATION_PITCH_DEGREES,
-        },
-      },
-      renderLayer: DEFAULT_KEYS_RENDER_LAYER,
-      zIndex: DEFAULT_KEYS_Z_INDEX,
-      depthMode: 'fixed',
-      opacity: 1,
-      interactive: true,
-      collisionEnabled: true,
-    });
-    this.engine.video.actionMenus.registerMenu(createDefaultKeysActionMenu(this.localization));
-    this.engine.video.render(0);
-  }
-
-  isRevealed(): boolean {
-    return this.revealed;
   }
 
   private restoreState(state: RoccoDefaultKeysState): void {
@@ -225,11 +140,20 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     this.engine.video.render(0);
   }
 
+  private acquireCollectInputLease(): void {
+    this.collectInputLease ??= this.engine.acquireInputLease(KEYS_COLLECT_INPUT_LEASE_ID, 'blocked');
+  }
+
+  private releaseCollectInputLease(): void {
+    this.collectInputLease?.dispose();
+    this.collectInputLease = undefined;
+  }
+
   private startGrabApproach(): void {
     const rocco = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
     const keys = this.engine.video.sprites.getSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
     if (!rocco || !keys) {
-      this.engine.setInputEnabled(true);
+      this.releaseCollectInputLease();
       return;
     }
 
@@ -249,7 +173,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     });
     if (!isStarted) {
       this.state = 'revealed';
-      this.engine.setInputEnabled(true);
+      this.releaseCollectInputLease();
       this.engine.video.actionMenus.registerMenu(createDefaultKeysActionMenu(this.localization));
     }
     this.engine.video.render(0);
@@ -264,6 +188,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     const keys = this.engine.video.sprites.getSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
     if (!rocco || !keys) {
       this.state = 'gone';
+      this.releaseCollectInputLease();
       return;
     }
 
@@ -338,7 +263,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
       this.state = 'collected';
       this.revealed = false;
       this.onCollected?.();
-      this.engine.setInputEnabled(true);
+      this.releaseCollectInputLease();
     }
   }
 
@@ -360,15 +285,101 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     });
   }
 
+  update(deltaMs: number): void {
+    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return;
+    }
+
+    if (this.state === 'approaching-grab') {
+      this.updateApproach();
+      return;
+    }
+
+    if (this.state === 'collecting') {
+      this.updateCollecting(deltaMs);
+    }
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (activation.targetInstanceId !== DEFAULT_KEYS_SPRITE_INSTANCE_ID) {
+      return;
+    }
+
+    if (this.handleSimpleAction(activation.actionId)) {
+      return;
+    }
+
+    if (activation.actionId !== KEYS_GRAB_ACTION_ID || this.state !== 'revealed') {
+      return;
+    }
+
+    if (this.onCollectRequested?.() === false) {
+      return;
+    }
+
+    this.acquireCollectInputLease();
+
+    // If Rocco is already moving (from the menu click), wait for him to arrive
+    // Otherwise, start the approach
+    if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+      this.state = 'approaching-grab';
+      const keys = this.engine.video.sprites.getSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
+      if (keys) {
+        this.keysX = keys.transform.x;
+        this.keysY = keys.transform.y;
+      }
+      this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
+      this.engine.video.render(0);
+    } else {
+      this.startGrabApproach();
+    }
+  }
+
+  revealAt(x: number, y: number): void {
+    if (this.revealed) {
+      return;
+    }
+
+    this.revealed = true;
+    this.state = 'revealed';
+    this.keysX = x;
+    this.keysY = y;
+    this.engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.createSpriteFromDefinition(DEFAULT_KEYS_SPRITE_DEFINITION_ID, {
+      id: DEFAULT_KEYS_SPRITE_INSTANCE_ID,
+      transform: {
+        x,
+        y,
+        scaleX: DEFAULT_KEYS_SPRITE_SCALE,
+        scaleY: DEFAULT_KEYS_SPRITE_SCALE,
+        rotation: 0,
+        presentation: {
+          pitchDegrees: DEFAULT_KEYS_PRESENTATION_PITCH_DEGREES,
+        },
+      },
+      renderLayer: DEFAULT_KEYS_RENDER_LAYER,
+      zIndex: DEFAULT_KEYS_Z_INDEX,
+      depthMode: 'fixed',
+      opacity: 1,
+      interactive: true,
+      collisionEnabled: true,
+    });
+    this.engine.video.actionMenus.registerMenu(createDefaultKeysActionMenu(this.localization));
+    this.engine.video.render(0);
+  }
+
+  isRevealed(): boolean {
+    return this.revealed;
+  }
+
   cancel(): void {
     // Cancel any non-cancelable sequence and re-enable input
-    if (!(this.state === 'approaching-grab' ||
-      this.state === 'collecting')) {
-    	return;
+    if (!(this.state === 'approaching-grab' || this.state === 'collecting')) {
+      return;
     }
 
     this.state = 'revealed';
-    this.engine.setInputEnabled(true);
+    this.releaseCollectInputLease();
     this.revealAt(this.keysX, this.keysY);
   }
 }
@@ -387,9 +398,11 @@ export async function installDefaultKeys(
     volume: KEYS_SOUND_VOLUME,
     loop: false,
   });
-  await preloader?.preloadSound(engine, KEYS_SOUND_ID).catch(() => {
+  try {
+    await preloader?.preloadSound(engine, KEYS_SOUND_ID);
+  } catch {
     engine.log('Audio', 'Keys sound could not be preloaded.');
-  });
+  }
   await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);

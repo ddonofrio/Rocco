@@ -13,6 +13,20 @@ import { RoccoInputHandler } from '../../src/console/input-handler';
 
 type InputHandlerVideoSystem = ConstructorParameters<typeof RoccoInputHandler>[0]['videoSystem'];
 
+interface PromiseWithResolversResult<T> {
+  promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+  reject(reason?: unknown): void;
+}
+
+const promiseConstructor = Promise as PromiseConstructor & {
+  withResolvers<T>(): PromiseWithResolversResult<T>;
+};
+
+function createPromiseWithResolvers<T>(): PromiseWithResolversResult<T> {
+  return promiseConstructor.withResolvers<T>();
+}
+
 function makeClickEvent(sceneX: number, sceneY: number): RoccoCursorActionEvent {
   return {
     kind: 'click',
@@ -165,10 +179,10 @@ describe('RoccoInputHandler characterization', () => {
         },
       }),
       getActiveCartridge: () => cartridge,
-      getActivePlayerSpriteId: () => null,
+      getActivePlayerSpriteId: () => {},
       actionDispatcher: new ActionDispatcher({
         getActiveCartridge: () => cartridge,
-        getActiveLevelId: () => null,
+        getActiveLevelId: () => {},
         log: () => {},
       }),
       log: () => {},
@@ -187,10 +201,8 @@ describe('RoccoInputHandler characterization', () => {
 
   it('CON-001: a second click is dropped while an exclusive action completion is still in flight', () => {
     const handledActions: unknown[] = [];
-    let resolveCompletion: () => void = () => {};
-    const completion = new Promise<void>((resolve) => {
-      resolveCompletion = resolve;
-    });
+    const completionDeferred = createPromiseWithResolvers<void>();
+    const completion = completionDeferred.promise;
 
     const cartridge = makeCartridge((action) => {
       handledActions.push(action);
@@ -218,10 +230,10 @@ describe('RoccoInputHandler characterization', () => {
         },
       }),
       getActiveCartridge: () => cartridge,
-      getActivePlayerSpriteId: () => null,
+      getActivePlayerSpriteId: () => {},
       actionDispatcher: new ActionDispatcher({
         getActiveCartridge: () => cartridge,
-        getActiveLevelId: () => null,
+        getActiveLevelId: () => {},
         log: () => {},
       }),
       log: () => {},
@@ -238,6 +250,6 @@ describe('RoccoInputHandler characterization', () => {
 
     expect(handledActions).toHaveLength(1);
 
-    resolveCompletion();
+    completionDeferred.resolve();
   });
 });

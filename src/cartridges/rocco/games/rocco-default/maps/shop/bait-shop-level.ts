@@ -1,5 +1,6 @@
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
-import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../../../console/cartridges';
+import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
+import type { InputPolicyLease } from '../../../../../../console/input';
 import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
@@ -601,34 +602,42 @@ function makeBaitShopActionMenuBase(
   };
 }
 
-function loadImage(uri: string): Promise<HTMLImageElement> {
+function releaseInputLease(inputLease: InputPolicyLease | undefined): InputPolicyLease | undefined {
+  inputLease?.dispose();
+  return undefined;
+}
+
+async function loadImage(uri: string): Promise<HTMLImageElement> {
   const image = new Image();
   image.src = uri;
 
   if (typeof image.decode === 'function') {
-    return image.decode().then(() => image);
+    await image.decode();
+    return image;
   }
 
   return new Promise((resolve, reject) => {
     image.addEventListener('load', () => resolve(image));
-    image.onerror = () => reject(new Error(`Could not load image '${uri}'.`));
+    image.addEventListener('error', () => {
+      reject(new Error(`Could not load image '${uri}'.`));
+    });
   });
 }
 
 export class RoccoBaitShopLevel implements RoccoLevel {
-  readonly id = ROCCO_BAIT_SHOP_LEVEL_ID;
-  readonly title: string;
-  readonly connectors = BAIT_SHOP_CONNECTORS;
-
   private readonly localization: RoccoLocalization;
   private readonly options: RoccoBaitShopLevelOptions;
   private readonly benchJumpController: BaitShopBenchJumpController;
-  private engine: RoccoEngine | null = null;
-  private spriteController: RoccoDefaultSpriteController | null = null;
-  private scriptedInteractionController: RoccoScriptedSceneInteractionController | null = null;
+  private benchJumpInputLease: InputPolicyLease | undefined;
+  private engine: RoccoEngine | undefined;
+  private spriteController: RoccoDefaultSpriteController | undefined;
+  private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined;
   private souvenirCloseupVisible = false;
   private hiddenKeysRevealed = false;
   private hiddenKeysCollected = false;
+  readonly id = ROCCO_BAIT_SHOP_LEVEL_ID;
+  readonly title: string;
+  readonly connectors = BAIT_SHOP_CONNECTORS;
 
   constructor(
     localization: RoccoLocalization = createRoccoLocalization(),
@@ -641,7 +650,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
       resolveJumpOrigins: (direction) => {
         const sprite = this.engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
         if (!sprite) {
-          return null;
+          return;
         }
 
         const scaleX = sprite.transform.scaleX || BAIT_SHOP_ROCCO_SCALE;
@@ -656,11 +665,16 @@ export class RoccoBaitShopLevel implements RoccoLevel {
               endOrigin: toOriginFromGroundPoint(BAIT_SHOP_BENCH_KICK_START_POINT, scaleX, scaleY),
             };
       },
-      setInputEnabled: (enabled) => {
-        this.engine?.setInputEnabled(enabled);
+      setInputEnabled: (isEnabled) => {
+        if (isEnabled) {
+          this.benchJumpInputLease = releaseInputLease(this.benchJumpInputLease);
+          return;
+        }
+
+        this.benchJumpInputLease ??= this.engine?.acquireInputLease('bait-shop-bench-jump', 'blocked');
       },
-      setWalkConstraint: (constrainMovement) => {
-        this.setRoccoWalkConstraint(constrainMovement);
+      setWalkConstraint: (isMovementConstrained) => {
+        this.setRoccoWalkConstraint(isMovementConstrained);
       },
       stopPlayerMovement: () => {
         this.engine?.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
@@ -720,214 +734,6 @@ export class RoccoBaitShopLevel implements RoccoLevel {
 
   private get roccoOnBench(): boolean {
     return this.benchJumpController.isOnBench();
-  }
-
-  async mount(
-    engine: RoccoEngine,
-    options: RoccoLevelMountOptions = {},
-    preloader?: RoccoAssetPreloader,
-  ): Promise<RoccoPlaneScene> {
-    this.engine = engine;
-    this.spriteController = null;
-    this.scriptedInteractionController = null;
-    this.benchJumpController.reset();
-    this.souvenirCloseupVisible = false;
-    if (this.options.hasMysteriousKey?.()) {
-      this.hiddenKeysCollected = true;
-      this.hiddenKeysRevealed = false;
-    }
-
-    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
-    const initialPosition = entryConnector
-      ? {
-          x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
-          y: entryConnector.entryPoint.y,
-        }
-      : { ...BAIT_SHOP_ENTRY_POSITION };
-    const initialFacing = entryConnector?.entryFacing ?? 'down-left';
-    const scene = await loadOrCreateBaitShopScene(engine, BAIT_SHOP_SCENE_DEFINITION);
-    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
-    engine.loadPlaneScene(scene);
-    await installBaitShopWalkMap(engine, BAIT_SHOP_WALK_MAP_IMAGE_URL, preloader);
-    installBaitShopSceneTargets(engine, this.localization);
-    this.syncSouvenirCloseupPresentation();
-    this.syncHiddenKeysTarget();
-    this.installActionMenus(engine);
-    this.spriteController = await installDefaultSprite(engine, {
-      appearance: options.roccoAppearance,
-      initialFacing,
-      initialPosition: { ...initialPosition },
-      scale: BAIT_SHOP_ROCCO_SCALE,
-      tint: BAIT_SHOP_ROCCO_TINT,
-      localization: this.localization,
-      playIntro: false,
-      perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
-    }, preloader);
-    if (!options.entryConnectorId) {
-      engine.audio.registerSound({
-        id: DOOR_CLOSING_SOUND_ID,
-        uri: baitShopDoorClosingSoundUrl,
-        volume: DOOR_CLOSING_SOUND_VOLUME,
-        loop: false,
-      });
-      await engine.audio.preloadSound(DOOR_CLOSING_SOUND_ID).catch(() => {
-        engine.log('Audio', 'Bait shop door closing sound could not be preloaded.');
-      });
-      engine.audio.playSound(DOOR_CLOSING_SOUND_ID, {
-        restart: true,
-        volume: DOOR_CLOSING_SOUND_VOLUME,
-      });
-    }
-    this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, [
-      {
-        targetInstanceId: BAIT_SHOP_SHELL_CITY_TARGET_INSTANCE_ID,
-        moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
-        facing: 'up',
-        onReached: () => {
-          roccoCartridgeMessageRuntime.think(
-            engine,
-            DEFAULT_SPRITE_INSTANCE_ID,
-            this.resolveShellCityLookLines(),
-            {
-              ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-            },
-            {
-              count: 1,
-              historyKey: BAIT_SHOP_SHELL_CITY_HISTORY_KEY,
-            },
-          );
-          engine.video.render(0);
-        },
-      },
-      {
-        targetInstanceId: BAIT_SHOP_WINDOW_TARGET_INSTANCE_ID,
-        moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
-        facing: 'up-left',
-        onReached: () => {
-          roccoCartridgeMessageRuntime.think(
-            engine,
-            DEFAULT_SPRITE_INSTANCE_ID,
-            this.resolveWindowLookLines(),
-            {
-              ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-            },
-            {
-              count: 1,
-              historyKey: BAIT_SHOP_WINDOW_HISTORY_KEY,
-            },
-          );
-          engine.video.render(0);
-        },
-      },
-      {
-        targetInstanceId: BAIT_SHOP_LEFT_BARREL_TARGET_INSTANCE_ID,
-        moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
-        facing: 'down-left',
-        onReached: () => {
-          roccoCartridgeMessageRuntime.think(
-            engine,
-            DEFAULT_SPRITE_INSTANCE_ID,
-            this.localization.text.baitShop.leftBarrelLookLines,
-            {
-              ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-            },
-            {
-              count: 1,
-              historyKey: BAIT_SHOP_LEFT_BARREL_HISTORY_KEY,
-            },
-          );
-          engine.video.render(0);
-        },
-      },
-    ]);
-
-    return scene;
-  }
-
-  unmount(engine: RoccoEngine): void {
-    engine.video.actionMenus.closeMenu();
-    engine.video.messages.clearMessages();
-    this.scriptedInteractionController?.cancel();
-    this.uninstallActionMenus(engine);
-    this.souvenirCloseupVisible = false;
-    this.syncSouvenirCloseupPresentation();
-    uninstallBaitShopSceneTargets(engine);
-    uninstallDefaultSprite(engine);
-    uninstallBaitShopWalkMap(engine);
-    engine.audio.stopSound(DOOR_CLOSING_SOUND_ID);
-    engine.audio.unregisterSound(DOOR_CLOSING_SOUND_ID);
-    this.engine = null;
-    this.spriteController = null;
-    this.scriptedInteractionController = null;
-    this.benchJumpController.reset();
-    this.souvenirCloseupVisible = false;
-    engine.video.render(0);
-  }
-
-  update(deltaMs: number): void {
-    this.spriteController?.update(deltaMs);
-    this.scriptedInteractionController?.update();
-    this.benchJumpController.update(deltaMs);
-  }
-
-  handleAction(activation: RoccoActionMenuActivation): void {
-    if (activation.targetInstanceId === BAIT_SHOP_BENCH_TARGET_INSTANCE_ID) {
-      this.handleBenchAction(activation);
-      return;
-    }
-
-    if (activation.targetInstanceId === BAIT_SHOP_POSTCARD_RACK_TARGET_INSTANCE_ID) {
-      this.handlePostcardRackAction(activation);
-      return;
-    }
-
-    if (activation.targetInstanceId === BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID) {
-      this.handleSouvenirTableAction(activation);
-      return;
-    }
-
-    if (activation.targetInstanceId !== BAIT_SHOP_CASH_REGISTER_TARGET_INSTANCE_ID) {
-      if (activation.targetInstanceId === BAIT_SHOP_EXIT_DOOR_TARGET_INSTANCE_ID) {
-        this.handleExitDoorAction(activation);
-        return;
-      }
-
-      return;
-    }
-
-    if (activation.actionId === 'look') {
-      this.faceCashRegisterFromCurrentPosition();
-      this.showCashRegisterLines(
-        this.resolveCashRegisterLookLines(),
-        BAIT_SHOP_CASH_REGISTER_LOOK_HISTORY_KEY,
-      );
-      return;
-    }
-
-    if (activation.actionId === 'kick') {
-      this.faceCashRegisterFromCurrentPosition();
-      this.showCashRegisterLines(
-        this.resolveCashRegisterKickLines(),
-        BAIT_SHOP_CASH_REGISTER_KICK_HISTORY_KEY,
-      );
-      return;
-    }
-
-    if (activation.actionId !== 'grab') {
-      return;
-    }
-
-    this.runBenchAwareScriptedInteraction({
-      targetInstanceId: BAIT_SHOP_CASH_REGISTER_TARGET_INSTANCE_ID,
-      moveTo: { ...BAIT_SHOP_CASH_REGISTER_INTERACTION_POINT },
-      facing: 'down-left',
-      onReached: () => {
-        this.showCashRegisterLines(
-          this.resolveCashRegisterGrabLines(),
-          BAIT_SHOP_CASH_REGISTER_GRAB_HISTORY_KEY,
-        );
-      },
-    });
   }
 
   private handleBenchAction(activation: RoccoActionMenuActivation): void {
@@ -1024,7 +830,6 @@ export class RoccoBaitShopLevel implements RoccoLevel {
           this.openSouvenirCloseup();
         },
       });
-      return;
     }
   }
 
@@ -1040,58 +845,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     if (activation.actionId === 'open') {
       this.showSingleBaitShopLine(this.localization.text.baitShop.shopExitDoorOpenLine);
       this.options.onExitShopRequested?.();
-      return;
     }
-  }
-
-  handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
-    if (this.benchJumpController.isActive()) {
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    if (this.souvenirCloseupVisible) {
-      this.closeSouvenirCloseup();
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    if (activation.targetInstanceId === BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID) {
-      this.collectHiddenKeys();
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    if (this.roccoOnBench && !activation.targetInstanceId) {
-      this.startBenchJumpDownSequence({
-        walkTo: {
-          x: activation.sceneX,
-          y: activation.sceneY,
-        },
-      });
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    if (
-      this.roccoOnBench &&
-      activation.targetInstanceId &&
-      this.scriptedInteractionController?.hasTarget(activation.targetInstanceId)
-    ) {
-      this.startBenchJumpDownSequence({
-        onComplete: () => {
-          this.scriptedInteractionController?.handleSceneClick(activation);
-        },
-      });
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    this.scriptedInteractionController?.handleSceneClick(activation);
-  }
-
-  handleInventorySceneClick(): boolean {
-    if (!this.souvenirCloseupVisible) {
-      return false;
-    }
-
-    this.closeSouvenirCloseup();
-    return true;
   }
 
   private startBenchJumpUpSequence(): void {
@@ -1102,7 +856,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
     this.benchJumpController.startJumpDown(options);
   }
 
-  private setRoccoWalkConstraint(constrainMovement: boolean): void {
+  private setRoccoWalkConstraint(isMovementConstrained: boolean): void {
     if (!this.engine) {
       return;
     }
@@ -1113,7 +867,7 @@ export class RoccoBaitShopLevel implements RoccoLevel {
         x: DEFAULT_SPRITE_GROUND_ANCHOR_X,
         y: DEFAULT_SPRITE_GROUND_ANCHOR_Y,
       },
-      constrainMovement,
+      constrainMovement: isMovementConstrained,
       followSurface: true,
     });
   }
@@ -1560,6 +1314,268 @@ export class RoccoBaitShopLevel implements RoccoLevel {
         text: this.localization.text.descriptions.hiddenKeys,
       },
     });
+  }
+
+  async mount(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
+    this.engine = engine;
+    this.spriteController = undefined;
+    this.scriptedInteractionController = undefined;
+    this.benchJumpInputLease = releaseInputLease(this.benchJumpInputLease);
+    this.benchJumpController.reset();
+    this.souvenirCloseupVisible = false;
+    if (this.options.hasMysteriousKey?.()) {
+      this.hiddenKeysCollected = true;
+      this.hiddenKeysRevealed = false;
+    }
+
+    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
+    const initialPosition = entryConnector
+      ? {
+          x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
+          y: entryConnector.entryPoint.y,
+        }
+      : { ...BAIT_SHOP_ENTRY_POSITION };
+    const initialFacing = entryConnector?.entryFacing ?? 'down-left';
+    const scene = await loadOrCreateBaitShopScene(engine, BAIT_SHOP_SCENE_DEFINITION);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+    engine.loadPlaneScene(scene);
+    await installBaitShopWalkMap(engine, BAIT_SHOP_WALK_MAP_IMAGE_URL, preloader);
+    installBaitShopSceneTargets(engine, this.localization);
+    this.syncSouvenirCloseupPresentation();
+    this.syncHiddenKeysTarget();
+    this.installActionMenus(engine);
+    this.spriteController = await installDefaultSprite(engine, {
+      appearance: options.roccoAppearance,
+      initialFacing,
+      initialPosition: { ...initialPosition },
+      scale: BAIT_SHOP_ROCCO_SCALE,
+      tint: BAIT_SHOP_ROCCO_TINT,
+      localization: this.localization,
+      playIntro: false,
+      perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
+    }, preloader);
+    if (!options.entryConnectorId) {
+      engine.audio.registerSound({
+        id: DOOR_CLOSING_SOUND_ID,
+        uri: baitShopDoorClosingSoundUrl,
+        volume: DOOR_CLOSING_SOUND_VOLUME,
+        loop: false,
+      });
+      try {
+        await engine.audio.preloadSound(DOOR_CLOSING_SOUND_ID);
+      } catch {
+        engine.log('Audio', 'Bait shop door closing sound could not be preloaded.');
+      }
+      engine.audio.playSound(DOOR_CLOSING_SOUND_ID, {
+        restart: true,
+        volume: DOOR_CLOSING_SOUND_VOLUME,
+      });
+    }
+    this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, [
+      {
+        targetInstanceId: BAIT_SHOP_SHELL_CITY_TARGET_INSTANCE_ID,
+        moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
+        facing: 'up',
+        onReached: () => {
+          roccoCartridgeMessageRuntime.think(
+            engine,
+            DEFAULT_SPRITE_INSTANCE_ID,
+            this.resolveShellCityLookLines(),
+            {
+              ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+            },
+            {
+              count: 1,
+              historyKey: BAIT_SHOP_SHELL_CITY_HISTORY_KEY,
+            },
+          );
+          engine.video.render(0);
+        },
+      },
+      {
+        targetInstanceId: BAIT_SHOP_WINDOW_TARGET_INSTANCE_ID,
+        moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
+        facing: 'up-left',
+        onReached: () => {
+          roccoCartridgeMessageRuntime.think(
+            engine,
+            DEFAULT_SPRITE_INSTANCE_ID,
+            this.resolveWindowLookLines(),
+            {
+              ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+            },
+            {
+              count: 1,
+              historyKey: BAIT_SHOP_WINDOW_HISTORY_KEY,
+            },
+          );
+          engine.video.render(0);
+        },
+      },
+      {
+        targetInstanceId: BAIT_SHOP_LEFT_BARREL_TARGET_INSTANCE_ID,
+        moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
+        facing: 'down-left',
+        onReached: () => {
+          roccoCartridgeMessageRuntime.think(
+            engine,
+            DEFAULT_SPRITE_INSTANCE_ID,
+            this.localization.text.baitShop.leftBarrelLookLines,
+            {
+              ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+            },
+            {
+              count: 1,
+              historyKey: BAIT_SHOP_LEFT_BARREL_HISTORY_KEY,
+            },
+          );
+          engine.video.render(0);
+        },
+      },
+    ]);
+
+    return scene;
+  }
+
+  unmount(engine: RoccoEngine): void {
+    engine.video.actionMenus.closeMenu();
+    engine.video.messages.clearMessages();
+    this.scriptedInteractionController?.cancel();
+    this.uninstallActionMenus(engine);
+    this.souvenirCloseupVisible = false;
+    this.syncSouvenirCloseupPresentation();
+    uninstallBaitShopSceneTargets(engine);
+    uninstallDefaultSprite(engine);
+    uninstallBaitShopWalkMap(engine);
+    engine.audio.stopSound(DOOR_CLOSING_SOUND_ID);
+    engine.audio.unregisterSound(DOOR_CLOSING_SOUND_ID);
+    this.engine = undefined;
+    this.spriteController = undefined;
+    this.scriptedInteractionController = undefined;
+    this.benchJumpInputLease = releaseInputLease(this.benchJumpInputLease);
+    this.benchJumpController.reset();
+    this.souvenirCloseupVisible = false;
+    engine.video.render(0);
+  }
+
+  update(deltaMs: number): void {
+    this.spriteController?.update(deltaMs);
+    this.scriptedInteractionController?.update();
+    this.benchJumpController.update(deltaMs);
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (activation.targetInstanceId === BAIT_SHOP_BENCH_TARGET_INSTANCE_ID) {
+      this.handleBenchAction(activation);
+      return;
+    }
+
+    if (activation.targetInstanceId === BAIT_SHOP_POSTCARD_RACK_TARGET_INSTANCE_ID) {
+      this.handlePostcardRackAction(activation);
+      return;
+    }
+
+    if (activation.targetInstanceId === BAIT_SHOP_SOUVENIR_TABLE_TARGET_INSTANCE_ID) {
+      this.handleSouvenirTableAction(activation);
+      return;
+    }
+
+    if (activation.targetInstanceId !== BAIT_SHOP_CASH_REGISTER_TARGET_INSTANCE_ID) {
+      if (activation.targetInstanceId === BAIT_SHOP_EXIT_DOOR_TARGET_INSTANCE_ID) {
+        this.handleExitDoorAction(activation);
+        return;
+      }
+
+      return;
+    }
+
+    if (activation.actionId === 'look') {
+      this.faceCashRegisterFromCurrentPosition();
+      this.showCashRegisterLines(
+        this.resolveCashRegisterLookLines(),
+        BAIT_SHOP_CASH_REGISTER_LOOK_HISTORY_KEY,
+      );
+      return;
+    }
+
+    if (activation.actionId === 'kick') {
+      this.faceCashRegisterFromCurrentPosition();
+      this.showCashRegisterLines(
+        this.resolveCashRegisterKickLines(),
+        BAIT_SHOP_CASH_REGISTER_KICK_HISTORY_KEY,
+      );
+      return;
+    }
+
+    if (activation.actionId !== 'grab') {
+      return;
+    }
+
+    this.runBenchAwareScriptedInteraction({
+      targetInstanceId: BAIT_SHOP_CASH_REGISTER_TARGET_INSTANCE_ID,
+      moveTo: { ...BAIT_SHOP_CASH_REGISTER_INTERACTION_POINT },
+      facing: 'down-left',
+      onReached: () => {
+        this.showCashRegisterLines(
+          this.resolveCashRegisterGrabLines(),
+          BAIT_SHOP_CASH_REGISTER_GRAB_HISTORY_KEY,
+        );
+      },
+    });
+  }
+
+  handleSceneClick(activation: RoccoSceneClickAction) {
+    if (this.benchJumpController.isActive()) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (this.souvenirCloseupVisible) {
+      this.closeSouvenirCloseup();
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (activation.targetInstanceId === BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID) {
+      this.collectHiddenKeys();
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (this.roccoOnBench && !activation.targetInstanceId) {
+      this.startBenchJumpDownSequence({
+        walkTo: {
+          x: activation.sceneX,
+          y: activation.sceneY,
+        },
+      });
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (
+      this.roccoOnBench &&
+      activation.targetInstanceId &&
+      this.scriptedInteractionController?.hasTarget(activation.targetInstanceId)
+    ) {
+      this.startBenchJumpDownSequence({
+        onComplete: () => {
+          this.scriptedInteractionController?.handleSceneClick(activation);
+        },
+      });
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    this.scriptedInteractionController?.handleSceneClick(activation);
+  }
+
+  handleInventorySceneClick(): boolean {
+    if (!this.souvenirCloseupVisible) {
+      return false;
+    }
+
+    this.closeSouvenirCloseup();
+    return true;
   }
 }
 

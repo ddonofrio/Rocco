@@ -4,6 +4,7 @@ import type { RoccoCartridgeAction } from '../../../src/console/cartridges';
 import type { RoccoEngine, RoccoEnginePersistence } from '../../../src/console/engine-sdk';
 import type { RoccoAudioSystem } from '../../../src/console/audio';
 import type { RoccoJukeboxSystem } from '../../../src/console/audio/jukebox';
+import { CompositionServiceImpl } from '../../../src/console/composition/composition-service';
 import type { RoccoEffect, RoccoEffectManager } from '../../../src/console/effects';
 import type { RoccoActionMenuSystem } from '../../../src/console/video/action-menu';
 import type { RoccoVideoDisplayModule, RoccoVideoPlaneModule, RoccoVideoSystem } from '../../../src/console/video';
@@ -441,8 +442,8 @@ function advanceStanConversationToFollowUpMenu(manager: RoccoLevelManager): void
 }
 
 interface EngineMockState {
-  restoredRecord: RoccoPlaneSceneRecord | null;
-  loadedScene: RoccoPlaneScene | null;
+  restoredRecord: RoccoPlaneSceneRecord | undefined;
+  loadedScene: RoccoPlaneScene | undefined;
   savedScenes: RoccoPlaneScene[];
   preloadedPlaneSceneIds: string[];
   addedEffectIds: string[];
@@ -459,7 +460,7 @@ interface EngineMockState {
   loadedSpriteDefinitionIds: string[];
   registeredWalkMapIds: string[];
   walkMapBindings: string[];
-  playerSpriteId: string | null;
+  playerSpriteId: string | undefined;
   removedSpriteIds: string[];
   createdSprites: string[];
   createdSpriteSnapshots: RoccoSpriteInstance[];
@@ -497,19 +498,23 @@ interface EngineMockState {
   statusMessages: string[];
   isSpriteMovingValue: boolean;
   inputEnabled: boolean;
-  inputLeases: { ownerId: string; mode: 'interactive' | 'advance-only' | 'blocked' }[];
+  inputLeases: InputLeaseRecord[];
   compositionSessions: string[];
   spriteSnapshot: RoccoSpriteInstance | undefined;
 }
 
+type InputLeaseMode = 'interactive' | 'advance-only' | 'blocked';
+
+interface InputLeaseRecord {
+  ownerId: string;
+  mode: InputLeaseMode;
+}
+
 function createEngineMock(state: EngineMockState): RoccoEngine {
   let isLegacyInputEnabled = state.inputEnabled;
-  const activeInputLeases: Array<{
-    ownerId: string;
-    mode: 'interactive' | 'advance-only' | 'blocked';
-  }> = [];
+  const activeInputLeases: InputLeaseRecord[] = [];
 
-  const recomputeInputMode = (): 'interactive' | 'advance-only' | 'blocked' => {
+  const recomputeInputMode = (): InputLeaseMode => {
     if (!isLegacyInputEnabled) {
       return 'blocked';
     }
@@ -666,12 +671,12 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
         sprite.transform.scaleY = scaleY;
       }
     },
-    setFlip(instanceId: string, flipX: boolean, flipY: boolean) {
-      state.spriteFlipUpdates.push(`${instanceId}:${flipX},${flipY}`);
+    setFlip(instanceId: string, isFlippedX: boolean, isFlippedY: boolean) {
+      state.spriteFlipUpdates.push(`${instanceId}:${isFlippedX},${isFlippedY}`);
       const sprite = findLatestSpriteSnapshot(state, instanceId);
       if (sprite) {
-        sprite.transform.flipX = flipX;
-        sprite.transform.flipY = flipY;
+        sprite.transform.flipX = isFlippedX;
+        sprite.transform.flipY = isFlippedY;
       }
     },
     setPresentationTransform(
@@ -768,16 +773,16 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
         sprite.contrast = contrast;
       }
     },
-    setInteractive(instanceId: string, interactive: boolean) {
+    setInteractive(instanceId: string, isInteractive: boolean) {
       const sprite = findLatestSpriteSnapshot(state, instanceId);
       if (sprite) {
-        sprite.interactive = interactive;
+        sprite.interactive = isInteractive;
       }
     },
-    setCollisionEnabled(instanceId: string, enabled: boolean) {
+    setCollisionEnabled(instanceId: string, isCollisionEnabled: boolean) {
       const sprite = findLatestSpriteSnapshot(state, instanceId);
       if (sprite) {
-        sprite.collisionEnabled = enabled;
+        sprite.collisionEnabled = isCollisionEnabled;
       }
     },
     bindToWalkMap(instanceId: string, binding: RoccoSpriteNavigationBinding) {
@@ -1021,15 +1026,13 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
     zoom,
     planes,
-    setRenderLayerOrder(_layers: RoccoRenderLayer[]) {
-      void _layers;
+    setRenderLayerOrder(_renderLayers: RoccoRenderLayer[]) {
       // noop
     },
     getRenderLayerOrder() {
       return [];
     },
-    preloadAssetUrls(assetUrls: readonly string[]) {
-      void assetUrls;
+    preloadAssetUrls(_assetUrls: readonly string[]) {
       return Promise.resolve();
     },
     preloadPlaneScene(scene: RoccoPlaneScene) {
@@ -1109,7 +1112,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
 
   const persistence: RoccoEnginePersistence = {
     loadPlaneSceneRecord(_cartridgeId: string, _sceneId: string) {
-      return Promise.resolve(state.restoredRecord ?? null);
+      return Promise.resolve(state.restoredRecord as RoccoPlaneSceneRecord | null);
     },
     savePlaneScene(_cartridgeId: string, scene: RoccoPlaneScene) {
       state.savedScenes.push(scene);
@@ -1172,7 +1175,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
 
     // Player state
-    setPlayerSprite(instanceId: string | null) {
+    setPlayerSprite(instanceId: string | undefined) {
       state.playerSpriteId = instanceId;
     },
     getPlayerSprite() {
@@ -1180,8 +1183,8 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
 
     // Input control
-    setInputEnabled(enabled: boolean) {
-      isLegacyInputEnabled = enabled;
+    setInputEnabled(isEnabled: boolean) {
+      isLegacyInputEnabled = isEnabled;
       syncLegacyInputState();
     },
     isInputEnabled() {
@@ -1230,25 +1233,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
     beginCompositionSession(ownerId: string) {
       state.compositionSessions.push(ownerId);
-      return {
-        id: `composition-${state.compositionSessions.length}`,
-        ownerId,
-        message: null,
-        mode: 'exclusive' as const,
-        status: 'active' as const,
-        completed: null,
-        total: null,
-        error: null,
-        report() {
-          // noop
-        },
-        fail() {
-          // noop
-        },
-        dispose() {
-          // noop
-        },
-      };
+      return new CompositionServiceImpl().begin({ ownerId });
     },
     endComposition() {
       // noop
@@ -1309,8 +1294,8 @@ function createEngineMockWithStrictPlaylistRegistration(state: EngineMockState):
 
 function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState {
   return {
-    restoredRecord: null,
-    loadedScene: null,
+    restoredRecord: undefined,
+    loadedScene: undefined,
     savedScenes: [],
     preloadedPlaneSceneIds: [],
     addedEffectIds: [],
@@ -1327,7 +1312,7 @@ function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState 
     loadedSpriteDefinitionIds: [],
     registeredWalkMapIds: [],
     walkMapBindings: [],
-    playerSpriteId: null,
+    playerSpriteId: undefined,
     removedSpriteIds: [],
     createdSprites: [],
     createdSpriteSnapshots: [],
@@ -2889,7 +2874,7 @@ describe('RoccoDefaultCartridge', () => {
       `${DEFAULT_CLOUD_SPRITE_INSTANCE_ID}:${expectedX},${expectedY}`,
     );
     expect(DEFAULT_CLOUD_SPRITE_SCALE).toBe(0.5);
-    expect(DEFAULT_CLOUD_SPRITE_OPACITY).toBe(0.9);
+    expect(DEFAULT_CLOUD_SPRITE_OPACITY).toBeCloseTo(0.9);
     expect(DEFAULT_CLOUD_SPEED_X).toBeGreaterThan(0);
   });
 

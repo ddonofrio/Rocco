@@ -34,7 +34,7 @@ export interface CartridgeActionContext {
   readonly actionId: string;
   readonly correlationId: string;
   readonly cartridgeId: string;
-  readonly levelId: string | null;
+  readonly levelId: string | undefined;
 }
 
 /**

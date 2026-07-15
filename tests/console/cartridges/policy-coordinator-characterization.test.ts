@@ -37,11 +37,11 @@ describe('RoccoRuntimeDefaultPlayerMovePolicyCoordinator', () => {
     ).toBe(false);
   });
 
-  it('COR-002: a null cartridge disposition does not suppress movement', () => {
+  it('COR-002: an undefined cartridge disposition does not suppress movement', () => {
     expect(
       coordinator.shouldSuppressDefaultPlayerMove({
         target: undefined,
-        cartridgeDisposition: null,
+        cartridgeDisposition: undefined,
       }),
     ).toBe(false);
   });
@@ -60,7 +60,7 @@ describe('RoccoRuntimeDefaultPlayerMovePolicyCoordinator', () => {
 
     const isResult = coordinatorWithTarget.shouldSuppressDefaultPlayerMove({
       target: { kind: 'scene-target', instanceId: 'bait-shop-door', definitionId: 'bait-shop-door' },
-      cartridgeDisposition: null,
+      cartridgeDisposition: undefined,
     });
 
     expect(isResult).toBe(true);

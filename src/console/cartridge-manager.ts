@@ -40,9 +40,9 @@ function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
-function combineErrors(message: string, errors: readonly unknown[]): Error | null {
+function combineErrors(message: string, errors: readonly unknown[]): Error | undefined {
   if (errors.length === 0) {
-    return null;
+    return undefined;
   }
   if (errors.length === 1) {
     return toError(errors[0]);
@@ -52,8 +52,136 @@ function combineErrors(message: string, errors: readonly unknown[]): Error | nul
 }
 
 export class RoccoCartridgeManager {
-  private activeCartridge: RoccoCartridge | null = null;
-  private cartridgeScope: ResourceScope | null = null;
+  private activeCartridge: RoccoCartridge | undefined;
+  private cartridgeScope: ResourceScope | undefined;
+
+  private loadInitialLocales(
+    configById: ReadonlyMap<string, (typeof builtinCartridgeConfigs)[number]>,
+  ): Record<string, string> {
+    const locales: Record<string, string> = {};
+    for (const [cartridgeId, config] of configById) {
+      const locale = this.loadStoredLocale(config);
+      if (locale) {
+        locales[cartridgeId] = locale;
+      }
+    }
+
+    return locales;
+  }
+
+  private loadStoredLocale(
+    config:
+      | (typeof builtinCartridgeConfigs)[number]
+      | undefined,
+  ): string | undefined {
+    if (!config?.preferredLocaleStorageKey) {
+      return undefined;
+    }
+
+    try {
+      return (
+        globalThis.localStorage?.getItem(config.preferredLocaleStorageKey) ??
+        config.defaultLocale
+      );
+    } catch {
+      return config.defaultLocale;
+    }
+  }
+
+  private async collectBootSetup(
+    configs: readonly (typeof builtinCartridgeConfigs)[number][],
+    engine: RoccoMenuSettingsEngine,
+  ): Promise<RoccoCollectedBootSetup> {
+    const bootSettingsById = new Map<string, RoccoCartridgeBootSetting>();
+    let consoleFlags: Partial<RoccoConsoleFlags> = {};
+
+    for (const config of configs) {
+      try {
+        const cartridge = config.createCartridge();
+        const setupResult = await cartridge.setup?.({
+          console: {
+            getFlags: () => engine.getConsoleFlags(),
+            setFlags: (patch) => {
+              engine.setConsoleFlags(patch);
+            },
+          },
+        });
+        const bootSettings = setupResult?.bootSettings ?? [];
+
+        consoleFlags = {
+          ...consoleFlags,
+          ...setupResult?.consoleFlags,
+        };
+
+        for (const bootSetting of bootSettings) {
+          if (bootSettingsById.has(bootSetting.id)) {
+            throw new Error(`Duplicate boot setting registration '${bootSetting.id}'.`);
+          }
+          bootSettingsById.set(bootSetting.id, bootSetting);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        engine.log('System', `Cartridge setup '${config.manifest.id}' failed: ${message}`);
+      }
+    }
+
+    const bootSettings = bootSettingsById.values();
+    return {
+      consoleFlags,
+      bootSettings: [...bootSettings],
+    };
+  }
+
+  private saveStoredLocale(
+    config:
+      | (typeof builtinCartridgeConfigs)[number]
+      | undefined,
+    locale: string,
+  ): void {
+    if (!config?.preferredLocaleStorageKey) {
+      return;
+    }
+
+    try {
+      globalThis.localStorage?.setItem(config.preferredLocaleStorageKey, locale);
+    } catch {
+      return;
+    }
+  }
+
+  private async cleanupCartridgeResources(
+    cartridge: RoccoCartridge | undefined,
+    scope: ResourceScope | undefined,
+    cartridgeId: string,
+  ): Promise<Error | undefined> {
+    const failures: unknown[] = [];
+
+    if (cartridge?.stop) {
+      try {
+        await cartridge.stop();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    if (cartridge?.dispose) {
+      try {
+        await cartridge.dispose();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    if (scope) {
+      try {
+        await scope.dispose();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    return combineErrors(`Cartridge '${cartridgeId}' cleanup failed.`, failures);
+  }
 
   async loadAndMount(options: CartridgeManagerOptions): Promise<RoccoCartridge> {
     const { app, engine, configuredCartridgeId } = options;
@@ -114,7 +242,7 @@ export class RoccoCartridgeManager {
       const cleanupError = await this.cleanupCartridgeResources(cartridge, scope, selectedId);
       const combinedError = combineErrors(
         `Failed to mount cartridge '${selectedId}' cleanly.`,
-        [error, cleanupError].filter((item) => item !== null),
+        [error, cleanupError].filter((item) => item !== undefined),
       );
       throw combinedError ?? error;
     }
@@ -124,12 +252,12 @@ export class RoccoCartridgeManager {
     return cartridge;
   }
 
-  getActiveCartridge(): RoccoCartridge | null {
+  getActiveCartridge(): RoccoCartridge | undefined {
     return this.activeCartridge;
   }
 
-  getActiveLevelId(): string | null {
-    return this.activeCartridge?.getActiveLevelId?.() ?? null;
+  getActiveLevelId(): string | undefined {
+    return this.activeCartridge?.getActiveLevelId?.() ?? undefined;
   }
 
   async dispose(): Promise<void> {
@@ -141,137 +269,11 @@ export class RoccoCartridgeManager {
       activeCartridge?.manifest.id ?? 'unknown',
     );
 
-    this.activeCartridge = null;
-    this.cartridgeScope = null;
+    this.activeCartridge = undefined;
+    this.cartridgeScope = undefined;
 
     if (cleanupError) {
       throw cleanupError;
     }
-  }
-
-  private loadInitialLocales(
-    configById: ReadonlyMap<string, (typeof builtinCartridgeConfigs)[number]>,
-  ): Record<string, string> {
-    const locales: Record<string, string> = {};
-    for (const [cartridgeId, config] of configById) {
-      const locale = this.loadStoredLocale(config);
-      if (locale) {
-        locales[cartridgeId] = locale;
-      }
-    }
-
-    return locales;
-  }
-
-  private loadStoredLocale(
-    config:
-      | (typeof builtinCartridgeConfigs)[number]
-      | undefined,
-  ): string | undefined {
-    if (!config?.preferredLocaleStorageKey) {
-      return undefined;
-    }
-
-    try {
-      return (
-        globalThis.localStorage?.getItem(config.preferredLocaleStorageKey) ??
-        config.defaultLocale
-      );
-    } catch {
-      return config.defaultLocale;
-    }
-  }
-
-  private async collectBootSetup(
-    configs: readonly (typeof builtinCartridgeConfigs)[number][],
-    engine: RoccoMenuSettingsEngine,
-  ): Promise<RoccoCollectedBootSetup> {
-    const bootSettingsById = new Map<string, RoccoCartridgeBootSetting>();
-    let consoleFlags: Partial<RoccoConsoleFlags> = {};
-
-    for (const config of configs) {
-      try {
-        const cartridge = config.createCartridge();
-        const setupResult = await cartridge.setup?.({
-          console: {
-            getFlags: () => engine.getConsoleFlags(),
-            setFlags: (patch) => {
-              engine.setConsoleFlags(patch);
-            },
-          },
-        });
-
-        consoleFlags = {
-          ...consoleFlags,
-          ...setupResult?.consoleFlags,
-        };
-
-        for (const bootSetting of setupResult?.bootSettings ?? []) {
-          if (bootSettingsById.has(bootSetting.id)) {
-            throw new Error(`Duplicate boot setting registration '${bootSetting.id}'.`);
-          }
-          bootSettingsById.set(bootSetting.id, bootSetting);
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        engine.log('System', `Cartridge setup '${config.manifest.id}' failed: ${message}`);
-      }
-    }
-
-    return {
-      consoleFlags,
-      bootSettings: [...bootSettingsById.values()],
-    };
-  }
-
-  private saveStoredLocale(
-    config:
-      | (typeof builtinCartridgeConfigs)[number]
-      | undefined,
-    locale: string,
-  ): void {
-    if (!config?.preferredLocaleStorageKey) {
-      return;
-    }
-
-    try {
-      globalThis.localStorage?.setItem(config.preferredLocaleStorageKey, locale);
-    } catch {
-      return;
-    }
-  }
-
-  private async cleanupCartridgeResources(
-    cartridge: RoccoCartridge | null,
-    scope: ResourceScope | null,
-    cartridgeId: string,
-  ): Promise<Error | null> {
-    const failures: unknown[] = [];
-
-    if (cartridge?.stop) {
-      try {
-        await cartridge.stop();
-      } catch (error) {
-        failures.push(error);
-      }
-    }
-
-    if (cartridge?.dispose) {
-      try {
-        await cartridge.dispose();
-      } catch (error) {
-        failures.push(error);
-      }
-    }
-
-    if (scope) {
-      try {
-        await scope.dispose();
-      } catch (error) {
-        failures.push(error);
-      }
-    }
-
-    return combineErrors(`Cartridge '${cartridgeId}' cleanup failed.`, failures);
   }
 }

@@ -1,6 +1,7 @@
 import type { RoccoRuntimeVideoSystem } from './video';
 import type { RoccoCursorActionEvent, RoccoCursorMoveEvent } from './video/cursor';
 import type { RoccoViewportHost } from './video/viewport';
+import type { RoccoRuntimeResolvedSceneTarget } from './video/runtime-system';
 import type {
   RoccoCartridge,
   RoccoSceneClickAction,
@@ -37,7 +38,7 @@ interface InputHandlerOptions {
   audioSystem: RoccoRuntimeAudioSystem;
   jukeboxSystem: RoccoJukeboxSystem;
   viewportHost?: RoccoViewportHost;
-  getActiveCartridge: () => RoccoCartridge | null;
+  getActiveCartridge: () => RoccoCartridge | null | undefined;
   getActivePlayerSpriteId: () => string | undefined;
   actionDispatcher?: ActionDispatcher;
   log: (channel: string, message: string) => void;
@@ -60,42 +61,6 @@ export class RoccoInputHandler {
   private readonly defaultPlayerMovePolicy: RoccoRuntimeDefaultPlayerMovePolicyCoordinator;
   private readonly inputPresentation: RoccoRuntimeInputPresentationCoordinator;
   private readonly getInputMode: () => InputMode;
-
-  constructor(options: InputHandlerOptions) {
-    this.videoSystem = options.videoSystem;
-    this.audioSystem = options.audioSystem;
-    this.jukeboxSystem = options.jukeboxSystem;
-    this.viewportHost = options.viewportHost;
-    this.getActivePlayerSpriteId = options.getActivePlayerSpriteId;
-    this.actionDispatcher = options.actionDispatcher ?? new ActionDispatcher({
-      getActiveCartridge: options.getActiveCartridge,
-      getActiveLevelId: () => null,
-      log: options.log,
-    });
-    this.logFn = options.log;
-    this.getInputMode = options.getInputMode ?? (() => 'interactive');
-    this.defaultPlayerMovePolicy = new RoccoRuntimeDefaultPlayerMovePolicyCoordinator({
-      getSceneTarget: (instanceId) => this.videoSystem.sceneTargets.getTarget(instanceId),
-    });
-    this.inputPresentation = new RoccoRuntimeInputPresentationCoordinator({
-      videoSystem: this.videoSystem,
-      viewportHost: this.viewportHost,
-    });
-  }
-
-  mount(): void {
-    this.viewportHost?.setCursorActionHandler(this.handleCursorAction);
-    this.viewportHost?.setCursorMoveHandler(this.handleCursorMove);
-    this.viewportHost?.setCursorLeaveHandler(this.handleCursorLeave);
-  }
-
-  unmount(): void {
-    this.viewportHost?.setCursorActionHandler(undefined);
-    this.viewportHost?.setCursorMoveHandler(undefined);
-    this.viewportHost?.  setCursorLeaveHandler(undefined);
-    this.inputPresentation.unmount();
-    this.actionDispatcher.dispose();
-  }
 
   private readonly handleCursorAction = (event: RoccoCursorActionEvent): void => {
     const x = Math.round(event.sceneX);
@@ -141,19 +106,6 @@ export class RoccoInputHandler {
 
     this.handleSceneCursorAction(event, x, y);
   };
-
-  private handleAdvanceOnlyCursorAction(
-    _event: RoccoCursorActionEvent,
-    roundedX: number,
-    roundedY: number,
-  ): void {
-    const advanceAction: RoccoAdvanceSequenceAction = {
-      kind: 'advance-sequence',
-    };
-
-    this.actionDispatcher.dispatch(advanceAction, { owner: 'advance-only' });
-    this.logFn('Cursor', `ADVANCE click at (${roundedX}, ${roundedY}).`);
-  }
 
   private readonly handleCursorMove = (event: RoccoCursorMoveEvent): void => {
     if (this.getInputMode() !== 'interactive') {
@@ -206,6 +158,41 @@ export class RoccoInputHandler {
     this.inputPresentation.setHoverDescription(undefined);
   };
 
+  constructor(options: InputHandlerOptions) {
+    this.videoSystem = options.videoSystem;
+    this.audioSystem = options.audioSystem;
+    this.jukeboxSystem = options.jukeboxSystem;
+    this.viewportHost = options.viewportHost;
+    this.getActivePlayerSpriteId = options.getActivePlayerSpriteId;
+    this.actionDispatcher = options.actionDispatcher ?? new ActionDispatcher({
+      getActiveCartridge: options.getActiveCartridge,
+      getActiveLevelId: () => {},
+      log: options.log,
+    });
+    this.logFn = options.log;
+    this.getInputMode = options.getInputMode ?? (() => 'interactive');
+    this.defaultPlayerMovePolicy = new RoccoRuntimeDefaultPlayerMovePolicyCoordinator({
+      getSceneTarget: (instanceId) => this.videoSystem.sceneTargets.getTarget(instanceId),
+    });
+    this.inputPresentation = new RoccoRuntimeInputPresentationCoordinator({
+      videoSystem: this.videoSystem,
+      viewportHost: this.viewportHost,
+    });
+  }
+
+  private handleAdvanceOnlyCursorAction(
+    _event: RoccoCursorActionEvent,
+    roundedX: number,
+    roundedY: number,
+  ): void {
+    const advanceAction: RoccoAdvanceSequenceAction = {
+      kind: 'advance-sequence',
+    };
+
+    this.actionDispatcher.dispatch(advanceAction, { owner: 'advance-only' });
+    this.logFn('Cursor', `ADVANCE click at (${roundedX}, ${roundedY}).`);
+  }
+
   private handleGridMenuCursorAction(event: RoccoCursorActionEvent): boolean {
     if (!this.videoSystem.gridMenus.isOpen()) {
       return false;
@@ -244,9 +231,10 @@ export class RoccoInputHandler {
       }
 
       this.actionDispatcher.dispatch(activation, { owner: 'grid-menu' });
+      const itemSuffix = activation.itemId ? ` for '${activation.itemId}'` : '';
       this.logFn(
         'GridMenu',
-        `ACTION '${activation.interaction}'${activation.itemId ? ` for '${activation.itemId}'` : ''} on grid menu '${activation.definitionId}'.`,
+        `ACTION '${activation.interaction}'${itemSuffix} on grid menu '${activation.definitionId}'.`,
       );
     }
     this.inputPresentation.syncCarriedCursorAttachment();
@@ -339,49 +327,24 @@ export class RoccoInputHandler {
       cartridgeDisposition: cartridgeActionResult,
     });
 
-    if (
-      !isSceneClickConsumed &&
-      visibleTarget &&
-      this.videoSystem.actionMenus.openMenuForTarget(
-        visibleTarget.instanceId,
-        visibleTarget.definitionId,
-        event.sceneX,
-        event.sceneY,
-      )
-    ) {
-      if (
-        playerSpriteId &&
-        visibleTarget.instanceId !== playerSpriteId &&
-        !isSuppressDefaultPlayerMove
-      ) {
-        this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
-          idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
-          idleSettleFacing: 'diagonal-from-facing',
-          targetInstanceId:
-            visibleTarget.kind === 'sprite' && visibleTarget.instanceId !== playerSpriteId
-              ? visibleTarget.instanceId
-              : undefined,
-        });
-      }
-      this.inputPresentation.setHoverDescription(undefined);
-      this.videoSystem.render(0);
-      this.logFn(
-        'ActionMenu',
-        `OPEN for ${visibleTarget.kind} '${visibleTarget.instanceId}' at (${roundedX}, ${roundedY}).`,
-      );
+    if (this.tryOpenActionMenuForVisibleTarget({
+      event,
+      roundedX,
+      roundedY,
+      visibleTarget,
+      playerSpriteId,
+      isSceneClickConsumed,
+      isSuppressDefaultPlayerMove,
+    })) {
       return;
     }
 
-    if (playerSpriteId && !isSuppressDefaultPlayerMove) {
-      this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
-        idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
-        idleSettleFacing: 'diagonal-from-facing',
-        targetInstanceId:
-          actionTarget?.kind === 'sprite' && actionTargetId && actionTargetId !== playerSpriteId
-            ? actionTargetId
-            : undefined,
-      });
-    }
+    this.movePlayerToScenePoint({
+      playerSpriteId,
+      event,
+      isSuppressDefaultPlayerMove,
+      actionTarget,
+    });
 
     if (visibleTarget) {
       this.logFn(
@@ -397,6 +360,74 @@ export class RoccoInputHandler {
     }
 
     this.logFn('Cursor', `CLICK at (${roundedX}, ${roundedY}).`);
+  }
+
+  private tryOpenActionMenuForVisibleTarget(options: {
+    event: RoccoCursorActionEvent;
+    roundedX: number;
+    roundedY: number;
+    visibleTarget: RoccoRuntimeResolvedSceneTarget | undefined;
+    playerSpriteId: string | undefined;
+    isSceneClickConsumed: boolean;
+    isSuppressDefaultPlayerMove: boolean;
+  }): boolean {
+    const {
+      event,
+      roundedX,
+      roundedY,
+      visibleTarget,
+      playerSpriteId,
+      isSceneClickConsumed,
+      isSuppressDefaultPlayerMove,
+    } = options;
+
+    if (
+      isSceneClickConsumed ||
+      !visibleTarget ||
+      !this.videoSystem.actionMenus.openMenuForTarget(
+        visibleTarget.instanceId,
+        visibleTarget.definitionId,
+        event.sceneX,
+        event.sceneY,
+      )
+    ) {
+      return false;
+    }
+
+    this.movePlayerToScenePoint({
+      playerSpriteId,
+      event,
+      isSuppressDefaultPlayerMove,
+      actionTarget: visibleTarget.instanceId === playerSpriteId ? undefined : visibleTarget,
+    });
+    this.inputPresentation.setHoverDescription(undefined);
+    this.videoSystem.render(0);
+    this.logFn(
+      'ActionMenu',
+      `OPEN for ${visibleTarget.kind} '${visibleTarget.instanceId}' at (${roundedX}, ${roundedY}).`,
+    );
+    return true;
+  }
+
+  private movePlayerToScenePoint(options: {
+    playerSpriteId: string | undefined;
+    event: RoccoCursorActionEvent;
+    isSuppressDefaultPlayerMove: boolean;
+    actionTarget: RoccoRuntimeResolvedSceneTarget | undefined;
+  }): void {
+    const { playerSpriteId, event, isSuppressDefaultPlayerMove, actionTarget } = options;
+    if (!playerSpriteId || isSuppressDefaultPlayerMove) {
+      return;
+    }
+
+    this.videoSystem.sprites.goTo(playerSpriteId, event.sceneX, event.sceneY, {
+      idleSettleDelayMs: PLAYER_IDLE_SETTLE_DELAY_MS,
+      idleSettleFacing: 'diagonal-from-facing',
+      targetInstanceId:
+        actionTarget?.kind === 'sprite' && actionTarget.instanceId !== playerSpriteId
+          ? actionTarget.instanceId
+          : undefined,
+    });
   }
 
   private clearForegroundMessages(): boolean {
@@ -431,5 +462,19 @@ export class RoccoInputHandler {
     }
 
     return Math.max(0, durationMs - ttlMs);
+  }
+
+  mount(): void {
+    this.viewportHost?.setCursorActionHandler(this.handleCursorAction);
+    this.viewportHost?.setCursorMoveHandler(this.handleCursorMove);
+    this.viewportHost?.setCursorLeaveHandler(this.handleCursorLeave);
+  }
+
+  unmount(): void {
+    this.viewportHost?.setCursorActionHandler(undefined);
+    this.viewportHost?.setCursorMoveHandler(undefined);
+    this.viewportHost?.setCursorLeaveHandler(undefined);
+    this.inputPresentation.unmount();
+    this.actionDispatcher.dispose();
   }
 }

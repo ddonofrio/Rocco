@@ -8,7 +8,7 @@ interface RoccoRuntimeDefaultPlayerMovePolicyCoordinatorOptions {
 
 interface ResolveDefaultPlayerMoveSuppressionOptions {
   target: RoccoRuntimeResolvedSceneTarget | undefined;
-  cartridgeDisposition: CartridgeActionDisposition | null;
+  cartridgeDisposition: CartridgeActionDisposition | undefined;
 }
 
 export class RoccoRuntimeDefaultPlayerMovePolicyCoordinator {
@@ -29,7 +29,7 @@ export class RoccoRuntimeDefaultPlayerMovePolicyCoordinator {
   }
 
   private shouldSuppressFromCartridgeDisposition(
-    disposition: CartridgeActionDisposition | null,
+    disposition: CartridgeActionDisposition | undefined,
   ): boolean {
     return disposition?.defaultPlayerMovement === 'suppress';
   }

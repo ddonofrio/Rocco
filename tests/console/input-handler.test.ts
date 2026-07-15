@@ -550,8 +550,8 @@ describe('RoccoInputHandler', () => {
           };
         },
       }),
-      getActiveCartridge: () => null,
-      getActivePlayerSpriteId: () => null,
+      getActiveCartridge: () => {},
+      getActivePlayerSpriteId: () => {},
       log: () => {},
     });
 
@@ -627,8 +627,8 @@ describe('RoccoInputHandler', () => {
             };
           },
         }),
-        getActiveCartridge: () => null,
-        getActivePlayerSpriteId: () => null,
+        getActiveCartridge: () => {},
+        getActivePlayerSpriteId: () => {},
         getInputMode: () => mode,
         log: () => {},
       });
@@ -734,7 +734,7 @@ describe('RoccoInputHandler', () => {
         },
       }),
       getActiveCartridge: () => cartridge,
-      getActivePlayerSpriteId: () => null,
+      getActivePlayerSpriteId: () => {},
       log: () => {},
     });
 
@@ -824,7 +824,7 @@ describe('RoccoInputHandler', () => {
           },
         }),
         getActiveCartridge: () => cartridge,
-        getActivePlayerSpriteId: () => null,
+        getActivePlayerSpriteId: () => {},
         getInputMode: () => mode,
         log: () => {},
       });
@@ -898,8 +898,8 @@ describe('RoccoInputHandler', () => {
           cursorAttachments.push(attachment);
         },
       }),
-      getActiveCartridge: () => null,
-      getActivePlayerSpriteId: () => null,
+      getActiveCartridge: () => {},
+      getActivePlayerSpriteId: () => {},
       log: () => {},
     });
 

@@ -39,7 +39,7 @@ function map(
     id,
     title: id,
     initialLevelId,
-    levels: levelIds.map(level),
+    levels: levelIds.map((levelId) => level(levelId)),
     connections,
   };
 }

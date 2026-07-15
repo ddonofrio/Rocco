@@ -23,9 +23,9 @@ class FakeGainNode {
 }
 
 class FakeAudioBufferSourceNode {
-  buffer: AudioBuffer | null = null;
+  buffer: AudioBuffer | undefined;
   loop = false;
-  onended: (() => void) | null = null;
+  onended: (() => void) | undefined;
 
   connect(): void {
     return;
@@ -165,7 +165,7 @@ describe('RoccoJukeboxSystemImpl', () => {
     system.stopPlaylist();
     const second = system.playPlaylist('pier-music');
 
-    await first.catch(() => {});
+    await first;
     await second;
 
     expect(system.isPlaying()).toBe(true);

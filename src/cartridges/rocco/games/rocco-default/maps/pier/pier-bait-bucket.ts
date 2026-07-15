@@ -1,4 +1,5 @@
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { InputPolicyLease } from '../../../../../../console/input';
 import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
@@ -227,6 +228,7 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
   private state: BaitBucketControllerState = 'normal';
   private kickElapsedMs = 0;
   private droppedPoseApplied = false;
+  private kickInputLease: InputPolicyLease | undefined;
 
   constructor(engine: RoccoEngine, options: RoccoDefaultBaitBucketControllerOptions = {}) {
     this.engine = engine;
@@ -234,61 +236,8 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
     this.localization = options.localization ?? createRoccoLocalization();
   }
 
-  start(): void {
-    this.kickElapsedMs = 0;
-    this.droppedPoseApplied = false;
-    if (this.options.initialState?.dropped) {
-      this.restoreDropped();
-      return;
-    }
-
-    this.state = 'normal';
-    this.installNormalMenu();
-  }
-
-  update(deltaMs: number): void {
-    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
-      return;
-    }
-
-    if (this.state === 'approaching-kick') {
-      this.updateApproach();
-      return;
-    }
-
-    if (this.state === 'kicking') {
-      this.updateKick(deltaMs);
-    }
-  }
-
-  handleAction(activation: RoccoActionMenuActivation): void {
-    if (activation.targetInstanceId !== DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID) {
-      return;
-    }
-
-    if (this.handleSimpleAction(activation.actionId)) {
-      return;
-    }
-
-    if (activation.actionId !== KICK_ACTION_ID || this.state !== 'normal') {
-      return;
-    }
-
-    this.startKickApproach();
-  }
-
-  isDropped(): boolean {
-    return this.state === 'dropped';
-  }
-
-  disableActionMenus(): void {
-    this.engine.video.actionMenus.unregisterMenu(NORMAL_MENU_ID);
-    this.engine.video.actionMenus.unregisterMenu(DROPPED_MENU_ID);
-    this.engine.video.render(0);
-  }
-
   private startKickApproach(): void {
-    this.engine.setInputEnabled(false);
+    this.kickInputLease ??= this.engine.acquireInputLease('pier-bait-bucket-kick', 'blocked');
     this.engine.video.sprites.moveTo(
       DEFAULT_SPRITE_INSTANCE_ID,
       DEFAULT_BAIT_BUCKET_X +
@@ -405,7 +354,8 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
       },
     );
     this.engine.video.render(0);
-    this.engine.setInputEnabled(true);
+    this.kickInputLease?.dispose();
+    this.kickInputLease = undefined;
     this.state = 'dropped';
     this.options.onDropped?.();
     this.installDroppedMenu();
@@ -450,6 +400,59 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
     );
     this.engine.video.render(0);
   }
+
+  start(): void {
+    this.kickElapsedMs = 0;
+    this.droppedPoseApplied = false;
+    if (this.options.initialState?.dropped) {
+      this.restoreDropped();
+      return;
+    }
+
+    this.state = 'normal';
+    this.installNormalMenu();
+  }
+
+  update(deltaMs: number): void {
+    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return;
+    }
+
+    if (this.state === 'approaching-kick') {
+      this.updateApproach();
+      return;
+    }
+
+    if (this.state === 'kicking') {
+      this.updateKick(deltaMs);
+    }
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (activation.targetInstanceId !== DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID) {
+      return;
+    }
+
+    if (this.handleSimpleAction(activation.actionId)) {
+      return;
+    }
+
+    if (activation.actionId !== KICK_ACTION_ID || this.state !== 'normal') {
+      return;
+    }
+
+    this.startKickApproach();
+  }
+
+  isDropped(): boolean {
+    return this.state === 'dropped';
+  }
+
+  disableActionMenus(): void {
+    this.engine.video.actionMenus.unregisterMenu(NORMAL_MENU_ID);
+    this.engine.video.actionMenus.unregisterMenu(DROPPED_MENU_ID);
+    this.engine.video.render(0);
+  }
 }
 
 export async function installDefaultBaitBucket(
@@ -469,9 +472,11 @@ export async function installDefaultBaitBucket(
     volume: KICK_SOUND_VOLUME,
     loop: false,
   });
-  await engine.audio.preloadSound(KICK_SOUND_ID).catch(() => {
+  try {
+    await engine.audio.preloadSound(KICK_SOUND_ID);
+  } catch {
     engine.log('Audio', 'Bait bucket kick sound could not be preloaded.');
-  });
+  }
   engine.audio.stopSound(KICK_SOUND_ID);
 
   engine.video.sprites.createSpriteFromDefinition(DEFAULT_BAIT_BUCKET_SPRITE_DEFINITION_ID, {

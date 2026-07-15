@@ -15,6 +15,12 @@ const DEFAULT_ACTION_MENU_ORBIT_RADIUS = 88;
 const DEFAULT_ACTION_MENU_ORBIT_SPEED = 0.08;
 const DEFAULT_PELIKAN_MESSAGE_TTL_MS = 3150;
 
+type PelikanSimpleReactionSelection = {
+  lines: readonly string[];
+  count: number;
+  historyKey: string;
+};
+
 export function createDefaultActionMenuDefinition(
   localization: RoccoLocalization = createRoccoLocalization(),
 ): RoccoActionMenuDefinition {
@@ -91,24 +97,46 @@ export function showDefaultPelikanSimpleReaction(
   engine: RoccoEngine,
   actionId: string,
   localization: RoccoLocalization = createRoccoLocalization(),
-): boolean {
-  const selection =
-    actionId === 'look'
-      ? { lines: localization.text.pelikan.lookLines, count: 2, historyKey: 'pelikan-look' }
-      : actionId === 'grab'
-        ? { lines: localization.text.pelikan.grabLines, count: 1, historyKey: 'pelikan-grab' }
-        : actionId === 'kick'
-          ? { lines: localization.text.pelikan.kickLines, count: 1, historyKey: 'pelikan-kick' }
-          : undefined;
+): PelikanSimpleReactionSelection | undefined {
+  let selection: PelikanSimpleReactionSelection | undefined;
+  switch (actionId) {
+    case 'look': {
+      selection = {
+        lines: localization.text.pelikan.lookLines,
+        count: 2,
+        historyKey: 'pelikan-look',
+      };
+      break;
+    }
+    case 'grab': {
+      selection = {
+        lines: localization.text.pelikan.grabLines,
+        count: 1,
+        historyKey: 'pelikan-grab',
+      };
+      break;
+    }
+    case 'kick': {
+      selection = {
+        lines: localization.text.pelikan.kickLines,
+        count: 1,
+        historyKey: 'pelikan-kick',
+      };
+      break;
+    }
+    default: {
+      break;
+    }
+  }
 
   if (!selection) {
-    return false;
+    return undefined;
   }
 
   roccoCartridgeMessageRuntime.think(
     engine,
     DEFAULT_SPRITE_INSTANCE_ID,
-    selection.lines,
+    [...selection.lines],
     {
       ttlMs: DEFAULT_PELIKAN_MESSAGE_TTL_MS,
     },
@@ -119,5 +147,5 @@ export function showDefaultPelikanSimpleReaction(
     },
   );
   engine.video.render(0);
-  return true;
+  return selection;
 }

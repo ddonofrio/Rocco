@@ -2,6 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RoccoRuntimeAudioSystem } from '../../../src/console/audio/runtime-audio-system';
 
+interface PromiseWithResolversResult<T> {
+  promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+  reject(reason?: unknown): void;
+}
+
+const promiseConstructor = Promise as PromiseConstructor & {
+  withResolvers<T>(): PromiseWithResolversResult<T>;
+};
+
 class FakeGainNode {
   readonly gain = { value: 1 };
 
@@ -9,9 +19,9 @@ class FakeGainNode {
 }
 
 class FakeAudioBufferSourceNode {
-  buffer: AudioBuffer | null = null;
+  buffer: AudioBuffer | undefined;
   loop = false;
-  onended: (() => void) | null = null;
+  onended: (() => void) | undefined;
 
   connect(): void {}
 
@@ -23,7 +33,7 @@ class FakeAudioBufferSourceNode {
 }
 
 class FakeAudioContext {
-  static instances: FakeAudioContext[] = [];
+  static readonly instances: FakeAudioContext[] = [];
 
   state: 'running' | 'suspended' | 'closed' = 'running';
   readonly destination = {};
@@ -61,9 +71,35 @@ class FakeAudioContext {
   }
 }
 
+function resolveRequestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') {
+    return input;
+  }
+
+  if (input instanceof URL) {
+    return input.href;
+  }
+
+  return input.url;
+}
+
+async function createFetchResponse(
+  arrayBufferPromise: Promise<ArrayBuffer>,
+): Promise<Response> {
+  const arrayBuffer = await arrayBufferPromise;
+  return {
+    ok: true,
+    arrayBuffer: () => Promise.resolve(arrayBuffer),
+  } as Response;
+}
+
+function createPromiseWithResolvers<T>(): PromiseWithResolversResult<T> {
+  return promiseConstructor.withResolvers<T>();
+}
+
 describe('RoccoRuntimeAudioSystem', () => {
   beforeEach(() => {
-    FakeAudioContext.instances = [];
+    FakeAudioContext.instances.length = 0;
     vi.stubGlobal('AudioContext', FakeAudioContext);
   });
 
@@ -134,8 +170,7 @@ describe('RoccoRuntimeAudioSystem', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn<typeof fetch>().mockImplementation((input: RequestInfo | URL) => {
-        const url =
-          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        const url = resolveRequestUrl(input);
         return new Promise<Response>((resolve) => {
           fetchResolvers.set(url, () => {
             resolve({
@@ -247,22 +282,13 @@ describe('RoccoRuntimeAudioSystem', () => {
   });
 
   it('stopAllSounds aborts a pending load', async () => {
-    let resolveFetch!: (value: ArrayBuffer) => void;
-    const fetchPromise = new Promise<ArrayBuffer>((resolve) => {
-      resolveFetch = resolve;
-    });
+    const fetchDeferred = createPromiseWithResolvers<ArrayBuffer>();
+    const fetchPromise = fetchDeferred.promise;
 
     vi.stubGlobal(
       'fetch',
       vi.fn<typeof fetch>().mockReturnValue(
-        new Promise<Response>((resolve) => {
-          fetchPromise.then((arrayBuffer) => {
-            resolve({
-              ok: true,
-              arrayBuffer: () => Promise.resolve(arrayBuffer),
-            } as Response);
-          }).catch(() => {});
-        }),
+        createFetchResponse(fetchPromise),
       ),
     );
 
@@ -274,7 +300,7 @@ describe('RoccoRuntimeAudioSystem', () => {
 
     system.playSound('delayed-sound');
     system.stopAllSounds();
-    resolveFetch(new ArrayBuffer(8));
+    fetchDeferred.resolve(new ArrayBuffer(8));
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 

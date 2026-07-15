@@ -2,6 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RoccoJukeboxSystemImpl } from '../../../../src/console/audio/jukebox/jukebox-system';
 
+interface PromiseWithResolversResult<T> {
+  promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+  reject(reason?: unknown): void;
+}
+
+const promiseConstructor = Promise as PromiseConstructor & {
+  withResolvers<T>(): PromiseWithResolversResult<T>;
+};
+
 class FakeGainNode {
   readonly gain = {
     value: 1,
@@ -22,9 +32,9 @@ class FakeGainNode {
 }
 
 class FakeAudioBufferSourceNode {
-  buffer: AudioBuffer | null = null;
+  buffer: AudioBuffer | undefined;
   loop = false;
-  onended: (() => void) | null = null;
+  onended: (() => void) | undefined;
 
   connect(): void {
     return;
@@ -41,6 +51,20 @@ class FakeAudioBufferSourceNode {
   stop(): void {
     this.onended?.();
   }
+}
+
+async function createFetchResponse(
+  arrayBufferPromise: Promise<ArrayBuffer>,
+): Promise<Response> {
+  const arrayBuffer = await arrayBufferPromise;
+  return {
+    ok: true,
+    arrayBuffer: () => Promise.resolve(arrayBuffer),
+  } as Response;
+}
+
+function createPromiseWithResolvers<T>(): PromiseWithResolversResult<T> {
+  return promiseConstructor.withResolvers<T>();
 }
 
 class FakeAudioContext {
@@ -187,30 +211,21 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
       globalVolume: 0.4,
     });
 
-    let resolveFetch!: (value: ArrayBuffer) => void;
-    const fetchPromise = new Promise<ArrayBuffer>((resolve) => {
-      resolveFetch = resolve;
-    });
+    const fetchDeferred = createPromiseWithResolvers<ArrayBuffer>();
+    const fetchPromise = fetchDeferred.promise;
 
     vi.stubGlobal(
       'fetch',
       vi.fn<typeof fetch>().mockReturnValue(
-        new Promise<Response>((resolve) => {
-          fetchPromise.then((arrayBuffer) => {
-            resolve({
-              ok: true,
-              arrayBuffer: () => Promise.resolve(arrayBuffer),
-            } as Response);
-          }).catch(() => {});
-        }),
+        createFetchResponse(fetchPromise),
       ),
     );
 
     const playPromise = system.playPlaylist('late-playlist');
     system.stopPlaylist();
-    resolveFetch(new ArrayBuffer(8));
+    fetchDeferred.resolve(new ArrayBuffer(8));
 
-    await playPromise.catch(() => {});
+    await playPromise;
 
     expect(system.isPlaying()).toBe(false);
   });

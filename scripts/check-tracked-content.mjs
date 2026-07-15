@@ -218,7 +218,7 @@ function encodeLatin1(text) {
   for (const character of text) {
     const codePoint = character.codePointAt(0) ?? 0;
     if (codePoint > 0xff) {
-      return null;
+      return;
     }
     bytes[index] = codePoint;
     index += 1;
@@ -238,7 +238,7 @@ function encodeWindows1252(text) {
     }
     const mappedByte = windows1252CodePointToByte.get(codePoint);
     if (mappedByte === undefined) {
-      return null;
+      return;
     }
     bytes[index] = mappedByte;
     index += 1;
@@ -250,13 +250,13 @@ function tryDecodeAsUtf8(bytes) {
   try {
     return utf8FatalDecoder.decode(bytes);
   } catch {
-    return null;
+    return;
   }
 }
 
 function tryRepairMojibake(text) {
   if (!suspiciousMojibakeLeadPattern.test(text)) {
-    return null;
+    return;
   }
 
   const originalScore = countSuspiciousCodePoints(text);
@@ -265,14 +265,14 @@ function tryRepairMojibake(text) {
       encoding: 'latin1',
       repairedText: (() => {
         const bytes = encodeLatin1(text);
-        return bytes ? tryDecodeAsUtf8(bytes) : null;
+        return bytes === undefined ? undefined : tryDecodeAsUtf8(bytes);
       })(),
     },
     {
       encoding: 'windows-1252',
       repairedText: (() => {
         const bytes = encodeWindows1252(text);
-        return bytes ? tryDecodeAsUtf8(bytes) : null;
+        return bytes === undefined ? undefined : tryDecodeAsUtf8(bytes);
       })(),
     },
   ]
@@ -284,7 +284,7 @@ function tryRepairMojibake(text) {
     .filter((candidate) => candidate.score < originalScore)
     .toSorted((left, right) => left.score - right.score || left.encoding.localeCompare(right.encoding));
 
-  return candidates[0] ?? null;
+  return candidates[0];
 }
 
 function truncateForMessage(text, maxLength = 96) {

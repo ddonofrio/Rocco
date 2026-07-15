@@ -9,9 +9,9 @@ class FakeGainNode {
 }
 
 class FakeAudioBufferSourceNode {
-  buffer: AudioBuffer | null = null;
+  buffer: AudioBuffer | undefined;
   loop = false;
-  onended: (() => void) | null = null;
+  onended: (() => void) | undefined;
 
   connect(): void {}
 
@@ -23,7 +23,7 @@ class FakeAudioBufferSourceNode {
 }
 
 class FakeAudioContext {
-  static instances: FakeAudioContext[] = [];
+  static readonly instances: FakeAudioContext[] = [];
 
   state: 'running' | 'suspended' | 'closed' = 'running';
   readonly destination = {};
@@ -63,7 +63,7 @@ class FakeAudioContext {
 
 describe('RoccoRuntimeAudioSystem characterization', () => {
   beforeEach(() => {
-    FakeAudioContext.instances = [];
+    FakeAudioContext.instances.length = 0;
     vi.stubGlobal('AudioContext', FakeAudioContext);
   });
 

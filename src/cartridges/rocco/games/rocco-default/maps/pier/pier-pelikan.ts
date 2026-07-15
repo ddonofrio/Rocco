@@ -261,59 +261,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
     this.random = random;
   }
 
-  start(): void {
-    if (this.options.initialState === 'feeding') {
-      this.restoreFeeding();
-      return;
-    }
-
-    this.state = 'idle';
-    this.poseIndex = 0;
-    this.elapsedMs = 0;
-    this.scheduleNextPose();
-    this.playCurrentPose();
-  }
-
-  update(deltaMs: number): void {
-    const safeDeltaMs = Number.isFinite(deltaMs) ? Math.max(0, deltaMs) : 0;
-    if (this.state === 'idle') {
-      this.updateIdle(safeDeltaMs);
-      return;
-    }
-
-    if (this.state === 'turning-to-bait') {
-      this.updateTurningToBait(safeDeltaMs);
-      return;
-    }
-
-    if (this.state === 'flying-to-bait') {
-      this.updateFlyingToBait(safeDeltaMs);
-      return;
-    }
-
-    if (this.state === 'feeding') {
-      this.updateFeeding(safeDeltaMs);
-    }
-  }
-
-  startBaitFeedingSequence(): boolean {
-    if (this.state !== 'idle') {
-      return false;
-    }
-
-    this.state = 'turning-to-bait';
-    this.elapsedMs = 0;
-    this.engine.video.actionMenus.unregisterMenu(DEFAULT_ACTION_MENU_ID);
-    this.engine.video.sprites.setFlip(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, true, false);
-    this.engine.video.render(0);
-    this.playCurrentPose();
-    return true;
-  }
-
-  isFeeding(): boolean {
-    return this.state === 'feeding';
-  }
-
   private updateIdle(deltaMs: number): void {
     this.elapsedMs += deltaMs;
     if (this.elapsedMs < this.nextPoseDelayMs) {
@@ -498,6 +445,59 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
     );
     this.engine.video.render(0);
   }
+
+  start(): void {
+    if (this.options.initialState === 'feeding') {
+      this.restoreFeeding();
+      return;
+    }
+
+    this.state = 'idle';
+    this.poseIndex = 0;
+    this.elapsedMs = 0;
+    this.scheduleNextPose();
+    this.playCurrentPose();
+  }
+
+  update(deltaMs: number): void {
+    const safeDeltaMs = Number.isFinite(deltaMs) ? Math.max(0, deltaMs) : 0;
+    if (this.state === 'idle') {
+      this.updateIdle(safeDeltaMs);
+      return;
+    }
+
+    if (this.state === 'turning-to-bait') {
+      this.updateTurningToBait(safeDeltaMs);
+      return;
+    }
+
+    if (this.state === 'flying-to-bait') {
+      this.updateFlyingToBait(safeDeltaMs);
+      return;
+    }
+
+    if (this.state === 'feeding') {
+      this.updateFeeding(safeDeltaMs);
+    }
+  }
+
+  startBaitFeedingSequence(): boolean {
+    if (this.state !== 'idle') {
+      return false;
+    }
+
+    this.state = 'turning-to-bait';
+    this.elapsedMs = 0;
+    this.engine.video.actionMenus.unregisterMenu(DEFAULT_ACTION_MENU_ID);
+    this.engine.video.sprites.setFlip(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, true, false);
+    this.engine.video.render(0);
+    this.playCurrentPose();
+    return true;
+  }
+
+  isFeeding(): boolean {
+    return this.state === 'feeding';
+  }
 }
 
 export async function installDefaultPelikan(
@@ -515,9 +515,11 @@ export async function installDefaultPelikan(
     volume: DEFAULT_PELIKAN_FLIGHT_SOUND_VOLUME,
     loop: false,
   });
-  await preloader?.preloadSound(engine, DEFAULT_PELIKAN_FLIGHT_SOUND_ID).catch(() => {
+  try {
+    await preloader?.preloadSound(engine, DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
+  } catch {
     engine.log('Audio', 'Pelikan flight sound could not be preloaded.');
-  });
+  }
   await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID);

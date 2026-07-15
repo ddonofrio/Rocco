@@ -1,5 +1,5 @@
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
-import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../../../console/cartridges';
+import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
@@ -19,6 +19,10 @@ export interface RoccoPierBeginningAmbientPersistentState {
   stan: RoccoStanPersistentState;
   door: RoccoBaitShopDoorState;
 }
+
+type RoccoSceneClickResult = {
+  suppressDefaultPlayerMove?: boolean;
+};
 
 class RoccoPierBeginningAmbientController implements RoccoPierSideAmbientController {
   private readonly stan: RoccoPierSideAmbientController;
@@ -45,7 +49,7 @@ class RoccoPierBeginningAmbientController implements RoccoPierSideAmbientControl
     this.stan.handleGridMenu?.(activation);
   }
 
-  handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
+  handleSceneClick(activation: RoccoSceneClickAction): RoccoSceneClickResult | void {
     return this.stan.handleSceneClick?.(activation);
   }
 

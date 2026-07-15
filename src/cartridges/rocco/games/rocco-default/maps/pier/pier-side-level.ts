@@ -1,5 +1,5 @@
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
-import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../../../console/cartridges';
+import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
 import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
@@ -27,11 +27,15 @@ import {
 import { pierDoorClosingSoundUrl } from './pier-assets';
 import { ROCCO_PIER_START_LEVEL_ID } from '../../constants';
 
+type RoccoSceneClickResult = {
+  suppressDefaultPlayerMove?: boolean;
+};
+
 export interface RoccoPierSideAmbientController {
   update(deltaMs: number): void;
   handleAction?(activation: RoccoActionMenuActivation): void;
   handleGridMenu?(activation: RoccoGridMenuActivation): void;
-  handleSceneClick?(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void;
+  handleSceneClick?(activation: RoccoSceneClickAction): RoccoSceneClickResult | void;
   unmount(engine: RoccoEngine): void;
 }
 
@@ -48,21 +52,23 @@ export interface RoccoPierSideLevelDefinition {
     persistentState: RoccoPierBeginningAmbientPersistentState,
     preloader?: RoccoAssetPreloader,
     entryConnectorId?: string,
-  ) => Promise<RoccoPierSideAmbientController | null> | RoccoPierSideAmbientController | null;
+  ) =>
+    | Promise<RoccoPierSideAmbientController | undefined>
+    | RoccoPierSideAmbientController
+    | undefined;
 }
 
 export class RoccoPierSideLevel implements RoccoLevel {
-  readonly id: string;
-  readonly title: string;
-  readonly connectors: readonly RoccoLevelConnector[];
-
   private readonly sceneId: string;
   private readonly backgroundScrollX: number;
   private readonly localization: RoccoLocalization;
   private readonly mountAmbient?: RoccoPierSideLevelDefinition['mountAmbient'];
-  private spriteController: RoccoDefaultSpriteController | null = null;
-  private cloudController: RoccoDefaultCloudController | null = null;
-  private ambientController: RoccoPierSideAmbientController | null = null;
+  private spriteController: RoccoDefaultSpriteController | undefined;
+  private cloudController: RoccoDefaultCloudController | undefined;
+  private ambientController: RoccoPierSideAmbientController | undefined;
+  readonly id: string;
+  readonly title: string;
+  readonly connectors: readonly RoccoLevelConnector[];
 
   constructor(definition: RoccoPierSideLevelDefinition) {
     this.id = definition.id;
@@ -79,9 +85,9 @@ export class RoccoPierSideLevel implements RoccoLevel {
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
-    this.spriteController = null;
-    this.cloudController = null;
-    this.ambientController = null;
+    this.spriteController = undefined;
+    this.cloudController = undefined;
+    this.ambientController = undefined;
 
     const scene = await loadOrCreatePierScene(engine, {
       sceneId: this.sceneId,
@@ -103,8 +109,13 @@ export class RoccoPierSideLevel implements RoccoLevel {
         initialPosition: entryConnector?.entryPoint,
         playIntro: false,
       }, preloader),
-      this.mountAmbient?.(engine, this.localization, { stan: { isIdentified: false }, door: { revealed: true } }, preloader, options.entryConnectorId) ??
-        Promise.resolve(null),
+      this.mountAmbient?.(
+        engine,
+        this.localization,
+        { stan: { isIdentified: false }, door: { revealed: true } },
+        preloader,
+        options.entryConnectorId,
+      ) ?? Promise.resolve(undefined),
     ]);
 
     this.cloudController = cloudController;
@@ -117,9 +128,11 @@ export class RoccoPierSideLevel implements RoccoLevel {
         volume: 0.21,
         loop: false,
       });
-      await engine.audio.preloadSound('rocco-bait-shop-door-closing-sound').catch(() => {
+      try {
+        await engine.audio.preloadSound('rocco-bait-shop-door-closing-sound');
+      } catch {
         engine.log('Audio', 'Pier start door closing sound could not be preloaded.');
-      });
+      }
     }
     return scene;
   }
@@ -135,9 +148,9 @@ export class RoccoPierSideLevel implements RoccoLevel {
       engine.audio.stopSound('rocco-bait-shop-door-closing-sound');
       engine.audio.unregisterSound('rocco-bait-shop-door-closing-sound');
     }
-    this.cloudController = null;
-    this.spriteController = null;
-    this.ambientController = null;
+    this.cloudController = undefined;
+    this.spriteController = undefined;
+    this.ambientController = undefined;
     engine.video.render(0);
   }
 
@@ -155,7 +168,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
     this.ambientController?.handleGridMenu?.(activation);
   }
 
-  handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
+  handleSceneClick(activation: RoccoSceneClickAction): RoccoSceneClickResult | void {
     return this.ambientController?.handleSceneClick?.(activation);
   }
 }

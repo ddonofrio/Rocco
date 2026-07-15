@@ -76,34 +76,35 @@ function collectWalkableSpansForColumn(
   alphaThreshold: number,
 ): RoccoSpriteWalkMapSpan[] {
   const spans: RoccoSpriteWalkMapSpan[] = [];
-  let openY: number | null = null;
+  let openY: number | undefined;
 
   for (let y = 0; y < height; y += 1) {
     const alpha = data[(y * width + x) * 4 + 3] ?? 0;
     const isWalkable = alpha >= alphaThreshold;
-    if (isWalkable && openY === null) {
+    if (isWalkable && openY === undefined) {
       openY = y;
     }
-    if ((!isWalkable || y === height - 1) && openY !== null) {
+    if ((!isWalkable || y === height - 1) && openY !== undefined) {
       const closeY = isWalkable && y === height - 1 ? y : y - 1;
       spans.push({ yMin: openY, yMax: closeY });
-      openY = null;
+      openY = undefined;
     }
   }
 
   return spans;
 }
 
-function loadImage(uri: string): Promise<HTMLImageElement> {
+async function loadImage(uri: string): Promise<HTMLImageElement> {
   const image = new Image();
   image.src = uri;
 
   if (typeof image.decode === 'function') {
-    return image.decode().then(() => image);
+    await image.decode();
+    return image;
   }
 
   return new Promise((resolve, reject) => {
     image.addEventListener('load', () => resolve(image));
-    image.onerror = () => reject(new Error(`Could not load image '${uri}'.`));
+    image.addEventListener('error', () => reject(new Error(`Could not load image '${uri}'.`)));
   });
 }

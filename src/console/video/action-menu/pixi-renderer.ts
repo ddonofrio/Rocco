@@ -1,4 +1,4 @@
-import { Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { Assets, Color, Container, Graphics, Sprite, Texture } from 'pixi.js';
 
 import type { RoccoActionMenuItem, RoccoActionMenuRenderable } from './types';
 
@@ -18,84 +18,12 @@ export class PixiRoccoActionMenuRenderer {
   private readonly textures = new Map<string, Texture>();
   private readonly pendingTextureLoads = new Map<string, Promise<Texture>>();
   private readonly resolveRenderLayerZIndex: (renderLayer: string) => number;
-  private layerRoot: Container | null = null;
-  private stage: Container | null = null;
+  private layerRoot: Container | undefined;
+  private stage: Container | undefined;
   private renderLayer = 'ui';
 
   constructor(options?: PixiRoccoActionMenuRendererOptions) {
     this.resolveRenderLayerZIndex = options?.resolveRenderLayerZIndex ?? (() => 0);
-  }
-
-  mount(stage: Container): void {
-    if (this.stage === stage) {
-      return;
-    }
-
-    this.unmount();
-    this.stage = stage;
-  }
-
-  unmount(): void {
-    if (this.layerRoot) {
-      this.layerRoot.parent?.removeChild(this.layerRoot);
-      this.layerRoot.destroy({ children: true });
-      this.layerRoot = null;
-    }
-    this.nodes.clear();
-    this.stage = null;
-  }
-
-  sync(renderable: RoccoActionMenuRenderable | undefined): void {
-    if (!this.stage) {
-      return;
-    }
-
-    if (!renderable) {
-      this.clearNodes();
-      return;
-    }
-
-    this.renderLayer = renderable.definition.renderLayer ?? 'ui';
-    const layerRoot = this.ensureLayerRoot();
-    const staleIds = new Set(this.nodes.keys());
-
-    for (const [index, item] of renderable.definition.items.entries()) {
-      const node = this.ensureNode(item);
-      if (node.root.parent !== layerRoot) {
-        node.root.parent?.removeChild(node.root);
-        layerRoot.addChild(node.root);
-      }
-
-      this.applyItemNode(node, renderable, item, index);
-      staleIds.delete(item.id);
-    }
-
-    for (const staleId of staleIds) {
-      const node = this.nodes.get(staleId);
-      if (!node) {
-        continue;
-      }
-      node.root.parent?.removeChild(node.root);
-      node.root.destroy({ children: true });
-      this.nodes.delete(staleId);
-    }
-  }
-
-  destroy(): void {
-    this.unmount();
-    for (const texture of this.textures.values()) {
-      texture.destroy(false);
-    }
-    this.textures.clear();
-    this.pendingTextureLoads.clear();
-  }
-
-  async preload(renderable: RoccoActionMenuRenderable | undefined): Promise<void> {
-    if (!renderable) {
-      return;
-    }
-
-    await Promise.all(renderable.definition.items.map((item) => this.queueTextureLoad(item.imageUri)));
   }
 
   private ensureLayerRoot(): Container {
@@ -119,7 +47,7 @@ export class PixiRoccoActionMenuRenderer {
 
   private clearNodes(): void {
     for (const node of this.nodes.values()) {
-      node.root.parent?.removeChild(node.root);
+      node.root.removeFromParent();
       node.root.destroy({ children: true });
     }
     this.nodes.clear();
@@ -173,7 +101,7 @@ export class PixiRoccoActionMenuRenderer {
     node.circle.clear();
     node.circle
       .circle(0, 0, itemSize / 2)
-      .fill({ color: definition.circleFill ?? '#0f1610', alpha: 0.9 })
+      .fill(new Color(definition.circleFill ?? '#0f1610').setAlpha(0.9).toHexa())
       .stroke({
         width: definition.circleStrokeWidth ?? 2,
         color: definition.circleStroke ?? '#d7e6c5',
@@ -240,16 +168,90 @@ export class PixiRoccoActionMenuRenderer {
       return pending;
     }
 
-    const load = Assets.load<Texture>(imageUri)
-      .then((texture) => {
+    const load = (async () => {
+      try {
+        const texture = await Assets.load<Texture>(imageUri);
         this.textures.set(imageUri, texture);
         return texture;
-      })
-      .catch(() => Texture.EMPTY)
-      .finally(() => {
+      } catch {
+        return Texture.EMPTY;
+      } finally {
         this.pendingTextureLoads.delete(imageUri);
-      });
+      }
+    })();
     this.pendingTextureLoads.set(imageUri, load);
     return load;
+  }
+
+  mount(stage: Container): void {
+    if (this.stage === stage) {
+      return;
+    }
+
+    this.unmount();
+    this.stage = stage;
+  }
+
+  unmount(): void {
+    if (this.layerRoot) {
+      this.layerRoot.removeFromParent();
+      this.layerRoot.destroy({ children: true });
+      this.layerRoot = undefined;
+    }
+    this.nodes.clear();
+    this.stage = undefined;
+  }
+
+  sync(renderable: RoccoActionMenuRenderable | undefined): void {
+    if (!this.stage) {
+      return;
+    }
+
+    if (!renderable) {
+      this.clearNodes();
+      return;
+    }
+
+    this.renderLayer = renderable.definition.renderLayer ?? 'ui';
+    const layerRoot = this.ensureLayerRoot();
+    const staleIds = new Set(this.nodes.keys());
+
+    for (const [index, item] of renderable.definition.items.entries()) {
+      const node = this.ensureNode(item);
+      if (node.root.parent !== layerRoot) {
+        node.root.removeFromParent();
+        layerRoot.addChild(node.root);
+      }
+
+      this.applyItemNode(node, renderable, item, index);
+      staleIds.delete(item.id);
+    }
+
+    for (const staleId of staleIds) {
+      const node = this.nodes.get(staleId);
+      if (!node) {
+        continue;
+      }
+      node.root.removeFromParent();
+      node.root.destroy({ children: true });
+      this.nodes.delete(staleId);
+    }
+  }
+
+  destroy(): void {
+    this.unmount();
+    for (const texture of this.textures.values()) {
+      texture.destroy(false);
+    }
+    this.textures.clear();
+    this.pendingTextureLoads.clear();
+  }
+
+  async preload(renderable: RoccoActionMenuRenderable | undefined): Promise<void> {
+    if (!renderable) {
+      return;
+    }
+
+    await Promise.all(renderable.definition.items.map((item) => this.queueTextureLoad(item.imageUri)));
   }
 }

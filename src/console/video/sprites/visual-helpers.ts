@@ -27,8 +27,8 @@ export interface SpriteVisibleBounds {
 export interface RoccoSpriteVisualHelperState {
   alphaMasks: Map<string, SpriteAlphaMask>;
   pendingAlphaMaskLoads: Map<string, Promise<void>>;
-  visibleBoundsCache: Map<string, SpriteVisibleBounds | null>;
-  autoAdjustReferenceHeightCache: Map<string, number | null>;
+  visibleBoundsCache: Map<string, SpriteVisibleBounds | undefined>;
+  autoAdjustReferenceHeightCache: Map<string, number | undefined>;
 }
 
 export interface RoccoSpriteVisualHelper {
@@ -73,7 +73,7 @@ export function createRoccoSpriteVisualHelper(
     }
 
     const bounds = calculateVisibleBounds(mask, frameRect);
-    state.visibleBoundsCache.set(cacheKey, bounds ?? null);
+    state.visibleBoundsCache.set(cacheKey, bounds ?? undefined);
     return bounds;
   }
 
@@ -89,13 +89,14 @@ export function createRoccoSpriteVisualHelper(
         return pending;
       }
 
-      const load = createAlphaMask(image)
-        .then((mask) => {
+      const load = (async () => {
+        try {
+          const mask = await createAlphaMask(image);
           state.alphaMasks.set(key, mask);
-        })
-        .finally(() => {
+        } finally {
           state.pendingAlphaMaskLoads.delete(key);
-        });
+        }
+      })();
       state.pendingAlphaMaskLoads.set(key, load);
       return load;
     },
@@ -123,7 +124,7 @@ export function createRoccoSpriteVisualHelper(
         }
       }
 
-      const resolved = referenceHeight > 0 ? referenceHeight : null;
+      const resolved = referenceHeight > 0 ? referenceHeight : undefined;
       state.autoAdjustReferenceHeightCache.set(definition.id, resolved);
       return resolved ?? undefined;
     },
@@ -211,17 +212,18 @@ function createOpaqueAlphaMask(width: number, height: number): SpriteAlphaMask {
   };
 }
 
-function loadImage(uri: string): Promise<HTMLImageElement> {
+async function loadImage(uri: string): Promise<HTMLImageElement> {
   const image = new Image();
   image.src = uri;
 
   if (typeof image.decode === 'function') {
-    return image.decode().then(() => image);
+    await image.decode();
+    return image;
   }
 
   return new Promise((resolve, reject) => {
     image.addEventListener('load', () => resolve(image));
-    image.onerror = () => reject(new Error(`Could not load sprite image '${uri}'.`));
+    image.addEventListener('error', () => reject(new Error(`Could not load sprite image '${uri}'.`)));
   });
 }
 
@@ -243,34 +245,56 @@ function calculateVisibleBounds(mask: SpriteAlphaMask, frameRect: RoccoRect): Sp
   const startY = clamp(Math.floor(frameRect.y), 0, mask.height - 1);
   const endX = clamp(Math.ceil(frameRect.x + frameRect.width), 0, mask.width);
   const endY = clamp(Math.ceil(frameRect.y + frameRect.height), 0, mask.height);
-  let minX = endX;
-  let minY = endY;
-  let maxX = startX - 1;
-  let maxY = startY - 1;
-
-  for (let y = startY; y < endY; y += 1) {
-    for (let x = startX; x < endX; x += 1) {
-      if ((mask.alpha[y * mask.width + x] ?? 0) <= 0) {
-        continue;
-      }
-
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-    }
-  }
-
-  if (maxX < minX || maxY < minY) {
+  const extent = collectVisibleBoundsExtent(mask, startX, startY, endX, endY);
+  if (extent.maxX < extent.minX || extent.maxY < extent.minY) {
     return undefined;
   }
 
   return {
-    x: minX - frameRect.x,
-    y: minY - frameRect.y,
-    width: maxX - minX + 1,
-    height: maxY - minY + 1,
+    x: extent.minX - frameRect.x,
+    y: extent.minY - frameRect.y,
+    width: extent.maxX - extent.minX + 1,
+    height: extent.maxY - extent.minY + 1,
   };
+}
+
+function collectVisibleBoundsExtent(
+  mask: SpriteAlphaMask,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+): { minX: number; minY: number; maxX: number; maxY: number } {
+  let minX = endX;
+  let minY = endY;
+  let maxX = startX - 1;
+  let maxY = startY - 1;
+  for (let y = startY; y < endY; y += 1) {
+    const row = scanRowAlphaExtent(mask, startX, endX, y);
+    if (row.maxX >= row.minX) {
+      minX = Math.min(minX, row.minX);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, row.maxX);
+      maxY = Math.max(maxY, y);
+    }
+  }
+
+  return { minX, minY, maxX, maxY };
+}
+
+function scanRowAlphaExtent(mask: SpriteAlphaMask, startX: number, endX: number, y: number): { minX: number; maxX: number } {
+  let minX = endX;
+  let maxX = startX - 1;
+  for (let x = startX; x < endX; x += 1) {
+    if ((mask.alpha[y * mask.width + x] ?? 0) <= 0) {
+      continue;
+    }
+
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+  }
+
+  return { minX, maxX };
 }
 
 function resolveFrameRect(frame: RoccoSpriteFrame, image: RoccoSpriteImage, mask: SpriteAlphaMask): RoccoRect {

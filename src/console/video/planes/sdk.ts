@@ -15,11 +15,7 @@ import type {
 } from './types';
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function atGrid(width: number, height: number, x: number, y: number): number {
@@ -65,6 +61,36 @@ function ensurePlaneDefaults(plane: RoccoGraphicPlane): RoccoGraphicPlane {
 
 export class RoccoGraphicPlaneSDK implements RoccoPlaneSDK {
   private readonly scenes = new Map<string, RoccoPlaneScene>();
+
+  private getScene(sceneId: string): RoccoPlaneScene {
+    const scene = this.scenes.get(sceneId);
+    if (!scene) {
+      throw new Error(`Scene '${sceneId}' is not loaded`);
+    }
+
+    return scene;
+  }
+
+  private getPlane(sceneId: string, planeId: string): RoccoGraphicPlane {
+    const scene = this.getScene(sceneId);
+    const plane = scene.planes.find((item) => item.id === planeId);
+    if (!plane) {
+      throw new Error(`Plane '${planeId}' was not found in scene '${sceneId}'`);
+    }
+
+    return plane;
+  }
+
+  private getTilemapSource(sceneId: string, tilemapId: string): RoccoTilemapSource {
+    const scene = this.getScene(sceneId);
+    for (const plane of scene.planes) {
+      if (plane.source.kind === 'tilemap' && plane.source.tilemapId === tilemapId) {
+        return plane.source;
+      }
+    }
+
+    throw new Error(`Tilemap '${tilemapId}' was not found in scene '${sceneId}'`);
+  }
 
   createScene(id: string): RoccoPlaneScene {
     const scene: RoccoPlaneScene = {
@@ -245,35 +271,5 @@ export class RoccoGraphicPlaneSDK implements RoccoPlaneSDK {
     }
 
     return scene.planes.find((item) => item.id === planeId);
-  }
-
-  private getScene(sceneId: string): RoccoPlaneScene {
-    const scene = this.scenes.get(sceneId);
-    if (!scene) {
-      throw new Error(`Scene '${sceneId}' is not loaded`);
-    }
-
-    return scene;
-  }
-
-  private getPlane(sceneId: string, planeId: string): RoccoGraphicPlane {
-    const scene = this.getScene(sceneId);
-    const plane = scene.planes.find((item) => item.id === planeId);
-    if (!plane) {
-      throw new Error(`Plane '${planeId}' was not found in scene '${sceneId}'`);
-    }
-
-    return plane;
-  }
-
-  private getTilemapSource(sceneId: string, tilemapId: string): RoccoTilemapSource {
-    const scene = this.getScene(sceneId);
-    for (const plane of scene.planes) {
-      if (plane.source.kind === 'tilemap' && plane.source.tilemapId === tilemapId) {
-        return plane.source;
-      }
-    }
-
-    throw new Error(`Tilemap '${tilemapId}' was not found in scene '${sceneId}'`);
   }
 }

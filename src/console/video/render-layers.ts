@@ -26,7 +26,7 @@ export const defaultRoccoRenderLayers: RoccoRenderLayer[] = [
 ];
 
 export function sortRoccoRenderLayers(layers: RoccoRenderLayer[]): RoccoRenderLayer[] {
-  return [...layers].toSorted((left, right) => {
+  return [...layers].sort((left, right) => {
     if (left.zIndex !== right.zIndex) {
       return left.zIndex - right.zIndex;
     }

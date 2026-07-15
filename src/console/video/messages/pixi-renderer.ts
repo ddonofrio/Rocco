@@ -48,77 +48,10 @@ export class PixiRoccoSpriteMessageRenderer {
   private readonly nodes = new Map<string, MessageNode>();
   private readonly layerRoots = new Map<string, Container>();
   private readonly resolveRenderLayerZIndex: (renderLayer: string) => number;
-  private stage: Container | null = null;
+  private stage: Container | undefined;
 
   constructor(options?: PixiRoccoSpriteMessageRendererOptions) {
     this.resolveRenderLayerZIndex = options?.resolveRenderLayerZIndex ?? (() => 0);
-  }
-
-  mount(stage: Container): void {
-    if (this.stage === stage) {
-      return;
-    }
-
-    this.unmount();
-    this.stage = stage;
-  }
-
-  unmount(): void {
-    if (!this.stage) {
-      return;
-    }
-
-    for (const layerRoot of this.layerRoots.values()) {
-      layerRoot.removeFromParent();
-      layerRoot.destroy({ children: true });
-    }
-    this.layerRoots.clear();
-    this.nodes.clear();
-    this.stage = null;
-  }
-
-  sync(renderables: RoccoSpriteMessageRenderable[], sprites: readonly RoccoRenderableSprite[]): void {
-    if (!this.stage) {
-      return;
-    }
-
-    const spriteBoundsById = new Map<string, SpriteBounds>();
-    for (const sprite of sprites) {
-      spriteBoundsById.set(sprite.instance.id, this.resolveSpriteBounds(sprite));
-    }
-
-    const staleIds = new Set(this.nodes.keys());
-    for (const renderable of renderables) {
-      const layerRoot = this.ensureLayerRoot(renderable.message.renderLayer);
-      let node = this.nodes.get(renderable.message.id);
-      if (!node) {
-        node = this.createNode(renderable.message);
-        this.nodes.set(renderable.message.id, node);
-        layerRoot.addChild(node.root);
-      } else if (node.renderLayer !== renderable.message.renderLayer || node.root.parent !== layerRoot) {
-        node.root.parent?.removeChild(node.root);
-        layerRoot.addChild(node.root);
-        node.renderLayer = renderable.message.renderLayer;
-      }
-
-      this.applyMessage(node, renderable, spriteBoundsById, sprites);
-      staleIds.delete(renderable.message.id);
-    }
-
-    for (const staleId of staleIds) {
-      const node = this.nodes.get(staleId);
-      if (!node) {
-        continue;
-      }
-
-      node.root.parent?.removeChild(node.root);
-      node.root.destroy({ children: true });
-      this.nodes.delete(staleId);
-    }
-  }
-
-  destroy(): void {
-    this.unmount();
   }
 
   private createNode(message: RoccoSpriteMessageState): MessageNode {
@@ -250,7 +183,7 @@ export class PixiRoccoSpriteMessageRenderer {
     graphics.clear();
     graphics
       .roundRect(0, 0, layout.width, layout.height, DEFAULT_RADIUS)
-      .fill({ color: fill, alpha: 1 })
+      .fill(fill)
       .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
 
     const targetLocalX = layout.targetX - layout.x;
@@ -264,11 +197,11 @@ export class PixiRoccoSpriteMessageRenderer {
       const dotX = Math.max(18, Math.min(layout.width - 18, targetLocalX));
       graphics
         .circle(dotX, layout.height + 8, 5)
-        .fill({ color: fill, alpha: 1 })
+        .fill(fill)
         .stroke({ color: stroke, width: 1.5, alpha: 1 });
       graphics
         .circle((dotX + targetLocalX) / 2, Math.min(targetLocalY - 4, layout.height + 20), 3)
-        .fill({ color: fill, alpha: 1 });
+        .fill(fill);
       return;
     }
 
@@ -276,7 +209,7 @@ export class PixiRoccoSpriteMessageRenderer {
       const tailY = Math.max(14, Math.min(layout.height - 14, targetLocalY));
       graphics
         .poly([0, tailY - 8, 0, tailY + 8, Math.min(-14, targetLocalX), targetLocalY], true)
-        .fill({ color: fill, alpha: 1 })
+        .fill(fill)
         .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
       return;
     }
@@ -285,7 +218,7 @@ export class PixiRoccoSpriteMessageRenderer {
       const tailY = Math.max(14, Math.min(layout.height - 14, targetLocalY));
       graphics
         .poly([layout.width, tailY - 8, layout.width, tailY + 8, Math.max(layout.width + 14, targetLocalX), targetLocalY], true)
-        .fill({ color: fill, alpha: 1 })
+        .fill(fill)
         .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
       return;
     }
@@ -303,7 +236,7 @@ export class PixiRoccoSpriteMessageRenderer {
         ],
         true,
       )
-      .fill({ color: fill, alpha: 1 })
+      .fill(fill)
       .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
   }
 
@@ -346,12 +279,9 @@ export class PixiRoccoSpriteMessageRenderer {
         ],
         obstacleBounds,
       );
-    }
+  }
 
-    const preferredSide =
-      targetX < renderable.designWidth * 0.56 ? 'right' : 'left';
-
-    if (message.side === 'left' || message.side === 'right') {
+  if (message.side === 'left' || message.side === 'right') {
       return this.chooseBestLayout(
         [
           this.buildHorizontalCandidate(
@@ -369,6 +299,8 @@ export class PixiRoccoSpriteMessageRenderer {
         obstacleBounds,
       );
     }
+
+    const preferredSide = targetX < renderable.designWidth * 0.56 ? 'right' : 'left';
 
     return this.chooseBestLayout(
       [
@@ -576,5 +508,72 @@ export class PixiRoccoSpriteMessageRenderer {
     }
 
     return Math.min(max, Math.max(min, value));
+  }
+
+  mount(stage: Container): void {
+    if (this.stage === stage) {
+      return;
+    }
+
+    this.unmount();
+    this.stage = stage;
+  }
+
+  unmount(): void {
+    if (!this.stage) {
+      return;
+    }
+
+    for (const layerRoot of this.layerRoots.values()) {
+      layerRoot.removeFromParent();
+      layerRoot.destroy({ children: true });
+    }
+    this.layerRoots.clear();
+    this.nodes.clear();
+    this.stage = undefined;
+  }
+
+  sync(renderables: RoccoSpriteMessageRenderable[], sprites: readonly RoccoRenderableSprite[]): void {
+    if (!this.stage) {
+      return;
+    }
+
+    const spriteBoundsById = new Map<string, SpriteBounds>();
+    for (const sprite of sprites) {
+      spriteBoundsById.set(sprite.instance.id, this.resolveSpriteBounds(sprite));
+    }
+
+    const staleIds = new Set(this.nodes.keys());
+    for (const renderable of renderables) {
+      const layerRoot = this.ensureLayerRoot(renderable.message.renderLayer);
+      let node = this.nodes.get(renderable.message.id);
+      if (!node) {
+        node = this.createNode(renderable.message);
+        this.nodes.set(renderable.message.id, node);
+        layerRoot.addChild(node.root);
+      } else if (node.renderLayer !== renderable.message.renderLayer || node.root.parent !== layerRoot) {
+        node.root.removeFromParent();
+        layerRoot.addChild(node.root);
+        node.renderLayer = renderable.message.renderLayer;
+      }
+
+      this.applyMessage(node, renderable, spriteBoundsById, sprites);
+      staleIds.delete(renderable.message.id);
+    }
+
+    for (const staleId of staleIds) {
+      const node = this.nodes.get(staleId);
+      if (!node) {
+        continue;
+      }
+
+      node.root.removeFromParent();
+      node.root.destroy({ children: true });
+      this.nodes.delete(staleId);
+    }
+  }
+
+  destroy(): void {
+    this.unmount();
   }
 }

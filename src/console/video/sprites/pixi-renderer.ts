@@ -8,7 +8,7 @@ interface SpriteNode {
   sprite: Sprite;
   frameKey: string;
   renderLayer: string;
-  contrastFilter: ColorMatrixFilter | null;
+  contrastFilter: ColorMatrixFilter | undefined;
   contrastValue: number;
 }
 
@@ -42,88 +42,10 @@ export class PixiRoccoSpriteRenderer {
   private readonly frameTextures = new Map<string, Texture>();
   private readonly pendingTextureLoads = new Map<string, Promise<Texture>>();
   private readonly resolveRenderLayerZIndex: (renderLayer: string) => number;
-  private stage: Container | null = null;
+  private stage: Container | undefined;
 
   constructor(options?: PixiRoccoSpriteRendererOptions) {
     this.resolveRenderLayerZIndex = options?.resolveRenderLayerZIndex ?? (() => 0);
-  }
-
-  mount(stage: Container): void {
-    if (this.stage === stage) {
-      return;
-    }
-
-    this.unmount();
-    this.stage = stage;
-  }
-
-  unmount(): void {
-    if (!this.stage) {
-      return;
-    }
-
-    for (const layerRoot of this.layerRoots.values()) {
-      layerRoot.removeFromParent();
-      layerRoot.destroy({ children: true });
-    }
-    this.layerRoots.clear();
-    this.stage = null;
-    this.nodes.clear();
-  }
-
-  sync(renderables: RoccoRenderableSprite[]): void {
-    if (!this.stage) {
-      return;
-    }
-
-    const staleIds = new Set(this.nodes.keys());
-    for (const [index, renderable] of renderables.entries()) {
-      const layerRoot = this.ensureLayerRoot(renderable.instance.renderLayer);
-      let node = this.nodes.get(renderable.instance.id);
-      if (!node) {
-        node = this.createNode();
-        this.nodes.set(renderable.instance.id, node);
-        layerRoot.addChild(node.root);
-      } else if (node.renderLayer !== renderable.instance.renderLayer || node.root.parent !== layerRoot) {
-        node.root.parent?.removeChild(node.root);
-        layerRoot.addChild(node.root);
-        node.renderLayer = renderable.instance.renderLayer;
-      }
-
-      this.applyRenderable(node, renderable, index);
-      staleIds.delete(renderable.instance.id);
-    }
-
-    for (const staleId of staleIds) {
-      const node = this.nodes.get(staleId);
-      if (!node) {
-        continue;
-      }
-
-      node.root.parent?.removeChild(node.root);
-      node.root.destroy({ children: true });
-      this.nodes.delete(staleId);
-    }
-  }
-
-  destroy(): void {
-    this.unmount();
-    for (const texture of this.frameTextures.values()) {
-      texture.destroy(false);
-    }
-    this.frameTextures.clear();
-    this.baseTextures.clear();
-  }
-
-  async preloadDefinition(definition: RoccoSpriteDefinition): Promise<void> {
-    const loads = definition.images
-      .filter((image) => Boolean(image.uri))
-      .map((image) => {
-        const key = this.resolveImageSourceKey(image, definition.id);
-        return this.queueUriTextureLoad(key, image.uri as string);
-      });
-
-    await Promise.all(loads);
   }
 
   private createNode(): SpriteNode {
@@ -140,7 +62,7 @@ export class PixiRoccoSpriteRenderer {
       sprite,
       frameKey: '',
       renderLayer: '',
-      contrastFilter: null,
+      contrastFilter: undefined,
       contrastValue: 1,
     };
   }
@@ -205,7 +127,7 @@ export class PixiRoccoSpriteRenderer {
   private applyContrast(node: SpriteNode, contrast?: number): void {
     if (!Number.isFinite(contrast) || Math.abs((contrast ?? 1) - 1) < 0.001) {
       node.sprite.filters = undefined;
-      node.contrastFilter = null;
+      node.contrastFilter = undefined;
       node.contrastValue = 1;
       return;
     }
@@ -277,16 +199,18 @@ export class PixiRoccoSpriteRenderer {
       return pending;
     }
 
-    const load = Assets.load<Texture>(uri)
-      .then((texture) => {
+    const load = (async () => {
+      try {
+        const texture = await Assets.load<Texture>(uri);
         this.baseTextures.set(key, texture);
         this.clearFrameTexturesForBaseKey(key);
         return texture;
-      })
-      .catch(() => this.baseTextures.get(key) ?? Texture.WHITE)
-      .finally(() => {
+      } catch {
+        return this.baseTextures.get(key) ?? Texture.WHITE;
+      } finally {
         this.pendingTextureLoads.delete(key);
-      });
+      }
+    })();
 
     this.pendingTextureLoads.set(key, load);
     return load;
@@ -331,7 +255,7 @@ export class PixiRoccoSpriteRenderer {
     }
 
     const colorA = this.hashToColor(seed, 0.65);
-    const colorB = this.hashToColor(seed.split('').reverse().join(''), 0.8);
+    const colorB = this.hashToColor(seed.split('').toReversed().join(''), 0.8);
 
     context.fillStyle = colorA;
     context.fillRect(0, 0, canvas.width, canvas.height);
@@ -358,7 +282,7 @@ export class PixiRoccoSpriteRenderer {
   private hashToColor(seed: string, alpha: number): string {
     let hash = 0;
     for (let index = 0; index < seed.length; index += 1) {
-      hash = (hash << 5) - hash + seed.charCodeAt(index);
+      hash = (hash << 5) - hash + seed.codePointAt(index);
       hash = Math.trunc(hash);
     }
 
@@ -378,5 +302,83 @@ export class PixiRoccoSpriteRenderer {
       }
     }
     return 0xff_ff_ff;
+  }
+
+  mount(stage: Container): void {
+    if (this.stage === stage) {
+      return;
+    }
+
+    this.unmount();
+    this.stage = stage;
+  }
+
+  unmount(): void {
+    if (!this.stage) {
+      return;
+    }
+
+    for (const layerRoot of this.layerRoots.values()) {
+      layerRoot.removeFromParent();
+      layerRoot.destroy({ children: true });
+    }
+    this.layerRoots.clear();
+    this.stage = undefined;
+    this.nodes.clear();
+  }
+
+  sync(renderables: RoccoRenderableSprite[]): void {
+    if (!this.stage) {
+      return;
+    }
+
+    const staleIds = new Set(this.nodes.keys());
+    for (const [index, renderable] of renderables.entries()) {
+      const layerRoot = this.ensureLayerRoot(renderable.instance.renderLayer);
+      let node = this.nodes.get(renderable.instance.id);
+      if (!node) {
+        node = this.createNode();
+        this.nodes.set(renderable.instance.id, node);
+        layerRoot.addChild(node.root);
+      } else if (node.renderLayer !== renderable.instance.renderLayer || node.root.parent !== layerRoot) {
+        node.root.removeFromParent();
+        layerRoot.addChild(node.root);
+        node.renderLayer = renderable.instance.renderLayer;
+      }
+
+      this.applyRenderable(node, renderable, index);
+      staleIds.delete(renderable.instance.id);
+    }
+
+    for (const staleId of staleIds) {
+      const node = this.nodes.get(staleId);
+      if (!node) {
+        continue;
+      }
+
+      node.root.removeFromParent();
+      node.root.destroy({ children: true });
+      this.nodes.delete(staleId);
+    }
+  }
+
+  destroy(): void {
+    this.unmount();
+    for (const texture of this.frameTextures.values()) {
+      texture.destroy(false);
+    }
+    this.frameTextures.clear();
+    this.baseTextures.clear();
+  }
+
+  async preloadDefinition(definition: RoccoSpriteDefinition): Promise<void> {
+    const loads = definition.images
+      .filter((image) => Boolean(image.uri))
+      .map((image) => {
+        const key = this.resolveImageSourceKey(image, definition.id);
+        return this.queueUriTextureLoad(key, image.uri as string);
+      });
+
+    await Promise.all(loads);
   }
 }

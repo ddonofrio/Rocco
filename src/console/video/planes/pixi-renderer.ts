@@ -31,7 +31,7 @@ import { wrapValue } from './wrap';
 interface PlaneNode {
   root: Container;
   content: Container;
-  contrastFilter: ColorMatrixFilter | null;
+  contrastFilter: ColorMatrixFilter | undefined;
   contrastValue: number;
   sourceKey: string;
   viewportMask?: Graphics;
@@ -77,107 +77,13 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     this.resolveRenderLayerZIndex = options?.resolveRenderLayerZIndex ?? (() => 0);
   }
 
-  async preloadScene(scene: RoccoPlaneScene): Promise<void> {
-    const uris = new Set<string>();
-    for (const plane of scene.planes) {
-      if (plane.source.kind === 'image') {
-        uris.add(plane.source.uri);
-      }
-      if (plane.source.kind === 'tileset') {
-        uris.add(plane.source.imageUri);
-      }
-    }
-
-    await Promise.all([...uris].map((uri) => Assets.load(uri)));
-  }
-
-  mount(sceneId: string, container: Container): void {
-    this.unmount(sceneId);
-
-    this.mountedScenes.set(sceneId, {
-      sceneId,
-      host: container,
-      layerRoots: new Map(),
-      planeNodes: new Map(),
-    });
-  }
-
-  unmount(sceneId: string): void {
-    const mounted = this.mountedScenes.get(sceneId);
-    if (!mounted) {
-      return;
-    }
-
-    for (const layerRoot of mounted.layerRoots.values()) {
-      layerRoot.removeFromParent();
-      layerRoot.destroy({ children: true });
-    }
-    this.mountedScenes.delete(sceneId);
-  }
-
-  sync(scene: RoccoPlaneScene): void {
-    const mounted = this.mountedScenes.get(scene.id);
-    if (!mounted) {
-      return;
-    }
-
-    const stalePlaneIds = new Set(mounted.planeNodes.keys());
-    for (const plane of scene.planes) {
-      let node = mounted.planeNodes.get(plane.id);
-      const layerRoot = this.ensureLayerRoot(mounted, plane.renderLayer ?? 'background.main');
-      if (!node) {
-        node = this.createPlaneNode(plane);
-        mounted.planeNodes.set(plane.id, node);
-        layerRoot.addChild(node.root);
-      } else if (!this.isCompatible(node, plane)) {
-        node.root.parent?.removeChild(node.root);
-        node.root.destroy({ children: true });
-        node = this.createPlaneNode(plane);
-        mounted.planeNodes.set(plane.id, node);
-        layerRoot.addChild(node.root);
-      } else if (node.root.parent !== layerRoot) {
-        node.root.parent?.removeChild(node.root);
-        layerRoot.addChild(node.root);
-      }
-
-      this.applyPlaneNode(plane, node);
-      stalePlaneIds.delete(plane.id);
-    }
-
-    for (const staleId of stalePlaneIds) {
-      const staleNode = mounted.planeNodes.get(staleId);
-      if (!staleNode) {
-        continue;
-      }
-      staleNode.root.parent?.removeChild(staleNode.root);
-      staleNode.root.destroy({ children: true });
-      mounted.planeNodes.delete(staleId);
-    }
-  }
-
-  render(delta: number): void {
-    const deltaMs = Math.max(0, delta) * (1000 / 60);
-    for (const mounted of this.mountedScenes.values()) {
-      for (const node of mounted.planeNodes.values()) {
-        updateWaterColorPlaneAnimation(node.waterAnimation, deltaMs);
-      }
-    }
-  }
-
-  destroy(): void {
-    const ids = [...this.mountedScenes.keys()];
-    for (const sceneId of ids) {
-      this.unmount(sceneId);
-    }
-  }
-
   private createPlaneNode(plane: RoccoGraphicPlane): PlaneNode {
     const root = new Container();
     const build = this.createSourceContainer(plane);
     root.addChild(build.content);
     return {
       root,
-      contrastFilter: null,
+      contrastFilter: undefined,
       contrastValue: 1,
       sourceKey: this.makeSourceKey(plane),
       ...build,
@@ -210,7 +116,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     return JSON.stringify({
       source: plane.source,
       wrap: plane.wrap,
-      waterColorEffect: resolvePlaneWaterColorEffect(plane)?.enabled ? plane.metadata?.waterColorEffect : null,
+      waterColorEffect: resolvePlaneWaterColorEffect(plane)?.enabled ? plane.metadata?.waterColorEffect : undefined,
     });
   }
 
@@ -228,8 +134,6 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
       case 'procedural': {
         return this.createProceduralNode(plane, plane.source);
       }
-      case 'bitmap':
-      case 'tileset':
       default: {
         return {
           content: this.createPlaceholderNode(plane.source.kind),
@@ -287,7 +191,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
         waterAnimation.frameContext = prepared.waterFrameContext;
         waterAnimation.texture = prepared.waterTexture;
 
-        original.parent?.removeChild(original);
+        original.removeFromParent();
         container.addChild(prepared.baseSprite);
         container.addChild(prepared.waterSprite);
       });
@@ -410,9 +314,9 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     this.applyContrast(node, plane.contrast);
     this.applyViewport(root, node, plane);
 
-    if (node.mode === 'tiling' && content.children[0] instanceof TilingSprite) {
-      const tiling = content.children[0];
-      tiling.tilePosition.set(wrappedScrollX, wrappedScrollY);
+    const firstChild = content.children.at(0);
+    if (node.mode === 'tiling' && firstChild instanceof TilingSprite) {
+      firstChild.tilePosition.set(wrappedScrollX, wrappedScrollY);
     }
   }
 
@@ -430,7 +334,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
   private applyContrast(node: PlaneNode, contrast?: number): void {
     if (!Number.isFinite(contrast) || Math.abs((contrast ?? 1) - 1) < 0.001) {
       node.content.filters = undefined;
-      node.contrastFilter = null;
+      node.contrastFilter = undefined;
       node.contrastValue = 1;
       return;
     }
@@ -455,7 +359,7 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
         node.viewportMask.destroy();
         node.viewportMask = undefined;
       }
-      root.mask = null;
+      root.mask = undefined;
       return;
     }
 
@@ -514,22 +418,26 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     container.addChild(base);
 
     for (let y = 0; y < tilemap.height; y += 1) {
-      for (let x = 0; x < tilemap.width; x += 1) {
-        const cell = tilemap.cells[y * tilemap.width + x];
-        if (!cell) {
-          continue;
-        }
-
-        const tile = new Graphics()
-          .rect(x * tilemap.tileWidth, y * tilemap.tileHeight, tilemap.tileWidth, tilemap.tileHeight)
-          .fill('#8a6841')
-          .stroke({ width: 1, color: '#2f2417' });
-        tile.alpha = cell.priority === undefined ? 0.85 : Math.min(1, 0.5 + cell.priority * 0.05);
-        container.addChild(tile);
-      }
+      this.addTilemapPatternRow(container, tilemap, y);
     }
 
     return container;
+  }
+
+  private addTilemapPatternRow(container: Container, tilemap: RoccoTilemapSource, y: number): void {
+    for (let x = 0; x < tilemap.width; x += 1) {
+      const cell = tilemap.cells[y * tilemap.width + x];
+      if (!cell) {
+        continue;
+      }
+
+      const tile = new Graphics()
+        .rect(x * tilemap.tileWidth, y * tilemap.tileHeight, tilemap.tileWidth, tilemap.tileHeight)
+        .fill('#8a6841')
+        .stroke({ width: 1, color: '#2f2417' });
+      tile.alpha = cell.priority === undefined ? 0.85 : Math.min(1, 0.5 + cell.priority * 0.05);
+      container.addChild(tile);
+    }
   }
 
   private buildProceduralPattern(source: RoccoProceduralSource): Container {
@@ -581,6 +489,98 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     }
     if (source.height) {
       sprite.height = source.height;
+    }
+  }
+
+  async preloadScene(scene: RoccoPlaneScene): Promise<void> {
+    const uris = new Set<string>();
+    for (const plane of scene.planes) {
+      if (plane.source.kind === 'image') {
+        uris.add(plane.source.uri);
+      } else if (plane.source.kind === 'tileset') {
+        uris.add(plane.source.imageUri);
+      }
+    }
+
+    await Promise.all([...uris].map((uri) => Assets.load(uri)));
+  }
+
+  mount(sceneId: string, container: Container): void {
+    this.unmount(sceneId);
+
+    this.mountedScenes.set(sceneId, {
+      sceneId,
+      host: container,
+      layerRoots: new Map(),
+      planeNodes: new Map(),
+    });
+  }
+
+  unmount(sceneId: string): void {
+    const mounted = this.mountedScenes.get(sceneId);
+    if (!mounted) {
+      return;
+    }
+
+    for (const layerRoot of mounted.layerRoots.values()) {
+      layerRoot.removeFromParent();
+      layerRoot.destroy({ children: true });
+    }
+    this.mountedScenes.delete(sceneId);
+  }
+
+  sync(scene: RoccoPlaneScene): void {
+    const mounted = this.mountedScenes.get(scene.id);
+    if (!mounted) {
+      return;
+    }
+
+    const stalePlaneIds = new Set(mounted.planeNodes.keys());
+    for (const plane of scene.planes) {
+      let node = mounted.planeNodes.get(plane.id);
+      const layerRoot = this.ensureLayerRoot(mounted, plane.renderLayer ?? 'background.main');
+      if (!node) {
+        node = this.createPlaneNode(plane);
+        mounted.planeNodes.set(plane.id, node);
+        layerRoot.addChild(node.root);
+      } else if (!this.isCompatible(node, plane)) {
+        node.root.removeFromParent();
+        node.root.destroy({ children: true });
+        node = this.createPlaneNode(plane);
+        mounted.planeNodes.set(plane.id, node);
+        layerRoot.addChild(node.root);
+      } else if (node.root.parent !== layerRoot) {
+        node.root.removeFromParent();
+        layerRoot.addChild(node.root);
+      }
+
+      this.applyPlaneNode(plane, node);
+      stalePlaneIds.delete(plane.id);
+    }
+
+    for (const staleId of stalePlaneIds) {
+      const staleNode = mounted.planeNodes.get(staleId);
+      if (!staleNode) {
+        continue;
+      }
+      staleNode.root.removeFromParent();
+      staleNode.root.destroy({ children: true });
+      mounted.planeNodes.delete(staleId);
+    }
+  }
+
+  render(delta: number): void {
+    const deltaMs = Math.max(0, delta) * (1000 / 60);
+    for (const mounted of this.mountedScenes.values()) {
+      for (const node of mounted.planeNodes.values()) {
+        updateWaterColorPlaneAnimation(node.waterAnimation, deltaMs);
+      }
+    }
+  }
+
+  destroy(): void {
+    for (const sceneId of this.mountedScenes.keys()) {
+      this.unmount(sceneId);
     }
   }
 }

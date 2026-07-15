@@ -15,74 +15,10 @@ export class PixiRoccoPrimitiveRenderer {
   private readonly nodes = new Map<string, PrimitiveNode>();
   private readonly layerRoots = new Map<string, Container>();
   private readonly resolveRenderLayerZIndex: (renderLayer: string) => number;
-  private stage: Container | null = null;
+  private stage: Container | undefined;
 
   constructor(options?: PixiRoccoPrimitiveRendererOptions) {
     this.resolveRenderLayerZIndex = options?.resolveRenderLayerZIndex ?? (() => 0);
-  }
-
-  mount(stage: Container): void {
-    if (this.stage === stage) {
-      return;
-    }
-
-    this.unmount();
-    this.stage = stage;
-  }
-
-  unmount(): void {
-    if (!this.stage) {
-      return;
-    }
-
-    for (const layerRoot of this.layerRoots.values()) {
-      layerRoot.removeFromParent();
-      layerRoot.destroy({ children: true });
-    }
-    this.layerRoots.clear();
-    this.nodes.clear();
-    this.stage = null;
-  }
-
-  sync(primitives: RoccoPrimitive[]): void {
-    if (!this.stage) {
-      return;
-    }
-
-    const staleIds = new Set(this.nodes.keys());
-    for (const primitive of primitives) {
-      const layerRoot = this.ensureLayerRoot(primitive.renderLayer);
-      let node = this.nodes.get(primitive.id);
-      if (!node) {
-        node = {
-          root: new Graphics(),
-          renderLayer: primitive.renderLayer,
-        };
-        this.nodes.set(primitive.id, node);
-        layerRoot.addChild(node.root);
-      } else if (node.renderLayer !== primitive.renderLayer || node.root.parent !== layerRoot) {
-        node.root.parent?.removeChild(node.root);
-        layerRoot.addChild(node.root);
-        node.renderLayer = primitive.renderLayer;
-      }
-
-      this.applyPrimitive(node.root, primitive);
-      staleIds.delete(primitive.id);
-    }
-
-    for (const staleId of staleIds) {
-      const node = this.nodes.get(staleId);
-      if (!node) {
-        continue;
-      }
-      node.root.parent?.removeChild(node.root);
-      node.root.destroy();
-      this.nodes.delete(staleId);
-    }
-  }
-
-  destroy(): void {
-    this.unmount();
   }
 
   private ensureLayerRoot(renderLayer: string): Container {
@@ -155,6 +91,70 @@ export class PixiRoccoPrimitiveRenderer {
     }
 
     graphics.stroke({ width: strokeWidth ?? 1, color });
+  }
+
+  mount(stage: Container): void {
+    if (this.stage === stage) {
+      return;
+    }
+
+    this.unmount();
+    this.stage = stage;
+  }
+
+  unmount(): void {
+    if (!this.stage) {
+      return;
+    }
+
+    for (const layerRoot of this.layerRoots.values()) {
+      layerRoot.removeFromParent();
+      layerRoot.destroy({ children: true });
+    }
+    this.layerRoots.clear();
+    this.nodes.clear();
+    this.stage = undefined;
+  }
+
+  sync(primitives: RoccoPrimitive[]): void {
+    if (!this.stage) {
+      return;
+    }
+
+    const staleIds = new Set(this.nodes.keys());
+    for (const primitive of primitives) {
+      const layerRoot = this.ensureLayerRoot(primitive.renderLayer);
+      let node = this.nodes.get(primitive.id);
+      if (!node) {
+        node = {
+          root: new Graphics(),
+          renderLayer: primitive.renderLayer,
+        };
+        this.nodes.set(primitive.id, node);
+        layerRoot.addChild(node.root);
+      } else if (node.renderLayer !== primitive.renderLayer || node.root.parent !== layerRoot) {
+        node.root.removeFromParent();
+        layerRoot.addChild(node.root);
+        node.renderLayer = primitive.renderLayer;
+      }
+
+      this.applyPrimitive(node.root, primitive);
+      staleIds.delete(primitive.id);
+    }
+
+    for (const staleId of staleIds) {
+      const node = this.nodes.get(staleId);
+      if (!node) {
+        continue;
+      }
+      node.root.removeFromParent();
+      node.root.destroy();
+      this.nodes.delete(staleId);
+    }
+  }
+
+  destroy(): void {
+    this.unmount();
   }
 }
 

@@ -21,19 +21,44 @@ const roccoDefaultGameMusicTrackUrls = [
   `${import.meta.env.BASE_URL}cartridges/rocco/music/game-music-2.mp3`,
 ] as const;
 
+function nullValue<T>(): T {
+  return JSON.parse('null') as T;
+}
+
 export class RoccoDefaultCartridge implements RoccoCartridge {
-  readonly manifest = roccoDefaultCartridgeManifest;
+  private static readonly GAME_MUSIC_PLAYLIST_ID = 'rocco-game-music';
   private gameRuntime: RpceGameRuntime<
     RoccoLevelManagerOptions,
     RoccoLevelManagerMountResult
-  > | null = null;
-  private mountContext: RoccoCartridgeContext | null = null;
-  private static readonly GAME_MUSIC_PLAYLIST_ID = 'rocco-game-music';
+  > | undefined = undefined;
+  private mountContext: RoccoCartridgeContext | undefined = undefined;
+  readonly manifest = roccoDefaultCartridgeManifest;
+
+  private async remountDefaultDemo(mountContext: RoccoCartridgeContext): Promise<void> {
+    try {
+      await this.mount(mountContext);
+    } catch {
+      this.mountContext?.engine.log('System', 'Default cartridge restart failed.');
+    }
+  }
+
+  private restartDefaultDemo(): void {
+    if (!this.mountContext) {
+      return;
+    }
+
+    const mountContext = { ...this.mountContext };
+    this.gameRuntime?.unmount();
+    this.gameRuntime = undefined;
+    const sdk = mountContext.sdk ?? mountContext.engine;
+    sdk.jukebox.unregisterPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
+    void this.remountDefaultDemo(mountContext);
+  }
 
   async mount(context: RoccoCartridgeContext): Promise<void> {
     this.mountContext = { ...context };
     this.gameRuntime?.unmount();
-    this.gameRuntime = null;
+    this.gameRuntime = undefined;
     const sdk = context.sdk ?? context.engine;
     const composition = sdk.beginCompositionSession('rocco-default-mount', {
       message: 'LOADING 0%',
@@ -84,11 +109,11 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
       });
       this.gameRuntime = gameRuntime;
       await gameRuntime.mount(context.engine, preloader);
-      await sdk.jukebox
-        .playPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID)
-        .catch(() => {
-          context.engine.log('System', 'Background music could not start.');
-        });
+      try {
+        await sdk.jukebox.playPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
+      } catch {
+        context.engine.log('System', 'Background music could not start.');
+      }
     } finally {
       composition.report({ completed: 100, total: 100, message: 'LOADING 100%' });
       composition.dispose();
@@ -107,29 +132,14 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
   }
 
   getActiveLevelId(): string | null {
-    return this.gameRuntime?.getActiveLevelId() ?? null;
+    return this.gameRuntime?.getActiveLevelId() ?? nullValue<string | null>();
   }
 
   stop(): void {
     const sdk = this.mountContext?.sdk ?? this.mountContext?.engine;
     sdk?.jukebox.unregisterPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
     this.gameRuntime?.unmount();
-    this.gameRuntime = null;
-    this.mountContext = null;
-  }
-
-  private restartDefaultDemo(): void {
-    if (!this.mountContext) {
-      return;
-    }
-
-    const mountContext = { ...this.mountContext };
-    this.gameRuntime?.unmount();
-    this.gameRuntime = null;
-    const sdk = mountContext.sdk ?? mountContext.engine;
-    sdk.jukebox.unregisterPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
-    void this.mount(mountContext).catch(() => {
-      this.mountContext?.engine.log('System', 'Default cartridge restart failed.');
-    });
+    this.gameRuntime = undefined;
+    this.mountContext = undefined;
   }
 }

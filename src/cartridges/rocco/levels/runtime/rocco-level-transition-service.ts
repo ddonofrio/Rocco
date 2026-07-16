@@ -4,6 +4,16 @@ import type { RoccoSpriteDefinition } from '../../../../console/video/sprites';
 import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import type { RoccoLevel, RoccoLevelMountOptions } from '../rocco-level-types';
 
+interface PromiseWithResolversResult<T> {
+  promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+  reject(reason?: unknown): void;
+}
+
+const promiseConstructor = Promise as PromiseConstructor & {
+  withResolvers<T>(): PromiseWithResolversResult<T>;
+};
+
 export type RoccoLevelTransitionPhase =
   | 'idle'
   | 'preparing-target'
@@ -19,10 +29,63 @@ interface RoccoLevelTransitionAbortReason {
   readonly requestedBy?: string;
 }
 
-class RoccoLevelTransitionCancelledError extends Error {
-  readonly abortReason: RoccoLevelTransitionAbortReason | null;
+interface ActiveTransitionRun {
+  readonly id: string;
+  readonly generation: number;
+  readonly controller: AbortController;
+  readonly settled: Promise<void>;
+  readonly resolveSettled: () => void;
+  published: boolean;
+}
 
-  constructor(message: string, abortReason: RoccoLevelTransitionAbortReason | null) {
+interface StartedTransitionRun {
+  readonly inputLease: ReturnType<RoccoEngine['acquireInputLease']>;
+  readonly composition: ReturnType<RoccoEngine['beginCompositionSession']>;
+  readonly run: ActiveTransitionRun;
+}
+
+interface TransitionProgressState {
+  currentLevelNeedsRestore: boolean;
+  currentLevelNeedsCleanupBeforeRestore: boolean;
+  isTargetMountAttempted: boolean;
+}
+
+interface FatalTransitionState {
+  inputLease: ReturnType<RoccoEngine['acquireInputLease']>;
+  composition: ReturnType<RoccoEngine['beginCompositionSession']>;
+}
+
+interface RollbackPreparedTransitionOptions {
+  engine: RoccoEngine;
+  planId: string;
+  originalError: unknown;
+  prepared: RoccoPreparedLevelTransition;
+  currentLevel: RoccoLevel;
+  cleanupTarget: boolean;
+  currentLevelNeedsRestore: boolean;
+  currentLevelNeedsCleanupBeforeRestore: boolean;
+  abortReason: RoccoLevelTransitionAbortReason | undefined;
+}
+
+interface RollbackPreparedTransitionResult {
+  restoredScene: RoccoPlaneScene | undefined;
+  fatalError: Error | undefined;
+}
+
+interface PreparedTransitionFailureOptions {
+  engine: RoccoEngine;
+  planId: string;
+  originalError: unknown;
+  prepared: RoccoPreparedLevelTransition;
+  currentLevel: RoccoLevel;
+  startedRun: StartedTransitionRun;
+  progressState: TransitionProgressState;
+}
+
+class RoccoLevelTransitionCancelledError extends Error {
+  readonly abortReason: RoccoLevelTransitionAbortReason | undefined;
+
+  constructor(message: string, abortReason: RoccoLevelTransitionAbortReason | undefined) {
     super(message);
     this.name = 'RoccoLevelTransitionCancelledError';
     this.abortReason = abortReason;
@@ -38,6 +101,17 @@ class AbortableTransitionPreloader extends RoccoAssetPreloader {
   ) {
     super(onProgress);
     this.signal = signal;
+  }
+
+  private assertNotAborted(stage: string): void {
+    if (!this.signal.aborted) {
+      return;
+    }
+
+    throw new RoccoLevelTransitionCancelledError(
+      `Level transition ${stage} was cancelled.`,
+      normalizeAbortReason(this.signal.reason),
+    );
   }
 
   override async preloadAssetUrls(engine: RoccoEngine, urls: readonly string[]): Promise<void> {
@@ -72,17 +146,6 @@ class AbortableTransitionPreloader extends RoccoAssetPreloader {
     super.addWalkMap();
     this.assertNotAborted('walk map preload');
   }
-
-  private assertNotAborted(stage: string): void {
-    if (!this.signal.aborted) {
-      return;
-    }
-
-    throw new RoccoLevelTransitionCancelledError(
-      `Level transition ${stage} was cancelled.`,
-      normalizeAbortReason(this.signal.reason),
-    );
-  }
 }
 
 export interface RoccoLevelTransitionPrepareContext {
@@ -112,7 +175,7 @@ export interface RoccoPreparedLevelTransition {
   remountCurrentLevel?(
     engine: RoccoEngine,
     currentLevel: RoccoLevel,
-  ): Promise<RoccoPlaneScene | null>;
+  ): Promise<RoccoPlaneScene | undefined>;
 
   dispose?(): void | Promise<void>;
 }
@@ -132,65 +195,48 @@ export interface RoccoLevelTransitionServiceOptions {
   createMountOptions: () => RoccoLevelMountOptions;
 }
 
-interface ActiveTransitionRun {
-  readonly id: string;
-  readonly generation: number;
-  readonly controller: AbortController;
-  readonly settled: Promise<void>;
-  readonly resolveSettled: () => void;
-  published: boolean;
-}
-
 export class RoccoLevelTransitionService {
   private readonly options: RoccoLevelTransitionServiceOptions;
   private phase: RoccoLevelTransitionPhase = 'idle';
   private busy = false;
   private generation = 0;
-  private activeRun: ActiveTransitionRun | null = null;
-  private fatalTransitionState:
-    | {
-        inputLease: ReturnType<RoccoEngine['acquireInputLease']>;
-        composition: ReturnType<RoccoEngine['beginCompositionSession']>;
-      }
-    | null = null;
+  private activeRun: ActiveTransitionRun | undefined = undefined;
+  private fatalTransitionState: FatalTransitionState | undefined = undefined;
 
   constructor(options: RoccoLevelTransitionServiceOptions) {
     this.options = options;
   }
 
-  get currentPhase(): RoccoLevelTransitionPhase {
-    return this.phase;
-  }
-
-  get isTransitioning(): boolean {
-    return this.busy;
-  }
-
-  async run(plan: RoccoLevelTransitionPlan): Promise<boolean> {
-    let engine = this.options.getEngine();
-    let activeLevel = this.options.getActiveLevel();
+  private resolveRunContext(
+    planId: string,
+  ): { engine: RoccoEngine; activeLevel: RoccoLevel } | undefined {
+    const engine = this.options.getEngine();
+    const activeLevel = this.options.getActiveLevel();
     if (!engine || !activeLevel) {
-      return false;
+      return undefined;
     }
 
     if (this.fatalTransitionState) {
       engine.log(
         'System',
-        `Level transition '${plan.id}' rejected: transition service is in a fatal state.`,
+        `Level transition '${planId}' rejected: transition service is in a fatal state.`,
       );
-      return false;
+      return undefined;
     }
 
     if (this.activeRun) {
       engine.log(
         'System',
-        `Level transition '${plan.id}' rejected: another transition '${this.activeRun.id}' is already in progress.`,
+        `Level transition '${planId}' rejected: another transition '${this.activeRun.id}' is already in progress.`,
       );
-      return false;
+      return undefined;
     }
 
-    const generation = this.generation + 1;
-    this.generation = generation;
+    return { engine, activeLevel };
+  }
+
+  private startRun(planId: string, engine: RoccoEngine): StartedTransitionRun {
+    this.generation += 1;
     this.busy = true;
     this.phase = 'preparing-target';
 
@@ -198,167 +244,28 @@ export class RoccoLevelTransitionService {
     const composition = engine.beginCompositionSession('level-transition', {
       message: 'LOADING 0%',
     });
-    const run = this.createActiveRun(plan.id, generation);
+    const run = this.createActiveRun(planId, this.generation);
     this.activeRun = run;
 
-    let prepared: RoccoPreparedLevelTransition | null = null;
-    let isKeepResourcesLocked = false;
-    let isCurrentLevelNeedsRestore = false;
-    let isCurrentLevelNeedsCleanupBeforeRestore = false;
-    let isTargetMountAttempted = false;
-
-    try {
-      const preparedCandidate = plan.prepare({
-        engine,
-        currentLevel: activeLevel,
-        signal: run.controller.signal,
-      });
-      prepared = isPromiseLike(preparedCandidate)
-        ? await preparedCandidate
-        : preparedCandidate;
-      this.assertRunNotAborted(
-        run.controller.signal,
-        `Level transition '${plan.id}' was cancelled during prepare.`,
-      );
-
-      const preloader = new AbortableTransitionPreloader(run.controller.signal, (progress) => {
-        composition.report({
-          completed: progress.percent,
-          total: 100,
-          message: `LOADING ${progress.percent}%`,
-        });
-      });
-
-      this.phase = 'committing';
-      await prepared.commit(engine);
-      this.assertRunNotAborted(
-        run.controller.signal,
-        `Level transition '${plan.id}' was cancelled during pre-commit.`,
-      );
-
-      try {
-        activeLevel.unmount(engine);
-        isCurrentLevelNeedsRestore = true;
-      } catch (unmountError) {
-        isCurrentLevelNeedsRestore = true;
-        isCurrentLevelNeedsCleanupBeforeRestore = true;
-        throw unmountError;
-      }
-
-      this.assertRunNotAborted(
-        run.controller.signal,
-        `Level transition '${plan.id}' was cancelled after the current level unmounted.`,
-      );
-
-      isTargetMountAttempted = true;
-      const scene = await prepared.targetLevel.mount(engine, prepared.mountOptions, preloader);
-      this.assertRunNotAborted(
-        run.controller.signal,
-        `Level transition '${plan.id}' was cancelled before publication.`,
-      );
-
-      run.published = true;
-      if (prepared.publish) {
-        await prepared.publish(engine, scene);
-      } else {
-        this.options.setActiveLevel(prepared.targetLevel);
-      }
-
-      this.assertRunNotAborted(
-        run.controller.signal,
-        `Level transition '${plan.id}' was cancelled after publication.`,
-      );
-
-      await prepared.onCommitted?.(engine, scene);
-      this.assertRunNotAborted(
-        run.controller.signal,
-        `Level transition '${plan.id}' was cancelled after commit follow-up.`,
-      );
-
-      this.phase = 'active';
-      composition.report({ completed: 100, total: 100, message: 'LOADING 100%' });
-      return true;
-    } catch (error) {
-      this.logTransitionFailure(engine, plan.id, error, prepared !== null);
-
-      if (!prepared) {
-        this.phase = 'idle';
-        return false;
-      }
-
-      const rollbackResult = await this.rollbackPreparedTransition({
-        engine,
-        planId: plan.id,
-        originalError: error,
-        prepared,
-        currentLevel: activeLevel,
-        cleanupTarget: isTargetMountAttempted,
-        currentLevelNeedsRestore: isCurrentLevelNeedsRestore,
-        currentLevelNeedsCleanupBeforeRestore: isCurrentLevelNeedsCleanupBeforeRestore,
-        abortReason: normalizeAbortReason(run.controller.signal.reason),
-      });
-      if (rollbackResult.fatalError) {
-        isKeepResourcesLocked = this.enterFatalState(
-          engine,
-          composition,
-          inputLease,
-          rollbackResult.fatalError,
-        );
-        return false;
-      }
-
-      this.phase =
-        normalizeAbortReason(run.controller.signal.reason)?.mode === 'abandon'
-          ? 'idle'
-          : 'active-current';
-      return false;
-    } finally {
-      if (prepared?.dispose) {
-        try {
-          await prepared.dispose();
-        } catch (disposeError) {
-          engine.log(
-            'System',
-            `Level transition '${plan.id}' cleanup failed: ${this.describeUnknownError(disposeError)}`,
-          );
-        }
-      }
-
-      if (this.activeRun === run) {
-        this.activeRun = null;
-      }
-      run.resolveSettled();
-
-      if (!isKeepResourcesLocked) {
-        composition.dispose();
-        inputLease.dispose();
-        this.busy = false;
-      }
-    }
-  }
-
-  invalidateGenerations(): void {
-    this.generation += 1;
-    this.abortActiveRun({
-      kind: 'invalidated',
-      mode: 'abandon',
-    });
-    this.clearFatalTransitionState();
+    return {
+      inputLease,
+      composition,
+      run,
+    };
   }
 
   private createActiveRun(id: string, generation: number): ActiveTransitionRun {
-    let resolveSettled = () => {};
-    const settled = new Promise<void>((resolve) => {
-      resolveSettled = resolve;
-    });
+    const deferred = promiseConstructor.withResolvers<void>();
 
     return {
       id,
       generation,
       controller: new AbortController(),
       published: false,
-      settled,
-      resolveSettled,
+      settled: deferred.promise,
+      resolveSettled: () => {
+        deferred.resolve();
+      },
     };
   }
 
@@ -378,10 +285,153 @@ export class RoccoLevelTransitionService {
     throw new RoccoLevelTransitionCancelledError(message, normalizeAbortReason(signal.reason));
   }
 
+  private async prepareTransition(
+    plan: RoccoLevelTransitionPlan,
+    engine: RoccoEngine,
+    activeLevel: RoccoLevel,
+    run: ActiveTransitionRun,
+  ): Promise<RoccoPreparedLevelTransition> {
+    const prepared = await plan.prepare({
+      engine,
+      currentLevel: activeLevel,
+      signal: run.controller.signal,
+    });
+    this.assertRunNotAborted(
+      run.controller.signal,
+      `Level transition '${plan.id}' was cancelled during prepare.`,
+    );
+    return prepared;
+  }
+
+  private createTransitionPreloader(
+    signal: AbortSignal,
+    composition: ReturnType<RoccoEngine['beginCompositionSession']>,
+  ): AbortableTransitionPreloader {
+    return new AbortableTransitionPreloader(signal, (progress) => {
+      composition.report({
+        completed: progress.percent,
+        total: 100,
+        message: `LOADING ${progress.percent}%`,
+      });
+    });
+  }
+
+  private async commitPreparedTransition(options: {
+    engine: RoccoEngine;
+    activeLevel: RoccoLevel;
+    planId: string;
+    prepared: RoccoPreparedLevelTransition;
+    run: ActiveTransitionRun;
+    composition: ReturnType<RoccoEngine['beginCompositionSession']>;
+    progressState: TransitionProgressState;
+  }): Promise<void> {
+    const preloader = this.createTransitionPreloader(
+      options.run.controller.signal,
+      options.composition,
+    );
+
+    this.phase = 'committing';
+    await options.prepared.commit(options.engine);
+    this.assertRunNotAborted(
+      options.run.controller.signal,
+      `Level transition '${options.planId}' was cancelled during pre-commit.`,
+    );
+
+    try {
+      options.activeLevel.unmount(options.engine);
+      options.progressState.currentLevelNeedsRestore = true;
+    } catch (unmountError) {
+      options.progressState.currentLevelNeedsRestore = true;
+      options.progressState.currentLevelNeedsCleanupBeforeRestore = true;
+      throw unmountError;
+    }
+
+    this.assertRunNotAborted(
+      options.run.controller.signal,
+      `Level transition '${options.planId}' was cancelled after the current level unmounted.`,
+    );
+
+    options.progressState.isTargetMountAttempted = true;
+    const scene = await options.prepared.targetLevel.mount(
+      options.engine,
+      options.prepared.mountOptions,
+      preloader,
+    );
+    this.assertRunNotAborted(
+      options.run.controller.signal,
+      `Level transition '${options.planId}' was cancelled before publication.`,
+    );
+
+    options.run.published = true;
+    if (options.prepared.publish) {
+      await options.prepared.publish(options.engine, scene);
+    } else {
+      this.options.setActiveLevel(options.prepared.targetLevel);
+    }
+
+    this.assertRunNotAborted(
+      options.run.controller.signal,
+      `Level transition '${options.planId}' was cancelled after publication.`,
+    );
+
+    await options.prepared.onCommitted?.(options.engine, scene);
+    this.assertRunNotAborted(
+      options.run.controller.signal,
+      `Level transition '${options.planId}' was cancelled after commit follow-up.`,
+    );
+  }
+
+  private completeSuccessfulRun(
+    composition: ReturnType<RoccoEngine['beginCompositionSession']>,
+  ): void {
+    this.phase = 'active';
+    composition.report({ completed: 100, total: 100, message: 'LOADING 100%' });
+  }
+
+  private async disposePreparedTransition(
+    engine: RoccoEngine,
+    planId: string,
+    prepared: RoccoPreparedLevelTransition | undefined,
+  ): Promise<void> {
+    if (!prepared?.dispose) {
+      return;
+    }
+
+    try {
+      await prepared.dispose();
+    } catch (disposeError) {
+      engine.log(
+        'System',
+        `Level transition '${planId}' cleanup failed: ${this.describeUnknownError(disposeError)}`,
+      );
+    }
+  }
+
+  private finishRun(startedRun: StartedTransitionRun, shouldKeepResourcesLocked: boolean): void {
+    if (this.activeRun === startedRun.run) {
+      this.activeRun = undefined;
+    }
+    startedRun.run.resolveSettled();
+
+    if (shouldKeepResourcesLocked) {
+      return;
+    }
+
+    startedRun.composition.dispose();
+    startedRun.inputLease.dispose();
+    this.busy = false;
+  }
+
+  private resolvePostRollbackPhase(signal: AbortSignal): RoccoLevelTransitionPhase {
+    return normalizeAbortReason(signal.reason)?.mode === 'abandon'
+      ? 'idle'
+      : 'active-current';
+  }
+
   private async remountCurrentLevel(
     engine: RoccoEngine,
     currentLevel: RoccoLevel,
-  ): Promise<RoccoPlaneScene | null> {
+  ): Promise<RoccoPlaneScene | undefined> {
     try {
       return await currentLevel.mount(
         engine,
@@ -393,21 +443,13 @@ export class RoccoLevelTransitionService {
         'System',
         `Failed to restore previous level after transition failure: ${this.describeUnknownError(restoreError)}`,
       );
-      return null;
+      return undefined;
     }
   }
 
-  private async rollbackPreparedTransition(options: {
-    engine: RoccoEngine;
-    planId: string;
-    originalError: unknown;
-    prepared: RoccoPreparedLevelTransition;
-    currentLevel: RoccoLevel;
-    cleanupTarget: boolean;
-    currentLevelNeedsRestore: boolean;
-    currentLevelNeedsCleanupBeforeRestore: boolean;
-    abortReason: RoccoLevelTransitionAbortReason | null;
-  }): Promise<{ restoredScene: RoccoPlaneScene | null; fatalError: Error | null }> {
+  private async rollbackPreparedTransition(
+    options: RollbackPreparedTransitionOptions,
+  ): Promise<RollbackPreparedTransitionResult> {
     this.phase = 'rolling-back';
 
     if (options.cleanupTarget) {
@@ -420,14 +462,14 @@ export class RoccoLevelTransitionService {
 
     if (options.abortReason?.mode === 'abandon') {
       return {
-        restoredScene: null,
-        fatalError: null,
+        restoredScene: undefined,
+        fatalError: undefined,
       };
     }
 
     this.options.setActiveLevel(options.currentLevel);
 
-    let rollbackError: unknown = null;
+    let rollbackError: unknown;
     try {
       await options.prepared.rollback(options.engine);
     } catch (error) {
@@ -438,8 +480,8 @@ export class RoccoLevelTransitionService {
       );
     }
 
-    let restoredScene: RoccoPlaneScene | null = null;
-    let restoreError: unknown = null;
+    let restoredScene: RoccoPlaneScene | undefined;
+    let restoreError: unknown;
     if (!rollbackError && options.currentLevelNeedsRestore) {
       if (options.currentLevelNeedsCleanupBeforeRestore) {
         this.safeUnmount(
@@ -465,7 +507,7 @@ export class RoccoLevelTransitionService {
 
     if (rollbackError || restoreError) {
       return {
-        restoredScene: null,
+        restoredScene: undefined,
         fatalError: this.createFatalTransitionError(
           options.planId,
           options.originalError,
@@ -492,8 +534,16 @@ export class RoccoLevelTransitionService {
 
     return {
       restoredScene,
-      fatalError: null,
+      fatalError: undefined,
     };
+  }
+
+  private createClearedActiveLevel(): Parameters<
+    RoccoLevelTransitionServiceOptions['setActiveLevel']
+  >[0] {
+    return JSON.parse('null') as Parameters<
+      RoccoLevelTransitionServiceOptions['setActiveLevel']
+    >[0];
   }
 
   private enterFatalState(
@@ -502,7 +552,7 @@ export class RoccoLevelTransitionService {
     inputLease: ReturnType<RoccoEngine['acquireInputLease']>,
     error: Error,
   ): true {
-    this.options.setActiveLevel(null);
+    this.options.setActiveLevel(this.createClearedActiveLevel());
     this.phase = 'fatal';
     this.busy = true;
     this.fatalTransitionState = {
@@ -517,7 +567,7 @@ export class RoccoLevelTransitionService {
   private clearFatalTransitionState(): void {
     this.fatalTransitionState?.composition.dispose();
     this.fatalTransitionState?.inputLease.dispose();
-    this.fatalTransitionState = null;
+    this.fatalTransitionState = undefined;
     if (this.phase === 'fatal') {
       this.phase = 'idle';
     }
@@ -534,9 +584,9 @@ export class RoccoLevelTransitionService {
   ): Error {
     const reasons = [
       `transition failure: ${this.describeUnknownError(originalError)}`,
-      rollbackError ? `rollback failure: ${this.describeUnknownError(rollbackError)}` : null,
-      restoreError ? `restore failure: ${this.describeUnknownError(restoreError)}` : null,
-    ].filter((reason): reason is string => reason !== null);
+      rollbackError ? `rollback failure: ${this.describeUnknownError(rollbackError)}` : undefined,
+      restoreError ? `restore failure: ${this.describeUnknownError(restoreError)}` : undefined,
+    ].filter((reason): reason is string => reason !== undefined);
     return new Error(
       `Level transition '${planId}' entered a fatal state; ${reasons.join(' | ')}`,
     );
@@ -557,14 +607,14 @@ export class RoccoLevelTransitionService {
     engine: RoccoEngine,
     planId: string,
     error: unknown,
-    prepared: boolean,
+    isPrepared: boolean,
   ): void {
     if (error instanceof RoccoLevelTransitionCancelledError) {
       engine.log('System', `Level transition '${planId}' cancelled: ${error.message}`);
       return;
     }
 
-    if (!prepared) {
+    if (!isPrepared) {
       engine.log(
         'System',
         `Level transition '${planId}' validation failed: ${this.describeUnknownError(error)}`,
@@ -604,11 +654,119 @@ export class RoccoLevelTransitionService {
       return Object.prototype.toString.call(error);
     }
   }
+
+  private async handlePreparedTransitionFailure(
+    options: PreparedTransitionFailureOptions,
+  ): Promise<{ shouldKeepResourcesLocked: boolean }> {
+    this.logTransitionFailure(options.engine, options.planId, options.originalError, true);
+
+    const rollbackResult = await this.rollbackPreparedTransition({
+      engine: options.engine,
+      planId: options.planId,
+      originalError: options.originalError,
+      prepared: options.prepared,
+      currentLevel: options.currentLevel,
+      cleanupTarget: options.progressState.isTargetMountAttempted,
+      currentLevelNeedsRestore: options.progressState.currentLevelNeedsRestore,
+      currentLevelNeedsCleanupBeforeRestore:
+        options.progressState.currentLevelNeedsCleanupBeforeRestore,
+      abortReason: normalizeAbortReason(options.startedRun.run.controller.signal.reason),
+    });
+    if (rollbackResult.fatalError) {
+      return {
+        shouldKeepResourcesLocked: this.enterFatalState(
+          options.engine,
+          options.startedRun.composition,
+          options.startedRun.inputLease,
+          rollbackResult.fatalError,
+        ),
+      };
+    }
+
+    this.phase = this.resolvePostRollbackPhase(options.startedRun.run.controller.signal);
+    return {
+      shouldKeepResourcesLocked: false,
+    };
+  }
+
+  get currentPhase(): RoccoLevelTransitionPhase {
+    return this.phase;
+  }
+
+  get isTransitioning(): boolean {
+    return this.busy;
+  }
+
+  async run(plan: RoccoLevelTransitionPlan): Promise<boolean> {
+    const runContext = this.resolveRunContext(plan.id);
+    if (!runContext) {
+      return false;
+    }
+
+    const startedRun = this.startRun(plan.id, runContext.engine);
+    let prepared: RoccoPreparedLevelTransition | undefined;
+    let shouldKeepResourcesLocked = false;
+    const progressState: TransitionProgressState = {
+      currentLevelNeedsRestore: false,
+      currentLevelNeedsCleanupBeforeRestore: false,
+      isTargetMountAttempted: false,
+    };
+
+    try {
+      prepared = await this.prepareTransition(
+        plan,
+        runContext.engine,
+        runContext.activeLevel,
+        startedRun.run,
+      );
+      await this.commitPreparedTransition({
+        engine: runContext.engine,
+        activeLevel: runContext.activeLevel,
+        planId: plan.id,
+        prepared,
+        run: startedRun.run,
+        composition: startedRun.composition,
+        progressState,
+      });
+      this.completeSuccessfulRun(startedRun.composition);
+      return true;
+    } catch (error) {
+      if (!prepared) {
+        this.logTransitionFailure(runContext.engine, plan.id, error, false);
+        this.phase = 'idle';
+        return false;
+      }
+
+      const failureResult = await this.handlePreparedTransitionFailure({
+        engine: runContext.engine,
+        planId: plan.id,
+        originalError: error,
+        prepared,
+        currentLevel: runContext.activeLevel,
+        startedRun,
+        progressState,
+      });
+      shouldKeepResourcesLocked = failureResult.shouldKeepResourcesLocked;
+      return false;
+    } finally {
+      await this.disposePreparedTransition(runContext.engine, plan.id, prepared);
+      this.finishRun(startedRun, shouldKeepResourcesLocked);
+    }
+  }
+
+  invalidateGenerations(): void {
+    this.generation += 1;
+    this.abortActiveRun({
+      kind: 'invalidated',
+      mode: 'abandon',
+    });
+    this.clearFatalTransitionState();
+  }
 }
 
-function normalizeAbortReason(reason: unknown): RoccoLevelTransitionAbortReason | null {
+function normalizeAbortReason(reason: unknown): RoccoLevelTransitionAbortReason | undefined {
   if (!reason || typeof reason !== 'object') {
-    return null;
+    return undefined;
   }
 
   const candidate = reason as Partial<RoccoLevelTransitionAbortReason>;
@@ -623,14 +781,5 @@ function normalizeAbortReason(reason: unknown): RoccoLevelTransitionAbortReason 
     };
   }
 
-  return null;
-}
-
-function isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'then' in value &&
-    typeof value.then === 'function'
-  );
+  return undefined;
 }

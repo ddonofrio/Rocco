@@ -28,6 +28,7 @@ import { roccoCartridgeMessageRuntime } from '../rpce/dialogue';
 const PIER_DOOR_VARIANT_MESSAGE_TTL_MS = 5200;
 const PIER_DOOR_ACTION_PRIORITY = 300;
 const PIER_SPECIAL_SCENE_CLICK_PRIORITY = 300;
+const PIER_DOOR_ACTION_IDS = new Set(['look', 'open', 'kick']);
 
 function isPierStart(context: InteractionContext): boolean {
   return context.activeLevel?.id === ROCCO_PIER_START_LEVEL_ID;
@@ -52,7 +53,7 @@ function showRoccoThoughtVariant(
     {
       count: 1,
       historyKey,
-      avoidImmediateRepeat: true,
+      isAvoidImmediateRepeat: true,
     },
   );
   engine.video.render(0);
@@ -66,6 +67,18 @@ function resolvePierDoorKickLines(context: InteractionContext): readonly string[
   return context.isStanIdentified()
     ? context.localization.text.pierDoor.kickSleepingKnownStanLines
     : context.localization.text.pierDoor.kickSleepingUnknownStanLines;
+}
+
+function resolvePierDoorKickHistoryVariant(context: InteractionContext): 'awake' | 'known' | 'unknown' {
+  if (context.isStanAwake()) {
+    return 'awake';
+  }
+
+  if (context.isStanIdentified()) {
+    return 'known';
+  }
+
+  return 'unknown';
 }
 
 /**
@@ -90,9 +103,7 @@ export function createPierActionMenuRules(): readonly InteractionRule[] {
         return (
           isPierStart(context) &&
           activation.targetInstanceId === DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID &&
-          (activation.actionId === 'look' ||
-            activation.actionId === 'open' ||
-            activation.actionId === 'kick')
+          PIER_DOOR_ACTION_IDS.has(activation.actionId)
         );
       },
       execute: (context) => {
@@ -131,7 +142,7 @@ export function createPierActionMenuRules(): readonly InteractionRule[] {
         showRoccoThoughtVariant(
           engine,
           resolvePierDoorKickLines(context),
-          `pier-bait-shop-door-kick:${context.isStanAwake() ? 'awake' : context.isStanIdentified() ? 'known' : 'unknown'}`,
+          `pier-bait-shop-door-kick:${resolvePierDoorKickHistoryVariant(context)}`,
         );
         return normalizeDisposition(true);
       },
@@ -251,7 +262,7 @@ export function createPierSpecialSceneClickRules(): readonly SpecialInventorySce
               {
                 count: 1,
                 historyKey: 'inventory-bata-self-already-wearing',
-                avoidImmediateRepeat: true,
+                isAvoidImmediateRepeat: true,
               },
             );
             shouldClearCarriedItem = true;
@@ -272,7 +283,7 @@ export function createPierSpecialSceneClickRules(): readonly SpecialInventorySce
             {
               count: 1,
               historyKey: 'inventory-bata-self-equip',
-              avoidImmediateRepeat: true,
+              isAvoidImmediateRepeat: true,
             },
           );
           shouldClearCarriedItem = true;

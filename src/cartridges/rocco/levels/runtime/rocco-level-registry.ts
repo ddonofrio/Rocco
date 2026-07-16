@@ -1,5 +1,7 @@
-import type { RoccoLevel } from '../rocco-level-types';
+/// <reference lib="esnext.iterator" />
+
 import type { RpceCompiledGame, RpceCompiledMap } from '../../rpce/core';
+import type { RoccoLevel } from '../rocco-level-types';
 
 export interface RoccoLevelRegistryOptions {
   compiledGame: RpceCompiledGame<RoccoLevel>;
@@ -27,6 +29,34 @@ export class RoccoLevelRegistry {
     }
   }
 
+  private instantiateMapLevels(map: RpceCompiledMap): readonly RoccoLevel[] {
+    return map.levelIds.map((levelId) => {
+      const compiledLevel = this.compiledGame.levelsById.get(levelId);
+      if (!compiledLevel?.createLevel) {
+        throw new Error(`Map '${map.id}' level '${levelId}' has no factory.`);
+      }
+
+      return compiledLevel.createLevel();
+    });
+  }
+
+  private registerLevels(levels: readonly RoccoLevel[]): void {
+    for (const level of levels) {
+      if (this.levels.has(level.id)) {
+        throw new Error(`Duplicate level registration '${level.id}'.`);
+      }
+      this.levels.set(level.id, level);
+    }
+  }
+
+  private replaceLevels(levelIds: readonly string[], nextLevels: readonly RoccoLevel[]): void {
+    for (const levelId of levelIds) {
+      this.levels.delete(levelId);
+    }
+
+    this.registerLevels(nextLevels);
+  }
+
   requireLevel(levelId: string): RoccoLevel {
     const level = this.levels.get(levelId);
     if (!level) {
@@ -37,7 +67,7 @@ export class RoccoLevelRegistry {
   }
 
   listLevels(): readonly RoccoLevel[] {
-    return [...this.levels.values()];
+    return this.levels.values().toArray();
   }
 
   prepareMapReset(mapId: string): RoccoPreparedLevelMapReset {
@@ -90,33 +120,5 @@ export class RoccoLevelRegistry {
 
   resetMap(mapId: string): void {
     this.prepareMapReset(mapId).commit();
-  }
-
-  private instantiateMapLevels(map: RpceCompiledMap): readonly RoccoLevel[] {
-    return map.levelIds.map((levelId) => {
-      const compiledLevel = this.compiledGame.levelsById.get(levelId);
-      if (!compiledLevel?.createLevel) {
-        throw new Error(`Map '${map.id}' level '${levelId}' has no factory.`);
-      }
-
-      return compiledLevel.createLevel();
-    });
-  }
-
-  private registerLevels(levels: readonly RoccoLevel[]): void {
-    for (const level of levels) {
-      if (this.levels.has(level.id)) {
-        throw new Error(`Duplicate level registration '${level.id}'.`);
-      }
-      this.levels.set(level.id, level);
-    }
-  }
-
-  private replaceLevels(levelIds: readonly string[], nextLevels: readonly RoccoLevel[]): void {
-    for (const levelId of levelIds) {
-      this.levels.delete(levelId);
-    }
-
-    this.registerLevels(nextLevels);
   }
 }

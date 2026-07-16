@@ -83,7 +83,6 @@ export function createCoreInteractionRules(): readonly InteractionRule[] {
           return normalizeDisposition(undefined);
         }
         context.developerRuntime.clearTransientState(engine);
-        engine.setInputEnabled(true);
         engine.video.actionMenus.closeMenu();
         context.inventoryRuntime.togglePlayerInventory(engine);
         return normalizeDisposition(undefined);
@@ -118,7 +117,7 @@ export function createCoreInteractionRules(): readonly InteractionRule[] {
           {
             count: 1,
             historyKey: 'rocco-self-talk',
-            avoidImmediateRepeat: true,
+            isAvoidImmediateRepeat: true,
           },
         );
         engine.video.render(0);

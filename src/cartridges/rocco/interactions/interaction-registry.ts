@@ -1,3 +1,5 @@
+/// <reference lib="esnext.iterator" />
+
 import type {
   InteractionContext,
   InteractionDisposition,
@@ -32,6 +34,16 @@ export class InteractionRegistry {
   private readonly actionRules = new Map<string, InteractionRule>();
   private readonly specialRules = new Map<string, SpecialInventorySceneClickRule>();
 
+  private rulesForKind(
+    kind: InteractionKind,
+    stage: InteractionStage,
+  ): readonly InteractionRule[] {
+    return this.actionRules.values()
+      .filter((rule) => rule.kind === kind && (rule.stage ?? 'default') === stage)
+      .toArray()
+      .toSorted(byDescendingPriorityThenId);
+  }
+
   register(rule: InteractionRule): void {
     this.registerMany([rule]);
   }
@@ -60,11 +72,11 @@ export class InteractionRegistry {
   }
 
   getRules(): readonly InteractionRule[] {
-    return [...this.actionRules.values()].sort(byDescendingPriorityThenId);
+    return this.actionRules.values().toArray().toSorted(byDescendingPriorityThenId);
   }
 
   getSpecialRules(): readonly SpecialInventorySceneClickRule[] {
-    return [...this.specialRules.values()].sort(byDescendingPriorityThenId);
+    return this.specialRules.values().toArray().toSorted(byDescendingPriorityThenId);
   }
 
   dispatch(context: InteractionContext, signal: AbortSignal): InteractionDisposition | undefined {
@@ -139,15 +151,6 @@ export class InteractionRegistry {
     }
 
     return { handled: false };
-  }
-
-  private rulesForKind(
-    kind: InteractionKind,
-    stage: InteractionStage,
-  ): readonly InteractionRule[] {
-    return [...this.actionRules.values()]
-      .filter((rule) => rule.kind === kind && (rule.stage ?? 'default') === stage)
-      .sort(byDescendingPriorityThenId);
   }
 }
 

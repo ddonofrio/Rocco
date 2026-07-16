@@ -24,8 +24,8 @@ interface RoccoActiveScriptedSceneInteraction {
 export class RoccoScriptedSceneInteractionController {
   private readonly engine: RoccoEngine;
   private readonly definitions = new Map<string, RoccoScriptedSceneInteractionDefinition>();
-  private activeInteraction: RoccoActiveScriptedSceneInteraction | null = null;
-  private inputLease: InputPolicyLease | null = null;
+  private activeInteraction: RoccoActiveScriptedSceneInteraction | undefined = undefined;
+  private inputLease: InputPolicyLease | undefined = undefined;
 
   constructor(
     engine: RoccoEngine,
@@ -35,6 +35,38 @@ export class RoccoScriptedSceneInteractionController {
     for (const definition of definitions) {
       this.definitions.set(definition.targetInstanceId, definition);
     }
+  }
+
+  private releaseInputLease(): void {
+    this.inputLease?.dispose();
+    this.inputLease = undefined;
+  }
+
+  private start(definition: RoccoScriptedSceneInteractionDefinition): void {
+    if (!this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
+      return;
+    }
+
+    this.activeInteraction = { definition };
+    this.inputLease = this.engine.acquireInputLease('scripted-scene-interaction', 'blocked');
+    const isStarted = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      definition.moveTo.x,
+      definition.moveTo.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        constrainToWalkMap: definition.constrainToWalkMap,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!isStarted) {
+      this.activeInteraction = undefined;
+      this.releaseInputLease();
+    }
+    this.engine.video.render(0);
   }
 
   handleSceneClick(activation: RoccoSceneClickAction): boolean {
@@ -77,10 +109,9 @@ export class RoccoScriptedSceneInteractionController {
       definition.onReached();
     } finally {
       if (definition.restoreInputOnComplete !== false) {
-        this.inputLease?.dispose();
-        this.inputLease = null;
+        this.releaseInputLease();
       }
-      this.activeInteraction = null;
+      this.activeInteraction = undefined;
     }
     this.engine.video.render(0);
   }
@@ -98,9 +129,8 @@ export class RoccoScriptedSceneInteractionController {
       return;
     }
 
-    this.activeInteraction = null;
-    this.inputLease?.dispose();
-    this.inputLease = null;
+    this.activeInteraction = undefined;
+    this.releaseInputLease();
   }
 
   run(definition: RoccoScriptedSceneInteractionDefinition): boolean {
@@ -110,33 +140,5 @@ export class RoccoScriptedSceneInteractionController {
 
     this.start(definition);
     return true;
-  }
-
-  private start(definition: RoccoScriptedSceneInteractionDefinition): void {
-    if (!this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
-      return;
-    }
-
-    this.activeInteraction = { definition };
-    this.inputLease = this.engine.acquireInputLease('scripted-scene-interaction', 'blocked');
-    const isStarted = this.engine.video.sprites.goTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      definition.moveTo.x,
-      definition.moveTo.y,
-      {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        constrainToWalkMap: definition.constrainToWalkMap,
-        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-        stopDistance: 1,
-        idleSettleDelayMs: 0,
-        idleSettleFacing: 'diagonal-from-facing',
-      },
-    );
-    if (!isStarted) {
-      this.activeInteraction = null;
-      this.inputLease.dispose();
-      this.inputLease = null;
-    }
-    this.engine.video.render(0);
   }
 }

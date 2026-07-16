@@ -1,3 +1,5 @@
+/// <reference lib="esnext.iterator" />
+
 import type { RoccoGridMenuItem } from '../../../../console/video/grid-menu';
 import type { RpceInventoryItem } from './types';
 
@@ -8,24 +10,61 @@ export interface RpceInventoryStorageOptions {
 }
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 export class RpceInventoryStorage {
+  private readonly items = new Map<string, RpceInventoryItem>();
   readonly id: string;
   readonly columns: number;
   readonly rows: number;
-
-  private readonly items = new Map<string, RpceInventoryItem>();
 
   constructor(options: RpceInventoryStorageOptions) {
     this.id = options.id;
     this.columns = Math.max(1, Math.floor(options.columns));
     this.rows = Math.max(1, Math.floor(options.rows));
+  }
+
+  private findFirstOpenSlot(excludingItemId?: string): number | undefined {
+    const occupiedSlots = new Set<number>();
+    for (const item of this.items.values()) {
+      if (item.id === excludingItemId || item.slotIndex === undefined) {
+        continue;
+      }
+
+      occupiedSlots.add(this.normalizeSlotIndex(item.slotIndex));
+    }
+
+    for (let slotIndex = 0; slotIndex < this.slotCount; slotIndex += 1) {
+      if (!occupiedSlots.has(slotIndex)) {
+        return slotIndex;
+      }
+    }
+
+    return undefined;
+  }
+
+  private isSlotOccupiedByOtherItem(slotIndex: number, excludingItemId?: string): boolean {
+    const normalizedSlotIndex = this.normalizeSlotIndex(slotIndex);
+    for (const item of this.items.values()) {
+      if (item.id === excludingItemId || item.slotIndex === undefined) {
+        continue;
+      }
+
+      if (this.normalizeSlotIndex(item.slotIndex) === normalizedSlotIndex) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private normalizeSlotIndex(slotIndex: number): number {
+    if (!Number.isFinite(slotIndex)) {
+      return 0;
+    }
+
+    return Math.max(0, Math.min(this.slotCount - 1, Math.floor(slotIndex)));
   }
 
   get slotCount(): number {
@@ -88,8 +127,9 @@ export class RpceInventoryStorage {
   }
 
   listItems(): RpceInventoryItem[] {
-    return [...this.items.values()]
-      .sort((left, right) => (left.slotIndex ?? 0) - (right.slotIndex ?? 0))
+    return this.items.values()
+      .toArray()
+      .toSorted((left, right) => (left.slotIndex ?? 0) - (right.slotIndex ?? 0))
       .map((item) => clone(item));
   }
 
@@ -124,47 +164,5 @@ export class RpceInventoryStorage {
 
   isFull(excludingItemId?: string): boolean {
     return !this.hasOpenSlot(excludingItemId);
-  }
-
-  private findFirstOpenSlot(excludingItemId?: string): number | undefined {
-    const occupiedSlots = new Set<number>();
-    for (const item of this.items.values()) {
-      if (item.id === excludingItemId || item.slotIndex === undefined) {
-        continue;
-      }
-
-      occupiedSlots.add(this.normalizeSlotIndex(item.slotIndex));
-    }
-
-    for (let slotIndex = 0; slotIndex < this.slotCount; slotIndex += 1) {
-      if (!occupiedSlots.has(slotIndex)) {
-        return slotIndex;
-      }
-    }
-
-    return undefined;
-  }
-
-  private isSlotOccupiedByOtherItem(slotIndex: number, excludingItemId?: string): boolean {
-    const normalizedSlotIndex = this.normalizeSlotIndex(slotIndex);
-    for (const item of this.items.values()) {
-      if (item.id === excludingItemId || item.slotIndex === undefined) {
-        continue;
-      }
-
-      if (this.normalizeSlotIndex(item.slotIndex) === normalizedSlotIndex) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  private normalizeSlotIndex(slotIndex: number): number {
-    if (!Number.isFinite(slotIndex)) {
-      return 0;
-    }
-
-    return Math.max(0, Math.min(this.slotCount - 1, Math.floor(slotIndex)));
   }
 }

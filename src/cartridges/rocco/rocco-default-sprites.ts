@@ -47,11 +47,7 @@ export interface RoccoDefaultSpriteInstallOptions {
 }
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function createInstalledSpriteDefinition(
@@ -116,72 +112,6 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
     this.engine = engine;
     this.options = options;
     this.localization = options.localization ?? createRoccoLocalization();
-  }
-
-  start(): void {
-    if (this.options.playIntro === false) {
-      this.startIdle(this.options.initialFacing ?? 'down');
-      return;
-    }
-
-    this.queueNextPass();
-  }
-
-  update(deltaMs: number): void {
-    if (!Number.isFinite(deltaMs) || deltaMs < 0) {
-      return;
-    }
-
-    if (this.phase === 'entering' && this.hasReachedCenter()) {
-      this.startIntroThought();
-      return;
-    }
-
-    if (this.phase === 'intro-thought') {
-      this.elapsedMs += deltaMs;
-      if (this.elapsedMs >= INTRO_THOUGHT_DURATION_MS) {
-        this.startIntroHelp();
-      }
-      return;
-    }
-
-    if (this.phase === 'intro-help') {
-      this.elapsedMs += deltaMs;
-      if (this.elapsedMs >= INTRO_HELP_DURATION_MS) {
-        this.finishIntro();
-      }
-    }
-  }
-
-  isIntroActive(): boolean {
-    return this.phase !== 'idle';
-  }
-
-  isIntroSpeaking(): boolean {
-    return this.phase === 'intro-thought' || this.phase === 'intro-help';
-  }
-
-  advanceIntro(): void {
-    if (this.phase === 'intro-thought') {
-      this.startIntroHelp();
-      return;
-    }
-
-    if (this.phase === 'intro-help') {
-      this.finishIntro();
-      this.engine.video.messages.clearMessages();
-    }
-  }
-
-  cancelIntro(): void {
-    if (!this.isIntroActive()) {
-      return;
-    }
-
-    this.engine.video.messages.clearMessages();
-    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
-    this.elapsedMs = 0;
-    this.startIdle('down');
   }
 
   private queueNextPass(): void {
@@ -260,6 +190,72 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
     }
 
     return sprite.transform.x <= DEFAULT_SPRITE_PAUSE_X + POSITION_EPSILON;
+  }
+
+  start(): void {
+    if (this.options.playIntro === false) {
+      this.startIdle(this.options.initialFacing ?? 'down');
+      return;
+    }
+
+    this.queueNextPass();
+  }
+
+  update(deltaMs: number): void {
+    if (!Number.isFinite(deltaMs) || deltaMs < 0) {
+      return;
+    }
+
+    if (this.phase === 'entering' && this.hasReachedCenter()) {
+      this.startIntroThought();
+      return;
+    }
+
+    if (this.phase === 'intro-thought') {
+      this.elapsedMs += deltaMs;
+      if (this.elapsedMs >= INTRO_THOUGHT_DURATION_MS) {
+        this.startIntroHelp();
+      }
+      return;
+    }
+
+    if (this.phase === 'intro-help') {
+      this.elapsedMs += deltaMs;
+      if (this.elapsedMs >= INTRO_HELP_DURATION_MS) {
+        this.finishIntro();
+      }
+    }
+  }
+
+  isIntroActive(): boolean {
+    return this.phase !== 'idle';
+  }
+
+  isIntroSpeaking(): boolean {
+    return this.phase === 'intro-thought' || this.phase === 'intro-help';
+  }
+
+  advanceIntro(): void {
+    if (this.phase === 'intro-thought') {
+      this.startIntroHelp();
+      return;
+    }
+
+    if (this.phase === 'intro-help') {
+      this.finishIntro();
+      this.engine.video.messages.clearMessages();
+    }
+  }
+
+  cancelIntro(): void {
+    if (!this.isIntroActive()) {
+      return;
+    }
+
+    this.engine.video.messages.clearMessages();
+    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    this.elapsedMs = 0;
+    this.startIdle('down');
   }
 }
 

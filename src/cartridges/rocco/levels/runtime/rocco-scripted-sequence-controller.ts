@@ -1,4 +1,4 @@
-﻿import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { RoccoEngine } from '../../../../console/engine-sdk';
 import type { RoccoPoint } from '../../../../console/video/sprites';
 import {
   DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
@@ -11,10 +11,13 @@ import {
   DEFAULT_SPRITE_RUN_ACTION_ID,
   DEFAULT_STAN_SPRITE_INSTANCE_ID,
 } from '../../rocco-default-constants';
-import { roccoCartridgeMessageRuntime } from '../../rpce/dialogue';
 import { type RoccoLocalization } from '../../localization';
-import { DEFAULT_STAN_DIALOGUE_TEXT_COLOR, DEFAULT_STAN_LOOK_RIGHT_ANIMATION_ID } from '../pier/pier-stan';
+import { roccoCartridgeMessageRuntime } from '../../rpce/dialogue';
 import { BAIT_SHOP_DOOR_OPENING_SOUND_ID } from '../pier/pier-bait-shop-door';
+import {
+  DEFAULT_STAN_DIALOGUE_TEXT_COLOR,
+  DEFAULT_STAN_LOOK_RIGHT_ANIMATION_ID,
+} from '../pier/pier-stan';
 
 type StanPoliceDefeatPhase = 'speaking' | 'fading' | 'title';
 type BaitShopDoorEntryPhase = 'walking-vertical' | 'transitioning';
@@ -40,10 +43,10 @@ interface RoccoPendingBaitShopDoorUse {
 }
 
 export interface RoccoScriptedSequenceControllerSnapshot {
-  stanPoliceDefeat: StanPoliceDefeatSequence | null;
-  baitShopDoorEntry: BaitShopDoorEntrySequence | null;
-  stanMoneyExchange: StanMoneyExchangeSequence | null;
-  pendingBaitShopDoorUse: RoccoPendingBaitShopDoorUse | null;
+  stanPoliceDefeat: StanPoliceDefeatSequence | undefined;
+  baitShopDoorEntry: BaitShopDoorEntrySequence | undefined;
+  stanMoneyExchange: StanMoneyExchangeSequence | undefined;
+  pendingBaitShopDoorUse: RoccoPendingBaitShopDoorUse | undefined;
 }
 
 export interface RoccoScriptedSequenceControllerOptions {
@@ -71,214 +74,23 @@ export const ROCCO_STAN_POLICE_DEFEAT_SOUND_ID = 'rocco-stan-police-whistle-soun
 export class RoccoScriptedSequenceController {
   private readonly localization: RoccoLocalization;
   private readonly options: RoccoScriptedSequenceControllerOptions;
-  private stanPoliceDefeat: StanPoliceDefeatSequence | null = null;
-  private baitShopDoorEntry: BaitShopDoorEntrySequence | null = null;
-  private stanMoneyExchange: StanMoneyExchangeSequence | null = null;
-  private pendingBaitShopDoorUse: RoccoPendingBaitShopDoorUse | null = null;
-  private blockingInputLease: ReturnType<RoccoEngine['acquireInputLease']> | null = null;
+  private stanPoliceDefeat: StanPoliceDefeatSequence | undefined = undefined;
+  private baitShopDoorEntry: BaitShopDoorEntrySequence | undefined = undefined;
+  private stanMoneyExchange: StanMoneyExchangeSequence | undefined = undefined;
+  private pendingBaitShopDoorUse: RoccoPendingBaitShopDoorUse | undefined = undefined;
+  private blockingInputLease: ReturnType<RoccoEngine['acquireInputLease']> | undefined =
+    undefined;
 
   constructor(options: RoccoScriptedSequenceControllerOptions) {
     this.options = options;
     this.localization = options.localization;
   }
 
-  hasBlockingSequence(): boolean {
-    return (
-      this.stanPoliceDefeat !== null ||
-      this.baitShopDoorEntry !== null ||
-      this.stanMoneyExchange !== null
-    );
-  }
-
-  hasPendingBaitShopDoorUse(): boolean {
-    return this.pendingBaitShopDoorUse !== null;
-  }
-
-  createSnapshot(): RoccoScriptedSequenceControllerSnapshot {
-    return {
-      stanPoliceDefeat: this.stanPoliceDefeat ? { ...this.stanPoliceDefeat } : null,
-      baitShopDoorEntry: this.baitShopDoorEntry ? { ...this.baitShopDoorEntry } : null,
-      stanMoneyExchange: this.stanMoneyExchange ? { ...this.stanMoneyExchange } : null,
-      pendingBaitShopDoorUse: this.pendingBaitShopDoorUse
-        ? { ...this.pendingBaitShopDoorUse }
-        : null,
-    };
-  }
-
-  restoreSnapshot(snapshot: RoccoScriptedSequenceControllerSnapshot): void {
-    this.stanPoliceDefeat = snapshot.stanPoliceDefeat ? { ...snapshot.stanPoliceDefeat } : null;
-    this.baitShopDoorEntry = snapshot.baitShopDoorEntry ? { ...snapshot.baitShopDoorEntry } : null;
-    this.stanMoneyExchange = snapshot.stanMoneyExchange ? { ...snapshot.stanMoneyExchange } : null;
-    this.pendingBaitShopDoorUse = snapshot.pendingBaitShopDoorUse
-      ? { ...snapshot.pendingBaitShopDoorUse }
-      : null;
-  }
-
-  resetRuntimeState(engine?: RoccoEngine | null): void {
-    if (engine && this.pendingBaitShopDoorUse) {
-      engine.video.sprites.cancelMovement(DEFAULT_SPRITE_INSTANCE_ID);
-    }
-
-    this.stanPoliceDefeat = null;
-    this.baitShopDoorEntry = null;
-    this.stanMoneyExchange = null;
-    this.pendingBaitShopDoorUse = null;
-    this.releaseBlockingInputLease();
-    this.clearStanPoliceDefeatPresentation(engine);
-  }
-
-  startStanPoliceDefeat(engine: RoccoEngine): void {
-    this.stanPoliceDefeat = {
-      phase: 'speaking',
-      elapsedMs: 0,
-    };
-    this.acquireBlockingInputLease(engine);
-    engine.video.gridMenus.clearCarriedItem();
-    engine.video.gridMenus.closeMenu();
-    engine.video.actionMenus.closeMenu();
-    engine.video.sprites.playAnimation(
-      DEFAULT_STAN_SPRITE_INSTANCE_ID,
-      DEFAULT_STAN_LOOK_RIGHT_ANIMATION_ID,
-      {
-        restart: true,
-      },
-    );
-    engine.video.messages.say(
-      DEFAULT_STAN_SPRITE_INSTANCE_ID,
-      this.localization.text.inventory.keysOnStanArrestLine,
-      {
-        ttlMs: STAN_POLICE_DEFEAT_MESSAGE_TTL_MS,
-        style: {
-          fill: DEFAULT_STAN_DIALOGUE_TEXT_COLOR,
-        },
-      },
-    );
-    engine.video.render(0);
-  }
-
-  startStanMoneyExchange(engine: RoccoEngine): void {
-    this.stanMoneyExchange = {
-      phase: 'stan-speaking',
-      elapsedMs: 0,
-    };
-    this.acquireBlockingInputLease(engine);
-    engine.video.gridMenus.clearCarriedItem();
-    engine.video.gridMenus.closeMenu();
-    engine.video.actionMenus.closeMenu();
-    engine.video.sprites.playAnimation(
-      DEFAULT_STAN_SPRITE_INSTANCE_ID,
-      DEFAULT_STAN_LOOK_RIGHT_ANIMATION_ID,
-      {
-        restart: true,
-      },
-    );
-    roccoCartridgeMessageRuntime.say(
-      engine,
-      DEFAULT_STAN_SPRITE_INSTANCE_ID,
-      this.localization.text.inventory.moneyOnStanAcceptedLines,
-      {
-        ttlMs: STAN_MONEY_ACCEPTED_TTL_MS,
-        style: {
-          fill: DEFAULT_STAN_DIALOGUE_TEXT_COLOR,
-        },
-      },
-      {
-        count: 1,
-        historyKey: 'inventory-money-on-stan-accepted',
-        avoidImmediateRepeat: true,
-      },
-    );
-    engine.video.render(0);
-  }
-
-  startBaitShopDoorUse(engine: RoccoEngine, activeLevelId: string): void {
-    engine.video.gridMenus.clearCarriedItem();
-    engine.video.gridMenus.closeMenu();
-    engine.video.actionMenus.closeMenu();
-    engine.video.messages.clearMessages();
-    this.options.clearPendingExitIntent();
-
-    const currentGroundPoint = this.options.resolvePlayerGroundPoint();
-    if (!currentGroundPoint) {
-      return;
-    }
-
-    if (this.options.doesPlayerOverlapBaitShopDoor()) {
-      this.finishBaitShopDoorHorizontalApproach(engine, currentGroundPoint);
-      return;
-    }
-
-    const isStarted = engine.video.sprites.goTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      this.options.baitShopDoorEndGroundX,
-      currentGroundPoint.y,
-      {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-        stopDistance: 1,
-        idleSettleDelayMs: 0,
-        idleSettleFacing: 'diagonal-from-facing',
-      },
-    );
-    if (!isStarted) {
-      engine.video.render(0);
-      return;
-    }
-
-    this.pendingBaitShopDoorUse = {
-      levelId: activeLevelId,
-    };
-    engine.video.render(0);
-  }
-
-  cancelPendingBaitShopDoorUse(engine?: RoccoEngine | null): void {
-    engine?.video.sprites.cancelMovement(DEFAULT_SPRITE_INSTANCE_ID);
-    this.pendingBaitShopDoorUse = null;
-  }
-
-  updateBlockingSequence(engine: RoccoEngine, deltaMs: number): void {
-    if (this.stanPoliceDefeat) {
-      this.updateStanPoliceDefeat(engine, deltaMs);
-      return;
-    }
-
-    if (this.baitShopDoorEntry) {
-      this.updateBaitShopDoorEntry(engine, deltaMs);
-      return;
-    }
-
-    if (this.stanMoneyExchange) {
-      this.updateStanMoneyExchange(engine, deltaMs);
-    }
-  }
-
-  updatePendingBaitShopDoorUse(engine: RoccoEngine, activeLevelId: string | null): void {
-    if (!this.pendingBaitShopDoorUse) {
-      return;
-    }
-
-    if (activeLevelId !== this.pendingBaitShopDoorUse.levelId) {
-      this.pendingBaitShopDoorUse = null;
-      return;
-    }
-
-    if (!engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
-      this.pendingBaitShopDoorUse = null;
-      return;
-    }
-
-    if (engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
-      return;
-    }
-
-    this.finishBaitShopDoorHorizontalApproach(engine);
-  }
-
   private finishBaitShopDoorHorizontalApproach(
     engine: RoccoEngine,
     groundPoint = this.options.resolvePlayerGroundPoint(),
   ): void {
-    this.pendingBaitShopDoorUse = null;
+    this.pendingBaitShopDoorUse = undefined;
     if (!groundPoint || !this.options.doesPlayerOverlapBaitShopDoor()) {
       return;
     }
@@ -410,7 +222,7 @@ export class RoccoScriptedSequenceController {
     try {
       await this.options.onEnterBaitShopRequested();
     } finally {
-      this.baitShopDoorEntry = null;
+      this.baitShopDoorEntry = undefined;
       this.releaseBlockingInputLease();
     }
   }
@@ -458,7 +270,7 @@ export class RoccoScriptedSequenceController {
   }
 
   private finishStanMoneyExchange(engine: RoccoEngine): void {
-    this.stanMoneyExchange = null;
+    this.stanMoneyExchange = undefined;
     this.releaseBlockingInputLease();
     engine.video.render(0);
   }
@@ -506,7 +318,7 @@ export class RoccoScriptedSequenceController {
   }
 
   private finishStanPoliceDefeat(engine: RoccoEngine): void {
-    this.stanPoliceDefeat = null;
+    this.stanPoliceDefeat = undefined;
     this.clearStanPoliceDefeatPresentation(engine);
     this.releaseBlockingInputLease();
     this.options.onRestartRequested?.();
@@ -518,7 +330,7 @@ export class RoccoScriptedSequenceController {
 
   private releaseBlockingInputLease(): void {
     this.blockingInputLease?.dispose();
-    this.blockingInputLease = null;
+    this.blockingInputLease = undefined;
   }
 
   private addStanPoliceDefeatFadePrimitive(engine: RoccoEngine, alpha: number): void {
@@ -548,5 +360,199 @@ export class RoccoScriptedSequenceController {
     engine.video.titles.removeTitle(STAN_POLICE_DEFEAT_TITLE_ID);
     engine.video.primitives.removePrimitive(STAN_POLICE_DEFEAT_FADE_PRIMITIVE_ID);
     engine.video.render(0);
+  }
+
+  hasBlockingSequence(): boolean {
+    return Boolean(this.stanPoliceDefeat || this.baitShopDoorEntry || this.stanMoneyExchange);
+  }
+
+  hasPendingBaitShopDoorUse(): boolean {
+    return this.pendingBaitShopDoorUse !== undefined;
+  }
+
+  createSnapshot(): RoccoScriptedSequenceControllerSnapshot {
+    return {
+      stanPoliceDefeat: this.stanPoliceDefeat ? { ...this.stanPoliceDefeat } : undefined,
+      baitShopDoorEntry: this.baitShopDoorEntry ? { ...this.baitShopDoorEntry } : undefined,
+      stanMoneyExchange: this.stanMoneyExchange ? { ...this.stanMoneyExchange } : undefined,
+      pendingBaitShopDoorUse: this.pendingBaitShopDoorUse
+        ? { ...this.pendingBaitShopDoorUse }
+        : undefined,
+    };
+  }
+
+  restoreSnapshot(snapshot: RoccoScriptedSequenceControllerSnapshot): void {
+    this.stanPoliceDefeat = snapshot.stanPoliceDefeat
+      ? { ...snapshot.stanPoliceDefeat }
+      : undefined;
+    this.baitShopDoorEntry = snapshot.baitShopDoorEntry
+      ? { ...snapshot.baitShopDoorEntry }
+      : undefined;
+    this.stanMoneyExchange = snapshot.stanMoneyExchange
+      ? { ...snapshot.stanMoneyExchange }
+      : undefined;
+    this.pendingBaitShopDoorUse = snapshot.pendingBaitShopDoorUse
+      ? { ...snapshot.pendingBaitShopDoorUse }
+      : undefined;
+  }
+
+  resetRuntimeState(engine?: RoccoEngine | null): void {
+    if (engine && this.pendingBaitShopDoorUse) {
+      engine.video.sprites.cancelMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    }
+
+    this.stanPoliceDefeat = undefined;
+    this.baitShopDoorEntry = undefined;
+    this.stanMoneyExchange = undefined;
+    this.pendingBaitShopDoorUse = undefined;
+    this.releaseBlockingInputLease();
+    this.clearStanPoliceDefeatPresentation(engine);
+  }
+
+  startStanPoliceDefeat(engine: RoccoEngine): void {
+    this.stanPoliceDefeat = {
+      phase: 'speaking',
+      elapsedMs: 0,
+    };
+    this.acquireBlockingInputLease(engine);
+    engine.video.gridMenus.clearCarriedItem();
+    engine.video.gridMenus.closeMenu();
+    engine.video.actionMenus.closeMenu();
+    engine.video.sprites.playAnimation(
+      DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      DEFAULT_STAN_LOOK_RIGHT_ANIMATION_ID,
+      {
+        restart: true,
+      },
+    );
+    engine.video.messages.say(
+      DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      this.localization.text.inventory.keysOnStanArrestLine,
+      {
+        ttlMs: STAN_POLICE_DEFEAT_MESSAGE_TTL_MS,
+        style: {
+          fill: DEFAULT_STAN_DIALOGUE_TEXT_COLOR,
+        },
+      },
+    );
+    engine.video.render(0);
+  }
+
+  startStanMoneyExchange(engine: RoccoEngine): void {
+    this.stanMoneyExchange = {
+      phase: 'stan-speaking',
+      elapsedMs: 0,
+    };
+    this.acquireBlockingInputLease(engine);
+    engine.video.gridMenus.clearCarriedItem();
+    engine.video.gridMenus.closeMenu();
+    engine.video.actionMenus.closeMenu();
+    engine.video.sprites.playAnimation(
+      DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      DEFAULT_STAN_LOOK_RIGHT_ANIMATION_ID,
+      {
+        restart: true,
+      },
+    );
+    roccoCartridgeMessageRuntime.say(
+      engine,
+      DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      this.localization.text.inventory.moneyOnStanAcceptedLines,
+      {
+        ttlMs: STAN_MONEY_ACCEPTED_TTL_MS,
+        style: {
+          fill: DEFAULT_STAN_DIALOGUE_TEXT_COLOR,
+        },
+      },
+      {
+        count: 1,
+        historyKey: 'inventory-money-on-stan-accepted',
+        isAvoidImmediateRepeat: true,
+      },
+    );
+    engine.video.render(0);
+  }
+
+  startBaitShopDoorUse(engine: RoccoEngine, activeLevelId: string): void {
+    engine.video.gridMenus.clearCarriedItem();
+    engine.video.gridMenus.closeMenu();
+    engine.video.actionMenus.closeMenu();
+    engine.video.messages.clearMessages();
+    this.options.clearPendingExitIntent();
+
+    const currentGroundPoint = this.options.resolvePlayerGroundPoint();
+    if (!currentGroundPoint) {
+      return;
+    }
+
+    if (this.options.doesPlayerOverlapBaitShopDoor()) {
+      this.finishBaitShopDoorHorizontalApproach(engine, currentGroundPoint);
+      return;
+    }
+
+    const isStarted = engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      this.options.baitShopDoorEndGroundX,
+      currentGroundPoint.y,
+      {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
+    if (!isStarted) {
+      engine.video.render(0);
+      return;
+    }
+
+    this.pendingBaitShopDoorUse = {
+      levelId: activeLevelId,
+    };
+    engine.video.render(0);
+  }
+
+  cancelPendingBaitShopDoorUse(engine?: RoccoEngine | null): void {
+    engine?.video.sprites.cancelMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    this.pendingBaitShopDoorUse = undefined;
+  }
+
+  updateBlockingSequence(engine: RoccoEngine, deltaMs: number): void {
+    if (this.stanPoliceDefeat) {
+      this.updateStanPoliceDefeat(engine, deltaMs);
+      return;
+    }
+
+    if (this.baitShopDoorEntry) {
+      this.updateBaitShopDoorEntry(engine, deltaMs);
+      return;
+    }
+
+    if (this.stanMoneyExchange) {
+      this.updateStanMoneyExchange(engine, deltaMs);
+    }
+  }
+
+  updatePendingBaitShopDoorUse(engine: RoccoEngine, activeLevelId: string | null): void {
+    if (!this.pendingBaitShopDoorUse) {
+      return;
+    }
+
+    if (activeLevelId !== this.pendingBaitShopDoorUse.levelId) {
+      this.pendingBaitShopDoorUse = undefined;
+      return;
+    }
+
+    if (!engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
+      this.pendingBaitShopDoorUse = undefined;
+      return;
+    }
+
+    if (engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+      return;
+    }
+
+    this.finishBaitShopDoorHorizontalApproach(engine);
   }
 }

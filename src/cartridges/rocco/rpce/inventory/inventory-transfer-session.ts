@@ -43,10 +43,6 @@ const DEFAULT_PADDING = 10;
 const DEFAULT_HEADER_HEIGHT = 32;
 
 export class RpceInventoryTransferSession {
-  readonly menuId: string;
-  readonly leftStorageId: string;
-  readonly rightStorageId: string;
-
   private readonly leftStorage: RpceInventoryStorage;
   private readonly rightStorage: RpceInventoryStorage;
   private readonly spacerColumns: number;
@@ -67,6 +63,9 @@ export class RpceInventoryTransferSession {
   private readonly hoverStroke?: string;
   private readonly renderLayer: string;
   private readonly zIndex: number;
+  readonly menuId: string;
+  readonly leftStorageId: string;
+  readonly rightStorageId: string;
 
   constructor(options: RpceInventoryTransferSessionOptions) {
     this.menuId = options.menuId;
@@ -94,84 +93,36 @@ export class RpceInventoryTransferSession {
     this.zIndex = options.zIndex ?? 120;
   }
 
-  matchesDefinition(definitionId: string): boolean {
-    return definitionId === this.menuId;
-  }
-
-  isActivationValid(activation: RoccoGridMenuActivation): boolean {
-    if (!this.matchesDefinition(activation.definitionId)) {
-      return false;
+  private appendCommittedItem(
+    mappedSlot: RpceInventoryTransferMappedSlot,
+    committedItem: RpceInventoryItem,
+    leftSlotIndexes: Set<number>,
+    rightSlotIndexes: Set<number>,
+    leftItems: RpceInventoryItem[],
+    rightItems: RpceInventoryItem[],
+  ): boolean {
+    if (mappedSlot.storage.id === this.leftStorage.id) {
+      return this.tryCommitToStorage(
+        committedItem,
+        mappedSlot.localSlotIndex,
+        leftSlotIndexes,
+        leftItems,
+      );
     }
 
-    if (activation.interaction === 'place' || activation.interaction === 'swap') {
-      return this.isPlacementAllowed(activation.itemId, activation.toSlotIndex);
-    }
-
-    if (activation.interaction === 'carry') {
-      return this.canCommitMenuItems(activation.items);
-    }
-
-    return true;
-  }
-
-  commitMenuItems(items: readonly RoccoGridMenuItem[]): boolean {
-    const committed = this.buildCommittedStorageItems(items);
-    if (!committed) {
-      return false;
-    }
-
-    try {
-      this.leftStorage.replaceItems(committed.leftItems);
-      this.rightStorage.replaceItems(committed.rightItems);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  createGridMenuDefinition(): RoccoGridMenuDefinition {
-    const headerHeight = this.leftTitle || this.rightTitle ? DEFAULT_HEADER_HEIGHT : 0;
-
-    return {
-      id: this.menuId,
-      showTitle: false,
-      columns: this.resolveTotalColumns(),
-      rows: this.resolveTotalRows(),
-      slotSize: this.slotSize,
-      gap: this.gap,
-      padding: this.padding,
-      closeOnEmptyClick: true,
-      headerHeight,
-      columnOffsets: this.createColumnOffsets(),
-      textDecorations: this.createTextDecorations(headerHeight),
-      lineDecorations: this.createLineDecorations(headerHeight),
-      renderLayer: this.renderLayer,
-      zIndex: this.zIndex,
-      reorderable: true,
-      blockedSlotIndexes: this.createBlockedSlotIndexes(),
-      backdropFill: this.backdropFill,
-      backdropAlpha: this.backdropAlpha,
-      panelFill: this.panelFill,
-      panelFillAlpha: this.panelFillAlpha,
-      panelStroke: this.panelStroke,
-      panelStrokeAlpha: this.panelStrokeAlpha,
-      slotFill: this.slotFill,
-      slotStroke: this.slotStroke,
-      hoverStroke: this.hoverStroke,
-      items: [
-        ...this.projectStorageItems(this.leftStorage, 'left'),
-        ...this.projectStorageItems(this.rightStorage, 'right'),
-      ],
-    };
+    return this.tryCommitToStorage(
+      committedItem,
+      mappedSlot.localSlotIndex,
+      rightSlotIndexes,
+      rightItems,
+    );
   }
 
   private canCommitMenuItems(items: readonly RoccoGridMenuItem[]): boolean {
     return Boolean(this.buildCommittedStorageItems(items));
   }
 
-  private buildCommittedStorageItems(
-    items: readonly RoccoGridMenuItem[],
-  ): { leftItems: RpceInventoryItem[]; rightItems: RpceInventoryItem[] } | undefined {
+  private resolveCurrentItemsById(): Map<string, RpceInventoryItem> {
     const currentItemsById = new Map<string, RpceInventoryItem>();
     for (const item of this.leftStorage.listItems()) {
       currentItemsById.set(item.id, item);
@@ -179,6 +130,33 @@ export class RpceInventoryTransferSession {
     for (const item of this.rightStorage.listItems()) {
       currentItemsById.set(item.id, item);
     }
+    return currentItemsById;
+  }
+
+  private resolveCommittedItem(
+    item: RoccoGridMenuItem,
+    currentItemsById: ReadonlyMap<string, RpceInventoryItem>,
+  ): { committedItem: RpceInventoryItem; mappedSlot: RpceInventoryTransferMappedSlot } | undefined {
+    const currentItem = currentItemsById.get(item.id);
+    const mappedSlot =
+      item.slotIndex === undefined ? undefined : this.resolveMappedSlot(item.slotIndex);
+    if (!currentItem || !mappedSlot || !mappedSlot.storage.canStoreItem(currentItem)) {
+      return undefined;
+    }
+
+    return {
+      committedItem: {
+        ...currentItem,
+        slotIndex: mappedSlot.localSlotIndex,
+      },
+      mappedSlot,
+    };
+  }
+
+  private buildCommittedStorageItems(
+    items: readonly RoccoGridMenuItem[],
+  ): { leftItems: RpceInventoryItem[]; rightItems: RpceInventoryItem[] } | undefined {
+    const currentItemsById = this.resolveCurrentItemsById();
 
     if (items.length !== currentItemsById.size) {
       return undefined;
@@ -191,10 +169,8 @@ export class RpceInventoryTransferSession {
     const rightItems: RpceInventoryItem[] = [];
 
     for (const item of items) {
-      const currentItem = currentItemsById.get(item.id);
-      const mappedSlot =
-        item.slotIndex === undefined ? undefined : this.resolveMappedSlot(item.slotIndex);
-      if (!currentItem || !mappedSlot || !mappedSlot.storage.canStoreItem(currentItem)) {
+      const resolvedItem = this.resolveCommittedItem(item, currentItemsById);
+      if (!resolvedItem) {
         return undefined;
       }
 
@@ -203,27 +179,18 @@ export class RpceInventoryTransferSession {
       }
 
       seenIds.add(item.id);
-      const committedItem: RpceInventoryItem = {
-        ...currentItem,
-        slotIndex: mappedSlot.localSlotIndex,
-      };
-
-      if (mappedSlot.storage.id === this.leftStorage.id) {
-        if (leftSlotIndexes.has(mappedSlot.localSlotIndex)) {
-          return undefined;
-        }
-
-        leftSlotIndexes.add(mappedSlot.localSlotIndex);
-        leftItems.push(committedItem);
-        continue;
-      }
-
-      if (rightSlotIndexes.has(mappedSlot.localSlotIndex)) {
+      if (
+        !this.appendCommittedItem(
+          resolvedItem.mappedSlot,
+          resolvedItem.committedItem,
+          leftSlotIndexes,
+          rightSlotIndexes,
+          leftItems,
+          rightItems,
+        )
+      ) {
         return undefined;
       }
-
-      rightSlotIndexes.add(mappedSlot.localSlotIndex);
-      rightItems.push(committedItem);
     }
 
     return {
@@ -315,11 +282,9 @@ export class RpceInventoryTransferSession {
           row < this.rightStorage.rows &&
           column >= rightStartColumn &&
           column < rightStartColumn + this.rightStorage.columns;
-        if (isInLeftStorage || isInRightStorage) {
-          continue;
+        if (!isInLeftStorage && !isInRightStorage) {
+          blockedSlotIndexes.push(row * totalColumns + column);
         }
-
-        blockedSlotIndexes.push(row * totalColumns + column);
       }
     }
 
@@ -393,10 +358,10 @@ export class RpceInventoryTransferSession {
   }
 
   private resolveStorageCenterX(side: 'left' | 'right'): number {
+    const storage = side === 'left' ? this.leftStorage : this.rightStorage;
     const startColumn = side === 'left' ? 0 : this.leftStorage.columns + this.spacerColumns;
-    const width = side === 'left' ? this.leftStorage.columns : this.rightStorage.columns;
     const firstLeft = this.resolveColumnLeft(startColumn);
-    const lastRight = this.resolveColumnLeft(startColumn + width - 1) + this.slotSize;
+    const lastRight = this.resolveColumnLeft(startColumn + storage.columns - 1) + this.slotSize;
     return (firstLeft + lastRight) / 2;
   }
 
@@ -422,5 +387,91 @@ export class RpceInventoryTransferSession {
 
   private resolveTotalSlotCount(): number {
     return this.resolveTotalColumns() * this.resolveTotalRows();
+  }
+
+  private tryCommitToStorage(
+    committedItem: RpceInventoryItem,
+    localSlotIndex: number,
+    occupiedSlotIndexes: Set<number>,
+    items: RpceInventoryItem[],
+  ): boolean {
+    if (occupiedSlotIndexes.has(localSlotIndex)) {
+      return false;
+    }
+
+    occupiedSlotIndexes.add(localSlotIndex);
+    items.push(committedItem);
+    return true;
+  }
+
+  matchesDefinition(definitionId: string): boolean {
+    return definitionId === this.menuId;
+  }
+
+  isActivationValid(activation: RoccoGridMenuActivation): boolean {
+    if (!this.matchesDefinition(activation.definitionId)) {
+      return false;
+    }
+
+    if (activation.interaction === 'place' || activation.interaction === 'swap') {
+      return this.isPlacementAllowed(activation.itemId, activation.toSlotIndex);
+    }
+
+    if (activation.interaction === 'carry') {
+      return this.canCommitMenuItems(activation.items);
+    }
+
+    return true;
+  }
+
+  commitMenuItems(items: readonly RoccoGridMenuItem[]): boolean {
+    const committed = this.buildCommittedStorageItems(items);
+    if (!committed) {
+      return false;
+    }
+
+    try {
+      this.leftStorage.replaceItems(committed.leftItems);
+      this.rightStorage.replaceItems(committed.rightItems);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  createGridMenuDefinition(): RoccoGridMenuDefinition {
+    const headerHeight = this.leftTitle || this.rightTitle ? DEFAULT_HEADER_HEIGHT : 0;
+
+    return {
+      id: this.menuId,
+      showTitle: false,
+      columns: this.resolveTotalColumns(),
+      rows: this.resolveTotalRows(),
+      slotSize: this.slotSize,
+      gap: this.gap,
+      padding: this.padding,
+      closeOnEmptyClick: true,
+      headerHeight,
+      columnOffsets: this.createColumnOffsets(),
+      textDecorations: this.createTextDecorations(headerHeight),
+      lineDecorations: this.createLineDecorations(headerHeight),
+      renderLayer: this.renderLayer,
+      zIndex: this.zIndex,
+      reorderable: true,
+      blockedSlotIndexes: this.createBlockedSlotIndexes(),
+      backdropFill: this.backdropFill,
+      backdropAlpha: this.backdropAlpha,
+      panelFill: this.panelFill,
+      panelFillAlpha: this.panelFillAlpha,
+      panelStroke: this.panelStroke,
+      panelStrokeAlpha: this.panelStrokeAlpha,
+      slotFill: this.slotFill,
+      slotStroke: this.slotStroke,
+      hoverStroke: this.hoverStroke,
+      items: [
+        ...this.projectStorageItems(this.leftStorage, 'left'),
+        ...this.projectStorageItems(this.rightStorage, 'right'),
+      ],
+    };
   }
 }

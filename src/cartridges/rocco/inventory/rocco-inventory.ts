@@ -218,7 +218,7 @@ function applyFusionRecipeToItemIds(
 function buildFusionPlan(
   targetItemId: string,
   availableItemIds: ReadonlySet<string>,
-): { availableItemIds: Set<string>; steps: RoccoInventoryFusionStep[] } | null {
+): { availableItemIds: Set<string>; steps: RoccoInventoryFusionStep[] } | undefined {
   if (availableItemIds.has(targetItemId)) {
     return {
       availableItemIds: new Set(availableItemIds),
@@ -228,7 +228,7 @@ function buildFusionPlan(
 
   const recipe = ROCCO_INVENTORY_FUSION_RECIPES_BY_RESULT.get(targetItemId);
   if (!recipe) {
-    return null;
+    return undefined;
   }
 
   let nextAvailableItemIds = new Set(availableItemIds);
@@ -236,7 +236,7 @@ function buildFusionPlan(
   for (const ingredientId of recipe.ingredientIds) {
     const ingredientPlan = buildFusionPlan(ingredientId, nextAvailableItemIds);
     if (!ingredientPlan) {
-      return null;
+      return undefined;
     }
 
     nextAvailableItemIds = ingredientPlan.availableItemIds;
@@ -247,7 +247,7 @@ function buildFusionPlan(
     !nextAvailableItemIds.has(recipe.ingredientIds[0]) ||
     !nextAvailableItemIds.has(recipe.ingredientIds[1])
   ) {
-    return null;
+    return undefined;
   }
 
   return {
@@ -417,11 +417,11 @@ export function createRoccoTwentyEurosInventoryItem(
 
 export function createRoccoMagazineInventoryItem(
   localization: RoccoLocalization,
-  known: boolean,
+  isKnown: boolean,
 ): RoccoInventoryItem {
   return {
     id: ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
-    label: known
+    label: isKnown
       ? localization.text.inventory.micromaniaLabel
       : localization.text.inventory.magazineLabel,
     imageUri: roccoDefaultMicromaniaInventoryAssetUrl,

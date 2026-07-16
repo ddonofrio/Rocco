@@ -1,6 +1,5 @@
-﻿import type {
+import type {
   CartridgeActionDisposition,
-  RoccoCartridgeActionResult,
   RoccoSceneClickAction,
 } from '../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../console/engine-sdk';
@@ -10,16 +9,16 @@ import {
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
   type RoccoInventoryItem,
 } from '../../inventory';
-import { isRoccoToiletLevelCapability } from './rocco-level-capabilities';
 import type { RoccoLocalization } from '../../localization';
+import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import {
   DEFAULT_SPRITE_IDLE_ACTION_ID,
   DEFAULT_SPRITE_INSTANCE_ID,
   DEFAULT_SPRITE_RUN_ACTION_ID,
   DEFAULT_SPRITE_SCALE,
 } from '../../rocco-default-constants';
-import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import type { RoccoLevel } from '../rocco-level-types';
+import { isRoccoToiletLevelCapability } from './rocco-level-capabilities';
 
 interface RoccoDroppedInventoryItemState {
   item: RoccoInventoryItem;
@@ -35,7 +34,7 @@ export interface RoccoDroppedInventoryControllerSnapshot {
   droppedInventoryItemsByLevel: ReadonlyArray<
     readonly [string, readonly RoccoDroppedInventoryItemState[]]
   >;
-  pendingDroppedInventoryPickup: RoccoPendingDroppedInventoryPickup | null;
+  pendingDroppedInventoryPickup: RoccoPendingDroppedInventoryPickup | undefined;
   coralRelicRefuseIndex: number;
 }
 
@@ -54,6 +53,7 @@ const DROPPED_CORAL_RELIC_ACTION_MENU_ID = 'rocco-dropped-coral-relic-action-men
 const DROPPED_CORAL_RELIC_LOOK_ACTION_ID = 'look';
 const DROPPED_CORAL_RELIC_STEP_ACTION_ID = 'step';
 const DROPPED_INVENTORY_TARGET_PRIORITY = 32;
+const DROPPED_INVENTORY_PICKUP_INPUT_OWNER_ID = 'dropped-inventory-pickup';
 
 export class RoccoDroppedInventoryController {
   private readonly localization: RoccoLocalization;
@@ -63,293 +63,34 @@ export class RoccoDroppedInventoryController {
     RoccoDroppedInventoryItemState[]
   >();
   private readonly activeDroppedInventoryRuntimeIds = new Set<string>();
-  private pendingDroppedInventoryPickup: RoccoPendingDroppedInventoryPickup | null = null;
+  private pendingDroppedInventoryPickup: RoccoPendingDroppedInventoryPickup | undefined = undefined;
   private coralRelicRefuseIndex = 0;
+  private pickupInputLease: ReturnType<RoccoEngine['acquireInputLease']> | undefined = undefined;
 
   constructor(options: RoccoDroppedInventoryControllerOptions) {
     this.options = options;
     this.localization = options.localization;
   }
 
-  hasPendingPickup(): boolean {
-    return this.pendingDroppedInventoryPickup !== null;
-  }
-
-  resetRuntimeState(): void {
-    this.pendingDroppedInventoryPickup = null;
-  }
-
-  createSnapshot(): RoccoDroppedInventoryControllerSnapshot {
+  private createSuppressDefaultMovementDisposition(
+    isConsumed: boolean,
+  ): CartridgeActionDisposition {
     return {
-      droppedInventoryItemsByLevel: [...this.droppedInventoryItemsByLevel].map(
-        ([levelId, items]) => [
-          levelId,
-          items.map((item) => ({
-            item: structuredClone(item.item),
-            groundPoint: { ...item.groundPoint },
-          })),
-        ] as const,
-      ),
-      pendingDroppedInventoryPickup: this.pendingDroppedInventoryPickup
-        ? { ...this.pendingDroppedInventoryPickup }
-        : null,
-      coralRelicRefuseIndex: this.coralRelicRefuseIndex,
+      consumed: isConsumed,
+      defaultPlayerMovement: 'suppress',
     };
   }
 
-  restoreSnapshot(snapshot: RoccoDroppedInventoryControllerSnapshot): void {
-    this.droppedInventoryItemsByLevel.clear();
-    for (const [levelId, items] of snapshot.droppedInventoryItemsByLevel) {
-      this.droppedInventoryItemsByLevel.set(
-        levelId,
-        items.map((item) => ({
-          item: structuredClone(item.item),
-          groundPoint: { ...item.groundPoint },
-        })),
-      );
-    }
-
-    this.pendingDroppedInventoryPickup = snapshot.pendingDroppedInventoryPickup
-      ? { ...snapshot.pendingDroppedInventoryPickup }
-      : null;
-    this.coralRelicRefuseIndex = Math.max(0, Math.floor(snapshot.coralRelicRefuseIndex));
-  }
-
-  clearLevelItemsWhere(predicate: (levelId: string) => boolean): void {
-    for (const levelId of this.droppedInventoryItemsByLevel.keys()) {
-      if (predicate(levelId)) {
-        this.droppedInventoryItemsByLevel.delete(levelId);
-      }
-    }
-
-    if (this.pendingDroppedInventoryPickup && predicate(this.pendingDroppedInventoryPickup.levelId)) {
-      this.pendingDroppedInventoryPickup = null;
-    }
-  }
-
-  hasAccessibleItem(
-    levelId: string,
-    inventoryItems: readonly RoccoInventoryItem[],
-    itemId: string,
-  ): boolean {
-    if (inventoryItems.some((item) => item.id === itemId)) {
-      return true;
-    }
-
-    return (this.droppedInventoryItemsByLevel.get(levelId) ?? []).some(
-      (droppedItem) => droppedItem.item.id === itemId,
+  private acquirePickupInputLease(engine: RoccoEngine): void {
+    this.pickupInputLease ??= engine.acquireInputLease(
+      DROPPED_INVENTORY_PICKUP_INPUT_OWNER_ID,
+      'blocked',
     );
   }
 
-  listAccessibleItemIds(levelId: string, inventoryItems: readonly RoccoInventoryItem[]): string[] {
-    const itemIds = new Set(inventoryItems.map((item) => item.id));
-    for (const droppedItem of this.droppedInventoryItemsByLevel.get(levelId) ?? []) {
-      itemIds.add(droppedItem.item.id);
-    }
-
-    return [...itemIds];
-  }
-
-  dropItem(levelId: string, item: RoccoInventoryItem, groundPoint: RoccoPoint): void {
-    const nextItems = (this.droppedInventoryItemsByLevel.get(levelId) ?? []).filter(
-      (entry) => entry.item.id !== item.id,
-    );
-    nextItems.push({
-      item: structuredClone(item),
-      groundPoint: { ...groundPoint },
-    });
-    this.droppedInventoryItemsByLevel.set(levelId, nextItems);
-  }
-
-  canHandleSceneClick(
-    engine: RoccoEngine,
-    activeLevel: RoccoLevel,
-    activation: RoccoSceneClickAction,
-  ): boolean {
-    if (!activation.targetInstanceId) {
-      return false;
-    }
-
-    if (engine.video.gridMenus.getCarriedItem()) {
-      return false;
-    }
-
-    const droppedItem = this.findDroppedInventoryItemByTargetInstanceId(
-      activeLevel.id,
-      activation.targetInstanceId,
-    );
-    return Boolean(droppedItem?.item.groundSprite?.pickable);
-  }
-
-  handleSceneClick(
-    engine: RoccoEngine,
-    activeLevel: RoccoLevel,
-    activation: RoccoSceneClickAction,
-  ): CartridgeActionDisposition | RoccoCartridgeActionResult | false {
-    if (!activation.targetInstanceId) {
-      return false;
-    }
-
-    if (engine.video.gridMenus.getCarriedItem()) {
-      return false;
-    }
-
-    const droppedItem = this.findDroppedInventoryItemByTargetInstanceId(
-      activeLevel.id,
-      activation.targetInstanceId,
-    );
-    if (!droppedItem?.item.groundSprite?.pickable) {
-      return false;
-    }
-
-    if (this.shouldOpenDroppedCoralRelicMenu(activeLevel, droppedItem.item.id)) {
-      return {
-        consumed: false,
-        defaultPlayerMovement: 'suppress',
-      };
-    }
-
-    this.startDroppedInventoryPickup(engine, activeLevel, droppedItem);
-    return { suppressDefaultPlayerMove: true };
-  }
-
-  canHandleActionMenu(
-    _engine: RoccoEngine,
-    activeLevel: RoccoLevel,
-    activation: RoccoActionMenuActivation,
-  ): boolean {
-    if (activation.definitionId !== DROPPED_CORAL_RELIC_ACTION_MENU_ID) {
-      return false;
-    }
-
-    if (!isRoccoToiletLevelCapability(activeLevel) || !activeLevel.isEscapeUrgencyActive()) {
-      return false;
-    }
-
-    const droppedItem = this.findDroppedInventoryItemByTargetInstanceId(
-      activeLevel.id,
-      activation.targetInstanceId,
-    );
-    return droppedItem?.item.id === ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID;
-  }
-
-  handleActionMenu(
-    engine: RoccoEngine,
-    activeLevel: RoccoLevel,
-    activation: RoccoActionMenuActivation,
-  ): boolean {
-    if (
-      activation.definitionId !== DROPPED_CORAL_RELIC_ACTION_MENU_ID ||
-      !isRoccoToiletLevelCapability(activeLevel) ||
-      !activeLevel.isEscapeUrgencyActive()
-    ) {
-      return false;
-    }
-
-    const droppedItem = this.findDroppedInventoryItemByTargetInstanceId(
-      activeLevel.id,
-      activation.targetInstanceId,
-    );
-    if (!droppedItem || droppedItem.item.id !== ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID) {
-      return false;
-    }
-
-    if (activation.actionId === DROPPED_CORAL_RELIC_LOOK_ACTION_ID) {
-      engine.video.messages.think(
-        activation.targetInstanceId,
-        this.localization.text.baitShop.coralRelicLookLine,
-        {
-          ttlMs: 3200,
-        },
-      );
-      engine.video.render(0);
-      return true;
-    }
-
-    if (activation.actionId === 'grab') {
-      this.showCoralRelicRefusal(engine, activation.targetInstanceId);
-      return true;
-    }
-
-    if (activation.actionId === DROPPED_CORAL_RELIC_STEP_ACTION_ID) {
-      const activeLevelId = activeLevel.id;
-      activeLevel.openCoralRelicWishMenu(droppedItem.groundPoint, () => {
-        this.removeDroppedInventoryItem(activeLevelId, ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID);
-        this.syncActiveLevelPresentation(engine, activeLevel);
-      });
-      return true;
-    }
-
-    return false;
-  }
-
-  private showCoralRelicRefusal(engine: RoccoEngine, targetInstanceId: string): void {
-    const refusalLines = this.localization.text.baitShop.coralRelicRefuseLines;
-    if (refusalLines.length === 0) {
-      return;
-    }
-
-    const line = refusalLines[this.coralRelicRefuseIndex % refusalLines.length];
-    this.coralRelicRefuseIndex += 1;
-    engine.video.messages.think(targetInstanceId, line, {
-      ttlMs: 3200,
-    });
-    engine.video.render(0);
-  }
-
-  updatePendingPickup(engine: RoccoEngine, activeLevel: RoccoLevel | null): void {
-    if (!activeLevel || !this.pendingDroppedInventoryPickup) {
-      return;
-    }
-
-    if (!engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
-      this.pendingDroppedInventoryPickup = null;
-      engine.setInputEnabled(true);
-      return;
-    }
-
-    if (engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
-      return;
-    }
-
-    this.finishDroppedInventoryPickup(
-      engine,
-      activeLevel,
-      this.pendingDroppedInventoryPickup.levelId,
-      this.pendingDroppedInventoryPickup.itemId,
-    );
-  }
-
-  syncActiveLevelPresentation(engine: RoccoEngine, activeLevel: RoccoLevel): void {
-    this.clearActiveLevelPresentation(engine);
-    const droppedItems = this.droppedInventoryItemsByLevel.get(activeLevel.id) ?? [];
-    for (const droppedItem of droppedItems) {
-      this.installDroppedInventoryPresentation(
-        engine,
-        activeLevel.id,
-        droppedItem,
-        this.resolvePlayerBaseScale(),
-      );
-    }
-    this.syncDroppedCoralRelicActionMenu(engine, activeLevel);
-  }
-
-  clearActiveLevelPresentation(engine?: RoccoEngine | null): void {
-    if (!engine) {
-      this.activeDroppedInventoryRuntimeIds.clear();
-      return;
-    }
-
-    engine.video.actionMenus.unregisterMenu(DROPPED_CORAL_RELIC_ACTION_MENU_ID);
-    for (const runtimeId of this.activeDroppedInventoryRuntimeIds) {
-      engine.video.sprites.removeSprite(
-        `${DROPPED_INVENTORY_ITEM_SPRITE_INSTANCE_PREFIX}:${runtimeId}`,
-      );
-      engine.video.sceneTargets?.unregisterTarget(
-        `${DROPPED_INVENTORY_ITEM_TARGET_PREFIX}:${runtimeId}`,
-      );
-    }
-    this.activeDroppedInventoryRuntimeIds.clear();
+  private releasePickupInputLease(): void {
+    this.pickupInputLease?.dispose();
+    this.pickupInputLease = undefined;
   }
 
   private resolvePlayerBaseScale(): number {
@@ -382,7 +123,7 @@ export class RoccoDroppedInventoryController {
 
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
-    engine.setInputEnabled(false);
+    this.acquirePickupInputLease(engine);
     const isStarted = engine.video.sprites.goTo(
       DEFAULT_SPRITE_INSTANCE_ID,
       droppedItem.groundPoint.x,
@@ -396,7 +137,7 @@ export class RoccoDroppedInventoryController {
       },
     );
     if (!isStarted) {
-      engine.setInputEnabled(true);
+      this.releasePickupInputLease();
       return;
     }
 
@@ -413,28 +154,27 @@ export class RoccoDroppedInventoryController {
     levelId: string,
     itemId: string,
   ): void {
-    const droppedItem = (this.droppedInventoryItemsByLevel.get(levelId) ?? []).find(
-      (item) => item.item.id === itemId,
-    );
+    const droppedItems = this.droppedInventoryItemsByLevel.get(levelId) ?? [];
+    const droppedItem = droppedItems.find((item) => item.item.id === itemId);
     if (!droppedItem) {
-      this.pendingDroppedInventoryPickup = null;
-      engine.setInputEnabled(true);
+      this.pendingDroppedInventoryPickup = undefined;
+      this.releasePickupInputLease();
       return;
     }
 
     if (!this.options.tryAddItemToInventory(droppedItem.item)) {
-      this.pendingDroppedInventoryPickup = null;
-      engine.setInputEnabled(true);
+      this.pendingDroppedInventoryPickup = undefined;
+      this.releasePickupInputLease();
       engine.video.render(0);
       return;
     }
 
     this.removeDroppedInventoryItem(levelId, itemId);
-    this.pendingDroppedInventoryPickup = null;
+    this.pendingDroppedInventoryPickup = undefined;
     if (activeLevel.id === levelId) {
       this.syncActiveLevelPresentation(engine, activeLevel);
     }
-    engine.setInputEnabled(true);
+    this.releasePickupInputLease();
     engine.video.messages.think(
       DEFAULT_SPRITE_INSTANCE_ID,
       this.localization.text.inventory.pickupLine,
@@ -592,6 +332,20 @@ export class RoccoDroppedInventoryController {
     );
   }
 
+  private showCoralRelicRefusal(engine: RoccoEngine, targetInstanceId: string): void {
+    const refusalLines = this.localization.text.baitShop.coralRelicRefuseLines;
+    if (refusalLines.length === 0) {
+      return;
+    }
+
+    const line = refusalLines[this.coralRelicRefuseIndex % refusalLines.length];
+    this.coralRelicRefuseIndex += 1;
+    engine.video.messages.think(targetInstanceId, line, {
+      ttlMs: 3200,
+    });
+    engine.video.render(0);
+  }
+
   private syncDroppedCoralRelicActionMenu(
     engine: RoccoEngine,
     activeLevel: RoccoLevel,
@@ -646,5 +400,276 @@ export class RoccoDroppedInventoryController {
         },
       ],
     });
+  }
+
+  hasPendingPickup(): boolean {
+    return this.pendingDroppedInventoryPickup !== undefined;
+  }
+
+  resetRuntimeState(): void {
+    this.pendingDroppedInventoryPickup = undefined;
+    this.releasePickupInputLease();
+  }
+
+  createSnapshot(): RoccoDroppedInventoryControllerSnapshot {
+    return {
+      droppedInventoryItemsByLevel: [...this.droppedInventoryItemsByLevel].map(
+        ([levelId, items]) => [
+          levelId,
+          items.map((item) => ({
+            item: structuredClone(item.item),
+            groundPoint: { ...item.groundPoint },
+          })),
+        ] as const,
+      ),
+      pendingDroppedInventoryPickup: this.pendingDroppedInventoryPickup
+        ? { ...this.pendingDroppedInventoryPickup }
+        : undefined,
+      coralRelicRefuseIndex: this.coralRelicRefuseIndex,
+    };
+  }
+
+  restoreSnapshot(snapshot: RoccoDroppedInventoryControllerSnapshot): void {
+    this.droppedInventoryItemsByLevel.clear();
+    for (const [levelId, items] of snapshot.droppedInventoryItemsByLevel) {
+      this.droppedInventoryItemsByLevel.set(
+        levelId,
+        items.map((item) => ({
+          item: structuredClone(item.item),
+          groundPoint: { ...item.groundPoint },
+        })),
+      );
+    }
+
+    this.pendingDroppedInventoryPickup = snapshot.pendingDroppedInventoryPickup
+      ? { ...snapshot.pendingDroppedInventoryPickup }
+      : undefined;
+    this.coralRelicRefuseIndex = Math.max(0, Math.floor(snapshot.coralRelicRefuseIndex));
+    this.releasePickupInputLease();
+  }
+
+  clearLevelItemsWhere(shouldClearLevel: (levelId: string) => boolean): void {
+    for (const levelId of this.droppedInventoryItemsByLevel.keys()) {
+      if (shouldClearLevel(levelId)) {
+        this.droppedInventoryItemsByLevel.delete(levelId);
+      }
+    }
+
+    if (
+      this.pendingDroppedInventoryPickup &&
+      shouldClearLevel(this.pendingDroppedInventoryPickup.levelId)
+    ) {
+      this.pendingDroppedInventoryPickup = undefined;
+      this.releasePickupInputLease();
+    }
+  }
+
+  hasAccessibleItem(
+    levelId: string,
+    inventoryItems: readonly RoccoInventoryItem[],
+    itemId: string,
+  ): boolean {
+    if (inventoryItems.some((item) => item.id === itemId)) {
+      return true;
+    }
+
+    return (this.droppedInventoryItemsByLevel.get(levelId) ?? []).some(
+      (droppedItem) => droppedItem.item.id === itemId,
+    );
+  }
+
+  listAccessibleItemIds(levelId: string, inventoryItems: readonly RoccoInventoryItem[]): string[] {
+    const itemIds = new Set(inventoryItems.map((item) => item.id));
+    const droppedItems = this.droppedInventoryItemsByLevel.get(levelId) ?? [];
+    for (const droppedItem of droppedItems) {
+      itemIds.add(droppedItem.item.id);
+    }
+
+    return [...itemIds];
+  }
+
+  dropItem(levelId: string, item: RoccoInventoryItem, groundPoint: RoccoPoint): void {
+    const nextItems = (this.droppedInventoryItemsByLevel.get(levelId) ?? []).filter(
+      (entry) => entry.item.id !== item.id,
+    );
+    nextItems.push({
+      item: structuredClone(item),
+      groundPoint: { ...groundPoint },
+    });
+    this.droppedInventoryItemsByLevel.set(levelId, nextItems);
+  }
+
+  canHandleSceneClick(
+    engine: RoccoEngine,
+    activeLevel: RoccoLevel,
+    activation: RoccoSceneClickAction,
+  ): boolean {
+    if (!activation.targetInstanceId) {
+      return false;
+    }
+
+    if (engine.video.gridMenus.getCarriedItem()) {
+      return false;
+    }
+
+    const droppedItem = this.findDroppedInventoryItemByTargetInstanceId(
+      activeLevel.id,
+      activation.targetInstanceId,
+    );
+    return Boolean(droppedItem?.item.groundSprite?.pickable);
+  }
+
+  handleSceneClick(
+    engine: RoccoEngine,
+    activeLevel: RoccoLevel,
+    activation: RoccoSceneClickAction,
+  ): CartridgeActionDisposition | undefined {
+    if (!activation.targetInstanceId) {
+      return undefined;
+    }
+
+    if (engine.video.gridMenus.getCarriedItem()) {
+      return undefined;
+    }
+
+    const droppedItem = this.findDroppedInventoryItemByTargetInstanceId(
+      activeLevel.id,
+      activation.targetInstanceId,
+    );
+    if (!droppedItem?.item.groundSprite?.pickable) {
+      return undefined;
+    }
+
+    if (this.shouldOpenDroppedCoralRelicMenu(activeLevel, droppedItem.item.id)) {
+      return this.createSuppressDefaultMovementDisposition(false);
+    }
+
+    this.startDroppedInventoryPickup(engine, activeLevel, droppedItem);
+    return this.createSuppressDefaultMovementDisposition(true);
+  }
+
+  canHandleActionMenu(
+    _engine: RoccoEngine,
+    activeLevel: RoccoLevel,
+    activation: RoccoActionMenuActivation,
+  ): boolean {
+    if (activation.definitionId !== DROPPED_CORAL_RELIC_ACTION_MENU_ID) {
+      return false;
+    }
+
+    if (!isRoccoToiletLevelCapability(activeLevel) || !activeLevel.isEscapeUrgencyActive()) {
+      return false;
+    }
+
+    const droppedItem = this.findDroppedInventoryItemByTargetInstanceId(
+      activeLevel.id,
+      activation.targetInstanceId,
+    );
+    return droppedItem?.item.id === ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID;
+  }
+
+  handleActionMenu(
+    engine: RoccoEngine,
+    activeLevel: RoccoLevel,
+    activation: RoccoActionMenuActivation,
+  ): boolean {
+    if (
+      activation.definitionId !== DROPPED_CORAL_RELIC_ACTION_MENU_ID ||
+      !isRoccoToiletLevelCapability(activeLevel) ||
+      !activeLevel.isEscapeUrgencyActive()
+    ) {
+      return false;
+    }
+
+    const droppedItem = this.findDroppedInventoryItemByTargetInstanceId(
+      activeLevel.id,
+      activation.targetInstanceId,
+    );
+    if (!droppedItem || droppedItem.item.id !== ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID) {
+      return false;
+    }
+
+    if (activation.actionId === DROPPED_CORAL_RELIC_LOOK_ACTION_ID) {
+      engine.video.messages.think(
+        activation.targetInstanceId,
+        this.localization.text.baitShop.coralRelicLookLine,
+        {
+          ttlMs: 3200,
+        },
+      );
+      engine.video.render(0);
+      return true;
+    }
+
+    if (activation.actionId === 'grab') {
+      this.showCoralRelicRefusal(engine, activation.targetInstanceId);
+      return true;
+    }
+
+    if (activation.actionId === DROPPED_CORAL_RELIC_STEP_ACTION_ID) {
+      const activeLevelId = activeLevel.id;
+      activeLevel.openCoralRelicWishMenu(droppedItem.groundPoint, () => {
+        this.removeDroppedInventoryItem(activeLevelId, ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID);
+        this.syncActiveLevelPresentation(engine, activeLevel);
+      });
+      return true;
+    }
+
+    return false;
+  }
+
+  updatePendingPickup(engine: RoccoEngine, activeLevel: RoccoLevel | null): void {
+    if (!activeLevel || !this.pendingDroppedInventoryPickup) {
+      return;
+    }
+
+    if (!engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
+      this.pendingDroppedInventoryPickup = undefined;
+      this.releasePickupInputLease();
+      return;
+    }
+
+    if (engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+      return;
+    }
+
+    this.finishDroppedInventoryPickup(
+      engine,
+      activeLevel,
+      this.pendingDroppedInventoryPickup.levelId,
+      this.pendingDroppedInventoryPickup.itemId,
+    );
+  }
+
+  syncActiveLevelPresentation(engine: RoccoEngine, activeLevel: RoccoLevel): void {
+    this.clearActiveLevelPresentation(engine);
+    const droppedItems = this.droppedInventoryItemsByLevel.get(activeLevel.id) ?? [];
+    for (const droppedItem of droppedItems) {
+      this.installDroppedInventoryPresentation(
+        engine,
+        activeLevel.id,
+        droppedItem,
+        this.resolvePlayerBaseScale(),
+      );
+    }
+    this.syncDroppedCoralRelicActionMenu(engine, activeLevel);
+  }
+
+  clearActiveLevelPresentation(engine?: RoccoEngine): void {
+    if (!engine) {
+      this.activeDroppedInventoryRuntimeIds.clear();
+      return;
+    }
+
+    engine.video.actionMenus.unregisterMenu(DROPPED_CORAL_RELIC_ACTION_MENU_ID);
+    for (const runtimeId of this.activeDroppedInventoryRuntimeIds) {
+      engine.video.sprites.removeSprite(
+        `${DROPPED_INVENTORY_ITEM_SPRITE_INSTANCE_PREFIX}:${runtimeId}`,
+      );
+      engine.video.sceneTargets?.unregisterTarget(
+        `${DROPPED_INVENTORY_ITEM_TARGET_PREFIX}:${runtimeId}`,
+      );
+    }
+    this.activeDroppedInventoryRuntimeIds.clear();
   }
 }

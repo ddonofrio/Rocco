@@ -1,4 +1,4 @@
-import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../../../console/cartridges';
+import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
@@ -71,6 +71,7 @@ const STAN_SLEEP_THOUGHT_LOOP_DURATION_MS =
 
 type RoccoStanPoseState = 'sleeping' | 'awake';
 type RoccoStanSequenceKind = 'wake' | 'look-around';
+type RoccoStanSceneClickResult = { suppressDefaultPlayerMove: true } | undefined;
 
 interface RoccoStanSequence {
   kind: RoccoStanSequenceKind;
@@ -86,6 +87,10 @@ export interface RoccoStanPersistentState {
 export interface RoccoStanInstallOptions {
   onConversationProgress?: () => void;
   justExitedShop?: boolean;
+}
+
+function createDefaultStanPersistentState(): RoccoStanPersistentState {
+  return { isIdentified: false };
 }
 
 async function createDefaultStanSpriteDefinition(
@@ -222,130 +227,82 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     });
   }
 
-  update(deltaMs: number): void {
-    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
+  private updateShopExitReactionWindow(deltaMs: number): void {
+    if (!this.justExitedShop) {
       return;
     }
 
-    if (this.justExitedShop) {
-      this.shopExitElapsedMs += deltaMs;
-      if (this.shopExitElapsedMs > STAN_SHOP_EXIT_DOOR_REACTION_WINDOW_MS) {
-        this.justExitedShop = false;
-      }
-    }
-
-    const isRoccoBehindStan = this.isRoccoBehindStan();
-    if (isRoccoBehindStan) {
-      this.awakeIdleMs = 0;
-      this.wakeForRearPresence();
-    }
-
-    if (this.state === 'awake' && !this.sequence) {
-      this.syncAwakeFacing();
-    }
-
-    let remainingDeltaMs = deltaMs;
-    while (remainingDeltaMs > 0) {
-      if (this.sequence) {
-        const isDialogueWasBusy =
-          this.dialogue.isActive() && !this.dialogue.isAwaitingChoice();
-        const deltaBeforeSequence = remainingDeltaMs;
-        remainingDeltaMs = this.advanceSequence(remainingDeltaMs);
-        const consumedDeltaMs = deltaBeforeSequence - remainingDeltaMs;
-        if (isDialogueWasBusy && consumedDeltaMs > 0) {
-          this.dialogue.update(consumedDeltaMs);
-        }
-        this.awakeIdleMs = 0;
-        continue;
-      }
-
-      if (this.dialogue.isActive() && !this.dialogue.isAwaitingChoice()) {
-        this.awakeIdleMs = 0;
-        this.dialogue.update(remainingDeltaMs);
-        return;
-      }
-
-      if (this.dialogue.isAwaitingChoice()) {
-        if (!isRoccoBehindStan) {
-          this.awakeIdleMs += remainingDeltaMs;
-          if (this.awakeIdleMs >= STAN_AWAKE_IDLE_TIMEOUT_MS) {
-            this.fallAsleep();
-          }
-        }
-        return;
-      }
-
-      if (this.state === 'awake') {
-        if (!isRoccoBehindStan) {
-          this.awakeIdleMs += remainingDeltaMs;
-          if (this.awakeIdleMs >= STAN_AWAKE_IDLE_TIMEOUT_MS) {
-            this.fallAsleep();
-          }
-        }
-        return;
-      }
-
-      this.updateSleepThought(remainingDeltaMs);
-      return;
+    this.shopExitElapsedMs += deltaMs;
+    if (this.shopExitElapsedMs > STAN_SHOP_EXIT_DOOR_REACTION_WINDOW_MS) {
+      this.justExitedShop = false;
     }
   }
 
-  handleAction(activation: RoccoActionMenuActivation): void {
-    if (activation.targetInstanceId !== DEFAULT_STAN_SPRITE_INSTANCE_ID) {
+  private handleRearPresence(isRoccoBehindStan: boolean): void {
+    if (!isRoccoBehindStan) {
       return;
     }
 
     this.awakeIdleMs = 0;
-    if (this.handleSimpleAction(activation.actionId)) {
-      return;
-    }
-
-    if (activation.actionId !== 'talk') {
-      return;
-    }
-
-    if (this.sequence || (this.dialogue.isActive() && !this.dialogue.isAwaitingChoice())) {
-      return;
-    }
-
-    if (this.dialogue.isAwaitingChoice()) {
-      this.dialogue.reopenChoices();
-      return;
-    }
-
-    if (this.state === 'sleeping') {
-      this.beginConversation();
-      return;
-    }
-
-    this.beginConversation();
+    this.wakeForRearPresence();
   }
 
-  handleGridMenu(activation: RoccoGridMenuActivation): void {
-    if (!this.dialogue.handleGridMenu(activation)) {
-    	return;
+  private advanceActiveSequence(deltaMs: number): number | undefined {
+    if (!this.sequence) {
+      return undefined;
+    }
+
+    const isDialogueBusy = this.dialogue.isActive() && !this.dialogue.isAwaitingChoice();
+    const remainingDeltaMs = this.advanceSequence(deltaMs);
+    const consumedDeltaMs = deltaMs - remainingDeltaMs;
+    if (isDialogueBusy && consumedDeltaMs > 0) {
+      this.dialogue.update(consumedDeltaMs);
     }
 
     this.awakeIdleMs = 0;
-    this.engine.video.render(0);
+    return remainingDeltaMs;
   }
 
-  handleSceneClick(_activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
+  private updateActiveDialogue(deltaMs: number): boolean {
     if (!this.dialogue.isActive() || this.dialogue.isAwaitingChoice()) {
-    	return;
+      return false;
     }
 
-    this.dialogue.advance();
-    return { suppressDefaultPlayerMove: true };
+    this.awakeIdleMs = 0;
+    this.dialogue.update(deltaMs);
+    return true;
   }
 
-  unmount(engine: RoccoEngine): void {
-    this.sequence = undefined;
-    this.dialogue.cancel();
-    this.resetSleepThoughtCycle();
-    uninstallDefaultStanActionMenu(engine);
-    engine.video.sprites.removeSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
-    engine.video.render(0);
+  private updateAwaitingChoiceState(
+    deltaMs: number,
+    isRoccoBehindStan: boolean,
+  ): boolean {
+    if (!this.dialogue.isAwaitingChoice()) {
+      return false;
+    }
+
+    this.updateAwakeIdle(deltaMs, isRoccoBehindStan);
+    return true;
+  }
+
+  private updateAwakeState(deltaMs: number, isRoccoBehindStan: boolean): boolean {
+    if (this.state !== 'awake') {
+      return false;
+    }
+
+    this.updateAwakeIdle(deltaMs, isRoccoBehindStan);
+    return true;
+  }
+
+  private updateAwakeIdle(deltaMs: number, isRoccoBehindStan: boolean): void {
+    if (isRoccoBehindStan) {
+      return;
+    }
+
+    this.awakeIdleMs += deltaMs;
+    if (this.awakeIdleMs >= STAN_AWAKE_IDLE_TIMEOUT_MS) {
+      this.fallAsleep();
+    }
   }
 
   private beginConversation(): void {
@@ -668,16 +625,107 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     this.sleepThoughtRemainingMs = STAN_SLEEP_THOUGHT_DELAY_MS;
     this.engine.video.messages.removeMessage(STAN_SLEEP_THOUGHT_MESSAGE_ID);
   }
+
+  update(deltaMs: number): void {
+    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return;
+    }
+
+    this.updateShopExitReactionWindow(deltaMs);
+    const isRoccoBehindStan = this.isRoccoBehindStan();
+    this.handleRearPresence(isRoccoBehindStan);
+    if (this.state === 'awake' && !this.sequence) {
+      this.syncAwakeFacing();
+    }
+
+    let remainingDeltaMs = deltaMs;
+    while (remainingDeltaMs > 0) {
+      const remainingSequenceDeltaMs = this.advanceActiveSequence(remainingDeltaMs);
+      if (remainingSequenceDeltaMs !== undefined) {
+        remainingDeltaMs = remainingSequenceDeltaMs;
+        continue;
+      }
+
+      if (this.updateActiveDialogue(remainingDeltaMs)) {
+        return;
+      }
+
+      if (this.updateAwaitingChoiceState(remainingDeltaMs, isRoccoBehindStan)) {
+        return;
+      }
+
+      if (this.updateAwakeState(remainingDeltaMs, isRoccoBehindStan)) {
+        return;
+      }
+
+      this.updateSleepThought(remainingDeltaMs);
+      return;
+    }
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (activation.targetInstanceId !== DEFAULT_STAN_SPRITE_INSTANCE_ID) {
+      return;
+    }
+
+    this.awakeIdleMs = 0;
+    if (this.handleSimpleAction(activation.actionId)) {
+      return;
+    }
+
+    if (activation.actionId !== 'talk') {
+      return;
+    }
+
+    if (this.sequence || (this.dialogue.isActive() && !this.dialogue.isAwaitingChoice())) {
+      return;
+    }
+
+    if (this.dialogue.isAwaitingChoice()) {
+      this.dialogue.reopenChoices();
+      return;
+    }
+
+    this.beginConversation();
+  }
+
+  handleGridMenu(activation: RoccoGridMenuActivation): void {
+    if (!this.dialogue.handleGridMenu(activation)) {
+      return;
+    }
+
+    this.awakeIdleMs = 0;
+    this.engine.video.render(0);
+  }
+
+  handleSceneClick(_activation: RoccoSceneClickAction): RoccoStanSceneClickResult {
+    if (!this.dialogue.isActive() || this.dialogue.isAwaitingChoice()) {
+      return undefined;
+    }
+
+    this.dialogue.advance();
+    return { suppressDefaultPlayerMove: true };
+  }
+
+  unmount(engine: RoccoEngine): void {
+    this.sequence = undefined;
+    this.dialogue.cancel();
+    this.resetSleepThoughtCycle();
+    uninstallDefaultStanActionMenu(engine);
+    engine.video.sprites.removeSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
+    engine.video.render(0);
+  }
 }
 
 export async function installDefaultStan(
   engine: RoccoEngine,
   localization: RoccoLocalization = createRoccoLocalization(),
-  persistentState: RoccoStanPersistentState = { isIdentified: false },
+  persistentState?: RoccoStanPersistentState,
   options: RoccoStanInstallOptions = {},
   preloader?: RoccoAssetPreloader,
 ): Promise<RoccoPierSideAmbientController> {
-  const definition = await createDefaultStanSpriteDefinition(localization, persistentState);
+  const resolvedPersistentState = persistentState ?? createDefaultStanPersistentState();
+  const definition = await createDefaultStanSpriteDefinition(localization, resolvedPersistentState);
   await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
@@ -703,5 +751,5 @@ export async function installDefaultStan(
   installDefaultStanActionMenu(engine, localization);
   engine.video.render(0);
 
-  return new RoccoStanController(engine, localization, persistentState, options);
+  return new RoccoStanController(engine, localization, resolvedPersistentState, options);
 }

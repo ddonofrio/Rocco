@@ -11,7 +11,7 @@ export {
 export {
   loadRoccoImageElement,
   makeRoccoColorKeyReplacedImageUri,
-  matchesRoccoColorKey,
+  isRoccoColorKeyMatch,
   parseRoccoColorKeyColors,
   type RoccoColorKeyReplaceImageOptions,
   type RoccoColorKeyReplacement,

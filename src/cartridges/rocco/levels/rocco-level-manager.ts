@@ -128,6 +128,10 @@ const ROCCO_SHARED_UI_ASSET_URLS = [
   roccoDefaultDeveloperSpriteCycleCursorAssetUrl,
 ] as const;
 
+function nullValue<T>(): T {
+  return JSON.parse('null') as T;
+}
+
 interface RoccoNetherEntrySnapshot {
   inventoryItems: RoccoInventoryItem[];
   roccoAppearance: RoccoPlayerAppearance;
@@ -174,20 +178,19 @@ export class RoccoLevelManager {
       revealed: true,
     },
   };
-  private engine: RoccoEngine | null = null;
-  private activeLevel: RoccoLevel | null = null;
-  private activeSceneId: string | null = null;
+  private engine: RoccoEngine | null = nullValue<RoccoEngine | null>();
+  private activeLevel: RoccoLevel | null = nullValue<RoccoLevel | null>();
+  private activeSceneId: string | null = nullValue<string | null>();
   private readonly levelTransitionService: RoccoLevelTransitionService;
   private readonly compiledGame: RpceCompiledGame<RoccoLevel>;
-  private pendingNetherEntrySnapshot: RoccoNetherEntrySnapshot | null = null;
+  private pendingNetherEntrySnapshot: RoccoNetherEntrySnapshot | null =
+    nullValue<RoccoNetherEntrySnapshot | null>();
   private readonly localization: RoccoLocalization;
   private roccoAppearance: RoccoPlayerAppearance = DEFAULT_ROCCO_PLAYER_APPEARANCE;
-  private netherEntrySnapshot: RoccoNetherEntrySnapshot | null = null;
-  private activeMountState: RoccoLevelManagerMountStateSnapshot | null = null;
-
-  private get inventory(): RoccoInventory {
-    return this.inventoryRuntime.getPlayerInventory();
-  }
+  private netherEntrySnapshot: RoccoNetherEntrySnapshot | null =
+    nullValue<RoccoNetherEntrySnapshot | null>();
+  private activeMountState: RoccoLevelManagerMountStateSnapshot | null =
+    nullValue<RoccoLevelManagerMountStateSnapshot | null>();
 
   constructor(options: RoccoLevelManagerOptions = {}) {
     this.options = {
@@ -214,7 +217,7 @@ export class RoccoLevelManager {
     this.inventoryRuntime = new RoccoInventoryRuntimeController({
       localization: this.localization,
       inventory: options.inventory,
-      getActiveLevelId: () => this.activeLevel?.id ?? null,
+      getActiveLevelId: () => this.activeLevel?.id ?? nullValue<string | null>(),
       handleSpecialSceneClick: (activation, carriedItem) =>
         this.actionRouter.handleSpecialInventorySceneClick(activation, carriedItem),
       resolveDroppedInventoryGroundPoint: () => this.resolveDroppedInventoryGroundPoint(),
@@ -287,8 +290,8 @@ export class RoccoLevelManager {
       inventory: this.inventory,
       resolveLevelTitle: (levelId) => this.levelRegistry.requireLevel(levelId).title,
       switchToLevel: (levelId) => this.switchToLevel(levelId),
-      canCollectInventoryItem: (itemId, showFullMessage) =>
-        this.canCollectIntoInventory(itemId, showFullMessage),
+      canCollectInventoryItem: (itemId, shouldShowFullMessage) =>
+        this.canCollectIntoInventory(itemId, shouldShowFullMessage),
       refreshStatus: () => this.refreshStatus(),
       onToiletReuseEventChanged: () => {
         if (this.activeLevel && isRoccoToiletLevelCapability(this.activeLevel)) {
@@ -324,126 +327,8 @@ export class RoccoLevelManager {
     });
   }
 
-  async mount(engine: RoccoEngine, preloader?: RoccoAssetPreloader): Promise<RoccoLevelManagerMountResult> {
-    this.engine = engine;
-    await preloader
-      ?.preloadAssetUrls(engine, [
-        ...ROCCO_SHARED_UI_ASSET_URLS,
-        ...ROCCO_INVENTORY_ITEM_IMAGE_URLS,
-        ...ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS,
-      ])
-      .catch(() => {
-        this.engine?.log('Assets', 'Some shared Rocco UI assets could not be preloaded.');
-      });
-    this.engine.audio.registerSound({
-      id: ROCCO_STAN_POLICE_DEFEAT_SOUND_ID,
-      uri: roccoDefaultPoliceWhistleSoundUrl,
-      volume: 0.45,
-      loop: false,
-    });
-    await preloader?.preloadSound(engine, ROCCO_STAN_POLICE_DEFEAT_SOUND_ID).catch(() => {
-      this.engine?.log('Audio', 'Stan police whistle sound could not be preloaded.');
-    });
-    this.engine.audio.stopSound(ROCCO_STAN_POLICE_DEFEAT_SOUND_ID);
-    this.activeSceneId = null;
-    this.developerRuntime.resetRuntimeState(this.engine);
-    this.transitions.reset();
-    this.droppedInventory.resetRuntimeState();
-    this.scriptedSequences.resetRuntimeState(this.engine);
-    this.inventoryRuntime.resetRuntimeState();
-    this.netherEntrySnapshot = null;
-    const level = this.levelRegistry.requireLevel(this.compiledGame.initialLevelId ?? 'pier');
-    const mountState = this.createMountStateSnapshot();
-    this.activeLevel = level;
-    const scene = await level.mount(engine, this.buildRuntimeMountOptions(mountState), preloader);
-    this.activeMountState = mountState;
-    installRoccoPlayerActionMenu(engine, this.localization);
-    this.syncActiveLevelDroppedInventoryPresentation();
-    this.updateStatus(scene);
-    return { level, scene };
-  }
-
-  unmount(): void {
-    if (!this.engine || !this.activeLevel) {
-      return;
-    }
-
-    this.developerRuntime.resetRuntimeState(this.engine);
-    this.activeLevel.unmount(this.engine);
-    uninstallRoccoPlayerActionMenu(this.engine);
-    this.activeSceneId = null;
-    this.transitions.reset();
-    this.levelTransitionService.invalidateGenerations();
-    this.droppedInventory.resetRuntimeState();
-    this.scriptedSequences.resetRuntimeState(this.engine);
-    this.inventoryRuntime.resetRuntimeState();
-    this.clearActiveLevelDroppedInventoryPresentation();
-    this.netherEntrySnapshot = null;
-    this.engine.audio.unregisterSound(ROCCO_STAN_POLICE_DEFEAT_SOUND_ID);
-    this.engine.video.gridMenus.closeMenu();
-    this.engine.video.gridMenus.clearCarriedItem();
-    this.activeLevel = null;
-    this.activeMountState = null;
-    this.engine = null;
-  }
-
-  update(deltaMs: number): void {
-    const engine = this.engine;
-    if (this.scriptedSequences.hasBlockingSequence()) {
-      if (!engine) {
-        return;
-      }
-
-      this.scriptedSequences.updateBlockingSequence(engine, deltaMs);
-      return;
-    }
-
-    this.activeLevel?.update(deltaMs);
-    if (this.droppedInventory.hasPendingPickup()) {
-      this.updateDroppedInventoryPickup();
-      return;
-    }
-
-    if (this.scriptedSequences.hasPendingBaitShopDoorUse()) {
-      if (!engine) {
-        return;
-      }
-
-      this.scriptedSequences.updatePendingBaitShopDoorUse(engine, this.activeLevel?.id ?? null);
-      return;
-    }
-
-    if (!engine || !this.activeLevel || this.levelTransitionService.isTransitioning) {
-      return;
-    }
-
-    const transition = this.transitions.update(this.activeLevel, deltaMs);
-    if (!transition) {
-      return;
-    }
-
-    if (isRoccoToiletLevelCapability(this.activeLevel) && this.activeLevel.shouldLoseOnExit(transition.connector.id)) {
-      this.transitions.clearPendingExitIntent();
-      this.activeLevel.beginExitDefeat();
-      return;
-    }
-
-    void this.transitionThrough(transition);
-  }
-
-  handleAction(
-    activation: RoccoCartridgeAction,
-    context?: CartridgeActionContext,
-  ): CartridgeActionDisposition | void {
-    return this.actionRouter.handleAction(activation, context);
-  }
-
-  getActiveLevelId(): string | null {
-    return this.activeLevel?.id ?? null;
-  }
-
-  getActiveLevel(): RoccoLevel | null {
-    return this.activeLevel;
+  private get inventory(): RoccoInventory {
+    return this.inventoryRuntime.getPlayerInventory();
   }
 
   private isNetherLevelId(levelId: string): boolean {
@@ -465,7 +350,7 @@ export class RoccoLevelManager {
     snapshot: RoccoNetherEntrySnapshot | null,
   ): RoccoNetherEntrySnapshot | null {
     if (!snapshot) {
-      return null;
+      return nullValue<RoccoNetherEntrySnapshot | null>();
     }
 
     return {
@@ -482,7 +367,7 @@ export class RoccoLevelManager {
     snapshot: RoccoLevelManagerMountStateSnapshot | null,
   ): RoccoLevelManagerMountStateSnapshot | null {
     if (!snapshot) {
-      return null;
+      return nullValue<RoccoLevelManagerMountStateSnapshot | null>();
     }
 
     return {
@@ -506,7 +391,8 @@ export class RoccoLevelManager {
   }
 
   private buildRuntimeMountOptions(
-    mountState: RoccoLevelManagerMountStateSnapshot | null = null,
+    mountState: RoccoLevelManagerMountStateSnapshot | null =
+      nullValue<RoccoLevelManagerMountStateSnapshot | null>(),
   ): RoccoLevelMountOptions {
     return {
       ...this.createLevelMountOptions(),
@@ -647,12 +533,12 @@ export class RoccoLevelManager {
 
   private capturePlayerSnapshot(): RoccoLevelManagerPlayerSnapshot | null {
     if (!this.engine) {
-      return null;
+      return nullValue<RoccoLevelManagerPlayerSnapshot | null>();
     }
 
     const player = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
     if (!player) {
-      return null;
+      return nullValue<RoccoLevelManagerPlayerSnapshot | null>();
     }
 
     return {
@@ -709,7 +595,7 @@ export class RoccoLevelManager {
     const mountStateSnapshot = this.cloneMountStateSnapshot(this.activeMountState);
     const enteringNetherSnapshot = this.isEnteringNether(this.activeLevel.id, targetLevelId)
       ? this.createNetherEntrySnapshot()
-      : null;
+      : nullValue<RoccoNetherEntrySnapshot | null>();
     return this.levelTransitionService.run({
       id: `switch-to-${targetLevelId}`,
       prepare: () => {
@@ -743,7 +629,7 @@ export class RoccoLevelManager {
             if (enteringNetherSnapshot) {
               this.captureNetherEntrySnapshot(enteringNetherSnapshot);
             }
-            this.pendingNetherEntrySnapshot = null;
+            this.pendingNetherEntrySnapshot = nullValue<RoccoNetherEntrySnapshot | null>();
             this.syncActiveLevelDroppedInventoryPresentation();
             this.updateStatus(scene);
             if (targetLevelId === ROCCO_PIER_START_LEVEL_ID && entryConnectorId === 'shop-exit') {
@@ -773,7 +659,7 @@ export class RoccoLevelManager {
     const mountStateSnapshot = this.cloneMountStateSnapshot(this.activeMountState);
     const enteringNetherSnapshot = this.isEnteringNether(this.activeLevel.id, targetLevelId)
       ? this.createNetherEntrySnapshot()
-      : null;
+      : nullValue<RoccoNetherEntrySnapshot | null>();
     await this.levelTransitionService.run({
       id: `transition-through-${targetLevelId}`,
       prepare: () => {
@@ -813,7 +699,7 @@ export class RoccoLevelManager {
             if (enteringNetherSnapshot) {
               this.captureNetherEntrySnapshot(enteringNetherSnapshot);
             }
-            this.pendingNetherEntrySnapshot = null;
+            this.pendingNetherEntrySnapshot = nullValue<RoccoNetherEntrySnapshot | null>();
             this.syncActiveLevelDroppedInventoryPresentation();
             this.transitions.setCooldown(PIER_LEVEL_TRANSITION_COOLDOWN_MS);
             this.updateStatus(scene);
@@ -917,17 +803,18 @@ export class RoccoLevelManager {
         }
 
         if (item.id === ROCCO_INVENTORY_BATA_ITEM_ID) {
-          void this.engine.video
-            .preloadSpriteDefinition(
-              createRoccoAppearanceSpriteDefinition(
-                this.engine,
-                ROCCO_LAB_COAT_PLAYER_APPEARANCE,
-                this.localization,
-              ),
-            )
-            .catch(() => {
+          const spriteDefinition = createRoccoAppearanceSpriteDefinition(
+            this.engine,
+            ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+            this.localization,
+          );
+          void (async () => {
+            try {
+              await this.engine.video.preloadSpriteDefinition(spriteDefinition);
+            } catch {
               this.engine?.log('Assets', 'Rocco lab coat assets could not be preloaded.');
-            });
+            }
+          })();
         }
 
         roccoCartridgeMessageRuntime.think(
@@ -960,7 +847,7 @@ export class RoccoLevelManager {
     const mountStateSnapshot = this.cloneMountStateSnapshot(this.activeMountState);
     const netherReset = this.isNetherLevelId(targetLevelId)
       ? this.levelRegistry.prepareMapReset('nether')
-      : null;
+      : nullValue<ReturnType<RoccoLevelRegistry['prepareMapReset']> | null>();
     await this.levelTransitionService.run({
       id: `restart-${targetLevelId}`,
       prepare: () => {
@@ -1023,17 +910,16 @@ export class RoccoLevelManager {
     }
 
     this.developerRuntime.clearTransientState(this.engine);
-    this.engine.setInputEnabled(true);
     this.engine.video.actionMenus.closeMenu();
     this.inventoryRuntime.openStorageInventory(this.engine, storageId, onInventoryClosed);
   }
 
-  private closeInventoryTransferMenu(storageId?: string, notifyLevel = false): void {
+  private closeInventoryTransferMenu(storageId?: string, shouldNotifyLevel = false): void {
     if (!this.engine) {
       return;
     }
 
-    this.inventoryRuntime.closeActiveTransferSession(this.engine, storageId, notifyLevel);
+    this.inventoryRuntime.closeActiveTransferSession(this.engine, storageId, shouldNotifyLevel);
   }
 
   private requestScriptedConnectorTransition(connectorId: string): boolean {
@@ -1122,8 +1008,8 @@ export class RoccoLevelManager {
     this.droppedInventory.clearActiveLevelPresentation(this.engine);
   }
 
-  private canCollectIntoInventory(itemId: string, showFullMessage = true): boolean {
-    return this.inventoryRuntime.canCollectItem(this.engine, itemId, showFullMessage);
+  private canCollectIntoInventory(itemId: string, shouldShowFullMessage = true): boolean {
+    return this.inventoryRuntime.canCollectItem(this.engine, itemId, shouldShowFullMessage);
   }
 
   private tryAddItemToInventory(item: RoccoInventoryItem): boolean {
@@ -1219,5 +1105,136 @@ export class RoccoLevelManager {
         };
       },
     });
+  }
+
+  async mount(engine: RoccoEngine, preloader?: RoccoAssetPreloader): Promise<RoccoLevelManagerMountResult> {
+    this.engine = engine;
+    if (preloader) {
+      try {
+        await preloader.preloadAssetUrls(engine, [
+          ...ROCCO_SHARED_UI_ASSET_URLS,
+          ...ROCCO_INVENTORY_ITEM_IMAGE_URLS,
+          ...ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS,
+        ]);
+      } catch {
+        this.engine?.log('Assets', 'Some shared Rocco UI assets could not be preloaded.');
+      }
+    }
+    this.engine.audio.registerSound({
+      id: ROCCO_STAN_POLICE_DEFEAT_SOUND_ID,
+      uri: roccoDefaultPoliceWhistleSoundUrl,
+      volume: 0.45,
+      loop: false,
+    });
+    if (preloader) {
+      try {
+        await preloader.preloadSound(engine, ROCCO_STAN_POLICE_DEFEAT_SOUND_ID);
+      } catch {
+        this.engine?.log('Audio', 'Stan police whistle sound could not be preloaded.');
+      }
+    }
+    this.engine.audio.stopSound(ROCCO_STAN_POLICE_DEFEAT_SOUND_ID);
+    this.activeSceneId = nullValue<string | null>();
+    this.developerRuntime.resetRuntimeState(this.engine);
+    this.transitions.reset();
+    this.droppedInventory.resetRuntimeState();
+    this.scriptedSequences.resetRuntimeState(this.engine);
+    this.inventoryRuntime.resetRuntimeState();
+    this.netherEntrySnapshot = nullValue<RoccoNetherEntrySnapshot | null>();
+    const level = this.levelRegistry.requireLevel(this.compiledGame.initialLevelId ?? 'pier');
+    const mountState = this.createMountStateSnapshot();
+    this.activeLevel = level;
+    const scene = await level.mount(engine, this.buildRuntimeMountOptions(mountState), preloader);
+    this.activeMountState = mountState;
+    installRoccoPlayerActionMenu(engine, this.localization);
+    this.syncActiveLevelDroppedInventoryPresentation();
+    this.updateStatus(scene);
+    return { level, scene };
+  }
+
+  unmount(): void {
+    if (!this.engine || !this.activeLevel) {
+      return;
+    }
+
+    this.developerRuntime.resetRuntimeState(this.engine);
+    this.activeLevel.unmount(this.engine);
+    uninstallRoccoPlayerActionMenu(this.engine);
+    this.activeSceneId = nullValue<string | null>();
+    this.transitions.reset();
+    this.levelTransitionService.invalidateGenerations();
+    this.droppedInventory.resetRuntimeState();
+    this.scriptedSequences.resetRuntimeState(this.engine);
+    this.inventoryRuntime.resetRuntimeState();
+    this.clearActiveLevelDroppedInventoryPresentation();
+    this.netherEntrySnapshot = nullValue<RoccoNetherEntrySnapshot | null>();
+    this.engine.audio.unregisterSound(ROCCO_STAN_POLICE_DEFEAT_SOUND_ID);
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.gridMenus.clearCarriedItem();
+    this.activeLevel = nullValue<RoccoLevel | null>();
+    this.activeMountState = nullValue<RoccoLevelManagerMountStateSnapshot | null>();
+    this.engine = nullValue<RoccoEngine | null>();
+  }
+
+  update(deltaMs: number): void {
+    const engine = this.engine;
+    if (this.scriptedSequences.hasBlockingSequence()) {
+      if (!engine) {
+        return;
+      }
+
+      this.scriptedSequences.updateBlockingSequence(engine, deltaMs);
+      return;
+    }
+
+    this.activeLevel?.update(deltaMs);
+    if (this.droppedInventory.hasPendingPickup()) {
+      this.updateDroppedInventoryPickup();
+      return;
+    }
+
+    if (this.scriptedSequences.hasPendingBaitShopDoorUse()) {
+      if (!engine) {
+        return;
+      }
+
+      this.scriptedSequences.updatePendingBaitShopDoorUse(
+        engine,
+        this.activeLevel?.id ?? nullValue<string | null>(),
+      );
+      return;
+    }
+
+    if (!engine || !this.activeLevel || this.levelTransitionService.isTransitioning) {
+      return;
+    }
+
+    const transition = this.transitions.update(this.activeLevel, deltaMs);
+    if (!transition) {
+      return;
+    }
+
+    if (isRoccoToiletLevelCapability(this.activeLevel) && this.activeLevel.shouldLoseOnExit(transition.connector.id)) {
+      this.transitions.clearPendingExitIntent();
+      this.activeLevel.beginExitDefeat();
+      return;
+    }
+
+    void this.transitionThrough(transition);
+  }
+
+  handleAction(
+    activation: RoccoCartridgeAction,
+    context?: CartridgeActionContext,
+  ): CartridgeActionDisposition | void {
+    return this.actionRouter.handleAction(activation, context);
+  }
+
+  getActiveLevelId(): string | null {
+    return this.activeLevel?.id ?? nullValue<string | null>();
+  }
+
+  getActiveLevel(): RoccoLevel | null {
+    return this.activeLevel;
   }
 }

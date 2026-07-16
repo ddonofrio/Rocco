@@ -261,10 +261,6 @@ function createBaitShopMagazineSpriteDefinition(
 }
 
 export class RoccoBaitShopSecondLevel implements RoccoLevel {
-  readonly id = ROCCO_BAIT_SHOP_SECOND_LEVEL_ID;
-  readonly title: string;
-  readonly connectors = BAIT_SHOP_SECOND_CONNECTORS;
-
   private readonly localization: RoccoLocalization;
   private readonly options: RoccoBaitShopSecondLevelOptions;
   private engine: RoccoEngine | undefined = undefined;
@@ -276,6 +272,9 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
   private magazineKnown = false;
   private magazineCollected = false;
   private shouldPlayDoorClosingSound = false;
+  readonly id = ROCCO_BAIT_SHOP_SECOND_LEVEL_ID;
+  readonly title: string;
+  readonly connectors = BAIT_SHOP_SECOND_CONNECTORS;
 
   constructor(
     localization: RoccoLocalization = createRoccoLocalization(),
@@ -284,170 +283,6 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     this.localization = localization;
     this.options = options;
     this.title = localization.text.levels.baitShopPlaceholderTitle;
-  }
-
-  async mount(
-    engine: RoccoEngine,
-    options: RoccoLevelMountOptions = {},
-    preloader?: RoccoAssetPreloader,
-  ): Promise<RoccoPlaneScene> {
-    this.engine = engine;
-    this.spriteController = undefined;
-    this.scriptedInteractionController = undefined;
-    this.onConnectorTransitionRequested = options.onConnectorTransitionRequested ?? undefined;
-    if (options.entryConnectorId === BAIT_SHOP_TOILET_CONNECTOR_ID) {
-      this.toiletDoorOpen = false;
-      this.toiletDoorKnown = true;
-    }
-    if (this.options.hasMagazine?.()) {
-      this.magazineCollected = true;
-    }
-
-    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
-    const initialPosition = entryConnector
-      ? {
-          x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
-          y: entryConnector.entryPoint.y,
-        }
-      : { ...BAIT_SHOP_SECOND_ENTRY_POSITION };
-    const initialFacing = entryConnector?.entryFacing ?? 'up';
-    const scene = await loadOrCreateBaitShopScene(engine, BAIT_SHOP_SECOND_SCENE_DEFINITION);
-    const magazineDefinition = createBaitShopMagazineSpriteDefinition(this.localization);
-    await this.registerToiletDoorSound(engine);
-    engine.audio.registerSound({
-      id: DOOR_CLOSING_SOUND_ID,
-      uri: baitShopDoorClosingSoundUrl,
-      volume: DOOR_CLOSING_SOUND_VOLUME,
-      loop: false,
-    });
-    await engine.audio.preloadSound(DOOR_CLOSING_SOUND_ID).catch(() => {
-      engine.log('Audio', 'Bait shop second level door closing sound could not be preloaded.');
-    });
-    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
-    await (preloader?.preloadSpriteDefinition(engine, magazineDefinition) ?? engine.video.preloadSpriteDefinition(magazineDefinition));
-    engine.loadPlaneScene(scene);
-    await installBaitShopWalkMap(engine, baitShopSecondScreenAssetUrls.walkMap, preloader);
-    engine.video.sprites.loadSpriteDefinition(magazineDefinition);
-    this.spriteController = await installDefaultSprite(engine, {
-      appearance: options.roccoAppearance,
-      initialFacing,
-      initialPosition: { ...initialPosition },
-      scale: BAIT_SHOP_ROCCO_SCALE,
-      tint: BAIT_SHOP_ROCCO_TINT,
-      localization: this.localization,
-      playIntro: false,
-      perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
-    }, preloader);
-    if (options.entryConnectorId === BAIT_SHOP_TOILET_CONNECTOR_ID) {
-      this.shouldPlayDoorClosingSound = true;
-    }
-    this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, []);
-    this.syncToiletDoorPresentation();
-    this.syncMagazinePresentation();
-
-    return scene;
-  }
-
-  unmount(engine: RoccoEngine): void {
-    engine.video.actionMenus.closeMenu();
-    engine.video.messages.clearMessages();
-    this.scriptedInteractionController?.cancel();
-    this.uninstallToiletDoorInteractions(engine);
-    this.uninstallMagazineInteractions(engine);
-    this.unregisterToiletDoorSound(engine);
-    engine.audio.stopSound(DOOR_CLOSING_SOUND_ID);
-    engine.audio.unregisterSound(DOOR_CLOSING_SOUND_ID);
-    this.shouldPlayDoorClosingSound = false;
-    uninstallDefaultSprite(engine);
-    uninstallBaitShopWalkMap(engine);
-    this.engine = undefined;
-    this.spriteController = undefined;
-    this.scriptedInteractionController = undefined;
-    this.onConnectorTransitionRequested = undefined;
-    engine.video.render(0);
-  }
-
-  update(deltaMs: number): void {
-    this.spriteController?.update(deltaMs);
-    this.scriptedInteractionController?.update();
-    if (this.shouldPlayDoorClosingSound && this.engine) {
-      this.shouldPlayDoorClosingSound = false;
-      this.engine.audio.playSound(DOOR_CLOSING_SOUND_ID, {
-        restart: true,
-        volume: DOOR_CLOSING_SOUND_VOLUME,
-      });
-    }
-  }
-
-  handleSceneClick(activation: RoccoSceneClickAction) {
-    if (!(activation.targetInstanceId === BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID &&
-      this.toiletDoorOpen)) {
-    	return;
-    }
-
-    this.walkIntoToilet();
-    return { suppressDefaultPlayerMove: true };
-  }
-
-  handleAction(activation: RoccoActionMenuActivation): void {
-    if (activation.targetInstanceId === BAIT_SHOP_MAGAZINE_SPRITE_INSTANCE_ID) {
-      this.handleMagazineAction(activation);
-      return;
-    }
-
-    if (activation.targetInstanceId !== BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID) {
-      return;
-    }
-
-    if (activation.actionId === 'look') {
-      this.faceToiletDoorFromCurrentPosition();
-      this.showToiletDoorLookLines();
-      return;
-    }
-
-    if (activation.actionId === 'kick') {
-      this.faceToiletDoorFromCurrentPosition();
-      this.showThoughtLine(this.localization.text.baitShop.toiletDoorKickLine);
-      return;
-    }
-
-    if (activation.actionId === 'open') {
-      this.tryOpenToiletDoorByHand();
-      return;
-    }
-
-    if (activation.actionId === 'close') {
-      this.closeToiletDoor();
-      return;
-    }
-
-    if (activation.actionId === 'walk' && this.toiletDoorOpen) {
-      this.walkIntoToilet();
-    }
-  }
-
-  handleInventorySceneClick(
-    activation: RoccoSceneClickAction,
-    carriedItem: RoccoGridMenuCarriedItem,
-  ): boolean {
-    if (
-      activation.targetInstanceId !== BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID ||
-      this.toiletDoorOpen
-    ) {
-      return false;
-    }
-
-    if (carriedItem.item.id === ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID) {
-      this.unlockToiletDoorWithKey();
-      return true;
-    }
-
-    if (carriedItem.item.id === ROCCO_INVENTORY_KEYS_ITEM_ID) {
-      this.rejectWrongToiletDoorKey();
-      return true;
-    }
-
-    return false;
   }
 
   private handleMagazineAction(activation: RoccoActionMenuActivation): void {
@@ -544,7 +379,6 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
         const isTransitioned =
           this.onConnectorTransitionRequested?.(BAIT_SHOP_TOILET_CONNECTOR_ID) ?? false;
         if (!isTransitioned) {
-          this.engine?.setInputEnabled(true);
           this.engine?.video.render(0);
         }
       },
@@ -640,9 +474,11 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       volume: BAIT_SHOP_TOILET_DOOR_SOUND_VOLUME,
       loop: false,
     });
-    await engine.audio.preloadSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID).catch(() => {
+    try {
+      await engine.audio.preloadSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
+    } catch {
       engine.log('Audio', 'Bait shop toilet door opening sound could not be preloaded.');
-    });
+    }
   }
 
   private unregisterToiletDoorSound(engine: RoccoEngine): void {
@@ -791,12 +627,182 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     const groundX =
       sprite.transform.x + DEFAULT_SPRITE_GROUND_ANCHOR_X * (sprite.transform.scaleX || 1);
     const deltaX = BAIT_SHOP_TOILET_DOOR_GROUND_POINT.x - groundX;
-    const facing: RoccoFacingDirection =
-      Math.abs(deltaX) <= 18 ? 'up' : deltaX < 0 ? 'up-left' : 'up-right';
+    let facing: RoccoFacingDirection = 'up';
+    if (Math.abs(deltaX) > 18) {
+      facing = deltaX < 0 ? 'up-left' : 'up-right';
+    }
     this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
       direction: facing,
       restart: true,
     });
     this.engine.video.render(0);
+  }
+
+  async mount(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
+    this.engine = engine;
+    this.spriteController = undefined;
+    this.scriptedInteractionController = undefined;
+    this.onConnectorTransitionRequested = options.onConnectorTransitionRequested ?? undefined;
+    if (options.entryConnectorId === BAIT_SHOP_TOILET_CONNECTOR_ID) {
+      this.toiletDoorOpen = false;
+      this.toiletDoorKnown = true;
+    }
+    if (this.options.hasMagazine?.()) {
+      this.magazineCollected = true;
+    }
+
+    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
+    const initialPosition = entryConnector
+      ? {
+          x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
+          y: entryConnector.entryPoint.y,
+        }
+      : { ...BAIT_SHOP_SECOND_ENTRY_POSITION };
+    const initialFacing = entryConnector?.entryFacing ?? 'up';
+    const scene = await loadOrCreateBaitShopScene(engine, BAIT_SHOP_SECOND_SCENE_DEFINITION);
+    const magazineDefinition = createBaitShopMagazineSpriteDefinition(this.localization);
+    await this.registerToiletDoorSound(engine);
+    engine.audio.registerSound({
+      id: DOOR_CLOSING_SOUND_ID,
+      uri: baitShopDoorClosingSoundUrl,
+      volume: DOOR_CLOSING_SOUND_VOLUME,
+      loop: false,
+    });
+    try {
+      await engine.audio.preloadSound(DOOR_CLOSING_SOUND_ID);
+    } catch {
+      engine.log('Audio', 'Bait shop second level door closing sound could not be preloaded.');
+    }
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+    await (preloader?.preloadSpriteDefinition(engine, magazineDefinition) ?? engine.video.preloadSpriteDefinition(magazineDefinition));
+    engine.loadPlaneScene(scene);
+    await installBaitShopWalkMap(engine, baitShopSecondScreenAssetUrls.walkMap, preloader);
+    engine.video.sprites.loadSpriteDefinition(magazineDefinition);
+    this.spriteController = await installDefaultSprite(engine, {
+      appearance: options.roccoAppearance,
+      initialFacing,
+      initialPosition: { ...initialPosition },
+      scale: BAIT_SHOP_ROCCO_SCALE,
+      tint: BAIT_SHOP_ROCCO_TINT,
+      localization: this.localization,
+      playIntro: false,
+      perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
+    }, preloader);
+    if (options.entryConnectorId === BAIT_SHOP_TOILET_CONNECTOR_ID) {
+      this.shouldPlayDoorClosingSound = true;
+    }
+    this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, []);
+    this.syncToiletDoorPresentation();
+    this.syncMagazinePresentation();
+
+    return scene;
+  }
+
+  unmount(engine: RoccoEngine): void {
+    engine.video.actionMenus.closeMenu();
+    engine.video.messages.clearMessages();
+    this.scriptedInteractionController?.cancel();
+    this.uninstallToiletDoorInteractions(engine);
+    this.uninstallMagazineInteractions(engine);
+    this.unregisterToiletDoorSound(engine);
+    engine.audio.stopSound(DOOR_CLOSING_SOUND_ID);
+    engine.audio.unregisterSound(DOOR_CLOSING_SOUND_ID);
+    this.shouldPlayDoorClosingSound = false;
+    uninstallDefaultSprite(engine);
+    uninstallBaitShopWalkMap(engine);
+    this.engine = undefined;
+    this.spriteController = undefined;
+    this.scriptedInteractionController = undefined;
+    this.onConnectorTransitionRequested = undefined;
+    engine.video.render(0);
+  }
+
+  update(deltaMs: number): void {
+    this.spriteController?.update(deltaMs);
+    this.scriptedInteractionController?.update();
+    if (this.shouldPlayDoorClosingSound && this.engine) {
+      this.shouldPlayDoorClosingSound = false;
+      this.engine.audio.playSound(DOOR_CLOSING_SOUND_ID, {
+        restart: true,
+        volume: DOOR_CLOSING_SOUND_VOLUME,
+      });
+    }
+  }
+
+  handleSceneClick(activation: RoccoSceneClickAction) {
+    if (
+      activation.targetInstanceId !== BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID ||
+      !this.toiletDoorOpen
+    ) {
+      return;
+    }
+
+    this.walkIntoToilet();
+    return { suppressDefaultPlayerMove: true };
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (activation.targetInstanceId === BAIT_SHOP_MAGAZINE_SPRITE_INSTANCE_ID) {
+      this.handleMagazineAction(activation);
+      return;
+    }
+
+    if (activation.targetInstanceId !== BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID) {
+      return;
+    }
+
+    if (activation.actionId === 'look') {
+      this.faceToiletDoorFromCurrentPosition();
+      this.showToiletDoorLookLines();
+      return;
+    }
+
+    if (activation.actionId === 'kick') {
+      this.faceToiletDoorFromCurrentPosition();
+      this.showThoughtLine(this.localization.text.baitShop.toiletDoorKickLine);
+      return;
+    }
+
+    if (activation.actionId === 'open') {
+      this.tryOpenToiletDoorByHand();
+      return;
+    }
+
+    if (activation.actionId === 'close') {
+      this.closeToiletDoor();
+      return;
+    }
+
+    if (activation.actionId === 'walk' && this.toiletDoorOpen) {
+      this.walkIntoToilet();
+    }
+  }
+
+  handleInventorySceneClick(
+    activation: RoccoSceneClickAction,
+    carriedItem: RoccoGridMenuCarriedItem,
+  ): boolean {
+    if (
+      activation.targetInstanceId !== BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID ||
+      this.toiletDoorOpen
+    ) {
+      return false;
+    }
+
+    if (carriedItem.item.id === ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID) {
+      this.unlockToiletDoorWithKey();
+      return true;
+    }
+
+    if (carriedItem.item.id === ROCCO_INVENTORY_KEYS_ITEM_ID) {
+      this.rejectWrongToiletDoorKey();
+      return true;
+    }
+
+    return false;
   }
 }

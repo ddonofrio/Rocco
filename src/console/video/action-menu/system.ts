@@ -13,11 +13,7 @@ const DEFAULT_ITEM_SIZE = 44;
 const DEFAULT_HOVER_SCALE = 1.14;
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function normalizeDefinition(definition: RoccoActionMenuDefinition): RoccoActionMenuDefinition {
@@ -38,6 +34,83 @@ function normalizeDefinition(definition: RoccoActionMenuDefinition): RoccoAction
 export class RoccoActionMenuSystemSDK implements RoccoActionMenuSystem {
   private readonly definitions = new Map<string, RoccoActionMenuDefinition>();
   private activeState: RoccoActionMenuState | undefined;
+
+  private adjustMenuPosition(
+    definition: RoccoActionMenuDefinition,
+    x: number,
+    y: number,
+  ): { x: number; y: number } {
+    const DESIGN_WIDTH = 960;
+    const DESIGN_HEIGHT = 540;
+
+    const orbitRadius = definition.orbitRadius ?? DEFAULT_ORBIT_RADIUS;
+    const itemSize = definition.itemSize ?? DEFAULT_ITEM_SIZE;
+    const hoverScale = definition.hoverScale ?? DEFAULT_HOVER_SCALE;
+
+    // Calculate the maximum distance an item can be from the center
+    // This is the orbit radius plus half the item size (scaled for hover)
+    const maxDistance = orbitRadius + (itemSize * hoverScale) / 2;
+
+    // Clamp the menu center position to keep all items within screen bounds
+    const clampedX = Math.max(maxDistance, Math.min(x, DESIGN_WIDTH - maxDistance));
+    const clampedY = Math.max(maxDistance, Math.min(y, DESIGN_HEIGHT - maxDistance));
+
+    return { x: clampedX, y: clampedY };
+  }
+
+  private findMenuForTarget(
+    targetInstanceId: string,
+    targetDefinitionId: string,
+  ): RoccoActionMenuDefinition | undefined {
+    for (const definition of this.definitions.values()) {
+      if (definition.targetInstanceIds?.includes(targetInstanceId)) {
+        return definition;
+      }
+      if (definition.targetDefinitionIds?.includes(targetDefinitionId)) {
+        return definition;
+      }
+    }
+
+    return undefined;
+  }
+
+  private findItemAt(
+    definition: RoccoActionMenuDefinition,
+    state: RoccoActionMenuState,
+    x: number,
+    y: number,
+  ): RoccoActionMenuItem | undefined {
+    const itemSize = definition.itemSize ?? DEFAULT_ITEM_SIZE;
+    const hitRadius = (itemSize * (definition.hoverScale ?? DEFAULT_HOVER_SCALE)) / 2;
+    const hitRadiusSquared = hitRadius * hitRadius;
+
+    for (let index = definition.items.length - 1; index >= 0; index -= 1) {
+      const position = this.resolveItemPosition(definition, state, index);
+      const dx = x - position.x;
+      const dy = y - position.y;
+      if (dx * dx + dy * dy <= hitRadiusSquared) {
+        return definition.items[index];
+      }
+    }
+
+    return undefined;
+  }
+
+  private resolveItemPosition(
+    definition: RoccoActionMenuDefinition,
+    state: RoccoActionMenuState,
+    index: number,
+  ): { x: number; y: number } {
+    const count = Math.max(1, definition.items.length);
+    const radius = definition.orbitRadius ?? DEFAULT_ORBIT_RADIUS;
+    const speed = definition.orbitSpeedRadiansPerSecond ?? DEFAULT_ORBIT_SPEED_RADIANS_PER_SECOND;
+    const elapsedSeconds = state.elapsedMs / 1000;
+    const angle = (Math.PI * 2 * index) / count - Math.PI / 2 + elapsedSeconds * speed;
+    return {
+      x: state.x + Math.cos(angle) * radius,
+      y: state.y + Math.sin(angle) * radius,
+    };
+  }
 
   registerMenu(definition: RoccoActionMenuDefinition): void {
     if (!definition.id) {
@@ -62,7 +135,7 @@ export class RoccoActionMenuSystemSDK implements RoccoActionMenuSystem {
   }
 
   listMenus(): RoccoActionMenuDefinition[] {
-    return [...this.definitions.values()].map((definition) => clone(definition));
+    return this.definitions.values().map((definition) => clone(definition)).toArray();
   }
 
   openMenuForTarget(targetInstanceId: string, targetDefinitionId: string, x: number, y: number): boolean {
@@ -166,80 +239,4 @@ export class RoccoActionMenuSystemSDK implements RoccoActionMenuSystem {
     this.activeState.elapsedMs += deltaMs;
   }
 
-  private adjustMenuPosition(
-    definition: RoccoActionMenuDefinition,
-    x: number,
-    y: number,
-  ): { x: number; y: number } {
-    const DESIGN_WIDTH = 960;
-    const DESIGN_HEIGHT = 540;
-    
-    const orbitRadius = definition.orbitRadius ?? DEFAULT_ORBIT_RADIUS;
-    const itemSize = definition.itemSize ?? DEFAULT_ITEM_SIZE;
-    const hoverScale = definition.hoverScale ?? DEFAULT_HOVER_SCALE;
-    
-    // Calculate the maximum distance an item can be from the center
-    // This is the orbit radius plus half the item size (scaled for hover)
-    const maxDistance = orbitRadius + (itemSize * hoverScale) / 2;
-    
-    // Clamp the menu center position to keep all items within screen bounds
-    const clampedX = Math.max(maxDistance, Math.min(x, DESIGN_WIDTH - maxDistance));
-    const clampedY = Math.max(maxDistance, Math.min(y, DESIGN_HEIGHT - maxDistance));
-    
-    return { x: clampedX, y: clampedY };
-  }
-
-  private findMenuForTarget(
-    targetInstanceId: string,
-    targetDefinitionId: string,
-  ): RoccoActionMenuDefinition | undefined {
-    for (const definition of this.definitions.values()) {
-      if (definition.targetInstanceIds?.includes(targetInstanceId)) {
-        return definition;
-      }
-      if (definition.targetDefinitionIds?.includes(targetDefinitionId)) {
-        return definition;
-      }
-    }
-
-    return undefined;
-  }
-
-  private findItemAt(
-    definition: RoccoActionMenuDefinition,
-    state: RoccoActionMenuState,
-    x: number,
-    y: number,
-  ): RoccoActionMenuItem | undefined {
-    const itemSize = definition.itemSize ?? DEFAULT_ITEM_SIZE;
-    const hitRadius = (itemSize * (definition.hoverScale ?? DEFAULT_HOVER_SCALE)) / 2;
-    const hitRadiusSquared = hitRadius * hitRadius;
-
-    for (let index = definition.items.length - 1; index >= 0; index -= 1) {
-      const position = this.resolveItemPosition(definition, state, index);
-      const dx = x - position.x;
-      const dy = y - position.y;
-      if (dx * dx + dy * dy <= hitRadiusSquared) {
-        return definition.items[index];
-      }
-    }
-
-    return undefined;
-  }
-
-  private resolveItemPosition(
-    definition: RoccoActionMenuDefinition,
-    state: RoccoActionMenuState,
-    index: number,
-  ): { x: number; y: number } {
-    const count = Math.max(1, definition.items.length);
-    const radius = definition.orbitRadius ?? DEFAULT_ORBIT_RADIUS;
-    const speed = definition.orbitSpeedRadiansPerSecond ?? DEFAULT_ORBIT_SPEED_RADIANS_PER_SECOND;
-    const elapsedSeconds = state.elapsedMs / 1000;
-    const angle = (Math.PI * 2 * index) / count - Math.PI / 2 + elapsedSeconds * speed;
-    return {
-      x: state.x + Math.cos(angle) * radius,
-      y: state.y + Math.sin(angle) * radius,
-    };
-  }
 }

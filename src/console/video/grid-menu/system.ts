@@ -25,11 +25,7 @@ interface CarriedGridMenuItem {
 }
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function resolveDefinitionTitleHeight(definition: RoccoGridMenuDefinition): number {
@@ -151,159 +147,6 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
   private activeDefinition: RoccoGridMenuDefinition | undefined;
   private activeState: RoccoGridMenuState | undefined;
   private carriedItem: CarriedGridMenuItem | undefined;
-
-  openMenu(definition: RoccoGridMenuDefinition): void {
-    if (!definition.id) {
-      throw new Error('Grid menu definition id is required.');
-    }
-
-    this.activeDefinition = normalizeDefinition(definition);
-    this.activeState = {
-      definitionId: definition.id,
-      hoveredItemId: undefined,
-      hoveredSlotIndex: undefined,
-      hoveredButtonId: undefined,
-      carriedItem:
-        this.carriedItem?.definitionId === definition.id
-          ? clone(this.carriedItem.item)
-          : undefined,
-    };
-  }
-
-  toggleMenu(definition: RoccoGridMenuDefinition): void {
-    if (this.isOpen(definition.id)) {
-      this.closeMenu();
-      return;
-    }
-
-    this.openMenu(definition);
-  }
-
-  closeMenu(): void {
-    this.activeDefinition = undefined;
-    this.activeState = undefined;
-  }
-
-  isOpen(definitionId?: string): boolean {
-    if (!this.activeDefinition || !this.activeState) {
-      return false;
-    }
-
-    return definitionId ? this.activeState.definitionId === definitionId : true;
-  }
-
-  setHoverAt(x: number, y: number): boolean {
-    if (!this.activeDefinition || !this.activeState) {
-      return false;
-    }
-
-    const slotIndex = this.findSlotIndexAt(x, y);
-    const item = slotIndex === undefined ? undefined : this.findItemInSlot(slotIndex);
-    const button = slotIndex === undefined ? this.findButtonAt(x, y) : undefined;
-    const nextHoveredItemId = item?.id;
-    const nextHoveredButtonId = button?.id;
-    if (
-      this.activeState.hoveredItemId === nextHoveredItemId &&
-      this.activeState.hoveredSlotIndex === slotIndex &&
-      this.activeState.hoveredButtonId === nextHoveredButtonId
-    ) {
-      return false;
-    }
-
-    this.activeState.hoveredItemId = nextHoveredItemId;
-    this.activeState.hoveredSlotIndex = slotIndex;
-    this.activeState.hoveredButtonId = nextHoveredButtonId;
-    return true;
-  }
-
-  getHoveredItem(): RoccoGridMenuItem | undefined {
-    if (!this.activeDefinition || this.activeState?.hoveredSlotIndex === undefined) {
-      return undefined;
-    }
-
-    const item = this.findItemInSlot(this.activeState.hoveredSlotIndex);
-    return item ? clone(item) : undefined;
-  }
-
-  activateAt(x: number, y: number): RoccoGridMenuActivation | undefined {
-    if (!this.activeDefinition || !this.activeState) {
-      return undefined;
-    }
-
-    if (!this.containsPoint(x, y)) {
-      if (this.activeDefinition.reorderable && this.carriedItem) {
-        return this.carryItemOutsideMenu();
-      }
-
-      const activation: RoccoGridMenuActivation = {
-        kind: 'grid-menu',
-        definitionId: this.activeDefinition.id,
-        interaction: 'close',
-        items: this.listActiveItems(),
-      };
-      this.closeMenu();
-      return activation;
-    }
-
-    const button = this.findButtonAt(x, y);
-    if (button) {
-      return this.activateButton(button);
-    }
-
-    const slotIndex = this.findSlotIndexAt(x, y);
-    if (slotIndex === undefined) {
-      if (this.activeDefinition.closeOnEmptyClick) {
-        const activation: RoccoGridMenuActivation = {
-          kind: 'grid-menu',
-          definitionId: this.activeDefinition.id,
-          interaction: 'close',
-          items: this.listActiveItems(),
-        };
-        this.closeMenu();
-        return activation;
-      }
-
-      return undefined;
-    }
-
-    if (this.activeDefinition.reorderable) {
-      return this.activateReorderableSlot(slotIndex);
-    }
-
-    return this.activateItem(slotIndex);
-  }
-
-  getCarriedItem(): RoccoGridMenuCarriedItem | undefined {
-    if (!this.carriedItem) {
-      return undefined;
-    }
-
-    return {
-      definitionId: this.carriedItem.definitionId,
-      item: clone(this.carriedItem.item),
-    };
-  }
-
-  clearCarriedItem(): void {
-    this.carriedItem = undefined;
-    if (this.activeState) {
-      this.activeState.carriedItem = undefined;
-    }
-  }
-
-  getRenderableMenu(): RoccoGridMenuRenderable | undefined {
-    if (!this.activeDefinition || !this.activeState) {
-      return undefined;
-    }
-
-    return {
-      definition: clone(this.activeDefinition),
-      state: clone({
-        ...this.activeState,
-        carriedItem: this.carriedItem ? this.carriedItem.item : undefined,
-      }),
-    };
-  }
 
   private activateItem(slotIndex: number): RoccoGridMenuActivation | undefined {
     const item = this.findItemInSlot(slotIndex);
@@ -472,7 +315,6 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
   private resolveRestoreSlotIndex(preferredSlotIndex: number): number {
     const slotCount = this.resolveSlotCount();
     const normalizedPreferred = Math.max(0, Math.min(slotCount - 1, Math.floor(preferredSlotIndex)));
-    const fallbackSlotIndex = this.findFirstAvailableSlotIndex();
     if (!this.isBlockedSlotIndex(normalizedPreferred) && !this.findItemInSlot(normalizedPreferred)) {
       return normalizedPreferred;
     }
@@ -483,6 +325,7 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
       }
     }
 
+    const fallbackSlotIndex = this.findFirstAvailableSlotIndex();
     return this.isBlockedSlotIndex(normalizedPreferred) ? fallbackSlotIndex : normalizedPreferred;
   }
 
@@ -505,9 +348,12 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
       return;
     }
 
-    this.activeDefinition.items = this.activeDefinition.items
-      .filter((item) => item.id !== itemId && item.id !== replacement.id)
-      .concat(replacement);
+    this.activeDefinition.items = [
+      ...this.activeDefinition.items.filter(
+        (item) => item.id !== itemId && item.id !== replacement.id,
+      ),
+      replacement,
+    ];
   }
 
   private listActiveItems(): RoccoGridMenuItem[] {
@@ -701,4 +547,158 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
       height: slotHeight,
     };
   }
+
+  openMenu(definition: RoccoGridMenuDefinition): void {
+    if (!definition.id) {
+      throw new Error('Grid menu definition id is required.');
+    }
+
+    this.activeDefinition = normalizeDefinition(definition);
+    this.activeState = {
+      definitionId: definition.id,
+      hoveredItemId: undefined,
+      hoveredSlotIndex: undefined,
+      hoveredButtonId: undefined,
+      carriedItem:
+        this.carriedItem?.definitionId === definition.id
+          ? clone(this.carriedItem.item)
+          : undefined,
+    };
+  }
+
+  toggleMenu(definition: RoccoGridMenuDefinition): void {
+    if (this.isOpen(definition.id)) {
+      this.closeMenu();
+      return;
+    }
+
+    this.openMenu(definition);
+  }
+
+  closeMenu(): void {
+    this.activeDefinition = undefined;
+    this.activeState = undefined;
+  }
+
+  isOpen(definitionId?: string): boolean {
+    if (!this.activeDefinition || !this.activeState) {
+      return false;
+    }
+
+    return definitionId ? this.activeState.definitionId === definitionId : true;
+  }
+
+  setHoverAt(x: number, y: number): boolean {
+    if (!this.activeDefinition || !this.activeState) {
+      return false;
+    }
+
+    const slotIndex = this.findSlotIndexAt(x, y);
+    const item = slotIndex === undefined ? undefined : this.findItemInSlot(slotIndex);
+    const button = slotIndex === undefined ? this.findButtonAt(x, y) : undefined;
+    const nextHoveredItemId = item?.id;
+    const nextHoveredButtonId = button?.id;
+    if (
+      this.activeState.hoveredItemId === nextHoveredItemId &&
+      this.activeState.hoveredSlotIndex === slotIndex &&
+      this.activeState.hoveredButtonId === nextHoveredButtonId
+    ) {
+      return false;
+    }
+
+    this.activeState.hoveredItemId = nextHoveredItemId;
+    this.activeState.hoveredSlotIndex = slotIndex;
+    this.activeState.hoveredButtonId = nextHoveredButtonId;
+    return true;
+  }
+
+  getHoveredItem(): RoccoGridMenuItem | undefined {
+    if (!this.activeDefinition || this.activeState?.hoveredSlotIndex === undefined) {
+      return undefined;
+    }
+
+    const item = this.findItemInSlot(this.activeState.hoveredSlotIndex);
+    return item ? clone(item) : undefined;
+  }
+
+  activateAt(x: number, y: number): RoccoGridMenuActivation | undefined {
+    if (!this.activeDefinition || !this.activeState) {
+      return undefined;
+    }
+
+    if (!this.containsPoint(x, y)) {
+      if (this.activeDefinition.reorderable && this.carriedItem) {
+        return this.carryItemOutsideMenu();
+      }
+
+      const activation: RoccoGridMenuActivation = {
+        kind: 'grid-menu',
+        definitionId: this.activeDefinition.id,
+        interaction: 'close',
+        items: this.listActiveItems(),
+      };
+      this.closeMenu();
+      return activation;
+    }
+
+    const button = this.findButtonAt(x, y);
+    if (button) {
+      return this.activateButton(button);
+    }
+
+    const slotIndex = this.findSlotIndexAt(x, y);
+    if (slotIndex === undefined) {
+      if (this.activeDefinition.closeOnEmptyClick) {
+        const activation: RoccoGridMenuActivation = {
+          kind: 'grid-menu',
+          definitionId: this.activeDefinition.id,
+          interaction: 'close',
+          items: this.listActiveItems(),
+        };
+        this.closeMenu();
+        return activation;
+      }
+
+      return undefined;
+    }
+
+    if (this.activeDefinition.reorderable) {
+      return this.activateReorderableSlot(slotIndex);
+    }
+
+    return this.activateItem(slotIndex);
+  }
+
+  getCarriedItem(): RoccoGridMenuCarriedItem | undefined {
+    if (!this.carriedItem) {
+      return undefined;
+    }
+
+    return {
+      definitionId: this.carriedItem.definitionId,
+      item: clone(this.carriedItem.item),
+    };
+  }
+
+  clearCarriedItem(): void {
+    this.carriedItem = undefined;
+    if (this.activeState) {
+      this.activeState.carriedItem = undefined;
+    }
+  }
+
+  getRenderableMenu(): RoccoGridMenuRenderable | undefined {
+    if (!this.activeDefinition || !this.activeState) {
+      return undefined;
+    }
+
+    return {
+      definition: clone(this.activeDefinition),
+      state: clone({
+        ...this.activeState,
+        carriedItem: this.carriedItem ? this.carriedItem.item : undefined,
+      }),
+    };
+  }
+
 }

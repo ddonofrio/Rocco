@@ -1,4 +1,4 @@
-import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../../../console/cartridges';
+import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
 import type {
   RoccoActionMenuActivation,
@@ -878,6 +878,9 @@ const NETHER_SCENE_DEFINITION: RoccoNetherSceneDefinition = {
   ],
 };
 
+type NetherConsoleHardwareSceneClickResult = { suppressDefaultPlayerMove: true } | undefined;
+const NETHER_BLOCKING_INPUT_OWNER_ID = 'nether-console-hardware-sequence';
+
 export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAppearanceCapability {
   private readonly localization: RoccoLocalization;
   private engine: RoccoEngine | undefined = undefined;
@@ -908,6 +911,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
   private sceneReady = false;
   private shelfLookedAt = false;
   private shelfTaken = false;
+  private blockingInputLease: ReturnType<RoccoEngine['acquireInputLease']> | undefined = undefined;
   private zoomIntroPhase: 'hold' | 'zoom-out' | undefined = undefined;
   private zoomIntroElapsedMs = 0;
 
@@ -920,424 +924,16 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.title = 'Nether';
   }
 
-  async mount(
-    engine: RoccoEngine,
-    options: RoccoLevelMountOptions = {},
-    preloader?: RoccoAssetPreloader,
-  ): Promise<RoccoPlaneScene> {
-    this.engine = engine;
-    this.options = options;
-    this.spriteController = undefined;
-    this.scriptedInteractionController = undefined;
-    this.onRestartRequested = options.onRestartRequested ?? undefined;
-    this.arrivalSequence = undefined;
-    this.securityDefeatSequence = undefined;
-    this.intercomStage = 'first-contact';
-    this.intercomPhase = 'idle';
-    this.intercomCurrentChoices = [];
-    this.intercomDialogue = new RoccoDialogueSession({
-      id: NETHER_INTERCOMUNICADOR_DIALOGUE_MENU_ID,
-      engine,
-      playerSpriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-      npcSpriteInstanceId: NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID,
-      playerLineTtlMs: NETHER_INTERCOMUNICADOR_PLAYER_TTL_MS,
-      npcLineTtlMs: NETHER_INTERCOMUNICADOR_REPLY_TTL_MS,
-    });
-    this.leftSideExposureElapsedMs = 0;
-    this.perspectiveFarY = 0;
-    this.smokeScale = 1;
-    this.pipeSmokeScale = 1;
-    this.pipeSmokeSecondScale = 1;
-    this.pipeSmokeSecondStartFrameIndex = 0;
-    this.portalScale = 1;
-    this.smokeFrameCount = 0;
-    this.ambientSoundVolume = NETHER_AMBIENT_SOUND_VOLUME;
-    this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
-    this.lightsNoiseOpacity = randomBetween(NETHER_LIGHTS_MIN_OPACITY, NETHER_LIGHTS_NOISE_MAX_OPACITY);
-    this.lightsNoiseTargetOpacity = this.lightsNoiseOpacity;
-    this.lightsNoiseTargetRemainingMs = randomBetween(
-      NETHER_LIGHTS_NOISE_STEP_MIN_MS,
-      NETHER_LIGHTS_NOISE_STEP_MAX_MS,
+  private acquireBlockingInputLease(engine: RoccoEngine): void {
+    this.blockingInputLease ??= engine.acquireInputLease(
+      NETHER_BLOCKING_INPUT_OWNER_ID,
+      'blocked',
     );
-    this.sceneReady = false;
-    this.shelfLookedAt = false;
-    this.shelfTaken = false;
-    this.zoomIntroPhase = undefined;
-    this.zoomIntroElapsedMs = 0;
-
-    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
-    const isReturningFromNetherTwo = entryConnector?.id === NETHER_FORWARD_CONNECTOR_ID;
-    const shouldPlayArrivalSequence =
-      entryConnector?.id === NETHER_ENTRY_CONNECTOR_ID &&
-      (options.forceArrivalSequence === true || !this.arrivalSequencePlayed);
-    let initialPosition: RoccoPoint;
-    if (isReturningFromNetherTwo) {
-      initialPosition = { ...NETHER_FORWARD_RETURN_POSITION };
-    } else if (entryConnector) {
-      initialPosition = {
-        x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
-        y: entryConnector.entryPoint.y,
-      };
-    } else {
-      initialPosition = { ...NETHER_ENTRY_POSITION };
-    }
-    const initialFacing = entryConnector?.entryFacing ?? 'down';
-    const scene = await loadOrCreateNetherScene(engine, NETHER_SCENE_DEFINITION);
-    const walkMapProfile = await createNetherWalkMapProfile(netherConsoleHardwareSpawnAssetUrls.walkPath);
-    this.perspectiveFarY = walkMapProfile.farY;
-    const securityCameraDefinition = createNetherSecurityCameraSpriteDefinition(this.localization);
-    const intercomMessageAnchorDefinition = createNetherIntercomMessageAnchorDefinition();
-    const [smokeSprite, portalSprite] = await Promise.all([
-      createNetherArrivalSmokeSpriteDefinition(),
-      shouldPlayArrivalSequence
-        ? createNetherArrivalPortalSpriteDefinition()
-        : Promise.resolve(undefined),
-    ]);
-    const pipeSmokeDefinition = createNetherPipeSmokeSpriteDefinition(smokeSprite.definition);
-    this.pipeSmokeScale = Math.max(
-      0.01,
-      NETHER_PIPE_SMOKE_TARGET_HEIGHT / Math.max(1, smokeSprite.initialFrameHeight),
-    );
-    this.pipeSmokeSecondScale = Math.max(
-      0.01,
-      NETHER_PIPE_SMOKE_SECOND_TARGET_HEIGHT / Math.max(1, smokeSprite.initialFrameHeight),
-    );
-    this.pipeSmokeSecondStartFrameIndex = Math.max(0, Math.floor(smokeSprite.frameCount / 2));
-
-    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
-    await Promise.all([
-      (preloader?.preloadSpriteDefinition(engine, securityCameraDefinition) ?? engine.video.preloadSpriteDefinition(securityCameraDefinition)),
-      (preloader?.preloadSpriteDefinition(engine, intercomMessageAnchorDefinition) ?? engine.video.preloadSpriteDefinition(intercomMessageAnchorDefinition)),
-      (preloader?.preloadSpriteDefinition(engine, pipeSmokeDefinition) ?? engine.video.preloadSpriteDefinition(pipeSmokeDefinition)),
-      shouldPlayArrivalSequence
-        ? (preloader?.preloadSpriteDefinition(engine, smokeSprite.definition) ?? engine.video.preloadSpriteDefinition(smokeSprite.definition))
-        : Promise.resolve(),
-      portalSprite
-        ? (preloader?.preloadSpriteDefinition(engine, portalSprite.definition) ?? engine.video.preloadSpriteDefinition(portalSprite.definition))
-        : Promise.resolve(),
-    ]);
-    engine.audio.registerSound({
-      id: NETHER_AMBIENT_SOUND_ID,
-      uri: netherAmbientSteamMachineAssetUrl,
-      volume: NETHER_AMBIENT_SOUND_VOLUME,
-      loop: true,
-    });
-    engine.audio.registerSound({
-      id: NETHER_SECURITY_ALERT_SOUND_ID,
-      uri: roccoDefaultYouLoseSoundUrl,
-      volume: NETHER_SECURITY_ALERT_SOUND_VOLUME,
-      loop: false,
-    });
-    engine.loadPlaneScene(scene);
-    engine.video.sprites.loadSpriteDefinition(securityCameraDefinition);
-    engine.video.sprites.loadSpriteDefinition(intercomMessageAnchorDefinition);
-    engine.video.sprites.loadSpriteDefinition(pipeSmokeDefinition);
-    if (shouldPlayArrivalSequence) {
-      engine.video.sprites.loadSpriteDefinition(smokeSprite.definition);
-    }
-    if (portalSprite) {
-      engine.video.sprites.loadSpriteDefinition(portalSprite.definition);
-    }
-    this.installSecurityCamera(engine);
-    this.installIntercomMessageAnchor(engine);
-    this.installIntercomunicador(engine);
-    this.installNoisyMachine(engine);
-    this.installShelf(engine);
-    this.installPipeSmoke(engine);
-    this.lightsOverlayOpacity = this.lightsNoiseOpacity;
-    engine.video.planes.updatePlane(
-      ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_SCENE_ID,
-      NETHER_LIGHTS_PLANE_ID,
-      {
-        opacity: this.lightsOverlayOpacity,
-      },
-    );
-    engine.video.planes.updatePlane(
-      ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_SCENE_ID,
-      NETHER_SCENE_DEFINITION.planeIds.background,
-      {
-        contrast:
-          NETHER_BACKGROUND_BASE_CONTRAST +
-          this.lightsOverlayOpacity * NETHER_BACKGROUND_CONTRAST_RESPONSE,
-      },
-    );
-    this.updateRoccoLightContrast(this.lightsOverlayOpacity);
-    engine.video.actionMenus.closeMenu();
-    engine.video.messages.clearMessages();
-    engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
-    await Promise.all([
-      (async () => {
-        try {
-          await engine.audio.preloadSound(NETHER_AMBIENT_SOUND_ID);
-        } catch {
-          engine.log('Audio', 'Nether ambient steam machine sound could not be preloaded.');
-        }
-      })(),
-      (async () => {
-        try {
-          await engine.audio.preloadSound(NETHER_SECURITY_ALERT_SOUND_ID);
-        } catch {
-          engine.log('Audio', 'Nether security alert sound could not be preloaded.');
-        }
-      })(),
-    ]);
-    engine.audio.playSound(NETHER_AMBIENT_SOUND_ID, {
-      restart: true,
-      volume: this.ambientSoundVolume,
-      loop: true,
-    });
-    this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, []);
-
-    if (shouldPlayArrivalSequence && portalSprite) {
-      engine.audio.registerSound({
-        id: NETHER_ARRIVAL_PORTAL_LOOP_SOUND_ID,
-        uri: NETHER_ARRIVAL_PORTAL_LOOP_SOUND_URL,
-        volume: NETHER_ARRIVAL_PORTAL_LOOP_SOUND_VOLUME,
-        loop: true,
-      });
-      engine.audio.registerSound({
-        id: NETHER_ARRIVAL_SPELL_SOUND_ID,
-        uri: NETHER_ARRIVAL_SPELL_SOUND_URL,
-        volume: NETHER_ARRIVAL_SPELL_SOUND_VOLUME,
-        loop: false,
-      });
-      await Promise.all([
-        (async () => {
-          try {
-            await engine.audio.preloadSound(NETHER_ARRIVAL_PORTAL_LOOP_SOUND_ID);
-          } catch {
-            engine.log('Audio', 'Nether arrival portal loop sound could not be preloaded.');
-          }
-        })(),
-        (async () => {
-          try {
-            await engine.audio.preloadSound(NETHER_ARRIVAL_SPELL_SOUND_ID);
-          } catch {
-            engine.log('Audio', 'Nether arrival spell sound could not be preloaded.');
-          }
-        })(),
-      ]);
-      engine.video.sprites.removeSprite(NETHER_ARRIVAL_PORTAL_INSTANCE_ID);
-      engine.video.sprites.removeSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
-      this.smokeScale = Math.max(
-        0.01,
-        NETHER_ARRIVAL_SMOKE_TARGET_HEIGHT / Math.max(1, smokeSprite.initialFrameHeight),
-      );
-      this.portalScale = Math.max(
-        0.01,
-        NETHER_ARRIVAL_PORTAL_TARGET_HEIGHT / Math.max(1, portalSprite.initialFrameHeight),
-      );
-      this.smokeFrameCount = smokeSprite.frameCount;
-      this.startArrivalZoomIntro(engine);
-    } else {
-      this.spriteController = await this.installNetherSprite(
-        engine,
-        initialFacing,
-        isReturningFromNetherTwo
-          ? { ...initialPosition }
-          : projectOriginToWalkMap(walkMapProfile.walkMap, initialPosition, NETHER_ROCCO_SCALE),
-      );
-    }
-    engine.video.render(0);
-    this.sceneReady = true;
-
-    return scene;
   }
 
-  unmount(engine: RoccoEngine): void {
-    engine.video.actionMenus.closeMenu();
-    this.scriptedInteractionController?.cancel();
-    this.resetIntercomConversationState();
-    this.clearSecurityDefeatPresentation();
-    engine.video.messages.clearMessages();
-    engine.audio.stopSound(NETHER_AMBIENT_SOUND_ID);
-    engine.audio.unregisterSound(NETHER_AMBIENT_SOUND_ID);
-    engine.audio.stopSound(NETHER_SECURITY_ALERT_SOUND_ID);
-    engine.audio.unregisterSound(NETHER_SECURITY_ALERT_SOUND_ID);
-    engine.audio.stopSound(NETHER_ARRIVAL_PORTAL_LOOP_SOUND_ID);
-    engine.audio.unregisterSound(NETHER_ARRIVAL_PORTAL_LOOP_SOUND_ID);
-    engine.audio.stopSound(NETHER_ARRIVAL_SPELL_SOUND_ID);
-    engine.audio.unregisterSound(NETHER_ARRIVAL_SPELL_SOUND_ID);
-    engine.video.actionMenus.unregisterMenu(NETHER_SECURITY_CAMERA_ACTION_MENU_ID);
-    engine.video.actionMenus.unregisterMenu(NETHER_INTERCOMUNICADOR_ACTION_MENU_ID);
-    engine.video.actionMenus.unregisterMenu(NETHER_NOISY_MACHINE_ACTION_MENU_ID);
-    engine.video.actionMenus.unregisterMenu(NETHER_SHELF_ACTION_MENU_ID);
-    this.intercomDialogue?.cancel();
-    engine.video.sprites.removeSprite(NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID);
-    engine.video.sprites.removeSprite(NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID);
-    engine.video.sprites.removeSprite(NETHER_PIPE_SMOKE_SPRITE_INSTANCE_ID);
-    engine.video.sprites.removeSprite(NETHER_PIPE_SMOKE_SECOND_SPRITE_INSTANCE_ID);
-    engine.video.sprites.removeSprite(NETHER_ARRIVAL_PORTAL_INSTANCE_ID);
-    engine.video.sprites.removeSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_INTERCOMUNICADOR_TARGET_INSTANCE_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_SHELF_TARGET_INSTANCE_ID);
-    uninstallDefaultSprite(engine);
-    engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
-    this.engine = undefined;
-    this.spriteController = undefined;
-    this.scriptedInteractionController = undefined;
-    this.onRestartRequested = undefined;
-    this.arrivalSequence = undefined;
-    this.securityDefeatSequence = undefined;
-    this.intercomStage = 'first-contact';
-    this.intercomPhase = 'idle';
-    this.intercomCurrentChoices = [];
-    this.intercomDialogue = undefined;
-    this.leftSideExposureElapsedMs = 0;
-    this.perspectiveFarY = 0;
-    this.smokeScale = 1;
-    this.pipeSmokeScale = 1;
-    this.pipeSmokeSecondScale = 1;
-    this.pipeSmokeSecondStartFrameIndex = 0;
-    this.portalScale = 1;
-    this.smokeFrameCount = 0;
-    this.ambientSoundVolume = NETHER_AMBIENT_SOUND_VOLUME;
-    this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
-    this.lightsNoiseOpacity = NETHER_LIGHTS_MIN_OPACITY;
-    this.lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;
-    this.lightsNoiseTargetRemainingMs = 0;
-    this.sceneReady = false;
-    this.zoomIntroPhase = undefined;
-    this.zoomIntroElapsedMs = 0;
-    engine.video.zoom.clear();
-    engine.video.render(0);
-  }
-
-  applyRoccoAppearance(appearance: RoccoPlayerAppearance): void {
-    this.options.roccoAppearance = appearance;
-  }
-
-  update(deltaMs: number): void {
-    this.updateLightsOverlay(deltaMs);
-    this.updateAmbientSoundVolume();
-
-    if (this.zoomIntroPhase) {
-      this.updateArrivalZoomIntro(deltaMs);
-      return;
-    }
-
-    if (this.securityDefeatSequence) {
-      this.updateSecurityDefeatSequence(deltaMs);
-      return;
-    }
-
-    if (this.arrivalSequence) {
-      this.updateArrivalSequence(deltaMs);
-      return;
-    }
-
-    this.spriteController?.update(deltaMs);
-    this.scriptedInteractionController?.update();
-    this.intercomDialogue?.update(deltaMs);
-    this.updateLeftSideSecurityWatch(deltaMs);
-  }
-
-  handleAction(activation: RoccoActionMenuActivation): void {
-    if (
-      !this.engine ||
-      (
-        activation.targetInstanceId !== NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID &&
-        activation.targetInstanceId !== NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID
-      )
-    ) {
-      if (
-        this.engine &&
-        activation.targetInstanceId === NETHER_INTERCOMUNICADOR_TARGET_INSTANCE_ID
-      ) {
-        this.handleIntercomunicadorAction(activation);
-      }
-      if (
-        this.engine &&
-        activation.targetInstanceId === NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID
-      ) {
-        this.handleNoisyMachineAction(activation);
-      }
-      if (
-        this.engine &&
-        activation.targetInstanceId === NETHER_SHELF_TARGET_INSTANCE_ID
-      ) {
-        this.handleShelfAction(activation);
-      }
-      return;
-    }
-
-    const cameraText = resolveNetherSecurityCameraText(this.localization);
-    if (activation.actionId === 'look') {
-      this.showSecurityCameraThought(cameraText.lookLines, 'nether-security-camera-look');
-      return;
-    }
-
-    if (activation.actionId === 'grab') {
-      this.showSecurityCameraThought(cameraText.grabLines, 'nether-security-camera-grab');
-      return;
-    }
-
-    if (activation.actionId === 'kick') {
-      this.showSecurityCameraThought(cameraText.kickLines, 'nether-security-camera-kick');
-    }
-  }
-
-  handleGridMenu(activation: RoccoGridMenuActivation): void {
-    if (
-      activation.definitionId !== NETHER_INTERCOMUNICADOR_DIALOGUE_MENU_ID ||
-      this.intercomPhase !== 'awaiting-choice'
-    ) {
-      return;
-    }
-
-    if (activation.interaction === 'close') {
-      return;
-    }
-
-    const menu = this.createIntercomChoiceMenu(this.intercomCurrentChoices);
-    const selected = resolveRoccoDialogueChoice(menu, activation);
-    if (!selected) {
-      return;
-    }
-
-    const choice = this.intercomCurrentChoices.find((candidate) => candidate.id === selected.id);
-    if (!choice) {
-      return;
-    }
-
-    this.intercomDialogue?.cancel();
-    this.startIntercomChoice(choice);
-  }
-
-  handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
-    if (this.securityDefeatSequence) {
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    if (this.advanceIntercomConversation()) {
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    if (
-      activation.targetInstanceId === NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID ||
-      activation.targetInstanceId === NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID
-    ) {
-      return;
-    }
-
-    if (activation.targetInstanceId === NETHER_INTERCOMUNICADOR_TARGET_INSTANCE_ID) {
-      return;
-    }
-
-    if (activation.targetInstanceId === NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID) {
-      return;
-    }
-
-    if (activation.targetInstanceId === NETHER_SHELF_TARGET_INSTANCE_ID && this.shelfTaken) {
-        const shelfText = resolveNetherShelfText(this.localization);
-        this.showShelfThought(
-          shelfText.emptyLookLines,
-          NETHER_SHELF_LOOK_HISTORY_KEY,
-        );
-        return { suppressDefaultPlayerMove: true };
-      }
+  private releaseBlockingInputLease(): void {
+    this.blockingInputLease?.dispose();
+    this.blockingInputLease = undefined;
   }
 
   private installSecurityCamera(engine: RoccoEngine): void {
@@ -1503,7 +1099,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.intercomCurrentChoices = choices;
     this.intercomPhase = 'awaiting-choice';
     this.engine.video.gridMenus.openMenu(this.createIntercomChoiceMenu(choices).gridMenu);
-    this.engine.setInputEnabled(true);
     this.engine.video.render(0);
   }
 
@@ -2048,7 +1643,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.engine.video.gridMenus.clearCarriedItem();
     this.engine.video.messages.clearMessages();
     this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
-    this.engine.setInputEnabled(false);
+    this.acquireBlockingInputLease(this.engine);
     this.securityDefeatSequence = {
       phase: 'warning',
       elapsedMs: 0,
@@ -2215,7 +1810,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       elapsedMs: 0,
     };
     this.clearSecurityDefeatPresentation();
-    this.engine.setInputEnabled(true);
+    this.releaseBlockingInputLease();
     onRestartRequested?.({
       levelId: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
       entryConnectorId: NETHER_ENTRY_CONNECTOR_ID,
@@ -2388,7 +1983,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
   }
 
   private startArrivalZoomIntro(engine: RoccoEngine): void {
-    engine.setInputEnabled(false);
+    this.acquireBlockingInputLease(engine);
     engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
     engine.setPlayerSprite(undefined);
     engine.video.zoom.setTransform({
@@ -2601,7 +2196,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     } catch (error) {
       engine.log('System', `Nether arrival sequence failed: ${String(error)}`);
     } finally {
-      engine.setInputEnabled(true);
+      this.releaseBlockingInputLease();
       this.arrivalSequence = undefined;
       engine.video.render(0);
     }
@@ -2621,5 +2216,429 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
 
   private resolveArrivalThoughtLine(): string {
     return this.localization.text.nether.arrivalThoughtLine;
+  }
+
+  async mount(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
+    this.engine = engine;
+    this.releaseBlockingInputLease();
+    this.options = options;
+    this.spriteController = undefined;
+    this.scriptedInteractionController = undefined;
+    this.onRestartRequested = options.onRestartRequested ?? undefined;
+    this.arrivalSequence = undefined;
+    this.securityDefeatSequence = undefined;
+    this.intercomStage = 'first-contact';
+    this.intercomPhase = 'idle';
+    this.intercomCurrentChoices = [];
+    this.intercomDialogue = new RoccoDialogueSession({
+      id: NETHER_INTERCOMUNICADOR_DIALOGUE_MENU_ID,
+      engine,
+      playerSpriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
+      npcSpriteInstanceId: NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID,
+      playerLineTtlMs: NETHER_INTERCOMUNICADOR_PLAYER_TTL_MS,
+      npcLineTtlMs: NETHER_INTERCOMUNICADOR_REPLY_TTL_MS,
+    });
+    this.leftSideExposureElapsedMs = 0;
+    this.perspectiveFarY = 0;
+    this.smokeScale = 1;
+    this.pipeSmokeScale = 1;
+    this.pipeSmokeSecondScale = 1;
+    this.pipeSmokeSecondStartFrameIndex = 0;
+    this.portalScale = 1;
+    this.smokeFrameCount = 0;
+    this.ambientSoundVolume = NETHER_AMBIENT_SOUND_VOLUME;
+    this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
+    this.lightsNoiseOpacity = randomBetween(NETHER_LIGHTS_MIN_OPACITY, NETHER_LIGHTS_NOISE_MAX_OPACITY);
+    this.lightsNoiseTargetOpacity = this.lightsNoiseOpacity;
+    this.lightsNoiseTargetRemainingMs = randomBetween(
+      NETHER_LIGHTS_NOISE_STEP_MIN_MS,
+      NETHER_LIGHTS_NOISE_STEP_MAX_MS,
+    );
+    this.sceneReady = false;
+    this.shelfLookedAt = false;
+    this.shelfTaken = false;
+    this.zoomIntroPhase = undefined;
+    this.zoomIntroElapsedMs = 0;
+
+    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
+    const isReturningFromNetherTwo = entryConnector?.id === NETHER_FORWARD_CONNECTOR_ID;
+    const shouldPlayArrivalSequence =
+      entryConnector?.id === NETHER_ENTRY_CONNECTOR_ID &&
+      (options.forceArrivalSequence === true || !this.arrivalSequencePlayed);
+    let initialPosition: RoccoPoint;
+    if (isReturningFromNetherTwo) {
+      initialPosition = { ...NETHER_FORWARD_RETURN_POSITION };
+    } else if (entryConnector) {
+      initialPosition = {
+        x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
+        y: entryConnector.entryPoint.y,
+      };
+    } else {
+      initialPosition = { ...NETHER_ENTRY_POSITION };
+    }
+    const initialFacing = entryConnector?.entryFacing ?? 'down';
+    const scene = await loadOrCreateNetherScene(engine, NETHER_SCENE_DEFINITION);
+    const walkMapProfile = await createNetherWalkMapProfile(netherConsoleHardwareSpawnAssetUrls.walkPath);
+    this.perspectiveFarY = walkMapProfile.farY;
+    const securityCameraDefinition = createNetherSecurityCameraSpriteDefinition(this.localization);
+    const intercomMessageAnchorDefinition = createNetherIntercomMessageAnchorDefinition();
+    const [smokeSprite, portalSprite] = await Promise.all([
+      createNetherArrivalSmokeSpriteDefinition(),
+      shouldPlayArrivalSequence
+        ? createNetherArrivalPortalSpriteDefinition()
+        : Promise.resolve(undefined),
+    ]);
+    const pipeSmokeDefinition = createNetherPipeSmokeSpriteDefinition(smokeSprite.definition);
+    this.pipeSmokeScale = Math.max(
+      0.01,
+      NETHER_PIPE_SMOKE_TARGET_HEIGHT / Math.max(1, smokeSprite.initialFrameHeight),
+    );
+    this.pipeSmokeSecondScale = Math.max(
+      0.01,
+      NETHER_PIPE_SMOKE_SECOND_TARGET_HEIGHT / Math.max(1, smokeSprite.initialFrameHeight),
+    );
+    this.pipeSmokeSecondStartFrameIndex = Math.max(0, Math.floor(smokeSprite.frameCount / 2));
+
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+    await Promise.all([
+      (preloader?.preloadSpriteDefinition(engine, securityCameraDefinition) ?? engine.video.preloadSpriteDefinition(securityCameraDefinition)),
+      (preloader?.preloadSpriteDefinition(engine, intercomMessageAnchorDefinition) ?? engine.video.preloadSpriteDefinition(intercomMessageAnchorDefinition)),
+      (preloader?.preloadSpriteDefinition(engine, pipeSmokeDefinition) ?? engine.video.preloadSpriteDefinition(pipeSmokeDefinition)),
+      shouldPlayArrivalSequence
+        ? (preloader?.preloadSpriteDefinition(engine, smokeSprite.definition) ?? engine.video.preloadSpriteDefinition(smokeSprite.definition))
+        : Promise.resolve(),
+      portalSprite
+        ? (preloader?.preloadSpriteDefinition(engine, portalSprite.definition) ?? engine.video.preloadSpriteDefinition(portalSprite.definition))
+        : Promise.resolve(),
+    ]);
+    engine.audio.registerSound({
+      id: NETHER_AMBIENT_SOUND_ID,
+      uri: netherAmbientSteamMachineAssetUrl,
+      volume: NETHER_AMBIENT_SOUND_VOLUME,
+      loop: true,
+    });
+    engine.audio.registerSound({
+      id: NETHER_SECURITY_ALERT_SOUND_ID,
+      uri: roccoDefaultYouLoseSoundUrl,
+      volume: NETHER_SECURITY_ALERT_SOUND_VOLUME,
+      loop: false,
+    });
+    engine.loadPlaneScene(scene);
+    engine.video.sprites.loadSpriteDefinition(securityCameraDefinition);
+    engine.video.sprites.loadSpriteDefinition(intercomMessageAnchorDefinition);
+    engine.video.sprites.loadSpriteDefinition(pipeSmokeDefinition);
+    if (shouldPlayArrivalSequence) {
+      engine.video.sprites.loadSpriteDefinition(smokeSprite.definition);
+    }
+    if (portalSprite) {
+      engine.video.sprites.loadSpriteDefinition(portalSprite.definition);
+    }
+    this.installSecurityCamera(engine);
+    this.installIntercomMessageAnchor(engine);
+    this.installIntercomunicador(engine);
+    this.installNoisyMachine(engine);
+    this.installShelf(engine);
+    this.installPipeSmoke(engine);
+    this.lightsOverlayOpacity = this.lightsNoiseOpacity;
+    engine.video.planes.updatePlane(
+      ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_SCENE_ID,
+      NETHER_LIGHTS_PLANE_ID,
+      {
+        opacity: this.lightsOverlayOpacity,
+      },
+    );
+    engine.video.planes.updatePlane(
+      ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_SCENE_ID,
+      NETHER_SCENE_DEFINITION.planeIds.background,
+      {
+        contrast:
+          NETHER_BACKGROUND_BASE_CONTRAST +
+          this.lightsOverlayOpacity * NETHER_BACKGROUND_CONTRAST_RESPONSE,
+      },
+    );
+    this.updateRoccoLightContrast(this.lightsOverlayOpacity);
+    engine.video.actionMenus.closeMenu();
+    engine.video.messages.clearMessages();
+    engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
+    await Promise.all([
+      (async () => {
+        try {
+          await engine.audio.preloadSound(NETHER_AMBIENT_SOUND_ID);
+        } catch {
+          engine.log('Audio', 'Nether ambient steam machine sound could not be preloaded.');
+        }
+      })(),
+      (async () => {
+        try {
+          await engine.audio.preloadSound(NETHER_SECURITY_ALERT_SOUND_ID);
+        } catch {
+          engine.log('Audio', 'Nether security alert sound could not be preloaded.');
+        }
+      })(),
+    ]);
+    engine.audio.playSound(NETHER_AMBIENT_SOUND_ID, {
+      restart: true,
+      volume: this.ambientSoundVolume,
+      loop: true,
+    });
+    this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, []);
+
+    if (shouldPlayArrivalSequence && portalSprite) {
+      engine.audio.registerSound({
+        id: NETHER_ARRIVAL_PORTAL_LOOP_SOUND_ID,
+        uri: NETHER_ARRIVAL_PORTAL_LOOP_SOUND_URL,
+        volume: NETHER_ARRIVAL_PORTAL_LOOP_SOUND_VOLUME,
+        loop: true,
+      });
+      engine.audio.registerSound({
+        id: NETHER_ARRIVAL_SPELL_SOUND_ID,
+        uri: NETHER_ARRIVAL_SPELL_SOUND_URL,
+        volume: NETHER_ARRIVAL_SPELL_SOUND_VOLUME,
+        loop: false,
+      });
+      await Promise.all([
+        (async () => {
+          try {
+            await engine.audio.preloadSound(NETHER_ARRIVAL_PORTAL_LOOP_SOUND_ID);
+          } catch {
+            engine.log('Audio', 'Nether arrival portal loop sound could not be preloaded.');
+          }
+        })(),
+        (async () => {
+          try {
+            await engine.audio.preloadSound(NETHER_ARRIVAL_SPELL_SOUND_ID);
+          } catch {
+            engine.log('Audio', 'Nether arrival spell sound could not be preloaded.');
+          }
+        })(),
+      ]);
+      engine.video.sprites.removeSprite(NETHER_ARRIVAL_PORTAL_INSTANCE_ID);
+      engine.video.sprites.removeSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
+      this.smokeScale = Math.max(
+        0.01,
+        NETHER_ARRIVAL_SMOKE_TARGET_HEIGHT / Math.max(1, smokeSprite.initialFrameHeight),
+      );
+      this.portalScale = Math.max(
+        0.01,
+        NETHER_ARRIVAL_PORTAL_TARGET_HEIGHT / Math.max(1, portalSprite.initialFrameHeight),
+      );
+      this.smokeFrameCount = smokeSprite.frameCount;
+      this.startArrivalZoomIntro(engine);
+    } else {
+      this.spriteController = await this.installNetherSprite(
+        engine,
+        initialFacing,
+        isReturningFromNetherTwo
+          ? { ...initialPosition }
+          : projectOriginToWalkMap(walkMapProfile.walkMap, initialPosition, NETHER_ROCCO_SCALE),
+      );
+    }
+    engine.video.render(0);
+    this.sceneReady = true;
+
+    return scene;
+  }
+
+  unmount(engine: RoccoEngine): void {
+    engine.video.actionMenus.closeMenu();
+    this.scriptedInteractionController?.cancel();
+    this.resetIntercomConversationState();
+    this.clearSecurityDefeatPresentation();
+    this.releaseBlockingInputLease();
+    engine.video.messages.clearMessages();
+    engine.audio.stopSound(NETHER_AMBIENT_SOUND_ID);
+    engine.audio.unregisterSound(NETHER_AMBIENT_SOUND_ID);
+    engine.audio.stopSound(NETHER_SECURITY_ALERT_SOUND_ID);
+    engine.audio.unregisterSound(NETHER_SECURITY_ALERT_SOUND_ID);
+    engine.audio.stopSound(NETHER_ARRIVAL_PORTAL_LOOP_SOUND_ID);
+    engine.audio.unregisterSound(NETHER_ARRIVAL_PORTAL_LOOP_SOUND_ID);
+    engine.audio.stopSound(NETHER_ARRIVAL_SPELL_SOUND_ID);
+    engine.audio.unregisterSound(NETHER_ARRIVAL_SPELL_SOUND_ID);
+    engine.video.actionMenus.unregisterMenu(NETHER_SECURITY_CAMERA_ACTION_MENU_ID);
+    engine.video.actionMenus.unregisterMenu(NETHER_INTERCOMUNICADOR_ACTION_MENU_ID);
+    engine.video.actionMenus.unregisterMenu(NETHER_NOISY_MACHINE_ACTION_MENU_ID);
+    engine.video.actionMenus.unregisterMenu(NETHER_SHELF_ACTION_MENU_ID);
+    this.intercomDialogue?.cancel();
+    engine.video.sprites.removeSprite(NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID);
+    engine.video.sprites.removeSprite(NETHER_PIPE_SMOKE_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(NETHER_PIPE_SMOKE_SECOND_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(NETHER_ARRIVAL_PORTAL_INSTANCE_ID);
+    engine.video.sprites.removeSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_INTERCOMUNICADOR_TARGET_INSTANCE_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_SHELF_TARGET_INSTANCE_ID);
+    uninstallDefaultSprite(engine);
+    engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
+    this.engine = undefined;
+    this.spriteController = undefined;
+    this.scriptedInteractionController = undefined;
+    this.onRestartRequested = undefined;
+    this.arrivalSequence = undefined;
+    this.securityDefeatSequence = undefined;
+    this.intercomStage = 'first-contact';
+    this.intercomPhase = 'idle';
+    this.intercomCurrentChoices = [];
+    this.intercomDialogue = undefined;
+    this.leftSideExposureElapsedMs = 0;
+    this.perspectiveFarY = 0;
+    this.smokeScale = 1;
+    this.pipeSmokeScale = 1;
+    this.pipeSmokeSecondScale = 1;
+    this.pipeSmokeSecondStartFrameIndex = 0;
+    this.portalScale = 1;
+    this.smokeFrameCount = 0;
+    this.ambientSoundVolume = NETHER_AMBIENT_SOUND_VOLUME;
+    this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
+    this.lightsNoiseOpacity = NETHER_LIGHTS_MIN_OPACITY;
+    this.lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;
+    this.lightsNoiseTargetRemainingMs = 0;
+    this.sceneReady = false;
+    this.zoomIntroPhase = undefined;
+    this.zoomIntroElapsedMs = 0;
+    engine.video.zoom.clear();
+    engine.video.render(0);
+  }
+
+  applyRoccoAppearance(appearance: RoccoPlayerAppearance): void {
+    this.options.roccoAppearance = appearance;
+  }
+
+  update(deltaMs: number): void {
+    this.updateLightsOverlay(deltaMs);
+    this.updateAmbientSoundVolume();
+
+    if (this.zoomIntroPhase) {
+      this.updateArrivalZoomIntro(deltaMs);
+      return;
+    }
+
+    if (this.securityDefeatSequence) {
+      this.updateSecurityDefeatSequence(deltaMs);
+      return;
+    }
+
+    if (this.arrivalSequence) {
+      this.updateArrivalSequence(deltaMs);
+      return;
+    }
+
+    this.spriteController?.update(deltaMs);
+    this.scriptedInteractionController?.update();
+    this.intercomDialogue?.update(deltaMs);
+    this.updateLeftSideSecurityWatch(deltaMs);
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (
+      !this.engine ||
+      (
+        activation.targetInstanceId !== NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID &&
+        activation.targetInstanceId !== NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID
+      )
+    ) {
+      if (
+        this.engine &&
+        activation.targetInstanceId === NETHER_INTERCOMUNICADOR_TARGET_INSTANCE_ID
+      ) {
+        this.handleIntercomunicadorAction(activation);
+      }
+      if (
+        this.engine &&
+        activation.targetInstanceId === NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID
+      ) {
+        this.handleNoisyMachineAction(activation);
+      }
+      if (
+        this.engine &&
+        activation.targetInstanceId === NETHER_SHELF_TARGET_INSTANCE_ID
+      ) {
+        this.handleShelfAction(activation);
+      }
+      return;
+    }
+
+    const cameraText = resolveNetherSecurityCameraText(this.localization);
+    if (activation.actionId === 'look') {
+      this.showSecurityCameraThought(cameraText.lookLines, 'nether-security-camera-look');
+      return;
+    }
+
+    if (activation.actionId === 'grab') {
+      this.showSecurityCameraThought(cameraText.grabLines, 'nether-security-camera-grab');
+      return;
+    }
+
+    if (activation.actionId === 'kick') {
+      this.showSecurityCameraThought(cameraText.kickLines, 'nether-security-camera-kick');
+    }
+  }
+
+  handleGridMenu(activation: RoccoGridMenuActivation): void {
+    if (
+      activation.definitionId !== NETHER_INTERCOMUNICADOR_DIALOGUE_MENU_ID ||
+      this.intercomPhase !== 'awaiting-choice'
+    ) {
+      return;
+    }
+
+    if (activation.interaction === 'close') {
+      return;
+    }
+
+    const menu = this.createIntercomChoiceMenu(this.intercomCurrentChoices);
+    const selected = resolveRoccoDialogueChoice(menu, activation);
+    if (!selected) {
+      return;
+    }
+
+    const choice = this.intercomCurrentChoices.find((candidate) => candidate.id === selected.id);
+    if (!choice) {
+      return;
+    }
+
+    this.intercomDialogue?.cancel();
+    this.startIntercomChoice(choice);
+  }
+
+  handleSceneClick(activation: RoccoSceneClickAction): NetherConsoleHardwareSceneClickResult {
+    if (this.securityDefeatSequence) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (this.advanceIntercomConversation()) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (
+      activation.targetInstanceId === NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID ||
+      activation.targetInstanceId === NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID
+    ) {
+      return undefined;
+    }
+
+    if (activation.targetInstanceId === NETHER_INTERCOMUNICADOR_TARGET_INSTANCE_ID) {
+      return undefined;
+    }
+
+    if (activation.targetInstanceId === NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID) {
+      return undefined;
+    }
+
+    if (activation.targetInstanceId === NETHER_SHELF_TARGET_INSTANCE_ID && this.shelfTaken) {
+      const shelfText = resolveNetherShelfText(this.localization);
+      this.showShelfThought(
+        shelfText.emptyLookLines,
+        NETHER_SHELF_LOOK_HISTORY_KEY,
+      );
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    return undefined;
   }
 }

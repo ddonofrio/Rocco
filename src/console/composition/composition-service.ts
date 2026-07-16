@@ -86,6 +86,10 @@ interface SessionState {
   error: CompositionSerializedError | null;
 }
 
+function nullValue<T>(): T {
+  return JSON.parse('null') as T;
+}
+
 function serializeCompositionError(error: unknown): CompositionSerializedError {
   if (error instanceof Error) {
     return {
@@ -102,18 +106,18 @@ function serializeCompositionError(error: unknown): CompositionSerializedError {
 }
 
 class CompositionSessionImpl implements CompositionSession {
+  private readonly service: CompositionServiceImpl;
   readonly id: string;
   readonly ownerId: string;
-  private readonly service: CompositionServiceImpl;
 
   constructor(id: string, ownerId: string, service: CompositionServiceImpl) {
+    this.service = service;
     this.id = id;
     this.ownerId = ownerId;
-    this.service = service;
   }
 
   get message(): string | null {
-    return this.service.getSession(this.id)?.message ?? null;
+    return this.service.getSession(this.id)?.message ?? nullValue<string | null>();
   }
 
   get status(): CompositionStatus {
@@ -125,15 +129,15 @@ class CompositionSessionImpl implements CompositionSession {
   }
 
   get completed(): number | null {
-    return this.service.getSession(this.id)?.completed ?? null;
+    return this.service.getSession(this.id)?.completed ?? nullValue<number | null>();
   }
 
   get total(): number | null {
-    return this.service.getSession(this.id)?.total ?? null;
+    return this.service.getSession(this.id)?.total ?? nullValue<number | null>();
   }
 
   get error(): CompositionSerializedError | null {
-    return this.service.getSession(this.id)?.error ?? null;
+    return this.service.getSession(this.id)?.error ?? nullValue<CompositionSerializedError | null>();
   }
 
   report(progress: CompositionProgress): void {
@@ -155,6 +159,42 @@ export class CompositionServiceImpl implements CompositionService {
   private readonly listeners = new Set<() => void>();
   private nextId = 0;
 
+  private activeSession(): SessionState | undefined {
+    for (let index = this.order.length - 1; index >= 0; index -= 1) {
+      const state = this.sessions.get(this.order[index] ?? '');
+      if (state?.mode === 'exclusive') {
+        return state;
+      }
+    }
+
+    for (let index = this.order.length - 1; index >= 0; index -= 1) {
+      const state = this.sessions.get(this.order[index] ?? '');
+      if (state) {
+        return state;
+      }
+    }
+    return undefined;
+  }
+
+  private emit(): void {
+    for (const listener of this.listeners) {
+      listener();
+    }
+  }
+
+  private toSessionInfo(state: SessionState): CompositionSessionInfo {
+    return {
+      id: state.id,
+      ownerId: state.ownerId,
+      message: state.message,
+      mode: state.mode,
+      status: state.status,
+      completed: state.completed,
+      total: state.total,
+      error: state.error,
+    };
+  }
+
   begin(options: {
     ownerId: string;
     mode?: CompositionMode;
@@ -165,12 +205,12 @@ export class CompositionServiceImpl implements CompositionService {
     const state: SessionState = {
       id,
       ownerId: options.ownerId,
-      message: options.message ?? null,
+      message: options.message ?? nullValue<string | null>(),
       mode: options.mode ?? 'exclusive',
       status: 'active',
-      completed: null,
-      total: null,
-      error: null,
+      completed: nullValue<number | null>(),
+      total: nullValue<number | null>(),
+      error: nullValue<CompositionSerializedError | null>(),
     };
     this.sessions.set(id, state);
     this.order.push(id);
@@ -191,8 +231,12 @@ export class CompositionServiceImpl implements CompositionService {
       throw new CompositionOwnershipError(state.ownerId, ownerId);
     }
     state.message = progress.message ?? state.message;
-    state.completed = Number.isFinite(progress.completed) ? progress.completed : state.completed;
-    state.total = Number.isFinite(progress.total) ? progress.total : state.total;
+    if (Number.isFinite(progress.completed)) {
+      state.completed = progress.completed;
+    }
+    if (Number.isFinite(progress.total)) {
+      state.total = progress.total;
+    }
     this.emit();
   }
 
@@ -228,17 +272,17 @@ export class CompositionServiceImpl implements CompositionService {
 
   getActiveMessage(): string | null {
     const active = this.activeSession();
-    return active ? active.message : null;
+    return active ? active.message : nullValue<string | null>();
   }
 
   getActiveStatus(): CompositionStatus | null {
     const active = this.activeSession();
-    return active ? active.status : null;
+    return active ? active.status : nullValue<CompositionStatus | null>();
   }
 
   getActiveSessionInfo(): CompositionSessionInfo | null {
     const active = this.activeSession();
-    return active ? this.toSessionInfo(active) : null;
+    return active ? this.toSessionInfo(active) : nullValue<CompositionSessionInfo | null>();
   }
 
   listSessions(): readonly CompositionSessionInfo[] {
@@ -252,42 +296,6 @@ export class CompositionServiceImpl implements CompositionService {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
-    };
-  }
-
-  private activeSession(): SessionState | undefined {
-    for (let index = this.order.length - 1; index >= 0; index -= 1) {
-      const state = this.sessions.get(this.order[index] ?? '');
-      if (state?.mode === 'exclusive') {
-        return state;
-      }
-    }
-
-    for (let index = this.order.length - 1; index >= 0; index -= 1) {
-      const state = this.sessions.get(this.order[index] ?? '');
-      if (state) {
-        return state;
-      }
-    }
-    return undefined;
-  }
-
-  private emit(): void {
-    for (const listener of this.listeners) {
-      listener();
-    }
-  }
-
-  private toSessionInfo(state: SessionState): CompositionSessionInfo {
-    return {
-      id: state.id,
-      ownerId: state.ownerId,
-      message: state.message,
-      mode: state.mode,
-      status: state.status,
-      completed: state.completed,
-      total: state.total,
-      error: state.error,
     };
   }
 }

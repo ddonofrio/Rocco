@@ -14,11 +14,7 @@ interface RoccoDefaultEffectManagerOptions {
 }
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -35,6 +31,15 @@ export class RoccoDefaultEffectManager implements RoccoEffectManager {
     this.registry = options.registry;
     this.resolveTarget = options.resolveTarget;
     this.onError = options.onError;
+  }
+
+  private requireEffect(effectId: string): RoccoEffect {
+    const effect = this.effects.get(effectId);
+    if (!effect) {
+      throw new Error(`Effect '${effectId}' was not found`);
+    }
+
+    return effect;
   }
 
   add(effect: RoccoEffect): void {
@@ -61,12 +66,13 @@ export class RoccoDefaultEffectManager implements RoccoEffectManager {
 
   update(effectId: string, patch: RoccoEffectPatch): void {
     const current = this.requireEffect(effectId);
-    const nextParameters =
-      patch.params === undefined
-        ? current.params
-        : isObject(current.params) && isObject(patch.params)
+    let nextParameters = current.params;
+    if (patch.params !== undefined) {
+      nextParameters =
+        isObject(current.params) && isObject(patch.params)
           ? { ...current.params, ...patch.params }
           : patch.params;
+    }
 
     const next: RoccoEffect = {
       ...current,
@@ -102,15 +108,6 @@ export class RoccoDefaultEffectManager implements RoccoEffectManager {
   }
 
   list(): RoccoEffect[] {
-    return [...this.effects.values()].map((effect) => clone(effect));
-  }
-
-  private requireEffect(effectId: string): RoccoEffect {
-    const effect = this.effects.get(effectId);
-    if (!effect) {
-      throw new Error(`Effect '${effectId}' was not found`);
-    }
-
-    return effect;
+    return Array.from(this.effects.values(), (effect) => clone(effect));
   }
 }

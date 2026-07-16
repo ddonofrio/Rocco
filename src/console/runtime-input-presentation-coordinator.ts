@@ -20,25 +20,38 @@ interface RoccoRuntimeInputPresentationCoordinatorOptions {
 export class RoccoRuntimeInputPresentationCoordinator {
   private readonly videoSystem: InputPresentationVideoSystem;
   private readonly viewportHost?: Pick<RoccoViewportHost, 'getMetrics' | 'setCursorAttachment'>;
-  private activeHoverDescription: string | null = null;
+  private activeHoverDescription: string | undefined;
 
   constructor(options: RoccoRuntimeInputPresentationCoordinatorOptions) {
     this.videoSystem = options.videoSystem;
     this.viewportHost = options.viewportHost;
   }
 
+  private resolveCarriedCursorAttachment(): RoccoCursorAttachment | undefined {
+    const carriedItem = this.videoSystem.gridMenus.getCarriedItem();
+    if (!carriedItem?.item.imageUri) {
+      return undefined;
+    }
+
+    return {
+      imageUri: carriedItem.item.imageUri,
+      label: carriedItem.item.label,
+      size: DEFAULT_CURSOR_ATTACHMENT_SIZE,
+    };
+  }
+
   unmount(): void {
-    this.activeHoverDescription = null;
+    this.activeHoverDescription = undefined;
     this.viewportHost?.setCursorAttachment(undefined);
   }
 
   setHoverDescription(text: string | undefined): void {
     const normalizedText = text?.trim() || undefined;
-    if ((this.activeHoverDescription ?? undefined) === normalizedText) {
+    if (this.activeHoverDescription === normalizedText) {
       return;
     }
 
-    this.activeHoverDescription = normalizedText ?? null;
+    this.activeHoverDescription = normalizedText;
     if (!normalizedText) {
       this.videoSystem.titles.removeTitle(HOVER_DESCRIPTION_TITLE_ID);
       this.videoSystem.render(0);
@@ -75,18 +88,5 @@ export class RoccoRuntimeInputPresentationCoordinator {
 
   syncCarriedCursorAttachment(): void {
     this.viewportHost?.setCursorAttachment(this.resolveCarriedCursorAttachment());
-  }
-
-  private resolveCarriedCursorAttachment(): RoccoCursorAttachment | undefined {
-    const carriedItem = this.videoSystem.gridMenus.getCarriedItem();
-    if (!carriedItem?.item.imageUri) {
-      return undefined;
-    }
-
-    return {
-      imageUri: carriedItem.item.imageUri,
-      label: carriedItem.item.label,
-      size: DEFAULT_CURSOR_ATTACHMENT_SIZE,
-    };
   }
 }

@@ -46,11 +46,11 @@ export async function makeRoccoColorKeyReplacedImageUri(
 
 export function parseRoccoColorKeyColors(colors: string[]): RoccoWaterColorRgb[] {
   return colors
-    .map(parseRoccoWaterColor)
+    .map((color) => parseRoccoWaterColor(color))
     .filter((color): color is RoccoWaterColorRgb => Boolean(color));
 }
 
-export function matchesRoccoColorKey(
+export function isRoccoColorKeyMatch(
   sample: RoccoWaterColorRgb,
   colors: RoccoWaterColorRgb[],
   tolerance: number,
@@ -64,9 +64,9 @@ export async function loadRoccoImageElement(uri: string): Promise<HTMLImageEleme
     image.addEventListener('load', () => {
       resolve(image);
     });
-    image.onerror = () => {
+    image.addEventListener('error', () => {
       reject(new Error(`Failed to load image '${uri}'.`));
-    };
+    });
     image.src = uri;
   });
 }
@@ -80,7 +80,9 @@ function replaceRoccoImageDataColors(
   },
 ): void {
   const replacementColor =
-    options.replacement.kind === 'color' ? parseRoccoWaterColor(options.replacement.color) : null;
+    options.replacement.kind === 'color'
+      ? parseRoccoWaterColor(options.replacement.color)
+      : undefined;
   const data = imageData.data;
   for (let index = 0; index < data.length; index += 4) {
     const alpha = data[index + 3] ?? 0;
@@ -93,7 +95,7 @@ function replaceRoccoImageDataColors(
       (data[index + 1] ?? 0) / 255,
       (data[index + 2] ?? 0) / 255,
     ];
-    if (!matchesRoccoColorKey(sample, options.colors, options.tolerance)) {
+    if (!isRoccoColorKeyMatch(sample, options.colors, options.tolerance)) {
       continue;
     }
 

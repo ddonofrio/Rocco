@@ -14,11 +14,7 @@ const DEFAULT_MESSAGE_RENDER_LAYER = 'overlay.messages';
 const DEFAULT_MESSAGE_Z_INDEX = 0;
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function normalizeMessage(message: RoccoSpriteMessageRequest, lines: string[]): RoccoSpriteMessageState {
@@ -90,7 +86,7 @@ export class RoccoSpriteMessageSystemSDK implements RoccoSpriteMessageSystem {
   }
 
   listMessages(): RoccoSpriteMessageState[] {
-    return [...this.messages.values()].map((message) => clone(message));
+    return this.messages.values().map((message) => clone(message)).toArray();
   }
 
   listRenderableMessages(
@@ -122,18 +118,22 @@ export class RoccoSpriteMessageSystemSDK implements RoccoSpriteMessageSystem {
       return;
     }
 
+    const expiredMessageIds: string[] = [];
     for (const message of this.messages.values()) {
       message.ttlMs -= deltaMs;
-      while (message.ttlMs <= 0) {
-        if (message.lineIndex < message.lines.length - 1) {
-          message.lineIndex += 1;
-          message.text = message.lines[message.lineIndex];
-          message.ttlMs += message.durationMs;
-        } else {
-          this.messages.delete(message.id);
-          break;
-        }
+      while (message.ttlMs <= 0 && message.lineIndex < message.lines.length - 1) {
+        message.lineIndex += 1;
+        message.text = message.lines[message.lineIndex];
+        message.ttlMs += message.durationMs;
       }
+
+      if (message.ttlMs <= 0) {
+        expiredMessageIds.push(message.id);
+      }
+    }
+
+    for (const messageId of expiredMessageIds) {
+      this.messages.delete(messageId);
     }
   }
 

@@ -44,9 +44,7 @@ export class RpceGameCompilationError extends Error {
   }
 }
 
-export type RpceEndpointKey = string;
-
-export function rpceEndpointKey(levelId: string, connectorId: string): RpceEndpointKey {
+export function rpceEndpointKey(levelId: string, connectorId: string): string {
   return `${levelId}#${connectorId}`;
 }
 
@@ -63,7 +61,7 @@ export interface RpceCompiledLevel<TLevel extends RpceLevel = RpceLevel> {
   readonly title: string;
   readonly developerOnly: boolean;
   readonly connectorIds: readonly string[];
-  readonly createLevel: (() => TLevel) | null;
+  readonly createLevel: (() => TLevel) | undefined;
 }
 
 export interface RpceCompiledMap {
@@ -81,7 +79,7 @@ export interface RpceCompiledGame<TLevel extends RpceLevel = RpceLevel> {
   readonly initialLevelId: string;
   readonly mapsById: ReadonlyMap<string, RpceCompiledMap>;
   readonly levelsById: ReadonlyMap<string, RpceCompiledLevel<TLevel>>;
-  readonly transitionsByEndpoint: ReadonlyMap<RpceEndpointKey, RpceCompiledEndpoint>;
+  readonly transitionsByEndpoint: ReadonlyMap<string, RpceCompiledEndpoint>;
   readonly reachableLevelIds: ReadonlySet<string>;
   resolveConnectedEndpoint(
     levelId: string,
@@ -94,47 +92,11 @@ interface RpceCollectedConnections {
   readonly scriptedConnections: readonly RpceScriptedConnection[];
 }
 
+function nullValue<T>(): T {
+  return JSON.parse('null') as T;
+}
+
 export class RpceGameCompiler {
-  compile<TLevel extends RpceLevel = RpceLevel>(
-    definition: RpceGameGraph<TLevel>,
-  ): RpceCompiledGame<TLevel> {
-    const mapsById = new Map<string, RpceCompiledMap>();
-    const levelsById = new Map<string, RpceCompiledLevel<TLevel>>();
-    const transitionsByEndpoint = new Map<RpceEndpointKey, RpceCompiledEndpoint>();
-
-    for (const map of definition.maps) {
-      this.registerMap(map, mapsById, levelsById);
-    }
-
-    const { connections, scriptedConnections } = this.collectConnections(definition);
-    this.registerConnections(connections, levelsById, transitionsByEndpoint);
-    this.registerScriptedConnections(scriptedConnections, levelsById, transitionsByEndpoint);
-
-    const initialMapId = this.resolveInitialMapId(definition, mapsById);
-    const initialLevelId = this.resolveInitialLevelId(initialMapId, mapsById);
-
-    const reachableLevelIds = this.computeReachableLevelIds(initialLevelId, transitionsByEndpoint);
-    const readonlyMapsById = new ReadonlyMapView(mapsById);
-    const readonlyLevelsById = new ReadonlyMapView(levelsById);
-    const readonlyTransitionsByEndpoint = new ReadonlyMapView(transitionsByEndpoint);
-    const readonlyReachableLevelIds = new ReadonlySetView(reachableLevelIds);
-
-    const game: RpceCompiledGame<TLevel> = {
-      id: definition.id,
-      title: definition.title,
-      initialMapId,
-      initialLevelId,
-      mapsById: readonlyMapsById,
-      levelsById: readonlyLevelsById,
-      transitionsByEndpoint: readonlyTransitionsByEndpoint,
-      reachableLevelIds: readonlyReachableLevelIds,
-      resolveConnectedEndpoint: (levelId, connectorId) =>
-        readonlyTransitionsByEndpoint.get(rpceEndpointKey(levelId, connectorId))?.target ?? null,
-    };
-
-    return game;
-  }
-
   private registerMap<TLevel extends RpceLevel>(
     map: RpceMapDefinition<TLevel>,
     mapsById: Map<string, RpceCompiledMap>,
@@ -164,7 +126,7 @@ export class RpceGameCompiler {
         title: level.title ?? level.id,
         developerOnly: Boolean(map.developerOnly),
         connectorIds: Object.freeze([...connectorIds]),
-        createLevel: typeof level.createLevel === 'function' ? level.createLevel : null,
+        createLevel: level.createLevel,
       });
     }
 
@@ -246,7 +208,7 @@ export class RpceGameCompiler {
   private registerConnections<TLevel extends RpceLevel>(
     connections: readonly RpceLevelConnection[],
     levelsById: Map<string, RpceCompiledLevel<TLevel>>,
-    transitionsByEndpoint: Map<RpceEndpointKey, RpceCompiledEndpoint>,
+    transitionsByEndpoint: Map<string, RpceCompiledEndpoint>,
   ): void {
     const seenPairs = new Set<string>();
 
@@ -282,7 +244,7 @@ export class RpceGameCompiler {
   private registerScriptedConnections<TLevel extends RpceLevel>(
     scriptedConnections: readonly RpceScriptedConnection[],
     levelsById: Map<string, RpceCompiledLevel<TLevel>>,
-    transitionsByEndpoint: Map<RpceEndpointKey, RpceCompiledEndpoint>,
+    transitionsByEndpoint: Map<string, RpceCompiledEndpoint>,
   ): void {
     for (const connection of scriptedConnections) {
       this.assertEndpointExists(connection.source, levelsById);
@@ -330,7 +292,7 @@ export class RpceGameCompiler {
     source: RpceLevelConnectionEndpoint,
     target: RpceLevelConnectionEndpoint,
     levelsById: Map<string, RpceCompiledLevel<TLevel>>,
-    transitionsByEndpoint: Map<RpceEndpointKey, RpceCompiledEndpoint>,
+    transitionsByEndpoint: Map<string, RpceCompiledEndpoint>,
   ): void {
     const key = rpceEndpointKey(source.levelId, source.connectorId);
     const existing = transitionsByEndpoint.get(key);
@@ -365,7 +327,7 @@ export class RpceGameCompiler {
     b: RpceLevelConnectionEndpoint,
   ): string {
     const keys = [rpceEndpointKey(a.levelId, a.connectorId), rpceEndpointKey(b.levelId, b.connectorId)];
-    keys.sort();
+    keys.sort((left, right) => left.localeCompare(right));
     return keys.join('|');
   }
 
@@ -406,9 +368,28 @@ export class RpceGameCompiler {
     return initialMap.initialLevelId;
   }
 
+  private enqueueReachableTargetLevel(
+    levelId: string,
+    endpoint: RpceCompiledEndpoint,
+    reachable: Set<string>,
+    queue: string[],
+  ): void {
+    if (endpoint.levelId !== levelId) {
+      return;
+    }
+
+    const targetLevelId = endpoint.target.levelId;
+    if (reachable.has(targetLevelId)) {
+      return;
+    }
+
+    reachable.add(targetLevelId);
+    queue.push(targetLevelId);
+  }
+
   private computeReachableLevelIds(
     initialLevelId: string,
-    transitionsByEndpoint: ReadonlyMap<RpceEndpointKey, RpceCompiledEndpoint>,
+    transitionsByEndpoint: ReadonlyMap<string, RpceCompiledEndpoint>,
   ): Set<string> {
     const reachable = new Set<string>();
     const queue: string[] = [initialLevelId];
@@ -417,19 +398,55 @@ export class RpceGameCompiler {
     while (queue.length > 0) {
       const levelId = queue.shift() as string;
       for (const endpoint of transitionsByEndpoint.values()) {
-        if (endpoint.levelId !== levelId) {
-          continue;
-        }
-
-        const targetLevelId = endpoint.target.levelId;
-        if (!reachable.has(targetLevelId)) {
-          reachable.add(targetLevelId);
-          queue.push(targetLevelId);
-        }
+        this.enqueueReachableTargetLevel(levelId, endpoint, reachable, queue);
       }
     }
 
     return reachable;
+  }
+
+  compile<TLevel extends RpceLevel = RpceLevel>(
+    definition: RpceGameGraph<TLevel>,
+  ): RpceCompiledGame<TLevel> {
+    const mapsById = new Map<string, RpceCompiledMap>();
+    const levelsById = new Map<string, RpceCompiledLevel<TLevel>>();
+    const transitionsByEndpoint = new Map<string, RpceCompiledEndpoint>();
+
+    for (const map of definition.maps) {
+      this.registerMap(map, mapsById, levelsById);
+    }
+
+    const { connections, scriptedConnections } = this.collectConnections(definition);
+    this.registerConnections(connections, levelsById, transitionsByEndpoint);
+    this.registerScriptedConnections(scriptedConnections, levelsById, transitionsByEndpoint);
+
+    const initialMapId = this.resolveInitialMapId(definition, mapsById);
+    const initialLevelId = this.resolveInitialLevelId(initialMapId, mapsById);
+
+    const reachableLevelIds = this.computeReachableLevelIds(initialLevelId, transitionsByEndpoint);
+    const readonlyMapsById = new ReadonlyMapView(mapsById);
+    const readonlyLevelsById = new ReadonlyMapView(levelsById);
+    const readonlyTransitionsByEndpoint = new ReadonlyMapView(transitionsByEndpoint);
+    const readonlyReachableLevelIds = new ReadonlySetView(reachableLevelIds);
+
+    const game: RpceCompiledGame<TLevel> = {
+      id: definition.id,
+      title: definition.title,
+      initialMapId,
+      initialLevelId,
+      mapsById: readonlyMapsById,
+      levelsById: readonlyLevelsById,
+      transitionsByEndpoint: readonlyTransitionsByEndpoint,
+      reachableLevelIds: readonlyReachableLevelIds,
+      resolveConnectedEndpoint: (levelId, connectorId) => {
+        const targetEndpoint = readonlyTransitionsByEndpoint.get(
+          rpceEndpointKey(levelId, connectorId),
+        )?.target;
+        return targetEndpoint ?? nullValue<RpceLevelConnectionEndpoint>();
+      },
+    };
+
+    return game;
   }
 }
 
@@ -533,6 +550,6 @@ export function createConnectedEndpointResolver(
       }
     }
 
-    return null;
+    return nullValue<RpceLevelConnectionEndpoint | null>();
   };
 }

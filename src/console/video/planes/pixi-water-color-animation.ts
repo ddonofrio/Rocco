@@ -2,7 +2,7 @@ import { Sprite, Texture } from 'pixi.js';
 
 import {
   loadRoccoImageElement,
-  matchesRoccoColorKey,
+  isRoccoColorKeyMatch,
   resolveRoccoWaterColorEffect,
   type RoccoResolvedWaterColorEffect,
   type RoccoWaterColorRgb,
@@ -163,7 +163,7 @@ function splitWaterColorImageData(
       (base[index + 1] ?? 0) / 255,
       (base[index + 2] ?? 0) / 255,
     ];
-    if (matchesRoccoColorKey(sample, colors, tolerance)) {
+    if (isRoccoColorKeyMatch(sample, colors, tolerance)) {
       base[index + 3] = 0;
     } else {
       water[index + 3] = 0;

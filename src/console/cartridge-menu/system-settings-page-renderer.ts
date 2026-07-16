@@ -83,64 +83,106 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     this.ui = ui;
   }
 
-  drawSettingsHome({
-    settingsOptions,
-    settingsSelectionId,
-    displayProfile,
-    soundProfile,
-    onSettingsRowPointerDown,
-  }: RoccoSettingsHomeRenderOptions): void {
-    const selectedOption = settingsOptions.find((option) => option.id === settingsSelectionId)
-      ?? settingsOptions[0];
-    if (!selectedOption) {
-      return;
+  private drawPanel(x: number, y: number, width: number, height: number, title: string): void {
+    this.ui.drawPanel(x, y, width, height, title, { panelInset: PANEL_INSET });
+  }
+
+  private drawDetailField(x: number, y: number, label: string, value: string): void {
+    this.ui.drawDetailField(x, y, label, value, { valueOffset: 120 });
+  }
+
+  private drawRowFrame(parent: Container, width: number, height: number, isSelected: boolean): void {
+    const fillColor = isSelected ? C.itemBgSelected : C.itemBg;
+    const borderColor = isSelected ? C.itemBorderSelected : C.itemBorder;
+    parent.addChild(
+      new Graphics()
+        .rect(0, 0, width, height)
+        .fill(fillColor)
+        .rect(0, 0, width, height)
+        .stroke({ color: borderColor, width: 1 }),
+    );
+  }
+
+  private countEnabledFilters(displayProfile: RoccoDisplayProfile): number {
+    return Number(displayProfile.roundedCorners)
+      + Number(displayProfile.crtMask)
+      + Number(displayProfile.edgeVignette);
+  }
+
+  private formatPercent(value: number): string {
+    return `${Math.round(value * 100)}%`;
+  }
+
+  private getSettingsOptionLabelFill(isEnabled: boolean, isSelected: boolean): number {
+    if (!isEnabled) {
+      return C.itemDisabled;
     }
 
-    this.drawPanel(PANEL_X, SETTINGS_TOP, MODULE_PANEL_W, 286, 'MODULES');
-    this.drawPanel(DETAIL_PANEL_X, SETTINGS_TOP, DETAIL_PANEL_W, 286, 'DETAIL');
+    return isSelected ? C.itemTitleSelected : C.itemTitle;
+  }
 
+  private drawSettingsOptionRows(
+    settingsOptions: readonly RoccoMenuSettingsOption[],
+    settingsSelectionId: string,
+    onSettingsRowPointerDown: (optionId: string) => void,
+  ): void {
     let rowY = SETTINGS_TOP + 42;
     for (const option of settingsOptions) {
-      const isSelected = option.id === settingsSelectionId;
-      const row = this.ui.createInteractiveContainer(
-        PANEL_X + 14,
+      rowY = this.drawSettingsOptionRow(
+        option,
         rowY,
-        MODULE_ROW_W,
-        MODULE_ROW_H,
-        () => {
-          onSettingsRowPointerDown(option.id);
-        },
+        option.id === settingsSelectionId,
+        onSettingsRowPointerDown,
       );
-
-      this.drawRowFrame(row, MODULE_ROW_W, MODULE_ROW_H, isSelected);
-
-      const label = this.ui.makeText(option.label, {
-        fontSize: 18,
-        fontWeight: isSelected ? '700' : '400',
-        fill: option.enabled
-          ? isSelected
-            ? C.itemTitleSelected
-            : C.itemTitle
-          : C.itemDisabled,
-        letterSpacing: 2,
-      });
-      label.x = 14;
-      label.y = 12;
-      row.addChild(label);
-
-      const status = this.ui.makeText(option.statusLabel, {
-        fontSize: 10,
-        fill: option.enabled ? C.detailValue : C.itemDisabled,
-        letterSpacing: 1,
-      });
-      status.x = MODULE_ROW_W - status.width - 12;
-      status.y = 18;
-      row.addChild(status);
-
-      this.root.addChild(row);
-      rowY += 58;
     }
+  }
 
+  private drawSettingsOptionRow(
+    option: RoccoMenuSettingsOption,
+    y: number,
+    isSelected: boolean,
+    onSettingsRowPointerDown: (optionId: string) => void,
+  ): number {
+    const row = this.ui.createInteractiveContainer(
+      PANEL_X + 14,
+      y,
+      MODULE_ROW_W,
+      MODULE_ROW_H,
+      () => {
+        onSettingsRowPointerDown(option.id);
+      },
+    );
+
+    this.drawRowFrame(row, MODULE_ROW_W, MODULE_ROW_H, isSelected);
+
+    const label = this.ui.makeText(option.label, {
+      fontSize: 18,
+      fontWeight: isSelected ? '700' : '400',
+      fill: this.getSettingsOptionLabelFill(option.enabled, isSelected),
+      letterSpacing: 2,
+    });
+    label.x = 14;
+    label.y = 12;
+    row.addChild(label);
+
+    const status = this.ui.makeText(option.statusLabel, {
+      fontSize: 10,
+      fill: option.enabled ? C.detailValue : C.itemDisabled,
+      letterSpacing: 1,
+    });
+    status.x = MODULE_ROW_W - status.width - 12;
+    status.y = 18;
+    row.addChild(status);
+
+    this.root.addChild(row);
+    return y + 58;
+  }
+
+  private drawSelectedSettingsDetail(
+    selectedOption: RoccoMenuSettingsOption,
+    displayProfile: RoccoDisplayProfile,
+    soundProfile: RoccoSoundProfile,
+  ): void {
     const title = this.ui.makeText(selectedOption.label, {
       fontSize: 24,
       fontWeight: '700',
@@ -162,66 +204,254 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     desc.y = SETTINGS_TOP + 88;
     this.root.addChild(desc);
 
+    let detailY = SETTINGS_TOP + 170;
+    for (const [label, value] of this.getSelectedSettingsDetailFields(
+      selectedOption,
+      displayProfile,
+      soundProfile,
+    )) {
+      this.drawDetailField(DETAIL_PANEL_X + PANEL_INSET, detailY, label, value);
+      detailY += 28;
+    }
+  }
+
+  private getSelectedSettingsDetailFields(
+    selectedOption: RoccoMenuSettingsOption,
+    displayProfile: RoccoDisplayProfile,
+    soundProfile: RoccoSoundProfile,
+  ): Array<readonly [string, string]> {
     if (selectedOption.id === 'video') {
-      this.drawDetailField(
-        DETAIL_PANEL_X + PANEL_INSET,
-        SETTINGS_TOP + 170,
-        'FILTERS',
-        `${this.countEnabledFilters(displayProfile)} / 3 ON`,
-      );
-      this.drawDetailField(
-        DETAIL_PANEL_X + PANEL_INSET,
-        SETTINGS_TOP + 198,
-        'BRIGHTNESS',
-        this.formatPercent(displayProfile.brightness),
-      );
-      this.drawDetailField(
-        DETAIL_PANEL_X + PANEL_INSET,
-        SETTINGS_TOP + 226,
-        'CONTRAST',
-        this.formatPercent(displayProfile.contrast),
-      );
-      return;
+      return [
+        ['FILTERS', `${this.countEnabledFilters(displayProfile)} / 3 ON`],
+        ['BRIGHTNESS', this.formatPercent(displayProfile.brightness)],
+        ['CONTRAST', this.formatPercent(displayProfile.contrast)],
+      ];
     }
 
     if (selectedOption.id === 'sound') {
-      this.drawDetailField(
-        DETAIL_PANEL_X + PANEL_INSET,
-        SETTINGS_TOP + 170,
-        'MASTER',
-        this.formatPercent(soundProfile.masterVolume),
-      );
-      this.drawDetailField(
-        DETAIL_PANEL_X + PANEL_INSET,
-        SETTINGS_TOP + 198,
-        'MUSIC',
-        this.formatPercent(getEffectiveMusicVolume(soundProfile)),
-      );
-      this.drawDetailField(
-        DETAIL_PANEL_X + PANEL_INSET,
-        SETTINGS_TOP + 226,
-        'SFX',
-        this.formatPercent(getEffectiveSfxVolume(soundProfile)),
-      );
-      return;
+      return [
+        ['MASTER', this.formatPercent(soundProfile.masterVolume)],
+        ['MUSIC', this.formatPercent(getEffectiveMusicVolume(soundProfile))],
+        ['SFX', this.formatPercent(getEffectiveSfxVolume(soundProfile))],
+      ];
     }
 
     if (selectedOption.getValueLabel) {
-      this.drawDetailField(
-        DETAIL_PANEL_X + PANEL_INSET,
-        SETTINGS_TOP + 170,
-        selectedOption.detailLabel ?? 'VALUE',
-        selectedOption.getValueLabel(),
+      return [[selectedOption.detailLabel ?? 'VALUE', selectedOption.getValueLabel()]];
+    }
+
+    return [['STATUS', selectedOption.enabled ? 'AVAILABLE' : 'DISABLED']];
+  }
+
+  private drawVideoInfoGrid(): void {
+    const fields: Array<[string, string]> = [
+      ['DEFINITION', '960 x 540'],
+      ['COLORS', '16.7M (24-BIT RGB)'],
+      ['COLOR MODEL', 'NATIVE RGB'],
+    ];
+
+    const startX = PANEL_X + PANEL_INSET;
+    const startY = SETTINGS_TOP + 48;
+    const columnGap = 390;
+    const rowGap = 34;
+
+    for (const [index, [label, value]] of fields.entries()) {
+      const column = index % 2;
+      const row = Math.floor(index / 2);
+      this.drawDetailField(startX + column * columnGap, startY + row * rowGap, label, value);
+    }
+  }
+
+  private drawVideoOptionRow(
+    id: VideoRowId,
+    label: string,
+    y: number,
+    videoSelectionId: VideoRowId,
+    displayProfile: RoccoDisplayProfile,
+    onVideoRowPointerDown: (id: VideoRowId) => void,
+    onVideoDecrease: (id: 'brightness' | 'contrast') => void,
+    onVideoIncrease: (id: 'brightness' | 'contrast') => void,
+  ): number {
+    const isSelected = videoSelectionId === id;
+    const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
+      onVideoRowPointerDown(id);
+    });
+
+    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
+
+    const text = this.ui.makeText(label, {
+      fontSize: 16,
+      fontWeight: isSelected ? '700' : '400',
+      fill: isSelected ? C.itemTitleSelected : C.itemTitle,
+      letterSpacing: 2,
+    });
+    text.x = 14;
+    text.y = 13;
+    row.addChild(text);
+
+    if (id === 'filters') {
+      const summary = this.ui.makeText(`${this.countEnabledFilters(displayProfile)} / 3 ON`, {
+        fontSize: 11,
+        fill: C.detailValue,
+        letterSpacing: 1,
+      });
+      summary.x = OPTION_ROW_W - summary.width - 42;
+      summary.y = 16;
+      row.addChild(summary);
+
+      const chevron = this.ui.makeText('>', {
+        fontSize: 16,
+        fill: isSelected ? C.titleBrand : C.detailValue,
+      });
+      chevron.x = OPTION_ROW_W - 18;
+      chevron.y = 12;
+      row.addChild(chevron);
+    } else {
+      const value = displayProfile[id];
+      this.ui.drawAdjustControl(
+        row,
+        OPTION_ROW_W - 214,
+        9,
+        200,
+        this.formatPercent(value),
+        () => {
+          onVideoDecrease(id);
+        },
+        () => {
+          onVideoIncrease(id);
+        },
       );
+    }
+
+    this.root.addChild(row);
+    return y + 54;
+  }
+
+  private drawSoundInfoGrid(soundProfile: RoccoSoundProfile): void {
+    const fields: Array<[string, string]> = [
+      ['MASTER', this.formatPercent(soundProfile.masterVolume)],
+      ['MUSIC OUTPUT', this.formatPercent(getEffectiveMusicVolume(soundProfile))],
+      ['SFX OUTPUT', this.formatPercent(getEffectiveSfxVolume(soundProfile))],
+      ['ROUTING', 'MASTER x CHANNEL'],
+    ];
+
+    const startX = PANEL_X + PANEL_INSET;
+    const startY = SETTINGS_TOP + 48;
+    const columnGap = 390;
+    const rowGap = 34;
+
+    for (const [index, [label, value]] of fields.entries()) {
+      const column = index % 2;
+      const row = Math.floor(index / 2);
+      this.drawDetailField(startX + column * columnGap, startY + row * rowGap, label, value);
+    }
+  }
+
+  private getSoundRowValue(id: SoundRowId, soundProfile: RoccoSoundProfile): number {
+    if (id === 'master') {
+      return soundProfile.masterVolume;
+    }
+
+    if (id === 'music') {
+      return getEffectiveMusicVolume(soundProfile);
+    }
+
+    return getEffectiveSfxVolume(soundProfile);
+  }
+
+  private drawSoundOptionRow(
+    id: SoundRowId,
+    label: string,
+    y: number,
+    soundSelectionId: SoundRowId,
+    soundProfile: RoccoSoundProfile,
+    onSoundRowPointerDown: (id: SoundRowId) => void,
+    onSoundDecrease: (id: SoundRowId) => void,
+    onSoundIncrease: (id: SoundRowId) => void,
+  ): number {
+    const isSelected = soundSelectionId === id;
+    const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
+      onSoundRowPointerDown(id);
+    });
+
+    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
+
+    const text = this.ui.makeText(label, {
+      fontSize: 16,
+      fontWeight: isSelected ? '700' : '400',
+      fill: isSelected ? C.itemTitleSelected : C.itemTitle,
+      letterSpacing: 2,
+    });
+    text.x = 14;
+    text.y = 13;
+    row.addChild(text);
+
+    this.ui.drawAdjustControl(
+      row,
+      OPTION_ROW_W - 214,
+      9,
+      200,
+      this.formatPercent(this.getSoundRowValue(id, soundProfile)),
+      () => {
+        onSoundDecrease(id);
+      },
+      () => {
+        onSoundIncrease(id);
+      },
+    );
+
+    this.root.addChild(row);
+    return y + 54;
+  }
+
+  private drawFilterOptionRow(
+    id: FilterRowId,
+    label: string,
+    y: number,
+    filterSelectionId: FilterRowId,
+    displayProfile: RoccoDisplayProfile,
+    onFilterRowPointerDown: (id: FilterRowId) => void,
+  ): number {
+    const isSelected = filterSelectionId === id;
+    const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
+      onFilterRowPointerDown(id);
+    });
+
+    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
+
+    const text = this.ui.makeText(label, {
+      fontSize: 16,
+      fontWeight: isSelected ? '700' : '400',
+      fill: isSelected ? C.itemTitleSelected : C.itemTitle,
+      letterSpacing: 2,
+    });
+    text.x = 14;
+    text.y = 13;
+    row.addChild(text);
+
+    this.ui.drawToggleControl(row, OPTION_ROW_W - TOGGLE_W - 14, 11, displayProfile[id]);
+
+    this.root.addChild(row);
+    return y + 54;
+  }
+
+  drawSettingsHome({
+    settingsOptions,
+    settingsSelectionId,
+    displayProfile,
+    soundProfile,
+    onSettingsRowPointerDown,
+  }: RoccoSettingsHomeRenderOptions): void {
+    const selectedOption = settingsOptions.find((option) => option.id === settingsSelectionId)
+      ?? settingsOptions[0];
+    if (!selectedOption) {
       return;
     }
 
-    this.drawDetailField(
-      DETAIL_PANEL_X + PANEL_INSET,
-      SETTINGS_TOP + 170,
-      'STATUS',
-      selectedOption.enabled ? 'AVAILABLE' : 'DISABLED',
-    );
+    this.drawPanel(PANEL_X, SETTINGS_TOP, MODULE_PANEL_W, 286, 'MODULES');
+    this.drawPanel(DETAIL_PANEL_X, SETTINGS_TOP, DETAIL_PANEL_W, 286, 'DETAIL');
+    this.drawSettingsOptionRows(settingsOptions, settingsSelectionId, onSettingsRowPointerDown);
+    this.drawSelectedSettingsDetail(selectedOption, displayProfile, soundProfile);
   }
 
   drawVideoSettings({
@@ -362,219 +592,5 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
       onSoundDecrease,
       onSoundIncrease,
     );
-  }
-
-  private drawVideoInfoGrid(): void {
-    const fields: Array<[string, string]> = [
-      ['DEFINITION', '960 x 540'],
-      ['COLORS', '16.7M (24-BIT RGB)'],
-      ['COLOR MODEL', 'NATIVE RGB'],
-    ];
-
-    const startX = PANEL_X + PANEL_INSET;
-    const startY = SETTINGS_TOP + 48;
-    const columnGap = 390;
-    const rowGap = 34;
-
-    for (const [index, [label, value]] of fields.entries()) {
-      const column = index % 2;
-      const row = Math.floor(index / 2);
-      this.drawDetailField(startX + column * columnGap, startY + row * rowGap, label, value);
-    }
-  }
-
-  private drawVideoOptionRow(
-    id: VideoRowId,
-    label: string,
-    y: number,
-    videoSelectionId: VideoRowId,
-    displayProfile: RoccoDisplayProfile,
-    onVideoRowPointerDown: (id: VideoRowId) => void,
-    onVideoDecrease: (id: 'brightness' | 'contrast') => void,
-    onVideoIncrease: (id: 'brightness' | 'contrast') => void,
-  ): number {
-    const isSelected = videoSelectionId === id;
-    const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
-      onVideoRowPointerDown(id);
-    });
-
-    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
-
-    const text = this.ui.makeText(label, {
-      fontSize: 16,
-      fontWeight: isSelected ? '700' : '400',
-      fill: isSelected ? C.itemTitleSelected : C.itemTitle,
-      letterSpacing: 2,
-    });
-    text.x = 14;
-    text.y = 13;
-    row.addChild(text);
-
-    if (id === 'filters') {
-      const summary = this.ui.makeText(`${this.countEnabledFilters(displayProfile)} / 3 ON`, {
-        fontSize: 11,
-        fill: C.detailValue,
-        letterSpacing: 1,
-      });
-      summary.x = OPTION_ROW_W - summary.width - 42;
-      summary.y = 16;
-      row.addChild(summary);
-
-      const chevron = this.ui.makeText('>', {
-        fontSize: 16,
-        fill: isSelected ? C.titleBrand : C.detailValue,
-      });
-      chevron.x = OPTION_ROW_W - 18;
-      chevron.y = 12;
-      row.addChild(chevron);
-    } else {
-      const value = displayProfile[id];
-      this.ui.drawAdjustControl(
-        row,
-        OPTION_ROW_W - 214,
-        9,
-        200,
-        this.formatPercent(value),
-        () => {
-          onVideoDecrease(id);
-        },
-        () => {
-          onVideoIncrease(id);
-        },
-      );
-    }
-
-    this.root.addChild(row);
-    return y + 54;
-  }
-
-  private drawSoundInfoGrid(soundProfile: RoccoSoundProfile): void {
-    const fields: Array<[string, string]> = [
-      ['MASTER', this.formatPercent(soundProfile.masterVolume)],
-      ['MUSIC OUTPUT', this.formatPercent(getEffectiveMusicVolume(soundProfile))],
-      ['SFX OUTPUT', this.formatPercent(getEffectiveSfxVolume(soundProfile))],
-      ['ROUTING', 'MASTER x CHANNEL'],
-    ];
-
-    const startX = PANEL_X + PANEL_INSET;
-    const startY = SETTINGS_TOP + 48;
-    const columnGap = 390;
-    const rowGap = 34;
-
-    for (const [index, [label, value]] of fields.entries()) {
-      const column = index % 2;
-      const row = Math.floor(index / 2);
-      this.drawDetailField(startX + column * columnGap, startY + row * rowGap, label, value);
-    }
-  }
-
-  private drawSoundOptionRow(
-    id: SoundRowId,
-    label: string,
-    y: number,
-    soundSelectionId: SoundRowId,
-    soundProfile: RoccoSoundProfile,
-    onSoundRowPointerDown: (id: SoundRowId) => void,
-    onSoundDecrease: (id: SoundRowId) => void,
-    onSoundIncrease: (id: SoundRowId) => void,
-  ): number {
-    const isSelected = soundSelectionId === id;
-    const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
-      onSoundRowPointerDown(id);
-    });
-
-    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
-
-    const text = this.ui.makeText(label, {
-      fontSize: 16,
-      fontWeight: isSelected ? '700' : '400',
-      fill: isSelected ? C.itemTitleSelected : C.itemTitle,
-      letterSpacing: 2,
-    });
-    text.x = 14;
-    text.y = 13;
-    row.addChild(text);
-
-    const value =
-      id === 'master'
-        ? soundProfile.masterVolume
-        : id === 'music'
-          ? getEffectiveMusicVolume(soundProfile)
-          : getEffectiveSfxVolume(soundProfile);
-    this.ui.drawAdjustControl(
-      row,
-      OPTION_ROW_W - 214,
-      9,
-      200,
-      this.formatPercent(value),
-      () => {
-        onSoundDecrease(id);
-      },
-      () => {
-        onSoundIncrease(id);
-      },
-    );
-
-    this.root.addChild(row);
-    return y + 54;
-  }
-
-  private drawFilterOptionRow(
-    id: FilterRowId,
-    label: string,
-    y: number,
-    filterSelectionId: FilterRowId,
-    displayProfile: RoccoDisplayProfile,
-    onFilterRowPointerDown: (id: FilterRowId) => void,
-  ): number {
-    const isSelected = filterSelectionId === id;
-    const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
-      onFilterRowPointerDown(id);
-    });
-
-    this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
-
-    const text = this.ui.makeText(label, {
-      fontSize: 16,
-      fontWeight: isSelected ? '700' : '400',
-      fill: isSelected ? C.itemTitleSelected : C.itemTitle,
-      letterSpacing: 2,
-    });
-    text.x = 14;
-    text.y = 13;
-    row.addChild(text);
-
-    this.ui.drawToggleControl(row, OPTION_ROW_W - TOGGLE_W - 14, 11, displayProfile[id]);
-
-    this.root.addChild(row);
-    return y + 54;
-  }
-
-  private drawPanel(x: number, y: number, width: number, height: number, title: string): void {
-    this.ui.drawPanel(x, y, width, height, title, { panelInset: PANEL_INSET });
-  }
-
-  private drawDetailField(x: number, y: number, label: string, value: string): void {
-    this.ui.drawDetailField(x, y, label, value, { valueOffset: 120 });
-  }
-
-  private drawRowFrame(parent: Container, width: number, height: number, selected: boolean): void {
-    parent.addChild(
-      new Graphics()
-        .rect(0, 0, width, height)
-        .fill(selected ? C.itemBgSelected : C.itemBg)
-        .rect(0, 0, width, height)
-        .stroke({ color: selected ? C.itemBorderSelected : C.itemBorder, width: 1 }),
-    );
-  }
-
-  private countEnabledFilters(displayProfile: RoccoDisplayProfile): number {
-    return Number(displayProfile.roundedCorners)
-      + Number(displayProfile.crtMask)
-      + Number(displayProfile.edgeVignette);
-  }
-
-  private formatPercent(value: number): string {
-    return `${Math.round(value * 100)}%`;
   }
 }

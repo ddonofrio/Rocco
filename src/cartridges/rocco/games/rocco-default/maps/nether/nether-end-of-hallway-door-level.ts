@@ -1,4 +1,4 @@
-import type { RoccoCartridgeActionResult, RoccoSceneClickAction } from '../../../../../../console/cartridges';
+import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
 import type {
   RoccoActionMenuActivation,
@@ -135,6 +135,8 @@ const NETHER_END_OF_HALLWAY_ENTRY_POSITION = toOriginFromGroundPoint(
   NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE,
 );
 
+type NetherEndOfHallwaySceneClickResult = { suppressDefaultPlayerMove: true } | undefined;
+
 const NETHER_END_OF_HALLWAY_CONNECTORS: readonly RoccoLevelConnector[] = [
   {
     id: NETHER_END_OF_HALLWAY_RETURN_CONNECTOR_ID,
@@ -216,165 +218,6 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
   constructor(localization: RoccoLocalization) {
     this.localization = localization;
     this.title = 'Nether';
-  }
-
-  async mount(
-    engine: RoccoEngine,
-    options: RoccoLevelMountOptions = {},
-    preloader?: RoccoAssetPreloader,
-  ): Promise<RoccoPlaneScene> {
-    this.engine = engine;
-    this.spriteController = undefined;
-    this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
-    this.lightsNoiseOpacity = randomBetween(NETHER_LIGHTS_MIN_OPACITY, NETHER_LIGHTS_NOISE_MAX_OPACITY);
-    this.lightsNoiseTargetOpacity = this.lightsNoiseOpacity;
-    this.lightsNoiseTargetRemainingMs = randomBetween(
-      NETHER_LIGHTS_NOISE_STEP_MIN_MS,
-      NETHER_LIGHTS_NOISE_STEP_MAX_MS,
-    );
-    this.sceneReady = false;
-
-    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
-    const initialPosition = entryConnector
-      ? {
-          x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
-          y: entryConnector.entryPoint.y,
-        }
-      : { ...NETHER_END_OF_HALLWAY_ENTRY_POSITION };
-    const initialFacing = entryConnector?.entryFacing ?? 'up';
-    const scene = await loadOrCreateNetherScene(engine, NETHER_END_OF_HALLWAY_SCENE_DEFINITION);
-    const walkMapProfile = await createNetherWalkMapProfile(netherEndOfHallwayDoorAssetUrls.walkPath);
-
-    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
-    engine.audio.registerSound({
-      id: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID,
-      uri: netherAmbientSteamMachineAssetUrl,
-      volume: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_VOLUME,
-      loop: true,
-    });
-    try {
-      await preloader?.preloadSound(engine, NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
-    } catch {
-      engine.log('Audio', 'Nether ambient steam machine sound could not be preloaded.');
-    }
-    engine.loadPlaneScene(scene);
-    this.lightsOverlayOpacity = this.lightsNoiseOpacity;
-    engine.video.planes.updatePlane(
-      ROCCO_NETHER_END_OF_HALLWAY_DOOR_SCENE_ID,
-      NETHER_END_OF_HALLWAY_LIGHTS_PLANE_ID,
-      {
-        opacity: this.lightsOverlayOpacity,
-      },
-    );
-    engine.video.actionMenus.closeMenu();
-    engine.video.messages.clearMessages();
-    engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
-    engine.audio.playSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID, {
-      restart: true,
-      volume: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_VOLUME,
-      loop: true,
-    });
-    this.spriteController = await installDefaultSprite(engine, {
-      appearance: options.roccoAppearance,
-      initialFacing,
-      initialPosition: projectOriginToWalkMap(
-        walkMapProfile.walkMap,
-        initialPosition,
-        NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE,
-      ),
-      scale: NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE,
-      tint: NETHER_END_OF_HALLWAY_DOOR_ROCCO_TINT,
-      localization: this.localization,
-      playIntro: false,
-      perspectiveAutoAdjust: {
-        farY: walkMapProfile.farY,
-        nearY: walkMapProfile.nearY,
-        farScale: NETHER_END_OF_HALLWAY_DOOR_FAR_SCALE,
-        nearScale: 1,
-        scaleCurve: 'linear',
-      },
-    }, preloader);
-    engine.video.render(0);
-    this.sceneReady = true;
-
-    this.installTimbre(engine);
-    this.installDoorHandle(engine);
-    this.installAscendingPipes(engine);
-    this.installWheelValve(engine);
-
-    return scene;
-  }
-
-  unmount(engine: RoccoEngine): void {
-    engine.video.actionMenus.closeMenu();
-    engine.video.messages.clearMessages();
-    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID);
-    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID);
-    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID);
-    engine.audio.stopSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
-    engine.audio.unregisterSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
-    uninstallDefaultSprite(engine);
-    engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
-    this.engine = undefined;
-    this.spriteController = undefined;
-    this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
-    this.lightsNoiseOpacity = NETHER_LIGHTS_MIN_OPACITY;
-    this.lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;
-    this.lightsNoiseTargetRemainingMs = 0;
-    this.sceneReady = false;
-    engine.video.render(0);
-  }
-
-  update(deltaMs: number): void {
-    this.updateLightsOverlay(deltaMs);
-    this.spriteController?.update(deltaMs);
-  }
-
-  handleAction(activation: RoccoActionMenuActivation): void {
-    if (
-      this.engine &&
-      activation.targetInstanceId === NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID
-    ) {
-      this.handleTimbreAction(activation);
-      return;
-    }
-
-    if (
-      this.engine &&
-      activation.targetInstanceId === NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID
-    ) {
-      this.handleDoorHandleAction(activation);
-    }
-
-    if (
-      this.engine &&
-      activation.targetInstanceId === NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID
-    ) {
-      this.handleWheelValveAction(activation);
-    }
-  }
-
-  handleSceneClick(activation: RoccoSceneClickAction): RoccoCartridgeActionResult | void {
-    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID) {
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID) {
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID) {
-      this.showAscendingPipesThought();
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID) {
-      return { suppressDefaultPlayerMove: true };
-    }
   }
 
   private installTimbre(engine: RoccoEngine): void {
@@ -625,6 +468,167 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
         opacity: nextOpacity,
       },
     );
+  }
+
+  async mount(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
+    this.engine = engine;
+    this.spriteController = undefined;
+    this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
+    this.lightsNoiseOpacity = randomBetween(NETHER_LIGHTS_MIN_OPACITY, NETHER_LIGHTS_NOISE_MAX_OPACITY);
+    this.lightsNoiseTargetOpacity = this.lightsNoiseOpacity;
+    this.lightsNoiseTargetRemainingMs = randomBetween(
+      NETHER_LIGHTS_NOISE_STEP_MIN_MS,
+      NETHER_LIGHTS_NOISE_STEP_MAX_MS,
+    );
+    this.sceneReady = false;
+
+    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
+    const initialPosition = entryConnector
+      ? {
+          x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
+          y: entryConnector.entryPoint.y,
+        }
+      : { ...NETHER_END_OF_HALLWAY_ENTRY_POSITION };
+    const initialFacing = entryConnector?.entryFacing ?? 'up';
+    const scene = await loadOrCreateNetherScene(engine, NETHER_END_OF_HALLWAY_SCENE_DEFINITION);
+    const walkMapProfile = await createNetherWalkMapProfile(netherEndOfHallwayDoorAssetUrls.walkPath);
+
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+    engine.audio.registerSound({
+      id: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID,
+      uri: netherAmbientSteamMachineAssetUrl,
+      volume: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_VOLUME,
+      loop: true,
+    });
+    try {
+      await preloader?.preloadSound(engine, NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
+    } catch {
+      engine.log('Audio', 'Nether ambient steam machine sound could not be preloaded.');
+    }
+    engine.loadPlaneScene(scene);
+    this.lightsOverlayOpacity = this.lightsNoiseOpacity;
+    engine.video.planes.updatePlane(
+      ROCCO_NETHER_END_OF_HALLWAY_DOOR_SCENE_ID,
+      NETHER_END_OF_HALLWAY_LIGHTS_PLANE_ID,
+      {
+        opacity: this.lightsOverlayOpacity,
+      },
+    );
+    engine.video.actionMenus.closeMenu();
+    engine.video.messages.clearMessages();
+    engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
+    engine.audio.playSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID, {
+      restart: true,
+      volume: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_VOLUME,
+      loop: true,
+    });
+    this.spriteController = await installDefaultSprite(engine, {
+      appearance: options.roccoAppearance,
+      initialFacing,
+      initialPosition: projectOriginToWalkMap(
+        walkMapProfile.walkMap,
+        initialPosition,
+        NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE,
+      ),
+      scale: NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE,
+      tint: NETHER_END_OF_HALLWAY_DOOR_ROCCO_TINT,
+      localization: this.localization,
+      playIntro: false,
+      perspectiveAutoAdjust: {
+        farY: walkMapProfile.farY,
+        nearY: walkMapProfile.nearY,
+        farScale: NETHER_END_OF_HALLWAY_DOOR_FAR_SCALE,
+        nearScale: 1,
+        scaleCurve: 'linear',
+      },
+    }, preloader);
+    engine.video.render(0);
+    this.sceneReady = true;
+
+    this.installTimbre(engine);
+    this.installDoorHandle(engine);
+    this.installAscendingPipes(engine);
+    this.installWheelValve(engine);
+
+    return scene;
+  }
+
+  unmount(engine: RoccoEngine): void {
+    engine.video.actionMenus.closeMenu();
+    engine.video.messages.clearMessages();
+    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID);
+    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID);
+    engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ID);
+    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID);
+    engine.audio.stopSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
+    engine.audio.unregisterSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
+    uninstallDefaultSprite(engine);
+    engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
+    this.engine = undefined;
+    this.spriteController = undefined;
+    this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
+    this.lightsNoiseOpacity = NETHER_LIGHTS_MIN_OPACITY;
+    this.lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;
+    this.lightsNoiseTargetRemainingMs = 0;
+    this.sceneReady = false;
+    engine.video.render(0);
+  }
+
+  update(deltaMs: number): void {
+    this.updateLightsOverlay(deltaMs);
+    this.spriteController?.update(deltaMs);
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    if (
+      this.engine &&
+      activation.targetInstanceId === NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID
+    ) {
+      this.handleTimbreAction(activation);
+      return;
+    }
+
+    if (
+      this.engine &&
+      activation.targetInstanceId === NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID
+    ) {
+      this.handleDoorHandleAction(activation);
+    }
+
+    if (
+      this.engine &&
+      activation.targetInstanceId === NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID
+    ) {
+      this.handleWheelValveAction(activation);
+    }
+  }
+
+  handleSceneClick(activation: RoccoSceneClickAction): NetherEndOfHallwaySceneClickResult {
+    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID) {
+      this.showAscendingPipesThought();
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    return undefined;
   }
 }
 

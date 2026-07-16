@@ -1,11 +1,7 @@
 import type { RoccoTitleMessage, RoccoTitleSystem } from './types';
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 export class RoccoTitleSystemSDK implements RoccoTitleSystem {
@@ -29,7 +25,7 @@ export class RoccoTitleSystemSDK implements RoccoTitleSystem {
   }
 
   listTitles(): RoccoTitleMessage[] {
-    return [...this.titles.values()].map((message) => clone(message));
+    return this.titles.values().map((message) => clone(message)).toArray();
   }
 
   update(deltaMs: number): void {
@@ -37,6 +33,7 @@ export class RoccoTitleSystemSDK implements RoccoTitleSystem {
       return;
     }
 
+    const expiredTitleIds: string[] = [];
     for (const message of this.titles.values()) {
       if (message.ttlMs === undefined) {
         continue;
@@ -44,9 +41,12 @@ export class RoccoTitleSystemSDK implements RoccoTitleSystem {
 
       message.ttlMs -= deltaMs;
       if (message.ttlMs <= 0) {
-        this.titles.delete(message.id);
+        expiredTitleIds.push(message.id);
       }
+    }
+
+    for (const titleId of expiredTitleIds) {
+      this.titles.delete(titleId);
     }
   }
 }
-

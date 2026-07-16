@@ -62,11 +62,43 @@ interface RoccoCartridgeMenuDetailFieldOptions {
   valueOffset?: number;
 }
 
+function createGraphicsFillStyle(color: number, alpha = 1): { color: number; alpha: number } {
+  return { color, alpha };
+}
+
 export class RoccoCartridgeMenuPixiUiPrimitives {
   private readonly root: Container;
 
   constructor(root: Container) {
     this.root = root;
+  }
+
+  private createControlButton(
+    x: number,
+    y: number,
+    label: string,
+    fontSize: number,
+    textX: number,
+    textY: number,
+    onPointerDown: () => void,
+  ): Container {
+    const button = this.createInteractiveContainer(x, y, 20, 20, onPointerDown);
+    button.addChild(
+      new Graphics()
+        .rect(0, 0, 20, 20)
+        .fill(ROCCO_CARTRIDGE_MENU_COLORS.itemBgHover)
+        .rect(0, 0, 20, 20)
+        .stroke({ color: ROCCO_CARTRIDGE_MENU_COLORS.controlBorder, width: 1 }),
+    );
+    const text = this.makeText(label, {
+      fontSize,
+      fontWeight: '700',
+      fill: ROCCO_CARTRIDGE_MENU_COLORS.controlText,
+    });
+    text.x = textX;
+    text.y = textY;
+    button.addChild(text);
+    return button;
   }
 
   drawPanel(
@@ -79,17 +111,15 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
   ): void {
     const panel = new Graphics()
       .rect(x, y, width, height)
-      .fill({ color: ROCCO_CARTRIDGE_MENU_COLORS.panelBg, alpha: 0.95 })
+      .fill(createGraphicsFillStyle(ROCCO_CARTRIDGE_MENU_COLORS.panelBg, 0.95))
       .rect(x, y, width, height)
       .stroke({ color: ROCCO_CARTRIDGE_MENU_COLORS.panelBorder, width: 1.2 });
     this.root.addChild(panel);
 
     const headerLineY = y + 30;
     this.root.addChild(
-      new Graphics().rect(x, headerLineY, width, 1).fill({
-        color: ROCCO_CARTRIDGE_MENU_COLORS.bgLine,
-        alpha: 1,
-      }),
+      new Graphics().rect(x, headerLineY, width, 1)
+        .fill(createGraphicsFillStyle(ROCCO_CARTRIDGE_MENU_COLORS.bgLine)),
     );
 
     const titleText = this.makeText(title, {
@@ -109,13 +139,11 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
     this.root.addChild(
       new Graphics()
         .rect(0, options.footerY, options.designWidth, options.footerHeight)
-        .fill({ color: 0x0a_0f_09, alpha: 1 }),
+        .fill(createGraphicsFillStyle(0x0a_0f_09)),
     );
     this.root.addChild(
-      new Graphics().rect(0, options.footerY, options.designWidth, 1).fill({
-        color: ROCCO_CARTRIDGE_MENU_COLORS.titleBrand,
-        alpha: 0.2,
-      }),
+      new Graphics().rect(0, options.footerY, options.designWidth, 1)
+        .fill(createGraphicsFillStyle(ROCCO_CARTRIDGE_MENU_COLORS.titleBrand, 0.2)),
     );
 
     let x = options.startX;
@@ -171,20 +199,20 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
     height: number,
     label: string,
     onPress: () => void,
-    primary = false,
+    isPrimary = false,
   ): void {
     const button = this.createInteractiveContainer(x, y, width, height, onPress);
     button.addChild(
       new Graphics()
         .roundRect(0, 0, width, height, 4)
         .fill(
-          primary
+          isPrimary
             ? ROCCO_CARTRIDGE_MENU_COLORS.itemBorderSelected
             : ROCCO_CARTRIDGE_MENU_COLORS.buttonFill,
         )
         .roundRect(0, 0, width, height, 4)
         .stroke({
-          color: primary
+          color: isPrimary
             ? ROCCO_CARTRIDGE_MENU_COLORS.titleBrand
             : ROCCO_CARTRIDGE_MENU_COLORS.buttonBorder,
           width: 2,
@@ -274,7 +302,7 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
     parent: Container,
     x: number,
     y: number,
-    enabled: boolean,
+    isEnabled: boolean,
   ): void {
     const toggle = new Container();
     toggle.x = x;
@@ -287,7 +315,7 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
         .stroke({ color: ROCCO_CARTRIDGE_MENU_COLORS.controlBorder, width: 1 }),
     );
 
-    const activeX = enabled ? 2 : ROCCO_CARTRIDGE_MENU_TOGGLE_W / 2;
+    const activeX = isEnabled ? 2 : ROCCO_CARTRIDGE_MENU_TOGGLE_W / 2;
     toggle.addChild(
       new Graphics()
         .roundRect(
@@ -303,7 +331,7 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
     const onText = this.makeText('ON', {
       fontSize: 11,
       fontWeight: '700',
-      fill: enabled
+      fill: isEnabled
         ? ROCCO_CARTRIDGE_MENU_COLORS.buttonText
         : ROCCO_CARTRIDGE_MENU_COLORS.detailValue,
       letterSpacing: 1,
@@ -315,7 +343,7 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
     const offText = this.makeText('OFF', {
       fontSize: 11,
       fontWeight: '700',
-      fill: enabled
+      fill: isEnabled
         ? ROCCO_CARTRIDGE_MENU_COLORS.detailValue
         : ROCCO_CARTRIDGE_MENU_COLORS.buttonText,
       letterSpacing: 1,
@@ -353,33 +381,5 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
         ...style,
       }),
     });
-  }
-
-  private createControlButton(
-    x: number,
-    y: number,
-    label: string,
-    fontSize: number,
-    textX: number,
-    textY: number,
-    onPointerDown: () => void,
-  ): Container {
-    const button = this.createInteractiveContainer(x, y, 20, 20, onPointerDown);
-    button.addChild(
-      new Graphics()
-        .rect(0, 0, 20, 20)
-        .fill(ROCCO_CARTRIDGE_MENU_COLORS.itemBgHover)
-        .rect(0, 0, 20, 20)
-        .stroke({ color: ROCCO_CARTRIDGE_MENU_COLORS.controlBorder, width: 1 }),
-    );
-    const text = this.makeText(label, {
-      fontSize,
-      fontWeight: '700',
-      fill: ROCCO_CARTRIDGE_MENU_COLORS.controlText,
-    });
-    text.x = textX;
-    text.y = textY;
-    button.addChild(text);
-    return button;
   }
 }

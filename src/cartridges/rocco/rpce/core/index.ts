@@ -32,7 +32,6 @@ export {
   type RpceCompiledLevel,
   type RpceCompiledMap,
   type RpceCompiledEndpoint,
-  type RpceEndpointKey,
   type RpceGameCompilationCode,
   type RpceGameGraph,
 } from './rpce-game-compiler';

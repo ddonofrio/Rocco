@@ -1,5 +1,8 @@
-﻿import type { RoccoEngine } from '../../console/engine-sdk';
-import type { RoccoSpriteAutoAdjustPerspectiveByY, RoccoSpriteDefinition } from '../../console/video/sprites';
+import type { CartridgeSdkV1Runtime } from '../../console/cartridges/sdk-v1';
+import type {
+  RoccoSpriteAutoAdjustPerspectiveByY,
+  RoccoSpriteDefinition,
+} from '../../console/video/sprites';
 import type { RoccoFacingDirection, RoccoPoint } from '../../console/video/sprites';
 import { RoccoAssetPreloader } from './levels/rocco-asset-preloader';
 import {
@@ -71,7 +74,7 @@ function createInstalledSpriteDefinition(
 }
 
 export function createRoccoAppearanceSpriteDefinition(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   appearance: RoccoPlayerAppearance,
   localization: RoccoLocalization = createRoccoLocalization(),
 ): RoccoSpriteDefinition {
@@ -83,7 +86,7 @@ export function createRoccoAppearanceSpriteDefinition(
 }
 
 export function applyDefaultSpriteAppearance(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   appearance: RoccoPlayerAppearance,
   localization: RoccoLocalization = createRoccoLocalization(),
 ): void {
@@ -93,22 +96,20 @@ export function applyDefaultSpriteAppearance(
     .preloadSpriteDefinition(definition)
     .then(() => {
       engine.video.sprites.loadSpriteDefinition(definition);
-      engine.video.render(0);
     })
     .catch(() => {
       engine.log('Assets', 'Rocco appearance assets could not be preloaded.');
     });
-  engine.video.render(0);
 }
 
 class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
-  private readonly engine: RoccoEngine;
+  private readonly engine: CartridgeSdkV1Runtime;
   private readonly options: RoccoDefaultSpriteInstallOptions;
   private readonly localization: RoccoLocalization;
   private phase: 'entering' | 'intro-thought' | 'intro-help' | 'idle' = 'entering';
   private elapsedMs = 0;
 
-  constructor(engine: RoccoEngine, options: RoccoDefaultSpriteInstallOptions = {}) {
+  constructor(engine: CartridgeSdkV1Runtime, options: RoccoDefaultSpriteInstallOptions = {}) {
     this.engine = engine;
     this.options = options;
     this.localization = options.localization ?? createRoccoLocalization();
@@ -126,7 +127,6 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
       action: DEFAULT_SPRITE_RUN_ACTION_ID,
       stopDistance: 1,
     });
-    this.engine.video.render(0);
     this.phase = 'entering';
     this.elapsedMs = 0;
   }
@@ -141,7 +141,6 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
         background: true,
       },
     );
-    this.engine.video.render(0);
     this.phase = 'intro-thought';
     this.elapsedMs = 0;
   }
@@ -156,7 +155,6 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
         background: true,
       },
     );
-    this.engine.video.render(0);
     this.phase = 'intro-help';
     this.elapsedMs = 0;
   }
@@ -175,7 +173,6 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
         restart: true,
       },
     );
-    this.engine.video.render(0);
     this.phase = 'idle';
   }
 
@@ -260,13 +257,14 @@ class RoccoRunningSpriteController implements RoccoDefaultSpriteController {
 }
 
 export async function installDefaultSprite(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   options: RoccoDefaultSpriteInstallOptions = {},
   preloader?: RoccoAssetPreloader,
 ): Promise<RoccoDefaultSpriteController> {
   const localization = options.localization ?? createRoccoLocalization();
   const definition = createInstalledSpriteDefinition(localization, options);
-  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
+  await (preloader?.preloadSpriteDefinition(engine, definition) ??
+    engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
   const scale = options.scale ?? DEFAULT_SPRITE_SCALE;
@@ -301,7 +299,6 @@ export async function installDefaultSprite(
     constrainMovement: true,
     followSurface: true,
   });
-  engine.video.render(0);
   engine.setPlayerSprite(DEFAULT_SPRITE_INSTANCE_ID);
 
   const controller = new RoccoRunningSpriteController(engine, {
@@ -313,8 +310,7 @@ export async function installDefaultSprite(
   return controller;
 }
 
-export function uninstallDefaultSprite(engine: RoccoEngine): void {
+export function uninstallDefaultSprite(engine: CartridgeSdkV1Runtime): void {
   engine.setPlayerSprite(undefined);
   engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
-  engine.video.render(0);
 }

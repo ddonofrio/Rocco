@@ -1,4 +1,4 @@
-﻿import type { RoccoEngine } from '../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../console/cartridges/sdk-v1';
 import type { RoccoGridMenuDefinition } from '../../console/video/grid-menu';
 import { createRoccoDialogueChoiceMenu } from './rpce/dialogue';
 import type { RoccoLocalization } from './localization';
@@ -33,7 +33,7 @@ const ROCCO_DEVELOPER_MAGAZINE_CHOICE_ID = 'developer-magazine';
 const ROCCO_DEVELOPER_MICROMANIA_CHOICE_ID = 'developer-micromania';
 
 export function isRoccoDeveloperModeEnabled(
-  engine: Pick<RoccoEngine, 'isDeveloperModeEnabled'> | null | undefined,
+  engine: Pick<CartridgeSdkV1Runtime, 'isDeveloperModeEnabled'> | null | undefined,
 ): boolean {
   return engine?.isDeveloperModeEnabled?.() ?? false;
 }
@@ -220,7 +220,8 @@ function createRoccoDeveloperInventoryOptions(
   inventory: RoccoInventory,
 ): readonly RoccoDeveloperInventoryOption[] {
   const currentMagazineLabel =
-    inventory.listItems().find((item) => item.id === ROCCO_INVENTORY_MAGAZINE_ITEM_ID)?.label ?? undefined;
+    inventory.listItems().find((item) => item.id === ROCCO_INVENTORY_MAGAZINE_ITEM_ID)?.label ??
+    undefined;
 
   return [
     {

@@ -2,7 +2,7 @@ import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../console/video/action-menu';
-import type { RoccoEngine } from '../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../console/cartridges/sdk-v1';
 import { roccoDefaultActionMenuAssetUrls } from './rocco-default-assets';
 import { DEFAULT_SPRITE_INSTANCE_ID } from './rocco-default-constants';
 import {
@@ -35,7 +35,7 @@ export function createRoccoPlayerActionMenuDefinition(
     },
   ];
 
-    if (isDeveloperModeEnabled) {
+  if (isDeveloperModeEnabled) {
     items.push({
       id: 'developer-mode',
       actionId: ROCCO_PLAYER_DEVELOPER_ACTION_ID,
@@ -60,33 +60,26 @@ export function createRoccoPlayerActionMenuDefinition(
 }
 
 export function installRoccoPlayerActionMenu(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   localization: RoccoLocalization = createRoccoLocalization(),
 ): void {
   engine.video.actionMenus.registerMenu(
-    createRoccoPlayerActionMenuDefinition(
-      localization,
-      isRoccoDeveloperModeEnabled(engine),
-    ),
+    createRoccoPlayerActionMenuDefinition(localization, isRoccoDeveloperModeEnabled(engine)),
   );
 }
 
-export function uninstallRoccoPlayerActionMenu(engine: RoccoEngine): void {
+export function uninstallRoccoPlayerActionMenu(engine: CartridgeSdkV1Runtime): void {
   engine.video.actionMenus.unregisterMenu(ROCCO_PLAYER_ACTION_MENU_ID);
 }
 
-export function isRoccoPlayerInventoryAction(
-  activation: RoccoActionMenuActivation,
-): boolean {
+export function isRoccoPlayerInventoryAction(activation: RoccoActionMenuActivation): boolean {
   return (
     activation.definitionId === ROCCO_PLAYER_ACTION_MENU_ID &&
     activation.actionId === ROCCO_PLAYER_INVENTORY_ACTION_ID
   );
 }
 
-export function isRoccoPlayerDeveloperAction(
-  activation: RoccoActionMenuActivation,
-): boolean {
+export function isRoccoPlayerDeveloperAction(activation: RoccoActionMenuActivation): boolean {
   return (
     activation.definitionId === ROCCO_PLAYER_ACTION_MENU_ID &&
     activation.actionId === ROCCO_PLAYER_DEVELOPER_ACTION_ID

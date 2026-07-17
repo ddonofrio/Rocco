@@ -1,4 +1,4 @@
-﻿import {
+import {
   type RoccoFacingDirection,
   type RoccoSpriteDefinition,
   type RoccoSpriteDirectionalAnimations,
@@ -19,9 +19,7 @@ import {
   DEFAULT_SPRITE_STANDING_SEQUENCE_ANIMATION_ID,
   DEFAULT_SPRITE_STANDING_SEQUENCE_RIGHT_ANIMATION_ID,
 } from './rocco-default-constants';
-import {
-  resolveRoccoPlayerAppearanceAssetUrls,
-} from './rocco-default-assets';
+import { resolveRoccoPlayerAppearanceAssetUrls } from './rocco-default-assets';
 import { createRoccoLocalization, type RoccoLocalization } from './localization';
 import {
   DEFAULT_ROCCO_PLAYER_APPEARANCE,
@@ -153,9 +151,19 @@ function createDefaultSpriteFrames(): RoccoSpriteDefinition['frames'] {
   return [
     { id: 'run-left-a', imageId: 'rocco-run-left-1', durationMs: 120, hitbox: makeDefaultHitbox() },
     { id: 'run-left-b', imageId: 'rocco-run-left-2', durationMs: 120 },
-    { id: 'run-right-a', imageId: 'rocco-run-right-1', durationMs: 120, hitbox: makeDefaultHitbox() },
+    {
+      id: 'run-right-a',
+      imageId: 'rocco-run-right-1',
+      durationMs: 120,
+      hitbox: makeDefaultHitbox(),
+    },
     { id: 'run-right-b', imageId: 'rocco-run-right-2', durationMs: 120 },
-    { id: PICK_UP_FRAME_ID, imageId: PICK_UP_IMAGE_ID, durationMs: 420, hitbox: makeDefaultHitbox() },
+    {
+      id: PICK_UP_FRAME_ID,
+      imageId: PICK_UP_IMAGE_ID,
+      durationMs: 420,
+      hitbox: makeDefaultHitbox(),
+    },
     ...STANDING_DIRECTIONS.map((direction) => ({
       id: makeStandingFrameId(direction),
       imageId: makeStandingImageId(direction),

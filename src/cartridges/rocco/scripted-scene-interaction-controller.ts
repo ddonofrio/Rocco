@@ -1,5 +1,5 @@
 import type { RoccoSceneClickAction } from '../../console/cartridges';
-import type { RoccoEngine } from '../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../console/cartridges/sdk-v1';
 import type { InputPolicyLease } from '../../console/input/input-policy-stack';
 import type { RoccoFacingDirection, RoccoPoint } from '../../console/video/sprites';
 import {
@@ -22,13 +22,13 @@ interface RoccoActiveScriptedSceneInteraction {
 }
 
 export class RoccoScriptedSceneInteractionController {
-  private readonly engine: RoccoEngine;
+  private readonly engine: CartridgeSdkV1Runtime;
   private readonly definitions = new Map<string, RoccoScriptedSceneInteractionDefinition>();
   private activeInteraction: RoccoActiveScriptedSceneInteraction | undefined = undefined;
   private inputLease: InputPolicyLease | undefined = undefined;
 
   constructor(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     definitions: readonly RoccoScriptedSceneInteractionDefinition[],
   ) {
     this.engine = engine;
@@ -66,11 +66,14 @@ export class RoccoScriptedSceneInteractionController {
       this.activeInteraction = undefined;
       this.releaseInputLease();
     }
-    this.engine.video.render(0);
   }
 
   handleSceneClick(activation: RoccoSceneClickAction): boolean {
-    if (this.engine.getInputMode() !== 'interactive' || this.activeInteraction || !activation.targetInstanceId) {
+    if (
+      this.engine.getInputMode() !== 'interactive' ||
+      this.activeInteraction ||
+      !activation.targetInstanceId
+    ) {
       return false;
     }
 
@@ -113,7 +116,6 @@ export class RoccoScriptedSceneInteractionController {
       }
       this.activeInteraction = undefined;
     }
-    this.engine.video.render(0);
   }
 
   hasTarget(targetInstanceId: string | null | undefined): boolean {

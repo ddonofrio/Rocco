@@ -1,16 +1,29 @@
-﻿import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { RoccoCartridgeAction } from '../../../src/console/cartridges';
-import type { RoccoEngine, RoccoEnginePersistence } from '../../../src/console/engine-sdk';
+import type { RoccoEnginePersistence } from '../../../src/console/engine-sdk';
+import { asRoccoTestSdk } from './test-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../src/console/cartridges/sdk-v1';
 import type { RoccoAudioSystem } from '../../../src/console/audio';
 import type { RoccoJukeboxSystem } from '../../../src/console/audio/jukebox';
 import { CompositionServiceImpl } from '../../../src/console/composition/composition-service';
 import type { RoccoEffect, RoccoEffectManager } from '../../../src/console/effects';
 import type { RoccoActionMenuSystem } from '../../../src/console/video/action-menu';
-import type { RoccoVideoDisplayModule, RoccoVideoPlaneModule, RoccoVideoSystem } from '../../../src/console/video';
-import type { RoccoVideoZoomModule } from '../../../src/console/video/zoom';
+import type {
+  RoccoVideoDisplayModule,
+  RoccoVideoPlaneModule,
+  RoccoVideoSystem,
+} from '../../../src/console/video';
+import type {
+  RoccoVideoZoomAnimationOptions,
+  RoccoVideoZoomModule,
+  RoccoVideoZoomTransform,
+} from '../../../src/console/video/zoom';
 import type { RoccoGridMenuSystem } from '../../../src/console/video/grid-menu';
-import type { RoccoSpriteMessageSystem, RoccoSpriteMessageText } from '../../../src/console/video/messages';
+import type {
+  RoccoSpriteMessageSystem,
+  RoccoSpriteMessageText,
+} from '../../../src/console/video/messages';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../src/console/video/planes';
 import type { RoccoPrimitiveSystem } from '../../../src/console/video/primitives';
 import type { RoccoRenderLayer } from '../../../src/console/video/render-layers';
@@ -136,8 +149,12 @@ import {
 import { BAIT_SHOP_DOOR_OPENING_SOUND_ID } from '../../../src/cartridges/rocco/levels/pier/pier-bait-shop-door';
 import { DEFAULT_STAN_ACTION_MENU_ID } from '../../../src/cartridges/rocco/levels/pier/pier-stan-action-menu';
 import { DEFAULT_STAN_DIALOGUE_MENU_ID } from '../../../src/cartridges/rocco/levels/pier/pier-stan';
-import type { RoccoDialogueChoiceNode, RoccoDialogueLine } from '../../../src/cartridges/rocco/rpce/dialogue';
+import type {
+  RoccoDialogueChoiceNode,
+  RoccoDialogueLine,
+} from '../../../src/cartridges/rocco/rpce/dialogue';
 import { createRoccoLocalization } from '../../../src/cartridges/rocco/localization';
+import { RoccoNetherConsoleHardwareSpawnLevel } from '../../../src/cartridges/rocco/games/rocco-default/maps/nether/nether-console-hardware-spawn-level';
 import { createDefaultSpriteDefinition } from '../../../src/cartridges/rocco/rocco-default-sprite-definition';
 import { makeDefaultWaterColorEffect } from '../../../src/cartridges/rocco/levels/pier/pier-video-effects';
 import {
@@ -168,11 +185,7 @@ vi.mock('../../../src/console/video/sprites', async (importOriginal) => {
   return {
     ...actual,
     loadRoccoSpriteWalkMapFromImage: vi.fn(
-      (options: {
-        id: string;
-        origin?: { x: number; y: number };
-        alphaThreshold?: number;
-      }) =>
+      (options: { id: string; origin?: { x: number; y: number }; alphaThreshold?: number }) =>
         Promise.resolve({
           id: options.id,
           width: 1672,
@@ -385,7 +398,9 @@ async function transitionFromMiddleToEndAndBack(
   setPlayerGroundPoint(state, 0);
   manager.update(16);
   await flushAsyncTransition();
-  manager.handleAction(makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2));
+  manager.handleAction(
+    makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2),
+  );
   setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
   manager.update(500);
   await flushAsyncTransition();
@@ -395,7 +410,9 @@ async function transitionToPierBeginning(
   manager: RoccoLevelManager,
   state: EngineMockState,
 ): Promise<void> {
-  manager.handleAction(makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2));
+  manager.handleAction(
+    makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2),
+  );
   setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
   manager.update(16);
   await flushAsyncTransition();
@@ -405,7 +422,9 @@ async function transitionFromMiddleToStartAndBack(
   manager: RoccoLevelManager,
   state: EngineMockState,
 ): Promise<void> {
-  manager.handleAction(makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2));
+  manager.handleAction(
+    makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2),
+  );
   setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
   manager.update(16);
   await flushAsyncTransition();
@@ -417,11 +436,7 @@ async function transitionFromMiddleToStartAndBack(
 
 function wakeStanToRootDialogue(manager: RoccoLevelManager): void {
   manager.handleAction(
-    makeActionActivation(
-      DEFAULT_STAN_SPRITE_INSTANCE_ID,
-      'talk',
-      DEFAULT_STAN_ACTION_MENU_ID,
-    ),
+    makeActionActivation(DEFAULT_STAN_SPRITE_INSTANCE_ID, 'talk', DEFAULT_STAN_ACTION_MENU_ID),
   );
 }
 
@@ -501,6 +516,13 @@ interface EngineMockState {
   inputLeases: InputLeaseRecord[];
   compositionSessions: string[];
   spriteSnapshot: RoccoSpriteInstance | undefined;
+  zoomTransforms: RoccoVideoZoomTransform[];
+  zoomAnimations: {
+    transform: RoccoVideoZoomTransform;
+    durationMs: number;
+    options: RoccoVideoZoomAnimationOptions | undefined;
+  }[];
+  zoomClearCount: number;
 }
 
 type InputLeaseMode = 'interactive' | 'advance-only' | 'blocked';
@@ -510,12 +532,12 @@ interface InputLeaseRecord {
   mode: InputLeaseMode;
 }
 
-function createEngineMock(state: EngineMockState): RoccoEngine {
-  let isLegacyInputEnabled = state.inputEnabled;
+function createEngineMock(state: EngineMockState): CartridgeSdkV1Runtime {
+  const isBaseInputEnabled = state.inputEnabled;
   const activeInputLeases: InputLeaseRecord[] = [];
 
   const recomputeInputMode = (): InputLeaseMode => {
-    if (!isLegacyInputEnabled) {
+    if (!isBaseInputEnabled) {
       return 'blocked';
     }
 
@@ -530,7 +552,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     return 'interactive';
   };
 
-  const syncLegacyInputState = (): void => {
+  const syncInputState = (): void => {
     state.inputEnabled = recomputeInputMode() === 'interactive';
     state.isSpriteMovingValue = !state.inputEnabled;
   };
@@ -991,14 +1013,14 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     getTransform() {
       return { factor: 1, focusX: 0, focusY: 0, anchorX: 0, anchorY: 0 };
     },
-    setTransform() {
-      // noop
+    setTransform(transform) {
+      state.zoomTransforms.push(transform);
     },
-    animateTo() {
-      // noop
+    animateTo(transform, durationMs, options) {
+      state.zoomAnimations.push({ transform, durationMs, options });
     },
     clear() {
-      // noop
+      state.zoomClearCount += 1;
     },
     isEnabled() {
       return false;
@@ -1157,7 +1179,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
   };
 
-  return {
+  return asRoccoTestSdk({
     video,
     audio,
     effects,
@@ -1183,13 +1205,6 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
 
     // Input control
-    setInputEnabled(isEnabled: boolean) {
-      isLegacyInputEnabled = isEnabled;
-      syncLegacyInputState();
-    },
-    isInputEnabled() {
-      return recomputeInputMode() === 'interactive';
-    },
     isDeveloperModeEnabled() {
       return true;
     },
@@ -1197,7 +1212,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
       const leaseRecord = { ownerId, mode };
       activeInputLeases.push(leaseRecord);
       state.inputLeases.push(leaseRecord);
-      syncLegacyInputState();
+      syncInputState();
       return {
         ownerId,
         mode,
@@ -1211,7 +1226,7 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
           if (stateIndex !== -1) {
             state.inputLeases.splice(stateIndex, 1);
           }
-          syncLegacyInputState();
+          syncInputState();
         },
       };
     },
@@ -1228,26 +1243,22 @@ function createEngineMock(state: EngineMockState): RoccoEngine {
     },
 
     // Composition
-    beginComposition() {
-      // noop
-    },
     beginCompositionSession(ownerId: string) {
       state.compositionSessions.push(ownerId);
       return new CompositionServiceImpl().begin({ ownerId });
     },
-    endComposition() {
-      // noop
-    },
     jukebox,
-  };
+  });
 }
 
-function createEngineMockWithStrictSoundRegistration(state: EngineMockState): RoccoEngine {
+function createEngineMockWithStrictSoundRegistration(
+  state: EngineMockState,
+): CartridgeSdkV1Runtime {
   const engine = createEngineMock(state);
   const registeredSoundIds = new Set<string>();
   const audio = engine.audio;
 
-  return {
+  return asRoccoTestSdk({
     ...engine,
     audio: {
       ...audio,
@@ -1264,19 +1275,21 @@ function createEngineMockWithStrictSoundRegistration(state: EngineMockState): Ro
         audio.unregisterSound(soundId);
       },
     },
-  };
+  });
 }
 
-function createEngineMockWithStrictPlaylistRegistration(state: EngineMockState): RoccoEngine {
+function createEngineMockWithStrictPlaylistRegistration(
+  state: EngineMockState,
+): CartridgeSdkV1Runtime {
   const engine = createEngineMock(state);
   const registeredPlaylistIds = new Set<string>();
   const jukebox = engine.jukebox;
 
-  return {
+  return asRoccoTestSdk({
     ...engine,
     jukebox: {
       ...jukebox,
-      registerPlaylist(playlist) {
+      registerPlaylist(playlist: Parameters<RoccoJukeboxSystem['registerPlaylist']>[0]) {
         if (registeredPlaylistIds.has(playlist.id)) {
           throw new Error(`Duplicate playlist registration '${playlist.id}'.`);
         }
@@ -1288,8 +1301,11 @@ function createEngineMockWithStrictPlaylistRegistration(state: EngineMockState):
         registeredPlaylistIds.delete(playlistId);
         jukebox.unregisterPlaylist(playlistId);
       },
+      unlock() {
+        // noop
+      },
     },
-  };
+  });
 }
 
 function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState {
@@ -1353,11 +1369,60 @@ function makeEngineState(overrides?: Partial<EngineMockState>): EngineMockState 
     inputLeases: [],
     compositionSessions: [],
     spriteSnapshot: undefined,
+    zoomTransforms: [],
+    zoomAnimations: [],
+    zoomClearCount: 0,
     ...overrides,
   };
 }
 
 describe('RoccoDefaultCartridge', () => {
+  it('preserves the Nether arrival zoom hold and ease-out sequence', () => {
+    const state = makeEngineState();
+    const engine = createEngineMock(state);
+    const level = new RoccoNetherConsoleHardwareSpawnLevel(createRoccoLocalization('en'));
+    const internals = level as unknown as {
+      engine: CartridgeSdkV1Runtime | undefined;
+      startArrivalZoomIntro(engine: CartridgeSdkV1Runtime): void;
+      updateArrivalZoomIntro(deltaMs: number): void;
+    };
+
+    internals.engine = engine;
+    internals.startArrivalZoomIntro(engine);
+
+    expect(state.zoomTransforms).toEqual([
+      {
+        factor: 3,
+        focusX: DEFAULT_DESIGN_WIDTH,
+        focusY: 0,
+        anchorX: DEFAULT_DESIGN_WIDTH,
+        anchorY: 0,
+      },
+    ]);
+    expect(state.zoomAnimations).toHaveLength(0);
+
+    internals.updateArrivalZoomIntro(1999);
+    expect(state.zoomAnimations).toHaveLength(0);
+
+    internals.updateArrivalZoomIntro(1);
+    expect(state.zoomAnimations).toHaveLength(1);
+    expect(state.zoomAnimations[0]).toMatchObject({
+      transform: {
+        factor: 1,
+        focusX: DEFAULT_DESIGN_WIDTH / 2,
+        focusY: DEFAULT_DESIGN_HEIGHT / 2,
+        anchorX: DEFAULT_DESIGN_WIDTH / 2,
+        anchorY: DEFAULT_DESIGN_HEIGHT / 2,
+      },
+      durationMs: 1000,
+      options: { easing: 'ease-in-out' },
+    });
+
+    state.zoomAnimations[0]?.options?.onComplete?.();
+    expect(state.zoomClearCount).toBe(1);
+    expect(state.createdSprites).toContain('rocco-nether-arrival-portal-instance');
+  });
+
   it('exposes a valid manifest', () => {
     const cartridge = new RoccoDefaultCartridge();
     expect(cartridge.manifest.id).toBe('rocco-default');
@@ -1370,7 +1435,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = new RoccoDefaultCartridge();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
 
     expect(state.loadedScene?.id).toBe(DEFAULT_SCENE_ID);
     expect(state.preloadedPlaneSceneIds).toEqual([DEFAULT_SCENE_ID]);
@@ -1457,7 +1522,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine, locale: 'es' });
+    await cartridge.mount({ sdk: engine, locale: 'es' });
 
     expect(state.statusMessages[0]).toContain('Nivel: Medio del muelle');
     const pelikanMenu = state.registeredActionMenuDefinitions.find(
@@ -1484,7 +1549,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMockWithStrictPlaylistRegistration(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine, locale: 'es' });
+    await cartridge.mount({ sdk: engine, locale: 'es' });
 
     state.statusMessages.length = 0;
     state.registeredActionMenuDefinitions.length = 0;
@@ -1511,7 +1576,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
     cartridge.stop();
 
     expect(state.unregisteredPlaylistIds).toEqual(['rocco-game-music']);
@@ -1522,7 +1587,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
 
     expect(state.preloadedSpriteDefinitionIds).toContain(DEFAULT_PELIKAN_SPRITE_DEFINITION_ID);
     expect(state.loadedSpriteDefinitionIds).toContain(DEFAULT_PELIKAN_SPRITE_DEFINITION_ID);
@@ -1547,7 +1612,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
 
     expect(state.preloadedSpriteDefinitionIds).toContain(DEFAULT_BAIT_BUCKET_SPRITE_DEFINITION_ID);
     expect(state.loadedSpriteDefinitionIds).toContain(DEFAULT_BAIT_BUCKET_SPRITE_DEFINITION_ID);
@@ -1584,7 +1649,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
 
     expect(state.loadedScene?.planes.map((plane) => plane.id)).toEqual([
       'rocco-green-black-backplate',
@@ -1621,7 +1686,7 @@ describe('RoccoDefaultCartridge', () => {
     const firstState = makeEngineState();
     const firstEngine = createEngineMock(firstState);
     const firstCartridge = createDefaultCartridgeForPierTests();
-    await firstCartridge.mount({ engine: firstEngine });
+    await firstCartridge.mount({ sdk: firstEngine });
     const restoredScene = firstState.savedScenes[0];
     if (!restoredScene) {
       throw new Error('Expected the first mount to create a saved scene');
@@ -1636,7 +1701,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
 
     expect(state.loadedScene).toBe(restoredScene);
     expect(state.savedScenes).toHaveLength(0);
@@ -1647,7 +1712,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
 
     expect(state.registeredWalkMapIds).toContain(DEFAULT_WALK_MAP_ID);
     expect(state.walkMapBindings).toContain(`${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_WALK_MAP_ID}`);
@@ -1675,8 +1740,10 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
-    cartridge.handleAction(makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2));
+    await cartridge.mount({ sdk: engine });
+    cartridge.handleAction(
+      makeSceneClickActivation(DEFAULT_DESIGN_WIDTH - 1, DEFAULT_DESIGN_HEIGHT / 2),
+    );
     setPlayerGroundPoint(state, DEFAULT_DESIGN_WIDTH);
     cartridge.update(16);
     await flushAsyncTransition();
@@ -1917,7 +1984,9 @@ describe('RoccoDefaultCartridge', () => {
     await manager.mount(engine);
     await transitionToPierBeginning(manager, state);
 
-    expect(state.preloadedSpriteDefinitionIds).toContain(DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID);
+    expect(state.preloadedSpriteDefinitionIds).toContain(
+      DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID,
+    );
     expect(state.loadedSpriteDefinitionIds).toContain(DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID);
     expect(state.createdSprites).toContain(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
 
@@ -1927,7 +1996,9 @@ describe('RoccoDefaultCartridge', () => {
       enabled: true,
       text: localization.text.descriptions.baitShopDoor,
     });
-    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).toContain(
+    expect(
+      listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID),
+    ).toContain(
       `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID}`,
     );
   });
@@ -1948,18 +2019,9 @@ describe('RoccoDefaultCartridge', () => {
     const stanMenu = state.registeredActionMenuDefinitions.find(
       (definition) => definition.id === DEFAULT_STAN_ACTION_MENU_ID,
     );
-    expect(stanMenu?.items.map((item) => item.actionId)).toEqual([
-      'look',
-      'talk',
-      'grab',
-      'kick',
-    ]);
+    expect(stanMenu?.items.map((item) => item.actionId)).toEqual(['look', 'talk', 'grab', 'kick']);
     manager.handleAction(
-      makeActionActivation(
-        DEFAULT_STAN_SPRITE_INSTANCE_ID,
-        'grab',
-        DEFAULT_STAN_ACTION_MENU_ID,
-      ),
+      makeActionActivation(DEFAULT_STAN_SPRITE_INSTANCE_ID, 'grab', DEFAULT_STAN_ACTION_MENU_ID),
     );
     expect(
       localization.text.stan.grabLines.some((line) =>
@@ -1968,11 +2030,7 @@ describe('RoccoDefaultCartridge', () => {
     ).toBe(true);
 
     manager.handleAction(
-      makeActionActivation(
-        DEFAULT_STAN_SPRITE_INSTANCE_ID,
-        'kick',
-        DEFAULT_STAN_ACTION_MENU_ID,
-      ),
+      makeActionActivation(DEFAULT_STAN_SPRITE_INSTANCE_ID, 'kick', DEFAULT_STAN_ACTION_MENU_ID),
     );
     expect(
       localization.text.stan.kickLines.some((line) =>
@@ -1982,11 +2040,7 @@ describe('RoccoDefaultCartridge', () => {
 
     state.spriteMessages.length = 0;
     manager.handleAction(
-      makeActionActivation(
-        DEFAULT_STAN_SPRITE_INSTANCE_ID,
-        'talk',
-        DEFAULT_STAN_ACTION_MENU_ID,
-      ),
+      makeActionActivation(DEFAULT_STAN_SPRITE_INSTANCE_ID, 'talk', DEFAULT_STAN_ACTION_MENU_ID),
     );
 
     expectLatestDialogueMenu(state, localization.text.stan.rootChoices);
@@ -2151,7 +2205,9 @@ describe('RoccoDefaultCartridge', () => {
 
     const booChoice = localization.text.stan.rootChoices.find((choice) => choice.id === 'boo');
     const bathroomChoice = booChoice?.choices?.find((choice) => choice.id === 'boo-bathroom');
-    const clueChoice = bathroomChoice?.choices?.find((choice) => choice.id === 'boo-bathroom-please');
+    const clueChoice = bathroomChoice?.choices?.find(
+      (choice) => choice.id === 'boo-bathroom-please',
+    );
     expect(booChoice?.choices).toBeDefined();
     expect(bathroomChoice?.choices).toBeDefined();
     expect(clueChoice).toBeDefined();
@@ -2314,11 +2370,15 @@ describe('RoccoDefaultCartridge', () => {
       colorRegisterSets: [],
       attributeMaps: [],
     };
-    const mountSpy = vi.spyOn(RoccoBaitShopLevel.prototype, 'mount').mockImplementation((mountEngine) => {
-      mountEngine.loadPlaneScene(baitShopScene);
-      return Promise.resolve(baitShopScene);
-    });
-    const unmountSpy = vi.spyOn(RoccoBaitShopLevel.prototype, 'unmount').mockImplementation(() => {});
+    const mountSpy = vi
+      .spyOn(RoccoBaitShopLevel.prototype, 'mount')
+      .mockImplementation((mountEngine) => {
+        mountEngine.loadPlaneScene(baitShopScene);
+        return Promise.resolve(baitShopScene);
+      });
+    const unmountSpy = vi
+      .spyOn(RoccoBaitShopLevel.prototype, 'unmount')
+      .mockImplementation(() => {});
 
     try {
       await manager.mount(engine);
@@ -2343,7 +2403,9 @@ describe('RoccoDefaultCartridge', () => {
       manager.update(16);
 
       expect(state.playedSoundIds).toContain(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
-      expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).toContain(
+      expect(
+        listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID),
+      ).toContain(
         `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID}`,
       );
 
@@ -2366,7 +2428,9 @@ describe('RoccoDefaultCartridge', () => {
       expect(mountSpy).toHaveBeenCalledOnce();
       expect(manager.getActiveLevel()?.id).toBe(ROCCO_BAIT_SHOP_LEVEL_ID);
       expect(state.loadedScene?.id).toBe(BAIT_SHOP_SCENE_ID);
-      expect(state.statusMessages.at(-1)).toContain(localization.text.levels.baitShopPlaceholderTitle);
+      expect(state.statusMessages.at(-1)).toContain(
+        localization.text.levels.baitShopPlaceholderTitle,
+      );
 
       manager.handleAction(
         makeActionActivation(
@@ -2380,7 +2444,10 @@ describe('RoccoDefaultCartridge', () => {
         id: ROCCO_INVENTORY_MENU_ID,
       });
       expect(state.toggledGridMenuDefinitions.at(-1)?.items.map((item) => item.id)).toEqual(
-        expect.arrayContaining([ROCCO_INVENTORY_KEYS_ITEM_ID, ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID]),
+        expect.arrayContaining([
+          ROCCO_INVENTORY_KEYS_ITEM_ID,
+          ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
+        ]),
       );
     } finally {
       mountSpy.mockRestore();
@@ -2416,7 +2483,9 @@ describe('RoccoDefaultCartridge', () => {
     );
 
     expect(state.playedSoundIds).not.toContain(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
-    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).not.toContain(
+    expect(
+      listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID),
+    ).not.toContain(
       `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID}`,
     );
 
@@ -2424,7 +2493,9 @@ describe('RoccoDefaultCartridge', () => {
     manager.update(16);
 
     expect(state.playedSoundIds).toContain(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
-    expect(listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID)).toContain(
+    expect(
+      listPlayedSpriteAnimationsFor(state, DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID),
+    ).toContain(
       `${DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID}:${DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID}`,
     );
     expect(state.spriteMessages).toContain(
@@ -2700,21 +2771,21 @@ describe('RoccoDefaultCartridge', () => {
         DEFAULT_PELIKAN_FEEDING_ANIMATION_ID,
       ),
     ).toBeGreaterThan(feedingAnimationCount);
-    expect(findLatestSpriteSnapshot(state, DEFAULT_PELIKAN_SPRITE_INSTANCE_ID)?.transform).toMatchObject(
-      {
-        x: DEFAULT_PELIKAN_FEEDING_X,
-        y: DEFAULT_PELIKAN_FEEDING_Y,
-      },
-    );
+    expect(
+      findLatestSpriteSnapshot(state, DEFAULT_PELIKAN_SPRITE_INSTANCE_ID)?.transform,
+    ).toMatchObject({
+      x: DEFAULT_PELIKAN_FEEDING_X,
+      y: DEFAULT_PELIKAN_FEEDING_Y,
+    });
     expect(
       state.createdSprites.filter((id) => id === DEFAULT_KEYS_SPRITE_INSTANCE_ID).length,
     ).toBeGreaterThan(keysCreationCount);
-    expect(findLatestSpriteSnapshot(state, DEFAULT_KEYS_SPRITE_INSTANCE_ID)?.transform).toMatchObject(
-      {
-        x: DEFAULT_KEYS_X,
-        y: DEFAULT_KEYS_Y,
-      },
-    );
+    expect(
+      findLatestSpriteSnapshot(state, DEFAULT_KEYS_SPRITE_INSTANCE_ID)?.transform,
+    ).toMatchObject({
+      x: DEFAULT_KEYS_X,
+      y: DEFAULT_KEYS_Y,
+    });
     expect(state.registeredActionMenus).toContain(DEFAULT_FEEDING_LOOK_ACTION_MENU_ID);
   });
 
@@ -2742,7 +2813,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
     state.isSpriteMovingValue = false;
     cartridge.update(16);
     cartridge.update(6400);
@@ -2771,7 +2842,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
     cartridge.handleAction(makeSceneClickActivation(320, 240));
     state.isSpriteMovingValue = false;
     cartridge.update(16);
@@ -2790,7 +2861,7 @@ describe('RoccoDefaultCartridge', () => {
     const cartridge = createDefaultCartridgeForPierTests();
     const localization = createRoccoLocalization();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
     state.isSpriteMovingValue = false;
     cartridge.update(16);
 
@@ -2818,7 +2889,7 @@ describe('RoccoDefaultCartridge', () => {
     const cartridge = createDefaultCartridgeForPierTests();
     const localization = createRoccoLocalization();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
     state.isSpriteMovingValue = false;
     cartridge.update(16);
     cartridge.handleAction(makeSceneClickActivation(320, 240));
@@ -2842,7 +2913,7 @@ describe('RoccoDefaultCartridge', () => {
     const cartridge = createDefaultCartridgeForPierTests();
     const localization = createRoccoLocalization();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
     state.isSpriteMovingValue = false;
     cartridge.update(16);
     cartridge.update(6400);
@@ -2864,7 +2935,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
     cartridge.update(DEFAULT_CLOUD_VERTICAL_PERIOD_MS / 4);
 
     const expectedX =
@@ -2883,7 +2954,7 @@ describe('RoccoDefaultCartridge', () => {
     const engine = createEngineMock(state);
     const cartridge = createDefaultCartridgeForPierTests();
 
-    await cartridge.mount({ engine });
+    await cartridge.mount({ sdk: engine });
     const halfTravelMs =
       ((DEFAULT_CLOUD_WRAP_RIGHT_X - DEFAULT_CLOUD_START_X) / DEFAULT_CLOUD_SPEED_X / 2) * 1000;
     cartridge.update(halfTravelMs);
@@ -2953,12 +3024,7 @@ describe('default cartridge helpers', () => {
     const state = makeEngineState();
     const engine = createEngineMock(state);
 
-    expect(menu.items.map((item) => item.label)).toEqual([
-      'Mirar',
-      'Hablar',
-      'Coger',
-      'Patear',
-    ]);
+    expect(menu.items.map((item) => item.label)).toEqual(['Mirar', 'Hablar', 'Coger', 'Patear']);
 
     showDefaultPelikanSimpleReaction(engine, 'look', localization);
 

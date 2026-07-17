@@ -28,7 +28,8 @@ const TRACKED_ASSET_EXTENSIONS = new Set([
   '.wav',
   '.webp',
 ]);
-const NEW_URL_ASSET_PATTERN = /new URL\(\s*(['"`])([^'"`]+)\1\s*,\s*import\.meta\.url\s*\)/g;
+// eslint-disable-next-line sonarjs/super-linear-regex -- The bounded asset literal and URL syntax keep this scan local to one declaration.
+const NEW_URL_ASSET_PATTERN = /new URL\(\s*(['"`])([^'"`]+)\1\s*,\s*import\.meta\.url\s*,?\s*\)/g;
 const BASE_URL_ASSET_PATTERN = /`\$\{import\.meta\.env\.BASE_URL\}([^`]+)`/g;
 
 function listTypeScriptFiles(directory: string): string[] {
@@ -105,19 +106,22 @@ function collectDeclaredAssetReferences(): DeclaredAssetReference[] {
     }
   }
 
-  const sortedReferences = references.values().toArray().toSorted((left, right) => {
-    const sourceComparison = left.sourceFile.localeCompare(right.sourceFile);
-    if (sourceComparison !== 0) {
-      return sourceComparison;
-    }
+  const sortedReferences = references
+    .values()
+    .toArray()
+    .toSorted((left, right) => {
+      const sourceComparison = left.sourceFile.localeCompare(right.sourceFile);
+      if (sourceComparison !== 0) {
+        return sourceComparison;
+      }
 
-    const assetComparison = left.assetPath.localeCompare(right.assetPath);
-    if (assetComparison !== 0) {
-      return assetComparison;
-    }
+      const assetComparison = left.assetPath.localeCompare(right.assetPath);
+      if (assetComparison !== 0) {
+        return assetComparison;
+      }
 
-    return left.resolutionKind.localeCompare(right.resolutionKind);
-  });
+      return left.resolutionKind.localeCompare(right.resolutionKind);
+    });
   return sortedReferences;
 }
 

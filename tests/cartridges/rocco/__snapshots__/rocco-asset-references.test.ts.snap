@@ -143,6 +143,11 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
   },
   {
+    "assetPath": "./assets/bait-shop-screen-2-toilet-door-open.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
     "assetPath": "./assets/bait-shop-screen-2-walkmap.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
@@ -154,6 +159,11 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
   },
   {
     "assetPath": "./assets/bait-shop-toilet-background.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
+  },
+  {
+    "assetPath": "./assets/bait-shop-toilet-rocco-reading-magazine.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
   },
@@ -418,6 +428,11 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
   },
   {
+    "assetPath": "./assets/actions/sprite-cycle-cursor.svg",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
     "assetPath": "./assets/actions/talk.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
@@ -479,6 +494,16 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
   },
   {
     "assetPath": "./assets/characters/rocco/lab-coat/run-right-2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/stand-down-left.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/rocco/lab-coat/stand-down-right.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
   },
@@ -599,6 +624,26 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
   },
   {
     "assetPath": "./assets/props/keys/keys.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/props/keys/mysterious-key.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/props/magazine/micromania-closed.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/props/magazine/micromania-inventory.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/props/money/20-euros.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
   },

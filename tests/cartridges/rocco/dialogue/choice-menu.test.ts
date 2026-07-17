@@ -1,6 +1,9 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { createRoccoDialogueChoiceMenu, resolveRoccoDialogueChoice } from '../../../../src/cartridges/rocco/rpce/dialogue/choice-menu';
+import {
+  createRoccoDialogueChoiceMenu,
+  resolveRoccoDialogueChoice,
+} from '../../../../src/cartridges/rocco/rpce/dialogue/choice-menu';
 
 describe('Rocco dialogue choice menu', () => {
   it('builds a text-list grid menu and resolves selected choices', () => {

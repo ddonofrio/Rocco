@@ -63,7 +63,7 @@ Forward generic grid-menu activations back into the session:
 
 ```typescript
 if (dialogue.handleGridMenu(activation)) {
-  engine.video.render(0);
+  // The console render loop synchronizes the updated menu state.
 }
 ```
 

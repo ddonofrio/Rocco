@@ -1,6 +1,8 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import { asRoccoTestSdk } from '../test-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 import type {
   RoccoGridMenuActivation,
   RoccoGridMenuCarriedItem,
@@ -46,7 +48,7 @@ function makeGridMenuActivation(
   };
 }
 
-function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
+function createEngineMock(state: DialogueEngineMockState): CartridgeSdkV1Runtime {
   let isLegacyInputEnabled = state.inputEnabled;
   const activeInputLeases: Array<{
     ownerId: string;
@@ -74,7 +76,7 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
     state.inputHistory.push(state.inputEnabled);
   };
 
-  return {
+  return asRoccoTestSdk({
     video: {
       messages: {
         showMessage(message: RoccoSpriteMessageRequest) {
@@ -152,10 +154,7 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
       return state.inputEnabled;
     },
     getInputMode: () => recomputeInputMode(),
-    acquireInputLease(
-      ownerId: string,
-      mode: 'interactive' | 'advance-only' | 'blocked',
-    ) {
+    acquireInputLease(ownerId: string, mode: 'interactive' | 'advance-only' | 'blocked') {
       const lease = { ownerId, mode };
       activeInputLeases.push(lease);
       syncLegacyInputState();
@@ -181,7 +180,7 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
       fail() {},
       dispose() {},
     }),
-  } as unknown as RoccoEngine;
+  } as unknown as RoccoEngine);
 }
 
 function makeState(): DialogueEngineMockState {
@@ -236,9 +235,9 @@ describe('RoccoDialogueSession', () => {
     ]);
     expect(state.inputEnabled).toBe(true);
 
-    expect(
-      session.handleGridMenu(makeGridMenuActivation('stan-dialogue', 'introduce-self')),
-    ).toBe(true);
+    expect(session.handleGridMenu(makeGridMenuActivation('stan-dialogue', 'introduce-self'))).toBe(
+      true,
+    );
     expect(state.messages.at(-1)).toBe("rocco:say:Uhhh... excuse me sir, I'm Rocco");
     expect(state.inputEnabled).toBe(false);
 
@@ -300,9 +299,7 @@ describe('RoccoDialogueSession', () => {
     });
 
     expect(session.isAwaitingChoice()).toBe(true);
-    expect(
-      session.handleGridMenu(makeGridMenuActivation('stan-dialogue', 'bathroom')),
-    ).toBe(true);
+    expect(session.handleGridMenu(makeGridMenuActivation('stan-dialogue', 'bathroom'))).toBe(true);
 
     session.update(4800);
 

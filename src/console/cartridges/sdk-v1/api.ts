@@ -10,6 +10,7 @@
 
 import type { RoccoConsoleFlags } from '../../engine-sdk';
 import type { RoccoVideoPlaneModule, RoccoVideoDisplayModule } from '../../video/types';
+import type { RoccoVideoZoomModule } from '../../video/zoom';
 import type { RoccoSpriteSystem } from '../../video/sprites/types';
 import type { RoccoSceneTargetSystem } from '../../video/scene-targets/types';
 import type { RoccoActionMenuSystem } from '../../video/action-menu/types';
@@ -25,10 +26,7 @@ import type { RoccoEffectManager } from '../../effects/types';
 import type { InputMode, InputPolicyLease } from '../../input/input-policy-stack';
 import type { ResourceScope } from '../../lifecycle';
 import type { CompositionSession } from '../../composition/composition-service';
-import type {
-  CartridgeSaveRepo,
-  CreateSaveRepoOptions,
-} from '../../persistence/types';
+import type { CartridgeSaveRepo, CreateSaveRepoOptions } from '../../persistence/types';
 import type { CartridgeCapability } from './capabilities';
 
 export type CartridgeVideoPlaneApi = Pick<
@@ -122,32 +120,46 @@ export type CartridgePrimitiveApi = Pick<
 >;
 export type CartridgeTitleApi = Omit<RoccoTitleSystem, 'update'>;
 export type CartridgeDisplayApi = Pick<RoccoVideoDisplayModule, 'getProfile' | 'setProfile'>;
+/**
+ * Controlled presentation transform operations. This facade preserves
+ * cartridge-owned presentation sequences without exposing the kernel's
+ * viewport or zoom module.
+ */
+export type CartridgeCameraApi = Pick<RoccoVideoZoomModule, 'setTransform' | 'animateTo' | 'clear'>;
 
 /**
- * Cartridge-facing video API. Excludes `viewport`, `zoom`, `update`,
+ * Cartridge-facing video API. Excludes `viewport`, the kernel `zoom` module,
+ * `update`,
  * `render`, and the render-layer ordering methods, which are internal
  * `ConsoleKernel` responsibilities.
  */
 export interface CartridgeVideoApi {
-  readonly planes: CartridgeVideoPlaneApi;
-  readonly sprites: CartridgeSpriteApi;
+  readonly planes?: CartridgeVideoPlaneApi;
+  readonly sprites?: CartridgeSpriteApi;
   readonly sceneTargets?: CartridgeSceneTargetApi;
-  readonly actionMenus: CartridgeActionMenuApi;
-  readonly gridMenus: CartridgeGridMenuApi;
-  readonly messages: CartridgeMessageApi;
-  readonly primitives: CartridgePrimitiveApi;
-  readonly titles: CartridgeTitleApi;
-  readonly display: CartridgeDisplayApi;
+  readonly actionMenus?: CartridgeActionMenuApi;
+  readonly gridMenus?: CartridgeGridMenuApi;
+  readonly messages?: CartridgeMessageApi;
+  readonly primitives?: CartridgePrimitiveApi;
+  readonly titles?: CartridgeTitleApi;
+  readonly display?: CartridgeDisplayApi;
+  readonly camera?: CartridgeCameraApi;
 
   preloadAssetUrls(assetUrls: readonly string[]): Promise<void>;
-  preloadPlaneScene(scene: RoccoPlaneScene): Promise<void>;
-  preloadSpriteDefinition(definition: RoccoSpriteDefinition): Promise<void>;
-  preloadSpriteDefinitions(definitions: RoccoSpriteDefinition[]): Promise<void>;
+  preloadPlaneScene?(scene: RoccoPlaneScene): Promise<void>;
+  preloadSpriteDefinition?(definition: RoccoSpriteDefinition): Promise<void>;
+  preloadSpriteDefinitions?(definitions: RoccoSpriteDefinition[]): Promise<void>;
 }
 
 export type CartridgeAudioApi = Pick<
   RoccoAudioSystem,
-  'registerSound' | 'unregisterSound' | 'preloadSound' | 'playSound' | 'setSoundVolume' | 'stopSound' | 'stopAllSounds'
+  | 'registerSound'
+  | 'unregisterSound'
+  | 'preloadSound'
+  | 'playSound'
+  | 'setSoundVolume'
+  | 'stopSound'
+  | 'stopAllSounds'
 >;
 
 /**
@@ -156,7 +168,13 @@ export type CartridgeAudioApi = Pick<
  */
 export type CartridgeJukeboxApi = Pick<
   RoccoJukeboxSystem,
-  'registerPlaylist' | 'unregisterPlaylist' | 'playPlaylist' | 'stopPlaylist' | 'isPlaying' | 'setVolume' | 'getCurrentTrack'
+  | 'registerPlaylist'
+  | 'unregisterPlaylist'
+  | 'playPlaylist'
+  | 'stopPlaylist'
+  | 'isPlaying'
+  | 'setVolume'
+  | 'getCurrentTrack'
 >;
 
 /**
@@ -178,7 +196,9 @@ export type CartridgeCreateSaveRepoOptions<TState> = Omit<
 >;
 
 export interface CartridgeStorageApi {
-  loadPlaneSceneRecord(sceneId: string): Promise<import('../../video/planes').RoccoPlaneSceneRecord | null>;
+  loadPlaneSceneRecord(
+    sceneId: string,
+  ): Promise<import('../../video/planes').RoccoPlaneSceneRecord | null>;
   savePlaneScene(scene: RoccoPlaneScene): Promise<void>;
   createSaveRepository<TState>(
     options: CartridgeCreateSaveRepoOptions<TState>,
@@ -198,30 +218,63 @@ export interface CartridgeLoggerApi {
  * advertises the negotiated `capabilities`.
  */
 export interface CartridgeSdkV1 {
-  readonly video: CartridgeVideoApi;
-  readonly audio: CartridgeAudioApi;
-  readonly jukebox: CartridgeJukeboxApi;
-  readonly effects: CartridgeEffectsApi;
-  readonly input: CartridgeInputApi;
-  readonly storage: CartridgeStorageApi;
-  readonly logger: CartridgeLoggerApi;
-  readonly scope: ResourceScope;
+  readonly video?: CartridgeVideoApi;
+  readonly audio?: CartridgeAudioApi;
+  readonly jukebox?: CartridgeJukeboxApi;
+  readonly effects?: CartridgeEffectsApi;
+  readonly input?: CartridgeInputApi;
+  readonly storage?: CartridgeStorageApi;
+  readonly logger?: CartridgeLoggerApi;
+  readonly log?: CartridgeLoggerApi['log'];
+  readonly setStatus?: CartridgeLoggerApi['setStatus'];
+  readonly scope?: ResourceScope;
   readonly sdkVersion: string;
   readonly capabilities: readonly CartridgeCapability[];
-  loadPlaneScene(scene: RoccoPlaneScene): void;
-  serializePlaneScene(sceneId: string): RoccoPlaneScene;
-  setPlayerSprite(instanceId: string | undefined): void;
-  getPlayerSprite(): string | undefined;
-  isDeveloperModeEnabled(): boolean;
-  getConsoleFlags(): RoccoConsoleFlags | undefined;
-  setConsoleFlags(patch: Partial<RoccoConsoleFlags>): void;
+  acquireInputLease?: CartridgeInputApi['acquireInputLease'];
+  getInputMode?: CartridgeInputApi['getInputMode'];
+  loadPlaneScene?: (scene: RoccoPlaneScene) => void;
+  serializePlaneScene?: (sceneId: string) => RoccoPlaneScene;
+  setPlayerSprite?: (instanceId: string | undefined) => void;
+  getPlayerSprite?: () => string | undefined;
+  isDeveloperModeEnabled?: () => boolean;
+  getConsoleFlags?: () => RoccoConsoleFlags | undefined;
+  setConsoleFlags?: (patch: Partial<RoccoConsoleFlags>) => void;
   /**
-   * Opens an owned composition/loading session. Exposed flat (like
-   * `RoccoEngine`) so fallback to the raw engine kernel in tests/legacy paths
-   * keeps working. See capability `composition.v1`.
+   * Opens an owned composition/loading session. It is exposed flat for the
+   * stable SDK v1 surface; legacy cartridges continue to receive their
+   * explicit `RoccoEngine` context. See capability `composition.v1`.
    */
-  beginCompositionSession(
-    ownerId: string,
-    options?: { message?: string },
-  ): CompositionSession;
+  beginCompositionSession?: (ownerId: string, options?: { message?: string }) => CompositionSession;
 }
+
+/**
+ * Internal type used only after a manifest has negotiated every capability
+ * required by the official cartridge runtime. It still contains facades only;
+ * it is never the kernel `RoccoEngine`.
+ */
+export type CartridgeSdkV1Runtime = Omit<CartridgeSdkV1, 'video'> & {
+  readonly video: Required<CartridgeVideoApi>;
+} & Required<
+    Pick<
+      CartridgeSdkV1,
+      | 'audio'
+      | 'jukebox'
+      | 'effects'
+      | 'input'
+      | 'storage'
+      | 'logger'
+      | 'log'
+      | 'setStatus'
+      | 'scope'
+      | 'acquireInputLease'
+      | 'getInputMode'
+      | 'loadPlaneScene'
+      | 'serializePlaneScene'
+      | 'setPlayerSprite'
+      | 'getPlayerSprite'
+      | 'isDeveloperModeEnabled'
+      | 'getConsoleFlags'
+      | 'setConsoleFlags'
+      | 'beginCompositionSession'
+    >
+  >;

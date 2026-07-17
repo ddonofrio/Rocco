@@ -7,23 +7,28 @@ methods never leak.
 
 ## Files
 
-| File           | Responsibility                                                              |
-| -------------- | -------------------------------------------------------------------------- |
-| `api.ts`       | `CartridgeSdkV1` and the neutral `Cartridge*Api` subsystem interfaces.     |
-| `capabilities.ts` | `CartridgeCapability` ids and `CONSOLE_SUPPORTED_CAPABILITIES`.        |
-| `version.ts`   | `CARTRIDGE_SDK_VERSION` and the minimal `satisfies()` semver matcher.      |
-| `adapter.ts`   | `createCartridgeSdkV1({ engine, scope, manifest })` wraps `RoccoEngine`.   |
-| `validator.ts` | `checkCartridgeSdkCompatibility` / `assertCartridgeSdkCompatibility`.      |
-| `index.ts`     | Barrel export.                                                             |
+| File              | Responsibility                                                           |
+| ----------------- | ------------------------------------------------------------------------ |
+| `api.ts`          | `CartridgeSdkV1` and the neutral `Cartridge*Api` subsystem interfaces.   |
+| `capabilities.ts` | `CartridgeCapability` ids and `CONSOLE_SUPPORTED_CAPABILITIES`.          |
+| `version.ts`      | `CARTRIDGE_SDK_VERSION` and the minimal `satisfies()` semver matcher.    |
+| `adapter.ts`      | `createCartridgeSdkV1({ engine, scope, manifest })` wraps `RoccoEngine`. |
+| `validator.ts`    | `checkCartridgeSdkCompatibility` / `assertCartridgeSdkCompatibility`.    |
+| `index.ts`        | Barrel export.                                                           |
 
 ## What the SDK is
 
 `CartridgeSdkV1` is composed only from the already-narrow neutral subsystem
 module interfaces, so host-only members — `video.update`, `video.render`,
-`video.viewport`, `video.zoom`, render-layer ordering, `effects.tick`,
+`video.viewport`, the kernel `video.zoom` module, render-layer ordering, `effects.tick`,
 `jukebox.unlock` — are never part of the contract. The adapter returns an
 object that does not even carry those members at runtime, so a cartridge
 cannot reach them.
+
+Visual cartridges may receive `video.camera`, a controlled facade exposing only
+`setTransform`, `animateTo`, and `clear` for cartridge-owned presentation
+sequences. It is not the kernel zoom object and does not expose render timing or
+viewport ownership.
 
 It carries its own `ResourceScope` (`scope`) so a cartridge can register
 disposers that are cleaned up with the cartridge, and advertises the
@@ -45,8 +50,9 @@ interface CartridgeSdkV1 {
 }
 ```
 
-`beginCompositionSession` is exposed flat (mirroring `RoccoEngine`) so the
-`engine` fallback path in tests and legacy call sites keeps working.
+`beginCompositionSession` is exposed flat as part of the SDK v1 contract.
+Legacy cartridges remain on the explicit `LegacyCartridgeContext` path and do
+not receive an SDK v1 fallback.
 
 ## Capability negotiation
 

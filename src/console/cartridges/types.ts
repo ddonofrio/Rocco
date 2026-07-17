@@ -90,19 +90,27 @@ export type RoccoCartridgeLocalizedManifest = Partial<
  */
 export interface CartridgeManifestRuntime {
   /** Semver range the cartridge requires, e.g. `'^1.0.0'`. */
-  sdk?: string;
+  sdk: string;
   /** Capability ids the cartridge intends to use. */
   capabilities?: readonly string[];
 }
 
-export interface RoccoCartridgeContext {
+export interface LegacyCartridgeContext {
   engine: RoccoEngine;
   locale?: string;
-  /**
-   * Version-stamped, narrow SDK surface (audit ROCCO-011). Prefer this over
-   * the deprecated `engine` kernel. Always provided by the manager.
-   */
-  sdk?: CartridgeSdkV1;
+}
+
+export interface CartridgeContextV1 {
+  sdk: CartridgeSdkV1;
+  locale?: string;
+}
+
+export type RoccoCartridgeContext = LegacyCartridgeContext | CartridgeContextV1;
+
+export function isSdkV1CartridgeManifest(
+  manifest: RoccoCartridgeManifest,
+): manifest is RoccoCartridgeManifest & { runtime: CartridgeManifestRuntime } {
+  return manifest.runtime !== undefined;
 }
 
 export interface RoccoCartridgeSetupConsole {
@@ -131,7 +139,11 @@ export interface RoccoCartridgeSetupResult {
 
 export interface RoccoCartridge {
   manifest: RoccoCartridgeManifest;
-  setup?(context: RoccoCartridgeSetupContext): Promise<RoccoCartridgeSetupResult | void> | RoccoCartridgeSetupResult | void;
+  /** Host-owned cancellation hook used before cartridge lifecycle teardown. */
+  setActionCancellation?(cancelActiveActions: (reason: string) => void): void;
+  setup?(
+    context: RoccoCartridgeSetupContext,
+  ): Promise<RoccoCartridgeSetupResult | void> | RoccoCartridgeSetupResult | void;
   mount(context: RoccoCartridgeContext): Promise<void> | void;
   start?(): Promise<void> | void;
   update?(deltaMs: number): void;

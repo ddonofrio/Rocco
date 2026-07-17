@@ -1,8 +1,5 @@
 import type { RoccoCartridgeManifest } from '../types';
-import {
-  CONSOLE_SUPPORTED_CAPABILITIES,
-  isSupportedCapability,
-} from './capabilities';
+import { CONSOLE_SUPPORTED_CAPABILITIES, isSupportedCapability } from './capabilities';
 import { CARTRIDGE_SDK_VERSION, satisfies } from './version';
 
 export interface SdkCompatibilityResult {
@@ -26,8 +23,8 @@ export class CartridgeSdkIncompatibleError extends Error {
  *
  * - A manifest without `runtime` is implicitly compatible (legacy cartridges
  *   keep mounting).
- * - `runtime.sdk`, when present, must satisfy the console's implemented
- *   SDK version.
+ * - `runtime.sdk` is required and must satisfy the console's implemented SDK
+ *   version.
  * - Every `runtime.capabilities` entry must be a capability the console
  *   actually exposes.
  */
@@ -41,11 +38,11 @@ export function checkCartridgeSdkCompatibility(
     return { ok: true, errors: Object.freeze([]) };
   }
 
-  if (runtime.sdk !== undefined && runtime.sdk !== '' && !satisfies(runtime.sdk, CARTRIDGE_SDK_VERSION)) {
-      errors.push(
-        `runtime.sdk '${runtime.sdk}' is not satisfied by console SDK '${CARTRIDGE_SDK_VERSION}'`,
-      );
-    }
+  if (!runtime.sdk || !satisfies(runtime.sdk, CARTRIDGE_SDK_VERSION)) {
+    errors.push(
+      `runtime.sdk '${runtime.sdk ?? ''}' is not satisfied by console SDK '${CARTRIDGE_SDK_VERSION}'`,
+    );
+  }
 
   if (runtime.capabilities) {
     for (const capability of runtime.capabilities) {
@@ -61,9 +58,7 @@ export function checkCartridgeSdkCompatibility(
 }
 
 /** Throws `CartridgeSdkIncompatibleError` when the manifest is incompatible. */
-export function assertCartridgeSdkCompatibility(
-  manifest: RoccoCartridgeManifest,
-): void {
+export function assertCartridgeSdkCompatibility(manifest: RoccoCartridgeManifest): void {
   const result = checkCartridgeSdkCompatibility(manifest);
   if (!result.ok) {
     throw new CartridgeSdkIncompatibleError(result);

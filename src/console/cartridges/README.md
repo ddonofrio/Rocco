@@ -12,8 +12,8 @@ Actual cartridge implementations live in `src/cartridges`.
 
 ## Subdirectories
 
-| Directory    | Contents                                   |
-| ------------ | ------------------------------------------ |
+| Directory    | Contents                                                             |
+| ------------ | -------------------------------------------------------------------- |
 | `providers/` | Built-in console-side cartridge providers; see `providers/README.md` |
 
 ## Cartridge Lifecycle
@@ -22,7 +22,8 @@ Actual cartridge implementations live in `src/cartridges`.
 CartridgeManager selection
   -> cartridge.setup({ console })
   -> CartridgeLoader.loadById() or loadDefault()
-  -> cartridge.mount({ engine, locale })
+  -> cartridge.mount({ sdk, locale })       // SDK v1
+  -> cartridge.mount({ engine, locale })    // legacy
   -> cartridge.start()
   -> cartridge.update(deltaMs)
   -> cartridge.handleAction(action)
@@ -37,15 +38,15 @@ Only `mount()` is required. All other lifecycle methods are optional.
 ## Cartridge Context
 
 ```typescript
-interface RoccoCartridgeContext {
-  engine: RoccoEngine;
-  locale?: string;
-}
+type RoccoCartridgeContext =
+  | { sdk: CartridgeSdkV1; locale?: string }
+  | { engine: RoccoEngine; locale?: string };
 ```
 
-`engine` is the full runtime SDK kernel. Prefer the narrow, version-stamped
-`CartridgeSdkV1` exposed as `context.sdk` inside `mount`, which hides internal
-runtime methods (`render`, `viewport`, `effects.tick`, `jukebox.unlock`, ...).
+SDK v1 cartridges receive the narrow, version-stamped `context.sdk`, which
+hides internal runtime methods (`render`, `viewport`, `effects.tick`,
+`jukebox.unlock`, ...). Legacy cartridges explicitly receive the full
+`context.engine` kernel.
 `locale` is set by the cartridge menu when a localized cartridge is loaded.
 
 The manifest may declare a `runtime` block:
@@ -137,7 +138,9 @@ type RoccoCartridgeLocalizedManifest = Partial<
 
 `localizations` is keyed by locale code. The base manifest is treated as English by convention. Localized manifests only include menu-facing text fields.
 
-When a localized cartridge is selected, `RoccoCartridgeMenu` returns `selectedLocale` and `RoccoCartridgeManager` passes it to `mount({ engine, locale })`.
+When a localized cartridge is selected, `RoccoCartridgeMenu` returns
+`selectedLocale`; `RoccoCartridgeManager` passes it to either
+`mount({ sdk, locale })` or the explicit legacy `mount({ engine, locale })`.
 
 ## Creating a Cartridge
 
@@ -148,7 +151,9 @@ When a localized cartridge is selected, `RoccoCartridgeMenu` returns `selectedLo
 5. Add cartridge assets.
 6. Register the cartridge in `src/cartridges/index.ts`.
 
-Avoid importing PixiJS rendering classes or engine renderer internals into cartridge code. Prefer engine SDK helpers for asset preloading and scene work, including `engine.video.preloadAssetUrls(...)`, `engine.video.preloadPlaneScene(...)`, and `engine.video.preloadSpriteDefinition(...)`.
+Avoid importing PixiJS rendering classes or engine renderer internals into
+cartridge code. SDK v1 cartridges use `context.sdk.video` helpers for asset
+preloading and scene work; legacy cartridges use their explicit engine context.
 
 ## Reading Next
 

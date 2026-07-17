@@ -7,6 +7,7 @@ export type {
   CartridgeStorageApi,
   CartridgeLoggerApi,
   CartridgeSdkV1,
+  CartridgeSdkV1Runtime,
 } from './api';
 export {
   CONSOLE_SUPPORTED_CAPABILITIES,

@@ -2,9 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createResourceScope, type ResourceScope } from '../../../src/console/lifecycle';
 import type { RoccoEngine } from '../../../src/console/engine-sdk';
-import type {
-  RoccoCartridgeManifest,
-} from '../../../src/console/cartridges/types';
+import type { RoccoCartridgeManifest } from '../../../src/console/cartridges/types';
 import {
   CARTRIDGE_SDK_VERSION,
   CONSOLE_SUPPORTED_CAPABILITIES,
@@ -37,7 +35,11 @@ interface FakeEngineSpies {
  * returned alongside the engine so assertions reference bare identifiers.
  */
 function createFakeEngine(): { engine: RoccoEngine; spies: FakeEngineSpies } {
-  const audioPlaySound = vi.fn(() => ({ stop: vi.fn(), setVolume: vi.fn(), ended: Promise.resolve() }));
+  const audioPlaySound = vi.fn(() => ({
+    stop: vi.fn(),
+    setVolume: vi.fn(),
+    ended: Promise.resolve(),
+  }));
   const effectsAdd = vi.fn();
   const jukeboxRegisterPlaylist = vi.fn();
   const log = vi.fn();
@@ -54,7 +56,12 @@ function createFakeEngine(): { engine: RoccoEngine; spies: FakeEngineSpies } {
   };
 
   const video = {
-    planes: { loadScene: vi.fn(), serializeScene: vi.fn(), updatePlane: vi.fn(), resolvePlane: vi.fn() },
+    planes: {
+      loadScene: vi.fn(),
+      serializeScene: vi.fn(),
+      updatePlane: vi.fn(),
+      resolvePlane: vi.fn(),
+    },
     sprites: {},
     actionMenus: {},
     gridMenus: {},
@@ -63,7 +70,7 @@ function createFakeEngine(): { engine: RoccoEngine; spies: FakeEngineSpies } {
     titles: {},
     display: { getProfile: vi.fn(), setProfile: vi.fn() },
     viewport: { setHost: vi.fn(), getHost: vi.fn() },
-    zoom: {},
+    zoom: { setTransform: vi.fn(), animateTo: vi.fn(), clear: vi.fn() },
     setRenderLayerOrder: vi.fn(),
     getRenderLayerOrder: vi.fn(),
     preloadAssetUrls: vi.fn(),
@@ -77,7 +84,9 @@ function createFakeEngine(): { engine: RoccoEngine; spies: FakeEngineSpies } {
   const jukebox = {
     registerPlaylist: jukeboxRegisterPlaylist,
     unregisterPlaylist: vi.fn(),
-    playPlaylist: vi.fn(() => Promise.resolve({ stop: vi.fn(), setVolume: vi.fn(), ended: Promise.resolve() })),
+    playPlaylist: vi.fn(() =>
+      Promise.resolve({ stop: vi.fn(), setVolume: vi.fn(), ended: Promise.resolve() }),
+    ),
     stopPlaylist: vi.fn(),
     isPlaying: vi.fn(() => false),
     setVolume: vi.fn(),
@@ -123,10 +132,7 @@ function createFakeEngine(): { engine: RoccoEngine; spies: FakeEngineSpies } {
   };
 }
 
-function buildSdk(
-  manifest: RoccoCartridgeManifest,
-  scope: ResourceScope,
-): CartridgeSdkV1 {
+function buildSdk(manifest: RoccoCartridgeManifest, scope: ResourceScope): CartridgeSdkV1 {
   return createCartridgeSdkV1({ engine: createFakeEngine().engine, scope, manifest });
 }
 
@@ -141,6 +147,7 @@ describe('Cartridge SDK v1 contract', () => {
     expect(video.getRenderLayerOrder).toBeUndefined();
     expect(video.viewport).toBeUndefined();
     expect(video.zoom).toBeUndefined();
+    expect(video.camera).toBeDefined();
   });
 
   it('hides effects.tick and jukebox.unlock from the cartridge', () => {
@@ -152,15 +159,32 @@ describe('Cartridge SDK v1 contract', () => {
 
   it('delegates public members to the underlying engine', () => {
     const { engine, spies } = createFakeEngine();
-    const sdk = createCartridgeSdkV1({ engine, scope: createResourceScope('t'), manifest: { id: 'c', title: 'c', version: '1.0.0' } });
+    const sdk = createCartridgeSdkV1({
+      engine,
+      scope: createResourceScope('t'),
+      manifest: { id: 'c', title: 'c', version: '1.0.0' },
+    });
 
-    sdk.audio.playSound('boom');
-    sdk.effects.add({ id: 'e', kind: 'k', targetType: 't', targetId: 'i', params: {}, enabled: true });
-    sdk.jukebox.registerPlaylist({ id: 'p', tracks: [], mixMode: { type: 'auto-mix' }, globalVolume: 1 });
-    sdk.logger.log('System', 'hi');
-    sdk.beginCompositionSession('owner', { message: 'hi' });
+    sdk.audio?.playSound('boom');
+    sdk.effects?.add({
+      id: 'e',
+      kind: 'k',
+      targetType: 't',
+      targetId: 'i',
+      params: {},
+      enabled: true,
+    });
+    sdk.jukebox?.registerPlaylist({
+      id: 'p',
+      tracks: [],
+      mixMode: { type: 'auto-mix' },
+      globalVolume: 1,
+    });
+    sdk.logger?.log('System', 'hi');
+    sdk.beginCompositionSession?.('owner', { message: 'hi' });
 
-    const { audioPlaySound, effectsAdd, jukeboxRegisterPlaylist, log, beginCompositionSession } = spies;
+    const { audioPlaySound, effectsAdd, jukeboxRegisterPlaylist, log, beginCompositionSession } =
+      spies;
     expect(audioPlaySound).toHaveBeenCalledWith('boom');
     expect(effectsAdd).toHaveBeenCalledOnce();
     expect(jukeboxRegisterPlaylist).toHaveBeenCalledOnce();
@@ -179,11 +203,49 @@ describe('Cartridge SDK v1 contract', () => {
 
   it('reflects explicitly declared capabilities', () => {
     const sdk = buildSdk(
-      { id: 'c', title: 'c', version: '1.0.0', runtime: { capabilities: ['audio.v1'] } },
+      {
+        id: 'c',
+        title: 'c',
+        version: '1.0.0',
+        runtime: { sdk: '^1.0.0', capabilities: ['audio.v1'] },
+      },
       createResourceScope('t'),
     );
 
     expect(sdk.capabilities).toEqual(['audio.v1']);
+  });
+
+  it('filters modules and methods by negotiated capability at runtime', () => {
+    const { engine } = createFakeEngine();
+    const sdk = createCartridgeSdkV1({
+      engine,
+      scope: createResourceScope('audio-only'),
+      manifest: {
+        id: 'audio-only',
+        title: 'audio-only',
+        version: '1.0.0',
+        runtime: { sdk: '^1.0.0', capabilities: ['audio.v1'] },
+      },
+    });
+
+    expect(sdk.audio).toBeDefined();
+    expect(sdk.video).toBeUndefined();
+    expect(sdk.input).toBeUndefined();
+    expect(sdk.storage).toBeUndefined();
+    expect(sdk.effects).toBeUndefined();
+    expect(sdk.beginCompositionSession).toBeUndefined();
+  });
+
+  it('returns method facades instead of the kernel subsystem objects', () => {
+    const { engine } = createFakeEngine();
+    const sdk = buildSdk({ id: 'c', title: 'c', version: '1.0.0' }, createResourceScope('facades'));
+
+    expect(sdk.video?.planes).not.toBe(engine.video.planes);
+    expect(sdk.video?.sprites).not.toBe(engine.video.sprites);
+    expect(sdk.video?.camera).not.toBe(engine.video.zoom);
+    expect(sdk.audio).not.toBe(engine.audio);
+    expect(sdk.effects).not.toBe(engine.effects);
+    expect(sdk.jukebox).not.toBe(engine.jukebox);
   });
 
   it('recognises supported capabilities', () => {
@@ -229,11 +291,23 @@ describe('Cartridge SDK compatibility validation', () => {
       id: 'c',
       title: 'c',
       version: '1.0.0',
-      runtime: { capabilities: ['video.sprites.v1', 'unknown.cap'] },
+      runtime: { sdk: '^1.0.0', capabilities: ['video.sprites.v1', 'unknown.cap'] },
     });
 
     expect(result.ok).toBe(false);
     expect(result.errors.join(' ')).toMatch(/unknown\.cap/);
+  });
+
+  it('rejects an SDK runtime without its required SDK range', () => {
+    const result = checkCartridgeSdkCompatibility({
+      id: 'c',
+      title: 'c',
+      version: '1.0.0',
+      runtime: { capabilities: ['audio.v1'] } as unknown as RoccoCartridgeManifest['runtime'],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/runtime\.sdk/);
   });
 
   it('throws from assertCartridgeSdkCompatibility on an incompatible manifest', () => {

@@ -75,10 +75,7 @@ describe('ActionDispatcher', () => {
     dispatcher.dispatch({ kind: 'scene-click', sceneX: 0, sceneY: 0 });
     await flush();
 
-    expect(log).toHaveBeenCalledWith(
-      'ActionDispatcher',
-      expect.stringContaining('boom'),
-    );
+    expect(log).toHaveBeenCalledWith('ActionDispatcher', expect.stringContaining('boom'));
   });
 
   it('suppresses default movement when handleAction throws', () => {
@@ -180,5 +177,35 @@ describe('ActionDispatcher', () => {
       consumed: true,
       defaultPlayerMovement: 'suppress',
     });
+  });
+
+  it('prevents an old action completion from applying after transition cancellation', async () => {
+    let levelId = 'level-1';
+    let isOldCompletionApplied = false;
+    const { promise: completion, resolve: resolveCompletion } = Promise.withResolvers<void>();
+    const cartridge = makeCartridge((_action, context) => ({
+      consumed: true,
+      defaultPlayerMovement: 'suppress',
+      completion: (async () => {
+        await completion;
+        if (!context.signal.aborted) {
+          isOldCompletionApplied = true;
+        }
+      })(),
+    }));
+    const dispatcher = new ActionDispatcher({
+      getActiveCartridge: () => cartridge,
+      getActiveLevelId: () => levelId,
+      log: () => {},
+    });
+
+    dispatcher.dispatch({ kind: 'scene-click', sceneX: 0, sceneY: 0 });
+    levelId = 'level-2';
+    dispatcher.cancelActiveActions('level-transition:level-2');
+    resolveCompletion();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(isOldCompletionApplied).toBe(false);
   });
 });

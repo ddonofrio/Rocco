@@ -5,10 +5,7 @@ import type { RoccoVideoSystem } from './video';
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from './video/planes';
 import type { InputMode, InputPolicyLease } from './input/input-policy-stack';
 import type { CompositionSession } from './composition/composition-service';
-import type {
-  CartridgeSaveRepo,
-  CreateSaveRepoOptions,
-} from './persistence/types';
+import type { CartridgeSaveRepo, CreateSaveRepoOptions } from './persistence/types';
 
 export interface RoccoEnginePersistence {
   loadPlaneSceneRecord(cartridgeId: string, sceneId: string): Promise<RoccoPlaneSceneRecord | null>;
@@ -20,9 +17,7 @@ export interface RoccoEnginePersistence {
    * The returned repository owns transaction, revision guard, migration and
    * quota handling; the cartridge only supplies domain serialization.
    */
-  createSaveRepository<TState>(
-    options: CreateSaveRepoOptions<TState>,
-  ): CartridgeSaveRepo<TState>;
+  createSaveRepository<TState>(options: CreateSaveRepoOptions<TState>): CartridgeSaveRepo<TState>;
 }
 
 export interface RoccoConsoleFlags {
@@ -48,26 +43,16 @@ export interface RoccoEngine {
   // Input control
   /**
    * Acquires a composable input lease. The effective mode is the most
-   * restrictive of all active leases. Prefer this over the deprecated
-   * `setInputEnabled` boolean. Dispose the returned lease to release the lock.
+   * restrictive of all active leases. Dispose the returned lease to release
+   * the lock.
    */
   acquireInputLease(ownerId: string, mode: InputMode): InputPolicyLease;
 
   /** Effective composed input mode (most restrictive active lease). */
   getInputMode(): InputMode;
 
-  /**
-   * @deprecated Retained for legacy per-level callers until level decomposition
-   * (audit Phase 4). Use `acquireInputLease` instead. Backed internally by
-   * per-owner ref-counted leases, so it still participates in the composed
-   * policy stack and each caller only releases its own lock.
-   */
-  setInputEnabled(isEnabled: boolean, ownerId?: string): void;
-
-  /**
-   * @deprecated Use `getInputMode() === 'interactive'`.
-   */
-  isInputEnabled(): boolean;
+  /** Cancels action completions before a level is unpublished or the cartridge stops. */
+  cancelActiveActions?(reason: string): void;
 
   // Console flags
   isDeveloperModeEnabled?(): boolean;
@@ -79,25 +64,7 @@ export interface RoccoEngine {
    * Opens an owned composition session. Only the returned session may update or
    * close its overlay. Prefer this over the deprecated `beginComposition`.
    */
-  beginCompositionSession(
-    ownerId: string,
-    options?: { message?: string },
-  ): CompositionSession;
-
-  /**
-   * @deprecated Retained for legacy callers. Use `beginCompositionSession`.
-   */
-  beginComposition(): void;
-
-  /**
-   * @deprecated Use `CompositionSession.dispose()`.
-   */
-  endComposition(): void;
-
-  /**
-   * @deprecated Use `CompositionSession.report`.
-   */
-  setCompositionText?(text: string | null): void;
+  beginCompositionSession(ownerId: string, options?: { message?: string }): CompositionSession;
 
   // Logging and status
   setStatus(status: string): void;

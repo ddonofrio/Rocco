@@ -6,8 +6,10 @@ import {
   RoccoDefaultCartridgeLoader,
   assertCartridgeSdkCompatibility,
   createCartridgeSdkV1,
+  isSdkV1CartridgeManifest,
   type RoccoCartridge,
   type RoccoCartridgeBootSetting,
+  type RoccoCartridgeManifest,
 } from './cartridges';
 import { RoccoCartridgeMenu } from './cartridge-menu/cartridge-menu';
 import type { RoccoConsoleFlags, RoccoEngine } from './engine-sdk';
@@ -23,6 +25,7 @@ interface RoccoMenuSettingsEngine extends RoccoEngine {
 interface CartridgeManagerOptions {
   app: Application;
   engine: RoccoMenuSettingsEngine;
+  cancelActiveActions?: (reason: string) => void;
   configuredCartridgeId?: string;
   /**
    * Existing cartridge `ResourceScope` owned by the runtime. When omitted the
@@ -34,6 +37,11 @@ interface CartridgeManagerOptions {
 interface RoccoCollectedBootSetup {
   consoleFlags: Partial<RoccoConsoleFlags>;
   bootSettings: RoccoCartridgeBootSetting[];
+}
+
+interface RoccoCartridgeSelection {
+  selectedId: string;
+  selectedLocale: string | undefined;
 }
 
 function toError(error: unknown): Error {
@@ -48,12 +56,16 @@ function combineErrors(message: string, errors: readonly unknown[]): Error | und
     return toError(errors[0]);
   }
 
-  return new AggregateError(errors.map((error) => toError(error)), message);
+  return new AggregateError(
+    errors.map((error) => toError(error)),
+    message,
+  );
 }
 
 export class RoccoCartridgeManager {
   private activeCartridge: RoccoCartridge | undefined;
   private cartridgeScope: ResourceScope | undefined;
+  private cancelActiveActions: ((reason: string) => void) | undefined;
 
   private loadInitialLocales(
     configById: ReadonlyMap<string, (typeof builtinCartridgeConfigs)[number]>,
@@ -70,9 +82,7 @@ export class RoccoCartridgeManager {
   }
 
   private loadStoredLocale(
-    config:
-      | (typeof builtinCartridgeConfigs)[number]
-      | undefined,
+    config: (typeof builtinCartridgeConfigs)[number] | undefined,
   ): string | undefined {
     if (!config?.preferredLocaleStorageKey) {
       return undefined;
@@ -80,8 +90,7 @@ export class RoccoCartridgeManager {
 
     try {
       return (
-        globalThis.localStorage?.getItem(config.preferredLocaleStorageKey) ??
-        config.defaultLocale
+        globalThis.localStorage?.getItem(config.preferredLocaleStorageKey) ?? config.defaultLocale
       );
     } catch {
       return config.defaultLocale;
@@ -133,9 +142,7 @@ export class RoccoCartridgeManager {
   }
 
   private saveStoredLocale(
-    config:
-      | (typeof builtinCartridgeConfigs)[number]
-      | undefined,
+    config: (typeof builtinCartridgeConfigs)[number] | undefined,
     locale: string,
   ): void {
     if (!config?.preferredLocaleStorageKey) {
@@ -153,8 +160,11 @@ export class RoccoCartridgeManager {
     cartridge: RoccoCartridge | undefined,
     scope: ResourceScope | undefined,
     cartridgeId: string,
+    cancelActiveActions?: (reason: string) => void,
   ): Promise<Error | undefined> {
     const failures: unknown[] = [];
+
+    cancelActiveActions?.('cartridge-unmount:' + cartridgeId);
 
     if (cartridge?.stop) {
       try {
@@ -183,24 +193,74 @@ export class RoccoCartridgeManager {
     return combineErrors(`Cartridge '${cartridgeId}' cleanup failed.`, failures);
   }
 
-  private validateCartridgeCompatibility(
-    selectedConfig: (typeof builtinCartridgeConfigs)[number] | undefined,
+  private validateCartridgeCompatibility(manifest: RoccoCartridgeManifest): void {
+    assertCartridgeSdkCompatibility(manifest);
+  }
+
+  private async mountSelectedCartridge(
     cartridge: RoccoCartridge,
-  ): void {
-    assertCartridgeSdkCompatibility(selectedConfig?.manifest ?? cartridge.manifest);
+    engine: RoccoMenuSettingsEngine,
+    scope: ResourceScope,
+    selectedLocale: string | undefined,
+  ): Promise<void> {
+    if (isSdkV1CartridgeManifest(cartridge.manifest)) {
+      const sdk = this.createCartridgeSdk(engine, scope, cartridge.manifest);
+      await cartridge.mount({ sdk, locale: selectedLocale });
+      return;
+    }
+
+    engine.log(
+      'System',
+      `Mounting legacy cartridge '${cartridge.manifest.id}' with full engine context.`,
+    );
+    await cartridge.mount({ engine, locale: selectedLocale });
   }
 
   private createCartridgeSdk(
     engine: RoccoMenuSettingsEngine,
     scope: ResourceScope,
-    selectedConfig: (typeof builtinCartridgeConfigs)[number] | undefined,
-    cartridge: RoccoCartridge,
+    manifest: RoccoCartridgeManifest,
   ) {
     return createCartridgeSdkV1({
       engine,
       scope,
-      manifest: selectedConfig?.manifest ?? cartridge.manifest,
+      manifest,
     });
+  }
+
+  private async selectCartridge(
+    app: Application,
+    engine: RoccoMenuSettingsEngine,
+    allManifests: RoccoCartridgeManifest[],
+    configById: ReadonlyMap<string, (typeof builtinCartridgeConfigs)[number]>,
+    configuredCartridgeId: string | undefined,
+    bootSetup: RoccoCollectedBootSetup,
+  ): Promise<RoccoCartridgeSelection> {
+    if (allManifests.length > 0 && !configuredCartridgeId) {
+      const menu = new RoccoCartridgeMenu(app);
+      const result = await menu.show(allManifests, {
+        initialLocales: this.loadInitialLocales(configById),
+        initialDisplayProfile: engine.video.display.getProfile(),
+        initialSoundProfile: engine.getSoundProfile(),
+        bootSettings: bootSetup.bootSettings,
+        onDisplayProfileChange: (profile) => {
+          engine.video.display.setProfile(profile);
+        },
+        onSoundProfileChange: (profile) => {
+          engine.setSoundProfile(profile);
+        },
+      });
+      return {
+        selectedId: result.selectedId,
+        selectedLocale: result.selectedLocale,
+      };
+    }
+
+    const selectedId = configuredCartridgeId ?? defaultBuiltinCartridgeId;
+    return {
+      selectedId,
+      selectedLocale: this.loadStoredLocale(configById.get(selectedId)),
+    };
   }
 
   async loadAndMount(options: CartridgeManagerOptions): Promise<RoccoCartridge> {
@@ -218,28 +278,14 @@ export class RoccoCartridgeManager {
     );
     const bootSetup = await this.collectBootSetup(builtinCartridgeConfigs, engine);
     engine.setConsoleFlags(bootSetup.consoleFlags);
-    let selectedId: string;
-    let selectedLocale: string | undefined;
-    if (allManifests.length > 0 && !configuredCartridgeId) {
-      const menu = new RoccoCartridgeMenu(app);
-      const result = await menu.show(allManifests, {
-        initialLocales: this.loadInitialLocales(configById),
-        initialDisplayProfile: engine.video.display.getProfile(),
-        initialSoundProfile: engine.getSoundProfile(),
-        bootSettings: bootSetup.bootSettings,
-        onDisplayProfileChange: (profile) => {
-          engine.video.display.setProfile(profile);
-        },
-        onSoundProfileChange: (profile) => {
-          engine.setSoundProfile(profile);
-        },
-      });
-      selectedId = result.selectedId;
-      selectedLocale = result.selectedLocale;
-    } else {
-      selectedId = configuredCartridgeId ?? defaultBuiltinCartridgeId;
-      selectedLocale = this.loadStoredLocale(configById.get(selectedId));
-    }
+    const { selectedId, selectedLocale } = await this.selectCartridge(
+      app,
+      engine,
+      allManifests,
+      configById,
+      configuredCartridgeId,
+      bootSetup,
+    );
 
     const selectedConfig = configById.get(selectedId);
     if (selectedLocale) {
@@ -247,17 +293,26 @@ export class RoccoCartridgeManager {
     }
 
     const cartridge = (await loader.loadById(selectedId)) ?? (await loader.loadDefault());
-    this.validateCartridgeCompatibility(selectedConfig, cartridge);
+    const manifest = cartridge.manifest;
+    this.validateCartridgeCompatibility(manifest);
 
     const scope = options.cartridgeScope ?? createResourceScope(`cartridge:${selectedId}`);
-    const sdk = this.createCartridgeSdk(engine, scope, selectedConfig, cartridge);
+    this.cancelActiveActions = options.cancelActiveActions;
     try {
-      await cartridge.mount({ engine, locale: selectedLocale, sdk });
+      if (options.cancelActiveActions) {
+        cartridge.setActionCancellation?.(options.cancelActiveActions);
+      }
+      await this.mountSelectedCartridge(cartridge, engine, scope, selectedLocale);
       if (cartridge.start) {
         await cartridge.start();
       }
     } catch (error) {
-      const cleanupError = await this.cleanupCartridgeResources(cartridge, scope, selectedId);
+      const cleanupError = await this.cleanupCartridgeResources(
+        cartridge,
+        scope,
+        selectedId,
+        this.cancelActiveActions,
+      );
       const combinedError = combineErrors(
         `Failed to mount cartridge '${selectedId}' cleanly.`,
         [error, cleanupError].filter((item) => item !== undefined),
@@ -285,10 +340,12 @@ export class RoccoCartridgeManager {
       activeCartridge,
       cartridgeScope,
       activeCartridge?.manifest.id ?? 'unknown',
+      this.cancelActiveActions,
     );
 
     this.activeCartridge = undefined;
     this.cartridgeScope = undefined;
+    this.cancelActiveActions = undefined;
 
     if (cleanupError) {
       throw cleanupError;

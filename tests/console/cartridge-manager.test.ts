@@ -152,12 +152,14 @@ describe('RoccoCartridgeManager', () => {
               },
             ],
           }),
-        })),
+        }),
+      ),
       createTestConfig('game', () => createTestCartridge('game')),
     ];
 
     testState.menuShow.mockImplementationOnce((_manifests, options) => {
-      const bootSettings = (options as { bootSettings: Array<{ getValueLabel(): string }> }).bootSettings;
+      const bootSettings = (options as { bootSettings: Array<{ getValueLabel(): string }> })
+        .bootSettings;
       systemSettingsValue = bootSettings[0]?.getValueLabel() ?? '';
       return { selectedId: 'game' };
     });
@@ -198,23 +200,37 @@ describe('RoccoCartridgeManager', () => {
               },
             ],
           }),
-        })),
+        }),
+      ),
       createTestConfig('game', () =>
         createTestCartridge('game', {
-          mount: ({ engine: mountEngine }) => {
-            mountedDeveloperModeEnabled =
-              mountEngine.getConsoleFlags?.().developerModeEnabled;
+          manifest: {
+            id: 'game',
+            title: 'game',
+            version: '1.0.0',
+            runtime: { sdk: '^1.0.0', capabilities: ['logger.v1'] },
           },
-        })),
+          mount: (context) => {
+            expect('engine' in context).toBe(false);
+            if (!('sdk' in context)) {
+              throw new Error('Expected SDK v1 mount context.');
+            }
+            const mountSdk = context.sdk;
+            mountedDeveloperModeEnabled = mountSdk.getConsoleFlags?.()?.developerModeEnabled;
+          },
+        }),
+      ),
     ];
 
     testState.menuShow.mockImplementationOnce(async (_manifests, options) => {
-      const bootSettings = (options as {
-        bootSettings: Array<{
-          getValueLabel(): string;
-          activate?(): Promise<void> | void;
-        }>;
-      }).bootSettings;
+      const bootSettings = (
+        options as {
+          bootSettings: Array<{
+            getValueLabel(): string;
+            activate?(): Promise<void> | void;
+          }>;
+        }
+      ).bootSettings;
       const setting = bootSettings[0];
       expect(setting?.getValueLabel()).toBe('ON');
       await setting?.activate?.();
@@ -230,6 +246,36 @@ describe('RoccoCartridgeManager', () => {
 
     expect(mountedDeveloperModeEnabled).toBe(false);
     expect(engine.getConsoleFlags().developerModeEnabled).toBe(false);
+  });
+
+  it('installs the action cancellation hook before mounting an SDK v1 cartridge', async () => {
+    const engine = createTestEngine(false);
+    const cancelActiveActions = vi.fn();
+    const setActionCancellation = vi.fn();
+
+    testState.registrations = [
+      createTestConfig('game', () =>
+        createTestCartridge('game', {
+          manifest: {
+            id: 'game',
+            title: 'game',
+            version: '1.0.0',
+            runtime: { sdk: '^1.0.0', capabilities: ['logger.v1'] },
+          },
+          setActionCancellation,
+        }),
+      ),
+    ];
+
+    const manager = new RoccoCartridgeManager();
+    await manager.loadAndMount({
+      app: {} as Application,
+      engine: engine as never,
+      configuredCartridgeId: 'game',
+      cancelActiveActions,
+    });
+
+    expect(setActionCancellation).toHaveBeenCalledWith(cancelActiveActions);
   });
 
   it('publishes the active cartridge only after mount and start complete', async () => {
@@ -268,7 +314,8 @@ describe('RoccoCartridgeManager', () => {
             };
             await startDeferred.promise;
           },
-        })),
+        }),
+      ),
     ];
 
     const manager = new RoccoCartridgeManager();
@@ -299,8 +346,9 @@ describe('RoccoCartridgeManager', () => {
     testState.registrations = [
       createTestConfig('game', () =>
         createTestCartridge('game', {
-          mount: ({ sdk }) => {
-            sdk?.scope.defer(() => {
+          mount: (context) => {
+            expect('engine' in context).toBe(true);
+            scope.defer(() => {
               order.push('scope');
             });
             throw new Error('mount failed');
@@ -311,7 +359,8 @@ describe('RoccoCartridgeManager', () => {
           dispose: () => {
             order.push('dispose');
           },
-        })),
+        }),
+      ),
     ];
 
     const manager = new RoccoCartridgeManager();
@@ -353,7 +402,8 @@ describe('RoccoCartridgeManager', () => {
             order.push('dispose');
             throw new Error('dispose failed');
           },
-        })),
+        }),
+      ),
     ];
 
     const manager = new RoccoCartridgeManager();

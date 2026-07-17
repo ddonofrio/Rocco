@@ -17,6 +17,8 @@ export interface DispatchOptions {
 }
 
 interface TrackedAction {
+  readonly actionId: string;
+  readonly levelId: string | undefined;
   readonly controller: AbortController;
   readonly startedAt: number;
   readonly owner?: string;
@@ -99,7 +101,10 @@ export class ActionDispatcher {
     return { consumed: true, defaultPlayerMovement: 'suppress' };
   }
 
-  dispatch(action: RoccoCartridgeAction, request: DispatchOptions = {}): CartridgeActionDisposition {
+  dispatch(
+    action: RoccoCartridgeAction,
+    request: DispatchOptions = {},
+  ): CartridgeActionDisposition {
     if (this.disposed) {
       return { consumed: true, defaultPlayerMovement: 'suppress' };
     }
@@ -132,7 +137,10 @@ export class ActionDispatcher {
       raw = cartridge.handleAction(action, context);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logFn('ActionDispatcher', `handleAction for '${cartridge.manifest.id}' failed: ${message}`);
+      this.logFn(
+        'ActionDispatcher',
+        `handleAction for '${cartridge.manifest.id}' failed: ${message}`,
+      );
       return { consumed: true, defaultPlayerMovement: 'suppress' };
     }
 
@@ -144,6 +152,8 @@ export class ActionDispatcher {
 
     if (disposition.completion) {
       this.tracked.set(actionId, {
+        actionId,
+        levelId,
         controller,
         startedAt: Date.now(),
         owner: request.owner,
@@ -164,7 +174,17 @@ export class ActionDispatcher {
       return;
     }
     this.generation += 1;
-    for (const [, tracked] of this.tracked) {
+    for (const tracked of this.tracked.values()) {
+      this.logFn(
+        'ActionDispatcher',
+        "Cancelling action '" +
+          tracked.actionId +
+          "' from level '" +
+          String(tracked.levelId) +
+          "': " +
+          (reason ?? 'unspecified') +
+          '.',
+      );
       tracked.controller.abort(reason);
     }
     this.tracked.clear();

@@ -1,6 +1,11 @@
+import { Container, type Application } from 'pixi.js';
 import { describe, expect, it, vi } from 'vitest';
 
 import { GameRuntime } from '../../src/console/runtime';
+import {
+  formatCompositionOverlayText,
+  RuntimeCompositionPresenter,
+} from '../../src/console/runtime-composition-presenter';
 
 describe('GameRuntime', () => {
   it('starts with developer mode disabled by default', () => {
@@ -51,5 +56,38 @@ describe('GameRuntime', () => {
     runtime.log('System', 'hello');
 
     expect(consoleInfo).toHaveBeenCalledWith('[ROCCO:System] hello');
+  });
+
+  it('keeps composition text formatting and overlay ownership in the presenter', () => {
+    const session = {
+      id: 'composition-1',
+      ownerId: 'test-owner',
+      message: 'LOADING',
+      mode: 'exclusive' as const,
+      status: 'active' as const,
+      completed: 30,
+      total: 100,
+      error: null,
+    };
+    expect(formatCompositionOverlayText(session)).toBe('LOADING\nPROGRESS 30/100');
+
+    const stage = new Container();
+    const render = vi.fn();
+    const app = {
+      stage,
+      screen: { width: 320, height: 180 },
+      render,
+    } as unknown as Application;
+    const presenter = new RuntimeCompositionPresenter();
+
+    presenter.sync(app, session);
+
+    expect(stage.children).toHaveLength(1);
+    expect(stage.children.some((child) => child.label === 'composition-overlay')).toBe(true);
+    expect(render).toHaveBeenCalledTimes(1);
+
+    presenter.sync(app, null);
+    expect(stage.children).toHaveLength(0);
+    presenter.dispose();
   });
 });

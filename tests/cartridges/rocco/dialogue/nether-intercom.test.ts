@@ -172,26 +172,28 @@ function runIntercomChoice(choice: NetherIntercomChoice): IntercomFixture {
         return;
       }
 
-      if (choice.npcLine !== undefined) {
-        session.beginLinearSequence({
-          speaker: 'npc',
-          lines: [choice.npcLine],
-          lineTtlMs: NETHER_INTERCOM_REPLY_TTL_MS,
-          onComplete: () => {
-            if (choice.thoughtLine !== undefined) {
-              session.beginLinearSequence({
-                speaker: 'player',
-                lines: [choice.thoughtLine as string | readonly string[]],
-                lineTtlMs: NETHER_INTERCOM_THOUGHT_TTL_MS,
-                messageKind: 'think',
-                onComplete: () => {},
-              });
-              return;
-            }
-          },
-        });
+      if (choice.npcLine === undefined) {
         return;
       }
+
+      session.beginLinearSequence({
+        speaker: 'npc',
+        lines: [choice.npcLine],
+        lineTtlMs: NETHER_INTERCOM_REPLY_TTL_MS,
+        onComplete: () => {
+          if (choice.thoughtLine === undefined) {
+            return;
+          }
+
+          session.beginLinearSequence({
+            speaker: 'player',
+            lines: [choice.thoughtLine],
+            lineTtlMs: NETHER_INTERCOM_THOUGHT_TTL_MS,
+            messageKind: 'think',
+            onComplete: () => {},
+          });
+        },
+      });
     },
   });
 
@@ -223,10 +225,7 @@ describe('Nether intercom multi-line dialogue regression', () => {
     const fixture = runIntercomChoice(choice);
 
     const intercom = spanishNetherText.intercom;
-    const expected: string[] = [
-      ...intercom.secondReplyLines,
-      ...intercom.secondReplyThoughtLines,
-    ];
+    const expected: string[] = [...intercom.secondReplyLines, ...intercom.secondReplyThoughtLines];
 
     const seen = collectVisibleInOrder(fixture);
 
@@ -244,10 +243,10 @@ describe('Nether intercom multi-line dialogue regression', () => {
 
     const npcLines = intercom.secondReplyLines;
     session.advance();
-    for (let i = 0; i < npcLines.length; i += 1) {
-      expect(state.messages.at(-1)).toContain(npcLines[i]);
+    for (let index = 0; index < npcLines.length; index += 1) {
+      expect(state.messages.at(-1)).toContain(npcLines[index]);
       expect(state.messages.at(-1)).not.toContain(':think:');
-      if (i < npcLines.length - 1) {
+      if (index < npcLines.length - 1) {
         session.advance();
       }
     }

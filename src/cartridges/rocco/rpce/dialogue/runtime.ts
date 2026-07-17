@@ -286,14 +286,6 @@ export class RoccoDialogueSession {
     return [...line];
   }
 
-  private normalizeDialogueLine(line: RoccoDialogueLine): string[] {
-    if (typeof line === 'string') {
-      return [line];
-    }
-
-    return [...line];
-  }
-
   private createNpcMessageOptions(ttlMs: number): RoccoSpriteMessageOptions {
     return {
       ttlMs,
@@ -383,7 +375,7 @@ export class RoccoDialogueSession {
 
   beginLinearSequence(start: RoccoDialogueLinearSequenceStart): void {
     this.cancel();
-    const normalizedLines = start.lines.flatMap((line) => this.normalizeDialogueLine(line));
+    const normalizedLines = start.lines.flatMap((line) => this.resolveMessageText(line));
     if (normalizedLines.length === 0) {
       start.onComplete?.();
       return;

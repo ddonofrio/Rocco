@@ -36,8 +36,7 @@ try {
 - `onChange(listener)` fires only when the effective mode actually changes.
 
 Because every lock is a lease, releasing one lock never invalidates another
-caller's lock — fixing the INP-001 nested-lock bug where any
-`setInputEnabled(true)` re-enabled input globally.
+caller's lock; nested input policies remain independent.
 
 ## Wiring
 
@@ -45,13 +44,6 @@ caller's lock — fixing the INP-001 nested-lock bug where any
 `getInputMode: () => inputPolicy.getEffectiveMode()` into `RoccoInputHandler`.
 The handler routes clicks as advance/disabled actions whenever the mode is not
 `'interactive'`.
-
-## Legacy compatibility
-
-`RoccoEngine.setInputEnabled` / `isInputEnabled` are retained as `@deprecated`
-shims backed by a ref-counted `'legacy-input'` lease. They are used by the large
-per-level content files and will be removed during audit Phase 4 (level
-decomposition). New code must use `acquireInputLease`.
 
 ## Files
 

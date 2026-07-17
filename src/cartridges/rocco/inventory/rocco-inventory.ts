@@ -1,4 +1,4 @@
-﻿import type { RoccoGridMenuDefinition } from '../../../console/video/grid-menu';
+import type { RoccoGridMenuDefinition } from '../../../console/video/grid-menu';
 import { DEFAULT_SPRITE_SCALE } from '../rocco-default-constants';
 import {
   roccoDefaultKeysAssetUrl,
@@ -36,14 +36,15 @@ const INVENTORY_BUTTON_HEIGHT = 40;
 const INVENTORY_BUTTON_GAP = 14;
 const INVENTORY_SLOT_SIZE = 106;
 const INVENTORY_SLOT_GAP = 8;
-const roccoAbyssalTalismanAssetUrl = new URL('assets/souvenirs/abyssal-talisman.png', import.meta.url)
-  .href;
+const roccoAbyssalTalismanAssetUrl = new URL(
+  'assets/souvenirs/abyssal-talisman.png',
+  import.meta.url,
+).href;
 export const roccoCoralRelicAssetUrl = new URL('assets/souvenirs/coral-relic.png', import.meta.url)
   .href;
 const roccoFloatingAmuletAssetUrl = new URL('assets/souvenirs/floating-amulet.png', import.meta.url)
   .href;
-const roccoSpiralRazorAssetUrl = new URL('assets/souvenirs/spiral-razor.png', import.meta.url)
-  .href;
+const roccoSpiralRazorAssetUrl = new URL('assets/souvenirs/spiral-razor.png', import.meta.url).href;
 const roccoBataAssetUrl = new URL('../assets/props/lab-coat.png', import.meta.url).href;
 const roccoBataGroundAssetUrl = new URL('../assets/props/lab-coat-ground.png', import.meta.url)
   .href;
@@ -82,8 +83,7 @@ function createGroundSpriteDefinition(
   height: number,
   referenceHeightAtDefaultRoccoScale: number,
 ): RoccoInventoryGroundSpriteDefinition {
-  const spriteScaleAtDefaultRoccoScale =
-    referenceHeightAtDefaultRoccoScale / Math.max(1, height);
+  const spriteScaleAtDefaultRoccoScale = referenceHeightAtDefaultRoccoScale / Math.max(1, height);
   return {
     imageUri,
     width,
@@ -173,18 +173,12 @@ const ROCCO_INVENTORY_FUSION_RECIPES: readonly RoccoInventoryFusionRecipe[] = [
   },
   {
     resultItemId: ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
-    ingredientIds: [
-      ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
-      ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
-    ],
+    ingredientIds: [ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID, ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID],
     createResult: createRoccoAbyssalTalismanInventoryItem,
   },
   {
     resultItemId: ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
-    ingredientIds: [
-      ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
-      BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID,
-    ],
+    ingredientIds: [ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID, BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID],
     createResult: createRoccoCoralRelicInventoryItem,
   },
 ];
@@ -305,7 +299,8 @@ export function resolveRoccoInventoryItemLabel(
       return createRoccoCoralRelicInventoryItem(localization).label;
     }
     default: {
-      return createBaitShopSouvenirTableItems(localization).find((item) => item.id === itemId)?.label;
+      return createBaitShopSouvenirTableItems(localization).find((item) => item.id === itemId)
+        ?.label;
     }
   }
 }
@@ -379,9 +374,7 @@ export class RoccoInventory extends RoccoInventoryStorage {
   }
 }
 
-export function createRoccoKeysInventoryItem(
-  localization: RoccoLocalization,
-): RoccoInventoryItem {
+export function createRoccoKeysInventoryItem(localization: RoccoLocalization): RoccoInventoryItem {
   return {
     id: ROCCO_INVENTORY_KEYS_ITEM_ID,
     label: localization.text.inventory.keysLabel,
@@ -478,9 +471,7 @@ export function createRoccoCoralRelicInventoryItem(
   };
 }
 
-export function createRoccoBataInventoryItem(
-  localization: RoccoLocalization,
-): RoccoInventoryItem {
+export function createRoccoBataInventoryItem(localization: RoccoLocalization): RoccoInventoryItem {
   return {
     id: ROCCO_INVENTORY_BATA_ITEM_ID,
     label: localization.text.inventory.bataLabel,

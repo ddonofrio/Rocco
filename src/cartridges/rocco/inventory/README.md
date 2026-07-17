@@ -2,7 +2,7 @@
 
 This directory contains inventory state for the `rocco-default` cartridge.
 
-The inventory belongs to the cartridge. The engine provides generic slot-panel UI, slot movement, and cursor item payloads through `engine.video.gridMenus` and the cursor subsystem.
+The inventory belongs to the cartridge. The cartridge-facing SDK provides generic slot-panel UI, slot movement, and cursor item payloads through `engine.video.gridMenus` and the cursor subsystem.
 
 ## Files
 
@@ -39,7 +39,7 @@ The inventory belongs to the cartridge. The engine provides generic slot-panel U
 
 ## UI Boundary
 
-Inventory code does not import PixiJS and does not draw directly. It returns `RoccoGridMenuDefinition` objects, and the engine renders them through the generic grid menu subsystem.
+Inventory code does not import PixiJS and does not draw directly. It returns `RoccoGridMenuDefinition` objects, and the console renders them through the generic grid menu subsystem.
 
 The console owns the cursor and only carries generic grid item payloads. Rocco inventory code owns item identity, slot persistence, labels, and game-specific use responses. `RoccoLevelManager` interprets carried inventory payloads through cartridge `scene-click` handling, including scripted outcomes such as handing the keys to Stan, unlocking the bait shop door while Stan sleeps, and opening shared storage transfers such as the bait shop souvenir table.
 

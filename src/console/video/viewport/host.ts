@@ -40,6 +40,39 @@ export interface RoccoViewportMetrics {
   scaleMode: 'contain' | 'cover';
 }
 
+function createViewportHostElement(backgroundColor: string): HTMLDivElement {
+  const element = document.createElement('div');
+  element.dataset.roccoViewportHost = 'true';
+  Object.assign(element.style, {
+    position: 'fixed',
+    left: '0',
+    top: '0',
+    width: '100vw',
+    height: '100dvh',
+    overflow: 'hidden',
+    backgroundColor,
+    touchAction: 'none',
+    userSelect: 'none',
+  });
+  return element;
+}
+
+function createViewportStageElement(designWidth: number, designHeight: number): HTMLDivElement {
+  const element = document.createElement('div');
+  element.dataset.roccoViewportStage = 'true';
+  Object.assign(element.style, {
+    position: 'absolute',
+    left: '0',
+    top: '0',
+    width: `${designWidth}px`,
+    height: `${designHeight}px`,
+    transformOrigin: 'top left',
+    overflow: 'hidden',
+    willChange: 'transform',
+  });
+  return element;
+}
+
 export class RoccoViewportHost {
   private readonly rootElement: HTMLElement;
   private readonly hostElement: HTMLDivElement;
@@ -127,28 +160,8 @@ export class RoccoViewportHost {
     this.ownsRootElement = !options.root;
     this.rootElement = options.root ?? document.createElement('div');
 
-    this.hostElement = document.createElement('div');
-    this.hostElement.dataset.roccoViewportHost = 'true';
-    this.hostElement.style.position = 'fixed';
-    this.hostElement.style.left = '0';
-    this.hostElement.style.top = '0';
-    this.hostElement.style.width = '100vw';
-    this.hostElement.style.height = '100dvh';
-    this.hostElement.style.overflow = 'hidden';
-    this.hostElement.style.backgroundColor = this.backgroundColor;
-    this.hostElement.style.touchAction = 'none';
-    this.hostElement.style.userSelect = 'none';
-
-    this.stageElement = document.createElement('div');
-    this.stageElement.dataset.roccoViewportStage = 'true';
-    this.stageElement.style.position = 'absolute';
-    this.stageElement.style.left = '0';
-    this.stageElement.style.top = '0';
-    this.stageElement.style.width = `${this.designWidth}px`;
-    this.stageElement.style.height = `${this.designHeight}px`;
-    this.stageElement.style.transformOrigin = 'top left';
-    this.stageElement.style.overflow = 'hidden';
-    this.stageElement.style.willChange = 'transform';
+    this.hostElement = createViewportHostElement(this.backgroundColor);
+    this.stageElement = createViewportStageElement(this.designWidth, this.designHeight);
 
     this.displayProfileRenderer = new RoccoDisplayProfileRenderer({
       rootElement: this.hostElement,

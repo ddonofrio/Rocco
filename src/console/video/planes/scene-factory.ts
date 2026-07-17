@@ -16,7 +16,18 @@ function basePlane(id: string): Omit<RoccoGraphicPlane, 'source'> {
 }
 
 export function createDefaultPlaneScene(sceneId: string): RoccoPlaneScene {
-  const backPlate: RoccoGraphicPlane = {
+  return {
+    id: sceneId,
+    planes: [createBackPlate(), createStarsPlane(), createEmblemPlane()],
+    clearColor: '#10170f',
+    palettes: [],
+    colorRegisterSets: [],
+    attributeMaps: [],
+  };
+}
+
+function createBackPlate(): RoccoGraphicPlane {
+  return {
     ...basePlane('backplate'),
     name: 'Backplate',
     source: {
@@ -32,8 +43,10 @@ export function createDefaultPlaneScene(sceneId: string): RoccoPlaneScene {
     priority: 0,
     renderLayer: 'background.back',
   };
+}
 
-  const emblemPlane: RoccoGraphicPlane = {
+function createEmblemPlane(): RoccoGraphicPlane {
+  return {
     ...basePlane('rocco-emblem'),
     name: 'Rocco Emblem',
     source: {
@@ -53,8 +66,10 @@ export function createDefaultPlaneScene(sceneId: string): RoccoPlaneScene {
     priority: 10,
     renderLayer: 'background.main',
   };
+}
 
-  const starsPlane: RoccoGraphicPlane = {
+function createStarsPlane(): RoccoGraphicPlane {
+  return {
     ...basePlane('stars'),
     name: 'Stars',
     source: {
@@ -73,14 +88,5 @@ export function createDefaultPlaneScene(sceneId: string): RoccoPlaneScene {
     opacity: 0.65,
     priority: 1,
     renderLayer: 'background.main',
-  };
-
-  return {
-    id: sceneId,
-    planes: [backPlate, starsPlane, emblemPlane],
-    clearColor: '#10170f',
-    palettes: [],
-    colorRegisterSets: [],
-    attributeMaps: [],
   };
 }

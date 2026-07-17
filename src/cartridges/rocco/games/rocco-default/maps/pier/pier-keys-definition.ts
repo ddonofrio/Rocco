@@ -66,40 +66,9 @@ export function createDefaultKeysSpriteDefinition(
   return {
     id: DEFAULT_KEYS_SPRITE_DEFINITION_ID,
     name: 'Rocco Demo Keys',
-    images: [
-      {
-        id: 'rocco-keys',
-        uri: roccoDefaultKeysAssetUrl,
-        width: DEFAULT_KEYS_SPRITE_WIDTH,
-        height: DEFAULT_KEYS_SPRITE_HEIGHT,
-      },
-    ],
-    frames: [
-      {
-        id: KEYS_FRAME_ID,
-        imageId: 'rocco-keys',
-        durationMs: 1000,
-        pivot: {
-          x: DEFAULT_KEYS_PIVOT_X,
-          y: DEFAULT_KEYS_PIVOT_Y,
-        },
-        hitbox: {
-          kind: 'rect',
-          x: 35,
-          y: 21,
-          width: 230,
-          height: 345,
-        },
-      },
-    ],
-    animations: {
-      [DEFAULT_KEYS_ANIMATION_ID]: {
-        id: DEFAULT_KEYS_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: KEYS_FRAME_ID, durationMs: 1000 }],
-      },
-    },
+    images: createKeysImages(),
+    frames: createKeysFrames(),
+    animations: createKeysAnimations(),
     defaultAnimation: DEFAULT_KEYS_ANIMATION_ID,
     pivot: {
       x: DEFAULT_KEYS_PIVOT_X,
@@ -117,6 +86,49 @@ export function createDefaultKeysSpriteDefinition(
     },
     metadata: {
       purpose: 'default-rocco-keys-demo',
+    },
+  };
+}
+
+function createKeysImages(): RoccoSpriteDefinition['images'] {
+  return [
+    {
+      id: 'rocco-keys',
+      uri: roccoDefaultKeysAssetUrl,
+      width: DEFAULT_KEYS_SPRITE_WIDTH,
+      height: DEFAULT_KEYS_SPRITE_HEIGHT,
+    },
+  ];
+}
+
+function createKeysFrames(): RoccoSpriteDefinition['frames'] {
+  return [
+    {
+      id: KEYS_FRAME_ID,
+      imageId: 'rocco-keys',
+      durationMs: 1000,
+      pivot: {
+        x: DEFAULT_KEYS_PIVOT_X,
+        y: DEFAULT_KEYS_PIVOT_Y,
+      },
+      hitbox: {
+        kind: 'rect',
+        x: 35,
+        y: 21,
+        width: 230,
+        height: 345,
+      },
+    },
+  ];
+}
+
+function createKeysAnimations(): RoccoSpriteDefinition['animations'] {
+  return {
+    [DEFAULT_KEYS_ANIMATION_ID]: {
+      id: DEFAULT_KEYS_ANIMATION_ID,
+      loop: false,
+      playbackRate: 1,
+      frames: [{ frameId: KEYS_FRAME_ID, durationMs: 1000 }],
     },
   };
 }

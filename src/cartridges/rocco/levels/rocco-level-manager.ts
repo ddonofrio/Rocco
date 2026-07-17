@@ -161,6 +161,15 @@ interface RoccoLevelManagerMountStateSnapshot {
   forceArrivalSequence?: boolean;
 }
 
+interface RoccoLevelTransitionPreparation {
+  rollbackSnapshot: RoccoLevelManagerTransitionSnapshot;
+  playerSnapshot: RoccoLevelManagerPlayerSnapshot | null;
+  mountStateSnapshot: RoccoLevelManagerMountStateSnapshot | null;
+  enteringNetherSnapshot: RoccoNetherEntrySnapshot | null;
+}
+
+/* eslint-disable max-lines */
+
 export class RoccoLevelManager {
   private readonly levelRegistry: RoccoLevelRegistry;
   private readonly transitions: RoccoLevelTransitionController;
@@ -192,6 +201,7 @@ export class RoccoLevelManager {
   private activeMountState: RoccoLevelManagerMountStateSnapshot | null =
     nullValue<RoccoLevelManagerMountStateSnapshot | null>();
 
+  // eslint-disable-next-line max-lines-per-function
   constructor(options: RoccoLevelManagerOptions = {}) {
     this.options = {
       cartridgeTitle: 'ROCCO',
@@ -550,6 +560,16 @@ export class RoccoLevelManager {
     };
   }
 
+  private prepareLevelTransition(targetLevelId: string): RoccoLevelTransitionPreparation {
+    const rollbackSnapshot = this.createLevelManagerTransitionSnapshot();
+    const playerSnapshot = this.capturePlayerSnapshot();
+    const mountStateSnapshot = this.cloneMountStateSnapshot(this.activeMountState);
+    const enteringNetherSnapshot = this.isEnteringNether(this.activeLevel?.id ?? '', targetLevelId)
+      ? this.createNetherEntrySnapshot()
+      : nullValue<RoccoNetherEntrySnapshot | null>();
+    return { rollbackSnapshot, playerSnapshot, mountStateSnapshot, enteringNetherSnapshot };
+  }
+
   private async remountCurrentLevelWithSnapshot(
     engine: RoccoEngine,
     currentLevel: RoccoLevel,
@@ -580,6 +600,7 @@ export class RoccoLevelManager {
     return scene;
   }
 
+  // eslint-disable-next-line max-lines-per-function
   private async switchToLevel(levelId: string, entryConnectorId?: string): Promise<boolean> {
     if (!this.engine || !this.activeLevel) {
       return false;
@@ -590,12 +611,8 @@ export class RoccoLevelManager {
     }
 
     const targetLevelId = levelId;
-    const rollbackSnapshot = this.createLevelManagerTransitionSnapshot();
-    const playerSnapshot = this.capturePlayerSnapshot();
-    const mountStateSnapshot = this.cloneMountStateSnapshot(this.activeMountState);
-    const enteringNetherSnapshot = this.isEnteringNether(this.activeLevel.id, targetLevelId)
-      ? this.createNetherEntrySnapshot()
-      : nullValue<RoccoNetherEntrySnapshot | null>();
+    const preparation = this.prepareLevelTransition(targetLevelId);
+    const { rollbackSnapshot, playerSnapshot, mountStateSnapshot, enteringNetherSnapshot } = preparation;
     return this.levelTransitionService.run({
       id: `switch-to-${targetLevelId}`,
       prepare: () => {
@@ -648,18 +665,15 @@ export class RoccoLevelManager {
     });
   }
 
+  // eslint-disable-next-line max-lines-per-function
   private async transitionThrough(transition: RoccoResolvedLevelTransition): Promise<void> {
     if (!this.engine || !this.activeLevel) {
       return;
     }
 
     const targetLevelId = transition.targetEndpoint.levelId;
-    const rollbackSnapshot = this.createLevelManagerTransitionSnapshot();
-    const playerSnapshot = this.capturePlayerSnapshot();
-    const mountStateSnapshot = this.cloneMountStateSnapshot(this.activeMountState);
-    const enteringNetherSnapshot = this.isEnteringNether(this.activeLevel.id, targetLevelId)
-      ? this.createNetherEntrySnapshot()
-      : nullValue<RoccoNetherEntrySnapshot | null>();
+    const preparation = this.prepareLevelTransition(targetLevelId);
+    const { rollbackSnapshot, playerSnapshot, mountStateSnapshot, enteringNetherSnapshot } = preparation;
     await this.levelTransitionService.run({
       id: `transition-through-${targetLevelId}`,
       prepare: () => {
@@ -758,85 +772,68 @@ export class RoccoLevelManager {
     return {
       roccoAppearance: this.roccoAppearance,
       onKeysCollectRequested: () => this.canCollectIntoInventory(ROCCO_INVENTORY_KEYS_ITEM_ID),
-      onKeysCollected: () => {
-        if (!this.tryAddItemToInventory(createRoccoKeysInventoryItem(this.localization))) {
-          return;
-        }
-
-        const engine = this.engine;
-        if (!engine) {
-          return;
-        }
-
-        roccoCartridgeMessageRuntime.think(
-          engine,
-          DEFAULT_SPRITE_INSTANCE_ID,
-          this.localization.text.keys.collectedLines,
-          {
-            ttlMs: 5600,
-          },
-          {
-            count: 1,
-            historyKey: 'keys-collected',
-            isAvoidImmediateRepeat: true,
-          },
-        );
-        engine.video.render(0);
-      },
+      onKeysCollected: () => this.handleKeysCollected(),
       onConnectorTransitionRequested: (connectorId: string) =>
         this.requestScriptedConnectorTransition(connectorId),
-      onRestartRequested: (request) => {
-        if (request) {
-          void this.restartFromCheckpoint(request);
-          return;
-        }
-
-        this.options.onRestartRequested?.();
-      },
+      onRestartRequested: (request) => this.handleRestartRequested(request),
       onPickupRequested: (item) => this.canCollectIntoInventory(item.id),
-      onPickupCollected: (item) => {
-        if (!this.tryAddItemToInventory(item)) {
-          return;
-        }
-
-        const engine = this.engine;
-        if (!engine) {
-          return;
-        }
-
-        if (item.id === ROCCO_INVENTORY_BATA_ITEM_ID) {
-          const spriteDefinition = createRoccoAppearanceSpriteDefinition(
-            engine,
-            ROCCO_LAB_COAT_PLAYER_APPEARANCE,
-            this.localization,
-          );
-          void (async () => {
-            try {
-              await engine.video.preloadSpriteDefinition(spriteDefinition);
-            } catch {
-              engine.log('Assets', 'Rocco lab coat assets could not be preloaded.');
-            }
-          })();
-        }
-
-        roccoCartridgeMessageRuntime.think(
-          engine,
-          DEFAULT_SPRITE_INSTANCE_ID,
-          this.localization.text.inventory.pickupLine,
-          {
-            ttlMs: 3200,
-          },
-          {
-            count: 1,
-            historyKey: `pickup-${item.id}`,
-            isAvoidImmediateRepeat: true,
-          },
-        );
-        engine.video.render(0);
-      },
+      onPickupCollected: (item) => this.handlePickupCollected(item),
     };
   }
 
+  private handleKeysCollected(): void {
+    if (!this.tryAddItemToInventory(createRoccoKeysInventoryItem(this.localization)) || !this.engine) {
+      return;
+    }
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      this.localization.text.keys.collectedLines,
+      { ttlMs: 5600 },
+      { count: 1, historyKey: 'keys-collected', isAvoidImmediateRepeat: true },
+    );
+    this.engine.video.render(0);
+  }
+
+  private handleRestartRequested(request?: RoccoLevelRestartRequest): void {
+    if (request) {
+      void this.restartFromCheckpoint(request);
+      return;
+    }
+    this.options.onRestartRequested?.();
+  }
+
+  private handlePickupCollected(item: RoccoInventoryItem): void {
+    if (!this.tryAddItemToInventory(item) || !this.engine) {
+      return;
+    }
+    if (item.id === ROCCO_INVENTORY_BATA_ITEM_ID) {
+      void this.preloadLabCoatSprite(this.engine);
+    }
+    roccoCartridgeMessageRuntime.think(
+      this.engine,
+      DEFAULT_SPRITE_INSTANCE_ID,
+      this.localization.text.inventory.pickupLine,
+      { ttlMs: 3200 },
+      { count: 1, historyKey: `pickup-${item.id}`, isAvoidImmediateRepeat: true },
+    );
+    this.engine.video.render(0);
+  }
+
+  private async preloadLabCoatSprite(engine: RoccoEngine): Promise<void> {
+    const spriteDefinition = createRoccoAppearanceSpriteDefinition(
+      engine,
+      ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+      this.localization,
+    );
+    try {
+      await engine.video.preloadSpriteDefinition(spriteDefinition);
+    } catch {
+      engine.log('Assets', 'Rocco lab coat assets could not be preloaded.');
+    }
+  }
+
+  // eslint-disable-next-line max-lines-per-function
   private async restartFromCheckpoint(request: RoccoLevelRestartRequest): Promise<void> {
     if (!this.engine || !this.activeLevel || this.levelTransitionService.isTransitioning) {
       this.options.onRestartRequested?.();

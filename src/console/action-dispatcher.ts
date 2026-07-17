@@ -72,30 +72,44 @@ export class ActionDispatcher {
     }
   }
 
+  private syncActiveLevel(levelId: string | undefined): void {
+    if (levelId === this.lastLevelId) {
+      return;
+    }
+
+    if (this.tracked.size > 0) {
+      this.logFn(
+        'ActionDispatcher',
+        `Scene change detected (${String(this.lastLevelId)} -> ${String(levelId)}); cancelling ${this.tracked.size} in-flight action(s).`,
+      );
+    }
+    this.cancelActiveActions('scene-change');
+    this.lastLevelId = levelId;
+  }
+
+  private rejectExclusiveAction(request: DispatchOptions): CartridgeActionDisposition | undefined {
+    if (request.exclusive === false || this.tracked.size === 0) {
+      return undefined;
+    }
+
+    this.logFn(
+      'ActionDispatcher',
+      `Dropping ${request.owner ?? 'exclusive'} action: another action is still in flight.`,
+    );
+    return { consumed: true, defaultPlayerMovement: 'suppress' };
+  }
+
   dispatch(action: RoccoCartridgeAction, request: DispatchOptions = {}): CartridgeActionDisposition {
     if (this.disposed) {
       return { consumed: true, defaultPlayerMovement: 'suppress' };
     }
 
     const levelId = this.getActiveLevelId() ?? undefined;
-    if (levelId !== this.lastLevelId) {
-      if (this.tracked.size > 0) {
-        this.logFn(
-          'ActionDispatcher',
-          `Scene change detected (${String(this.lastLevelId)} -> ${String(levelId)}); cancelling ${this.tracked.size} in-flight action(s).`,
-        );
-      }
-      this.cancelActiveActions('scene-change');
-      this.lastLevelId = levelId;
-    }
+    this.syncActiveLevel(levelId);
 
-    const isExclusive = request.exclusive !== false;
-    if (isExclusive && this.tracked.size > 0) {
-      this.logFn(
-        'ActionDispatcher',
-        `Dropping ${request.owner ?? 'exclusive'} action: another action is still in flight.`,
-      );
-      return { consumed: true, defaultPlayerMovement: 'suppress' };
+    const exclusiveDisposition = this.rejectExclusiveAction(request);
+    if (exclusiveDisposition) {
+      return exclusiveDisposition;
     }
 
     const cartridge = this.getActiveCartridge();

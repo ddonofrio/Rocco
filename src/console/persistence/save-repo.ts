@@ -81,158 +81,130 @@ function toMetadata(row: SaveEnvelopeRow): SaveMetadata {
   };
 }
 
-export function createSaveRepo<TState>(
-  options: CreateSaveRepoOptions<TState>,
-): CartridgeSaveRepo<TState> {
-  const { cartridgeId, cartridgeVersion, provider } = options;
-  const store: SaveStore = options.store ?? new DexieSaveStore();
-  assertRepoIdentity(cartridgeId, cartridgeVersion, provider.schemaVersion);
+class SaveRepoRuntime<TState> {
+  private readonly cartridgeId: string;
+  private readonly cartridgeVersion: string;
+  private readonly provider: CreateSaveRepoOptions<TState>['provider'];
+  private readonly store: SaveStore;
 
-  function keyOf(profileId: string, slotId: string): SaveStoreKey {
-    return buildKey(cartridgeId, profileId, slotId);
+  constructor(options: CreateSaveRepoOptions<TState>) {
+    this.cartridgeId = options.cartridgeId;
+    this.cartridgeVersion = options.cartridgeVersion;
+    this.provider = options.provider;
+    this.store = options.store ?? new DexieSaveStore();
+    assertRepoIdentity(this.cartridgeId, this.cartridgeVersion, this.provider.schemaVersion);
   }
 
-  function validateKeyParts(profileId: string, slotId: string): void {
+  private keyOf(profileId: string, slotId: string): SaveStoreKey {
+    return buildKey(this.cartridgeId, profileId, slotId);
+  }
+
+  private validateKeyParts(profileId: string, slotId: string): void {
     if (!isNonEmptyString(profileId) || !isNonEmptyString(slotId)) {
       throw new SaveSchemaError({
-        key: formatSaveKey(keyOf(profileId, slotId)),
+        key: formatSaveKey(this.keyOf(profileId, slotId)),
         storedSchemaVersion: 0,
-        supportedSchemaVersion: provider.schemaVersion,
+        supportedSchemaVersion: this.provider.schemaVersion,
       });
     }
   }
 
-  function validateExpectedRevision(expectedRevision: number): void {
-    if (!isPositiveSafeInteger(expectedRevision)) {
-      throw new SaveRevisionConflictError({
-        key: `${cartridgeId}:invalid-expected-revision`,
-        expectedRevision,
-        actualRevision: 0,
-      });
-    }
-  }
-
-  function normalizeImportedEnvelope(
+  private normalizeImportedEnvelope(
     envelope: PortableSaveEnvelope<TState>,
   ): PortableSaveEnvelope<TState> {
-    if (
-      !isNonEmptyString(envelope.cartridgeId) ||
-      !isNonEmptyString(envelope.cartridgeVersion) ||
-      !isNonEmptyString(envelope.profileId) ||
-      !isNonEmptyString(envelope.slotId) ||
-      !isNonNegativeSafeInteger(envelope.schemaVersion) ||
-      !isPositiveSafeInteger(envelope.revision) ||
-      !isPositiveSafeInteger(envelope.createdAt) ||
-      !isPositiveSafeInteger(envelope.updatedAt) ||
-      envelope.updatedAt < envelope.createdAt
-    ) {
+    const isValid =
+      isNonEmptyString(envelope.cartridgeId) &&
+      isNonEmptyString(envelope.cartridgeVersion) &&
+      isNonEmptyString(envelope.profileId) &&
+      isNonEmptyString(envelope.slotId) &&
+      isNonNegativeSafeInteger(envelope.schemaVersion) &&
+      isPositiveSafeInteger(envelope.revision) &&
+      isPositiveSafeInteger(envelope.createdAt) &&
+      isPositiveSafeInteger(envelope.updatedAt) &&
+      envelope.updatedAt >= envelope.createdAt;
+    if (!isValid) {
       throw new SaveSchemaError({
         key: 'invalid-import-envelope',
-        storedSchemaVersion:
-          typeof envelope.schemaVersion === 'number' ? envelope.schemaVersion : 0,
-        supportedSchemaVersion: provider.schemaVersion,
+        storedSchemaVersion: typeof envelope.schemaVersion === 'number' ? envelope.schemaVersion : 0,
+        supportedSchemaVersion: this.provider.schemaVersion,
       });
     }
-
-    if (envelope.cartridgeId !== cartridgeId) {
+    if (envelope.cartridgeId !== this.cartridgeId || envelope.schemaVersion > this.provider.schemaVersion) {
       throw new SaveSchemaError({
-        key: formatSaveKey(keyOf(envelope.profileId, envelope.slotId)),
+        key: formatSaveKey(this.keyOf(envelope.profileId, envelope.slotId)),
         storedSchemaVersion: envelope.schemaVersion,
-        supportedSchemaVersion: provider.schemaVersion,
+        supportedSchemaVersion: this.provider.schemaVersion,
       });
     }
-
-    if (envelope.schemaVersion > provider.schemaVersion) {
-      throw new SaveSchemaError({
-        key: formatSaveKey(keyOf(envelope.profileId, envelope.slotId)),
-        storedSchemaVersion: envelope.schemaVersion,
-        supportedSchemaVersion: provider.schemaVersion,
-      });
-    }
-
     return envelope;
   }
 
-  /**
-   * Migrates a stored envelope forward to the provider's schema version and
-   * persists the migrated envelope. Throws `SaveSchemaError` when the stored
-   * schema is newer than the provider can handle (explainable, recoverable
-   * failure rather than silent corruption).
-   */
-  async function materialize(row: SaveEnvelopeRow): Promise<TState> {
-    if (row.schemaVersion > provider.schemaVersion) {
+  private async materialize(row: SaveEnvelopeRow): Promise<TState> {
+    if (row.schemaVersion > this.provider.schemaVersion) {
       throw new SaveSchemaError({
         key: row.key,
         storedSchemaVersion: row.schemaVersion,
-        supportedSchemaVersion: provider.schemaVersion,
+        supportedSchemaVersion: this.provider.schemaVersion,
       });
     }
-
-    if (row.schemaVersion === provider.schemaVersion) {
+    if (row.schemaVersion === this.provider.schemaVersion) {
       return row.payload as TState;
     }
-
-    const migrated = provider.migrateState(row.schemaVersion, row.payload);
-    await store.transaction(async () => {
-      const updated: SaveEnvelopeRow = {
+    const migrated = this.provider.migrateState(row.schemaVersion, row.payload);
+    await this.store.transaction(async () => {
+      await this.store.put({
         ...row,
         payload: migrated,
-        schemaVersion: provider.schemaVersion,
-        cartridgeVersion,
+        schemaVersion: this.provider.schemaVersion,
+        cartridgeVersion: this.cartridgeVersion,
         revision: row.revision + 1,
         updatedAt: Date.now(),
-      };
-      await store.put(updated);
+      });
     });
     return migrated;
   }
 
-  async function save(
+  private async save(
     profileId: string,
     slotId: string,
     saveOptions?: SaveOptions,
   ): Promise<SaveMetadata> {
-    validateKeyParts(profileId, slotId);
-    const key = keyOf(profileId, slotId);
-    if (saveOptions?.expectedRevision !== undefined) {
-      validateExpectedRevision(saveOptions.expectedRevision);
+    this.validateKeyParts(profileId, slotId);
+    if (saveOptions?.expectedRevision !== undefined && !isPositiveSafeInteger(saveOptions.expectedRevision)) {
+      throw new SaveRevisionConflictError({
+        key: `${this.cartridgeId}:invalid-expected-revision`,
+        expectedRevision: saveOptions.expectedRevision,
+        actualRevision: 0,
+      });
     }
+    const key = this.keyOf(profileId, slotId);
     try {
-      return await store.transaction(async () => {
-        const existing = await store.get(key);
-
-        if (saveOptions?.expectedRevision !== undefined) {
-          if (!existing) {
-            throw new SaveRevisionConflictError({
-              key: formatSaveKey(key),
-              expectedRevision: saveOptions.expectedRevision,
-              actualRevision: 0,
-            });
-          }
-          if (existing.revision !== saveOptions.expectedRevision) {
-            throw new SaveRevisionConflictError({
-              key: formatSaveKey(key),
-              expectedRevision: saveOptions.expectedRevision,
-              actualRevision: existing.revision,
-            });
-          }
+      return await this.store.transaction(async () => {
+        const existing = await this.store.get(key);
+        if (
+          saveOptions?.expectedRevision !== undefined &&
+          (!existing || existing.revision !== saveOptions.expectedRevision)
+        ) {
+          throw new SaveRevisionConflictError({
+            key: formatSaveKey(key),
+            expectedRevision: saveOptions.expectedRevision,
+            actualRevision: existing?.revision ?? 0,
+          });
         }
-
         const now = Date.now();
-        const revision = (existing?.revision ?? 0) + 1;
         const row: SaveEnvelopeRow = {
           key: formatSaveKey(key),
-          cartridgeId,
-          cartridgeVersion,
-          schemaVersion: provider.schemaVersion,
+          cartridgeId: this.cartridgeId,
+          cartridgeVersion: this.cartridgeVersion,
+          schemaVersion: this.provider.schemaVersion,
           profileId,
           slotId,
-          revision,
+          revision: (existing?.revision ?? 0) + 1,
           createdAt: existing?.createdAt ?? now,
           updatedAt: now,
-          payload: provider.serializeState(),
+          payload: this.provider.serializeState(),
         };
-        await store.put(row);
+        await this.store.put(row);
         return toMetadata(row);
       });
     } catch (error) {
@@ -243,79 +215,63 @@ export function createSaveRepo<TState>(
     }
   }
 
-  async function load(profileId: string, slotId: string): Promise<TState | undefined> {
-    const row = await store.get(keyOf(profileId, slotId));
-    if (!row) {
-      return undefined;
-    }
-    return materialize(row);
+  private async load(profileId: string, slotId: string): Promise<TState | undefined> {
+    const row = await this.store.get(this.keyOf(profileId, slotId));
+    return row ? this.materialize(row) : undefined;
   }
 
-  async function listSlots(profileId: string): Promise<readonly SaveMetadata[]> {
-    const rows = await store.queryByProfile(cartridgeId, profileId);
+  private async listSlots(profileId: string): Promise<readonly SaveMetadata[]> {
+    const rows = await this.store.queryByProfile(this.cartridgeId, profileId);
     return rows.map((row) => toMetadata(row));
   }
 
-  async function deleteSlot(profileId: string, slotId: string): Promise<void> {
-    validateKeyParts(profileId, slotId);
-    await store.delete(keyOf(profileId, slotId));
+  private async deleteSlot(profileId: string, slotId: string): Promise<void> {
+    this.validateKeyParts(profileId, slotId);
+    await this.store.delete(this.keyOf(profileId, slotId));
   }
 
-  async function exportSave(
+  private async exportSave(
     profileId: string,
     slotId: string,
   ): Promise<PortableSaveEnvelope<TState> | undefined> {
-    const key = keyOf(profileId, slotId);
-    const row = await store.get(key);
+    const key = this.keyOf(profileId, slotId);
+    const row = await this.store.get(key);
     if (!row) {
       return undefined;
     }
-    const payload = await materialize(row);
-    const updatedRow = await store.get(key);
+    const payload = await this.materialize(row);
+    const updatedRow = await this.store.get(key);
     if (!updatedRow) {
       return undefined;
     }
-    return {
-      cartridgeId: updatedRow.cartridgeId,
-      cartridgeVersion: updatedRow.cartridgeVersion,
-      schemaVersion: updatedRow.schemaVersion,
-      profileId: updatedRow.profileId,
-      slotId: updatedRow.slotId,
-      revision: updatedRow.revision,
-      createdAt: updatedRow.createdAt,
-      updatedAt: updatedRow.updatedAt,
-      payload,
-    };
+    return { ...updatedRow, payload };
   }
 
-  async function importSave(
-    envelope: PortableSaveEnvelope<TState>,
-  ): Promise<SaveMetadata> {
-    const normalized = normalizeImportedEnvelope(envelope);
-    validateKeyParts(normalized.profileId, normalized.slotId);
-    const key = keyOf(normalized.profileId, normalized.slotId);
-    const now = Date.now();
-
+  private async importSave(envelope: PortableSaveEnvelope<TState>): Promise<SaveMetadata> {
+    const normalized = this.normalizeImportedEnvelope(envelope);
+    this.validateKeyParts(normalized.profileId, normalized.slotId);
+    const key = this.keyOf(normalized.profileId, normalized.slotId);
     try {
-      return await store.transaction(async () => {
-        const existing = await store.get(key);
-        const migrated =
-          normalized.schemaVersion < provider.schemaVersion
-            ? provider.migrateState(normalized.schemaVersion, normalized.payload)
+      return await this.store.transaction(async () => {
+        const existing = await this.store.get(key);
+        const payload =
+          normalized.schemaVersion < this.provider.schemaVersion
+            ? this.provider.migrateState(normalized.schemaVersion, normalized.payload)
             : normalized.payload;
+        const now = Date.now();
         const row: SaveEnvelopeRow = {
           key: formatSaveKey(key),
-          cartridgeId,
-          cartridgeVersion,
-          schemaVersion: provider.schemaVersion,
+          cartridgeId: this.cartridgeId,
+          cartridgeVersion: this.cartridgeVersion,
+          schemaVersion: this.provider.schemaVersion,
           profileId: normalized.profileId,
           slotId: normalized.slotId,
           revision: Math.max(existing?.revision ?? 0, normalized.revision) + 1,
           createdAt: existing?.createdAt ?? normalized.createdAt,
           updatedAt: now,
-          payload: migrated,
+          payload,
         };
-        await store.put(row);
+        await this.store.put(row);
         return toMetadata(row);
       });
     } catch (error) {
@@ -326,12 +282,20 @@ export function createSaveRepo<TState>(
     }
   }
 
-  return {
-    listSlots,
-    load,
-    save,
-    delete: deleteSlot,
-    exportSave,
-    importSave,
-  };
+  createRepository(): CartridgeSaveRepo<TState> {
+    return {
+      listSlots: this.listSlots.bind(this),
+      load: this.load.bind(this),
+      save: this.save.bind(this),
+      delete: this.deleteSlot.bind(this),
+      exportSave: this.exportSave.bind(this),
+      importSave: this.importSave.bind(this),
+    };
+  }
+}
+
+export function createSaveRepo<TState>(
+  options: CreateSaveRepoOptions<TState>,
+): CartridgeSaveRepo<TState> {
+  return new SaveRepoRuntime(options).createRepository();
 }

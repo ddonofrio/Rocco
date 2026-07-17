@@ -125,68 +125,9 @@ export function createDefaultBaitBucketSpriteDefinition(
   return {
     id: DEFAULT_BAIT_BUCKET_SPRITE_DEFINITION_ID,
     name: 'Rocco Demo Bait Bucket',
-    images: [
-      {
-        id: 'bait-bucket-normal',
-        uri: roccoDefaultBaitBucketAssetUrls.normal,
-        width: DEFAULT_BAIT_BUCKET_SPRITE_WIDTH,
-        height: DEFAULT_BAIT_BUCKET_SPRITE_HEIGHT,
-      },
-      {
-        id: 'bait-bucket-dropped',
-        uri: roccoDefaultBaitBucketAssetUrls.dropped,
-        width: DEFAULT_BAIT_BUCKET_SPRITE_WIDTH,
-        height: DEFAULT_BAIT_BUCKET_SPRITE_HEIGHT,
-      },
-    ],
-    frames: [
-      {
-        id: NORMAL_FRAME_ID,
-        imageId: 'bait-bucket-normal',
-        durationMs: 1000,
-        pivot: {
-          x: DEFAULT_BAIT_BUCKET_NORMAL_PIVOT_X,
-          y: DEFAULT_BAIT_BUCKET_NORMAL_PIVOT_Y,
-        },
-        hitbox: {
-          kind: 'rect',
-          x: 166,
-          y: 237,
-          width: 911,
-          height: 763,
-        },
-      },
-      {
-        id: DROPPED_FRAME_ID,
-        imageId: 'bait-bucket-dropped',
-        durationMs: 1000,
-        pivot: {
-          x: DEFAULT_BAIT_BUCKET_DROPPED_PIVOT_X,
-          y: DEFAULT_BAIT_BUCKET_DROPPED_PIVOT_Y,
-        },
-        hitbox: {
-          kind: 'rect',
-          x: 105,
-          y: 264,
-          width: 994,
-          height: 705,
-        },
-      },
-    ],
-    animations: {
-      [DEFAULT_BAIT_BUCKET_NORMAL_ANIMATION_ID]: {
-        id: DEFAULT_BAIT_BUCKET_NORMAL_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: NORMAL_FRAME_ID, durationMs: 1000 }],
-      },
-      [DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID]: {
-        id: DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: DROPPED_FRAME_ID, durationMs: 1000 }],
-      },
-    },
+    images: createBaitBucketImages(),
+    frames: createBaitBucketFrames(),
+    animations: createBaitBucketAnimations(),
     defaultAnimation: DEFAULT_BAIT_BUCKET_NORMAL_ANIMATION_ID,
     render: {
       renderLayer: DEFAULT_BAIT_BUCKET_RENDER_LAYER,
@@ -200,6 +141,77 @@ export function createDefaultBaitBucketSpriteDefinition(
     },
     metadata: {
       purpose: 'default-rocco-bait-bucket-demo',
+    },
+  };
+}
+
+function createBaitBucketImages(): RoccoSpriteDefinition['images'] {
+  return [
+    {
+      id: 'bait-bucket-normal',
+      uri: roccoDefaultBaitBucketAssetUrls.normal,
+      width: DEFAULT_BAIT_BUCKET_SPRITE_WIDTH,
+      height: DEFAULT_BAIT_BUCKET_SPRITE_HEIGHT,
+    },
+    {
+      id: 'bait-bucket-dropped',
+      uri: roccoDefaultBaitBucketAssetUrls.dropped,
+      width: DEFAULT_BAIT_BUCKET_SPRITE_WIDTH,
+      height: DEFAULT_BAIT_BUCKET_SPRITE_HEIGHT,
+    },
+  ];
+}
+
+function createBaitBucketFrames(): RoccoSpriteDefinition['frames'] {
+  return [
+    {
+      id: NORMAL_FRAME_ID,
+      imageId: 'bait-bucket-normal',
+      durationMs: 1000,
+      pivot: {
+        x: DEFAULT_BAIT_BUCKET_NORMAL_PIVOT_X,
+        y: DEFAULT_BAIT_BUCKET_NORMAL_PIVOT_Y,
+      },
+      hitbox: {
+        kind: 'rect',
+        x: 166,
+        y: 237,
+        width: 911,
+        height: 763,
+      },
+    },
+    {
+      id: DROPPED_FRAME_ID,
+      imageId: 'bait-bucket-dropped',
+      durationMs: 1000,
+      pivot: {
+        x: DEFAULT_BAIT_BUCKET_DROPPED_PIVOT_X,
+        y: DEFAULT_BAIT_BUCKET_DROPPED_PIVOT_Y,
+      },
+      hitbox: {
+        kind: 'rect',
+        x: 105,
+        y: 264,
+        width: 994,
+        height: 705,
+      },
+    },
+  ];
+}
+
+function createBaitBucketAnimations(): RoccoSpriteDefinition['animations'] {
+  return {
+    [DEFAULT_BAIT_BUCKET_NORMAL_ANIMATION_ID]: {
+      id: DEFAULT_BAIT_BUCKET_NORMAL_ANIMATION_ID,
+      loop: false,
+      playbackRate: 1,
+      frames: [{ frameId: NORMAL_FRAME_ID, durationMs: 1000 }],
+    },
+    [DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID]: {
+      id: DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID,
+      loop: false,
+      playbackRate: 1,
+      frames: [{ frameId: DROPPED_FRAME_ID, durationMs: 1000 }],
     },
   };
 }

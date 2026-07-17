@@ -150,6 +150,151 @@ export function createPierActionMenuRules(): readonly InteractionRule[] {
   ];
 }
 
+function createBaitShopDoorUseRule(): SpecialInventorySceneClickRule {
+  return {
+    id: 'pier-bait-shop-door-use',
+    ownerId: 'pier.bait-shop-door-use',
+    priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
+    matches: (context, carriedItem) =>
+      isPierStart(context) &&
+      isSceneClickAction(context.action) &&
+      carriedItem.item.id === ROCCO_INVENTORY_KEYS_ITEM_ID &&
+      context.action.targetInstanceId === DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
+    execute: (context) => {
+      const engine = context.engine;
+      const activeLevel = context.activeLevel;
+      if (!engine || !activeLevel || !isPierStart(context)) {
+        return { handled: false };
+      }
+      context.scriptedSequences.startBaitShopDoorUse(engine, activeLevel.id);
+      return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
+    },
+  };
+}
+
+function createStanPoliceDefeatRule(): SpecialInventorySceneClickRule {
+  return {
+    id: 'pier-stan-police-defeat',
+    ownerId: 'pier.stan-police-defeat',
+    priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
+    matches: (context, carriedItem) =>
+      isPierStart(context) &&
+      isSceneClickAction(context.action) &&
+      carriedItem.item.id === ROCCO_INVENTORY_KEYS_ITEM_ID &&
+      context.action.targetInstanceId === DEFAULT_STAN_SPRITE_INSTANCE_ID,
+    execute: (context) => {
+      const engine = context.engine;
+      if (!engine) {
+        return { handled: false };
+      }
+      if (!context.isStanAwake()) {
+        showRoccoThoughtVariant(
+          engine,
+          context.localization.text.inventory.keysOnStanSleepingLines,
+          'pier-stan-keys-sleeping',
+        );
+        engine.video.gridMenus.clearCarriedItem();
+        return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
+      }
+      context.scriptedSequences.startStanPoliceDefeat(engine);
+      return { handled: true };
+    },
+  };
+}
+
+function createStanMoneyRule(): SpecialInventorySceneClickRule {
+  return {
+    id: 'pier-stan-money',
+    ownerId: 'pier.stan-money',
+    priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
+    matches: (context, carriedItem) =>
+      isPierStart(context) &&
+      isSceneClickAction(context.action) &&
+      carriedItem.item.id === ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID &&
+      context.action.targetInstanceId === DEFAULT_STAN_SPRITE_INSTANCE_ID,
+    execute: (context) => {
+      const engine = context.engine;
+      if (!engine) {
+        return { handled: false };
+      }
+      if (!context.isStanAwake()) {
+        showRoccoThoughtVariant(
+          engine,
+          context.localization.text.inventory.moneyOnStanSleepingLines,
+          'pier-stan-money-sleeping',
+        );
+        engine.video.gridMenus.clearCarriedItem();
+        return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
+      }
+      context.inventory.removeItem(ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID);
+      context.scriptedSequences.startStanMoneyExchange(engine);
+      return { handled: true };
+    },
+  };
+}
+
+function createLabCoatEquipRule(): SpecialInventorySceneClickRule {
+  return {
+    id: 'pier-lab-coat-equip',
+    ownerId: 'pier.lab-coat-equip',
+    priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
+    matches: (context, carriedItem) =>
+      isSceneClickAction(context.action) &&
+      carriedItem.item.id === ROCCO_INVENTORY_BATA_ITEM_ID &&
+      context.action.targetInstanceId === DEFAULT_SPRITE_INSTANCE_ID,
+    execute: (context) => {
+      const engine = context.engine;
+      if (!engine) {
+        return { handled: false };
+      }
+      const inputLease = engine.acquireInputLease('pier-lab-coat-equip', 'blocked');
+      let shouldClearCarriedItem = false;
+      try {
+        if (context.getRoccoAppearance() === ROCCO_LAB_COAT_PLAYER_APPEARANCE) {
+          roccoCartridgeMessageRuntime.think(
+            engine,
+            DEFAULT_SPRITE_INSTANCE_ID,
+            [context.localization.text.inventory.bataAlreadyOnSelfLine],
+            { ttlMs: 3200 },
+            {
+              count: 1,
+              historyKey: 'inventory-bata-self-already-wearing',
+              isAvoidImmediateRepeat: true,
+            },
+          );
+          shouldClearCarriedItem = true;
+          return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
+        }
+
+        applyDefaultSpriteAppearance(engine, ROCCO_LAB_COAT_PLAYER_APPEARANCE, context.localization);
+        context.setRoccoAppearance(ROCCO_LAB_COAT_PLAYER_APPEARANCE);
+        context.inventory.removeItem(ROCCO_INVENTORY_BATA_ITEM_ID);
+        if (engine.video.gridMenus.isOpen(ROCCO_INVENTORY_MENU_ID)) {
+          engine.video.gridMenus.openMenu(context.inventory.createGridMenuDefinition(context.localization));
+        }
+        roccoCartridgeMessageRuntime.think(
+          engine,
+          DEFAULT_SPRITE_INSTANCE_ID,
+          [context.localization.text.inventory.bataOnSelfLine],
+          { ttlMs: 3200 },
+          { count: 1, historyKey: 'inventory-bata-self-equip', isAvoidImmediateRepeat: true },
+        );
+        shouldClearCarriedItem = true;
+        return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
+      } catch (error) {
+        engine.log('System', `Rocco lab coat equip failed: ${String(error)}`);
+        return { handled: true };
+      } finally {
+        if (shouldClearCarriedItem) {
+          engine.video.gridMenus.clearCarriedItem();
+        }
+        inputLease.dispose();
+        engine.video.render(0);
+      }
+    },
+  };
+}
+
 /**
  * Pier-specific carried-item scene-click rules, evaluated by the inventory
  * runtime's `handleSpecialSceneClick` sub-dispatch. Each rule owns its own
@@ -158,147 +303,9 @@ export function createPierActionMenuRules(): readonly InteractionRule[] {
  */
 export function createPierSpecialSceneClickRules(): readonly SpecialInventorySceneClickRule[] {
   return [
-    {
-      id: 'pier-bait-shop-door-use',
-      ownerId: 'pier.bait-shop-door-use',
-      priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
-      matches: (context, carriedItem) =>
-        isPierStart(context) &&
-        isSceneClickAction(context.action) &&
-        carriedItem.item.id === ROCCO_INVENTORY_KEYS_ITEM_ID &&
-        context.action.targetInstanceId === DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
-      execute: (context) => {
-        const engine = context.engine;
-        const activeLevel = context.activeLevel;
-        if (!engine || !activeLevel || !isPierStart(context)) {
-          return { handled: false };
-        }
-        context.scriptedSequences.startBaitShopDoorUse(engine, activeLevel.id);
-        return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
-      },
-    },
-    {
-      id: 'pier-stan-police-defeat',
-      ownerId: 'pier.stan-police-defeat',
-      priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
-      matches: (context, carriedItem) =>
-        isPierStart(context) &&
-        isSceneClickAction(context.action) &&
-        carriedItem.item.id === ROCCO_INVENTORY_KEYS_ITEM_ID &&
-        context.action.targetInstanceId === DEFAULT_STAN_SPRITE_INSTANCE_ID,
-      execute: (context) => {
-        const engine = context.engine;
-        if (!engine) {
-          return { handled: false };
-        }
-
-        if (!context.isStanAwake()) {
-          showRoccoThoughtVariant(
-            engine,
-            context.localization.text.inventory.keysOnStanSleepingLines,
-            'pier-stan-keys-sleeping',
-          );
-          engine.video.gridMenus.clearCarriedItem();
-          return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
-        }
-
-        context.scriptedSequences.startStanPoliceDefeat(engine);
-        return { handled: true };
-      },
-    },
-    {
-      id: 'pier-stan-money',
-      ownerId: 'pier.stan-money',
-      priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
-      matches: (context, carriedItem) =>
-        isPierStart(context) &&
-        isSceneClickAction(context.action) &&
-        carriedItem.item.id === ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID &&
-        context.action.targetInstanceId === DEFAULT_STAN_SPRITE_INSTANCE_ID,
-      execute: (context) => {
-        const engine = context.engine;
-        if (!engine) {
-          return { handled: false };
-        }
-
-        if (!context.isStanAwake()) {
-          showRoccoThoughtVariant(
-            engine,
-            context.localization.text.inventory.moneyOnStanSleepingLines,
-            'pier-stan-money-sleeping',
-          );
-          engine.video.gridMenus.clearCarriedItem();
-          return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
-        }
-
-        context.inventory.removeItem(ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID);
-        context.scriptedSequences.startStanMoneyExchange(engine);
-        return { handled: true };
-      },
-    },
-    {
-      id: 'pier-lab-coat-equip',
-      ownerId: 'pier.lab-coat-equip',
-      priority: PIER_SPECIAL_SCENE_CLICK_PRIORITY,
-      matches: (context, carriedItem) =>
-        isSceneClickAction(context.action) &&
-        carriedItem.item.id === ROCCO_INVENTORY_BATA_ITEM_ID &&
-        context.action.targetInstanceId === DEFAULT_SPRITE_INSTANCE_ID,
-      execute: (context) => {
-        const engine = context.engine;
-        if (!engine) {
-          return { handled: false };
-        }
-
-        const inputLease = engine.acquireInputLease('pier-lab-coat-equip', 'blocked');
-        let shouldClearCarriedItem = false;
-        try {
-          if (context.getRoccoAppearance() === ROCCO_LAB_COAT_PLAYER_APPEARANCE) {
-            roccoCartridgeMessageRuntime.think(
-              engine,
-              DEFAULT_SPRITE_INSTANCE_ID,
-              [context.localization.text.inventory.bataAlreadyOnSelfLine],
-              { ttlMs: 3200 },
-              {
-                count: 1,
-                historyKey: 'inventory-bata-self-already-wearing',
-                isAvoidImmediateRepeat: true,
-              },
-            );
-            shouldClearCarriedItem = true;
-            return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
-          }
-
-          applyDefaultSpriteAppearance(engine, ROCCO_LAB_COAT_PLAYER_APPEARANCE, context.localization);
-          context.setRoccoAppearance(ROCCO_LAB_COAT_PLAYER_APPEARANCE);
-          context.inventory.removeItem(ROCCO_INVENTORY_BATA_ITEM_ID);
-          if (engine.video.gridMenus.isOpen(ROCCO_INVENTORY_MENU_ID)) {
-            engine.video.gridMenus.openMenu(context.inventory.createGridMenuDefinition(context.localization));
-          }
-          roccoCartridgeMessageRuntime.think(
-            engine,
-            DEFAULT_SPRITE_INSTANCE_ID,
-            [context.localization.text.inventory.bataOnSelfLine],
-            { ttlMs: 3200 },
-            {
-              count: 1,
-              historyKey: 'inventory-bata-self-equip',
-              isAvoidImmediateRepeat: true,
-            },
-          );
-          shouldClearCarriedItem = true;
-          return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
-        } catch (error) {
-          engine.log('System', `Rocco lab coat equip failed: ${String(error)}`);
-          return { handled: true };
-        } finally {
-          if (shouldClearCarriedItem) {
-            engine.video.gridMenus.clearCarriedItem();
-          }
-          inputLease.dispose();
-          engine.video.render(0);
-        }
-      },
-    },
+    createBaitShopDoorUseRule(),
+    createStanPoliceDefeatRule(),
+    createStanMoneyRule(),
+    createLabCoatEquipRule(),
   ];
 }

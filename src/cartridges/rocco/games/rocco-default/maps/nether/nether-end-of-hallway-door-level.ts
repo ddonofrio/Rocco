@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
 import type {
@@ -470,11 +472,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     );
   }
 
-  async mount(
-    engine: RoccoEngine,
-    options: RoccoLevelMountOptions = {},
-    preloader?: RoccoAssetPreloader,
-  ): Promise<RoccoPlaneScene> {
+  private resetMountState(engine: RoccoEngine): void {
     this.engine = engine;
     this.spriteController = undefined;
     this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
@@ -485,38 +483,46 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       NETHER_LIGHTS_NOISE_STEP_MAX_MS,
     );
     this.sceneReady = false;
+  }
 
-    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
-    const initialPosition = entryConnector
-      ? {
-          x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
-          y: entryConnector.entryPoint.y,
-        }
-      : { ...NETHER_END_OF_HALLWAY_ENTRY_POSITION };
-    const initialFacing = entryConnector?.entryFacing ?? 'up';
-    const scene = await loadOrCreateNetherScene(engine, NETHER_END_OF_HALLWAY_SCENE_DEFINITION);
-    const walkMapProfile = await createNetherWalkMapProfile(netherEndOfHallwayDoorAssetUrls.walkPath);
-
-    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+  private registerAmbientSound(engine: RoccoEngine): void {
     engine.audio.registerSound({
       id: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID,
       uri: netherAmbientSteamMachineAssetUrl,
       volume: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_VOLUME,
       loop: true,
     });
+  }
+
+  private async preloadAmbientSound(
+    engine: RoccoEngine,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<void> {
     try {
       await preloader?.preloadSound(engine, NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
     } catch {
       engine.log('Audio', 'Nether ambient steam machine sound could not be preloaded.');
     }
+  }
+
+  private async prepareNetherEndScene(
+    engine: RoccoEngine,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<{
+    scene: RoccoPlaneScene;
+    walkMapProfile: Awaited<ReturnType<typeof createNetherWalkMapProfile>>;
+  }> {
+    const scene = await loadOrCreateNetherScene(engine, NETHER_END_OF_HALLWAY_SCENE_DEFINITION);
+    const walkMapProfile = await createNetherWalkMapProfile(netherEndOfHallwayDoorAssetUrls.walkPath);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+    this.registerAmbientSound(engine);
+    await this.preloadAmbientSound(engine, preloader);
     engine.loadPlaneScene(scene);
     this.lightsOverlayOpacity = this.lightsNoiseOpacity;
     engine.video.planes.updatePlane(
       ROCCO_NETHER_END_OF_HALLWAY_DOOR_SCENE_ID,
       NETHER_END_OF_HALLWAY_LIGHTS_PLANE_ID,
-      {
-        opacity: this.lightsOverlayOpacity,
-      },
+      { opacity: this.lightsOverlayOpacity },
     );
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
@@ -526,6 +532,25 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       volume: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_VOLUME,
       loop: true,
     });
+    return { scene, walkMapProfile };
+  }
+
+  async mount(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
+    this.resetMountState(engine);
+
+    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
+    const initialPosition = entryConnector
+      ? {
+          x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
+          y: entryConnector.entryPoint.y,
+        }
+      : { ...NETHER_END_OF_HALLWAY_ENTRY_POSITION };
+    const initialFacing = entryConnector?.entryFacing ?? 'up';
+    const { scene, walkMapProfile } = await this.prepareNetherEndScene(engine, preloader);
     this.spriteController = await installDefaultSprite(engine, {
       appearance: options.roccoAppearance,
       initialFacing,

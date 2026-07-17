@@ -48,120 +48,128 @@ export interface RoccoSpriteVisualHelper {
   ): boolean;
 }
 
+function resolveFrameVisibleBounds(
+  state: RoccoSpriteVisualHelperState,
+  definition: RoccoSpriteDefinition,
+  frame: RoccoSpriteFrame,
+): SpriteVisibleBounds | undefined {
+  const image = definition.images.find((item) => item.id === frame.imageId);
+  if (!image) {
+    return undefined;
+  }
+  const imageKey = resolveImageSourceKey(image, definition.id);
+  const mask = state.alphaMasks.get(imageKey);
+  if (!mask) {
+    return undefined;
+  }
+  const frameRect = resolveFrameRect(frame, image, mask);
+  const cacheKey = `${definition.id}:${frame.id}:${imageKey}:${frameRect.x}:${frameRect.y}:${frameRect.width}:${frameRect.height}`;
+  if (state.visibleBoundsCache.has(cacheKey)) {
+    return state.visibleBoundsCache.get(cacheKey) ?? undefined;
+  }
+  const bounds = calculateVisibleBounds(mask, frameRect);
+  state.visibleBoundsCache.set(cacheKey, bounds ?? undefined);
+  return bounds;
+}
+
+async function queueAlphaMaskLoad(
+  state: RoccoSpriteVisualHelperState,
+  image: RoccoSpriteImage,
+  definitionId: string,
+): Promise<void> {
+  const key = resolveImageSourceKey(image, definitionId);
+  if (state.alphaMasks.has(key)) {
+    return;
+  }
+  const pending = state.pendingAlphaMaskLoads.get(key);
+  if (pending) {
+    return pending;
+  }
+  const load = (async () => {
+    try {
+      state.alphaMasks.set(key, await createAlphaMask(image));
+    } finally {
+      state.pendingAlphaMaskLoads.delete(key);
+    }
+  })();
+  state.pendingAlphaMaskLoads.set(key, load);
+  return load;
+}
+
+function clearVisualCachesForDefinition(
+  state: RoccoSpriteVisualHelperState,
+  definitionId: string,
+): void {
+  state.autoAdjustReferenceHeightCache.delete(definitionId);
+  const prefix = `${definitionId}:`;
+  for (const key of state.visibleBoundsCache.keys()) {
+    if (key.startsWith(prefix)) {
+      state.visibleBoundsCache.delete(key);
+    }
+  }
+}
+
+function resolveAutoAdjustReferenceHeight(
+  state: RoccoSpriteVisualHelperState,
+  definition: RoccoSpriteDefinition,
+): number | undefined {
+  if (state.autoAdjustReferenceHeightCache.has(definition.id)) {
+    return state.autoAdjustReferenceHeightCache.get(definition.id) ?? undefined;
+  }
+  let referenceHeight = 0;
+  for (const frame of definition.frames) {
+    const bounds = resolveFrameVisibleBounds(state, definition, frame);
+    if (bounds) {
+      referenceHeight = Math.max(referenceHeight, bounds.height);
+    }
+  }
+  const resolved = referenceHeight > 0 ? referenceHeight : undefined;
+  state.autoAdjustReferenceHeightCache.set(definition.id, resolved);
+  return resolved;
+}
+
+function isPointOnVisibleSpritePixel(
+  state: RoccoSpriteVisualHelperState,
+  instance: RoccoSpriteInstance,
+  definition: RoccoSpriteDefinition,
+  frame: RoccoSpriteFrame,
+  point: RoccoPoint,
+  visualAdjustment?: RoccoSpriteVisualAdjustment,
+): boolean {
+  const image = definition.images.find((item) => item.id === frame.imageId);
+  if (!image) {
+    return false;
+  }
+  const mask = state.alphaMasks.get(resolveImageSourceKey(image, definition.id));
+  if (!mask) {
+    return false;
+  }
+  const frameRect = resolveFrameRect(frame, image, mask);
+  const localPoint = toSpriteLocalPoint(instance, definition, frame, frameRect, point, visualAdjustment);
+  if (!localPoint) {
+    return false;
+  }
+  const sourceX = Math.floor(frameRect.x + localPoint.x);
+  const sourceY = Math.floor(frameRect.y + localPoint.y);
+  if (sourceX < 0 || sourceY < 0 || sourceX >= mask.width || sourceY >= mask.height) {
+    return false;
+  }
+  return (mask.alpha[sourceY * mask.width + sourceX] ?? 0) > 0;
+}
+
 export function createRoccoSpriteVisualHelper(
   state: RoccoSpriteVisualHelperState,
 ): RoccoSpriteVisualHelper {
-  function resolveFrameVisibleBounds(
-    definition: RoccoSpriteDefinition,
-    frame: RoccoSpriteFrame,
-  ): SpriteVisibleBounds | undefined {
-    const image = definition.images.find((item) => item.id === frame.imageId);
-    if (!image) {
-      return undefined;
-    }
-
-    const imageKey = resolveImageSourceKey(image, definition.id);
-    const mask = state.alphaMasks.get(imageKey);
-    if (!mask) {
-      return undefined;
-    }
-
-    const frameRect = resolveFrameRect(frame, image, mask);
-    const cacheKey = `${definition.id}:${frame.id}:${imageKey}:${frameRect.x}:${frameRect.y}:${frameRect.width}:${frameRect.height}`;
-    if (state.visibleBoundsCache.has(cacheKey)) {
-      return state.visibleBoundsCache.get(cacheKey) ?? undefined;
-    }
-
-    const bounds = calculateVisibleBounds(mask, frameRect);
-    state.visibleBoundsCache.set(cacheKey, bounds ?? undefined);
-    return bounds;
-  }
-
   return {
-    queueAlphaMaskLoad(image: RoccoSpriteImage, definitionId: string): Promise<void> {
-      const key = resolveImageSourceKey(image, definitionId);
-      if (state.alphaMasks.has(key)) {
-        return Promise.resolve();
-      }
-
-      const pending = state.pendingAlphaMaskLoads.get(key);
-      if (pending) {
-        return pending;
-      }
-
-      const load = (async () => {
-        try {
-          const mask = await createAlphaMask(image);
-          state.alphaMasks.set(key, mask);
-        } finally {
-          state.pendingAlphaMaskLoads.delete(key);
-        }
-      })();
-      state.pendingAlphaMaskLoads.set(key, load);
-      return load;
-    },
-
-    clearVisualCachesForDefinition(definitionId: string): void {
-      state.autoAdjustReferenceHeightCache.delete(definitionId);
-      const prefix = `${definitionId}:`;
-      for (const key of state.visibleBoundsCache.keys()) {
-        if (key.startsWith(prefix)) {
-          state.visibleBoundsCache.delete(key);
-        }
-      }
-    },
-
-    resolveAutoAdjustReferenceHeight(definition: RoccoSpriteDefinition): number | undefined {
-      if (state.autoAdjustReferenceHeightCache.has(definition.id)) {
-        return state.autoAdjustReferenceHeightCache.get(definition.id) ?? undefined;
-      }
-
-      let referenceHeight = 0;
-      for (const frame of definition.frames) {
-        const bounds = resolveFrameVisibleBounds(definition, frame);
-        if (bounds) {
-          referenceHeight = Math.max(referenceHeight, bounds.height);
-        }
-      }
-
-      const resolved = referenceHeight > 0 ? referenceHeight : undefined;
-      state.autoAdjustReferenceHeightCache.set(definition.id, resolved);
-      return resolved ?? undefined;
-    },
-
-    resolveFrameVisibleBounds,
-
-    isPointOnVisibleSpritePixel(
-      instance: RoccoSpriteInstance,
-      definition: RoccoSpriteDefinition,
-      frame: RoccoSpriteFrame,
-      point: RoccoPoint,
-      visualAdjustment?: RoccoSpriteVisualAdjustment,
-    ): boolean {
-      const image = definition.images.find((item) => item.id === frame.imageId);
-      if (!image) {
-        return false;
-      }
-
-      const mask = state.alphaMasks.get(resolveImageSourceKey(image, definition.id));
-      if (!mask) {
-        return false;
-      }
-
-      const frameRect = resolveFrameRect(frame, image, mask);
-      const localPoint = toSpriteLocalPoint(instance, definition, frame, frameRect, point, visualAdjustment);
-      if (!localPoint) {
-        return false;
-      }
-
-      const sourceX = Math.floor(frameRect.x + localPoint.x);
-      const sourceY = Math.floor(frameRect.y + localPoint.y);
-      if (sourceX < 0 || sourceY < 0 || sourceX >= mask.width || sourceY >= mask.height) {
-        return false;
-      }
-
-      return (mask.alpha[sourceY * mask.width + sourceX] ?? 0) > 0;
-    },
+    queueAlphaMaskLoad: (image, definitionId) => queueAlphaMaskLoad(state, image, definitionId),
+    clearVisualCachesForDefinition: (definitionId) =>
+      clearVisualCachesForDefinition(state, definitionId),
+    resolveAutoAdjustReferenceHeight: (definition) =>
+      resolveAutoAdjustReferenceHeight(state, definition),
+    resolveFrameVisibleBounds: (definition, frame) =>
+      resolveFrameVisibleBounds(state, definition, frame),
+    isPointOnVisibleSpritePixel: (instance, definition, frame, point, visualAdjustment) =>
+      isPointOnVisibleSpritePixel(state, instance, definition, frame, point, visualAdjustment),
   };
 }
 

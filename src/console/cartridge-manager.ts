@@ -183,6 +183,26 @@ export class RoccoCartridgeManager {
     return combineErrors(`Cartridge '${cartridgeId}' cleanup failed.`, failures);
   }
 
+  private validateCartridgeCompatibility(
+    selectedConfig: (typeof builtinCartridgeConfigs)[number] | undefined,
+    cartridge: RoccoCartridge,
+  ): void {
+    assertCartridgeSdkCompatibility(selectedConfig?.manifest ?? cartridge.manifest);
+  }
+
+  private createCartridgeSdk(
+    engine: RoccoMenuSettingsEngine,
+    scope: ResourceScope,
+    selectedConfig: (typeof builtinCartridgeConfigs)[number] | undefined,
+    cartridge: RoccoCartridge,
+  ) {
+    return createCartridgeSdkV1({
+      engine,
+      scope,
+      manifest: selectedConfig?.manifest ?? cartridge.manifest,
+    });
+  }
+
   async loadAndMount(options: CartridgeManagerOptions): Promise<RoccoCartridge> {
     const { app, engine, configuredCartridgeId } = options;
 
@@ -227,12 +247,10 @@ export class RoccoCartridgeManager {
     }
 
     const cartridge = (await loader.loadById(selectedId)) ?? (await loader.loadDefault());
-    const manifest = selectedConfig?.manifest ?? cartridge.manifest;
-
-    assertCartridgeSdkCompatibility(manifest);
+    this.validateCartridgeCompatibility(selectedConfig, cartridge);
 
     const scope = options.cartridgeScope ?? createResourceScope(`cartridge:${selectedId}`);
-    const sdk = createCartridgeSdkV1({ engine, scope, manifest });
+    const sdk = this.createCartridgeSdk(engine, scope, selectedConfig, cartridge);
     try {
       await cartridge.mount({ engine, locale: selectedLocale, sdk });
       if (cartridge.start) {

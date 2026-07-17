@@ -25,6 +25,33 @@ function nullValue<T>(): T {
   return JSON.parse('null') as T;
 }
 
+type RoccoCartridgeSdk = RoccoCartridgeContext['engine'] | NonNullable<RoccoCartridgeContext['sdk']>;
+
+function registerGameMusicPlaylist(sdk: RoccoCartridgeSdk, playlistId: string): void {
+  sdk.jukebox.registerPlaylist({
+    id: playlistId,
+    tracks: [
+      {
+        id: 'game-music-1',
+        uri: roccoDefaultGameMusicTrackUrls[0],
+        volume: 0.5,
+      },
+      {
+        id: 'game-music-2',
+        uri: roccoDefaultGameMusicTrackUrls[1],
+        volume: 0.5,
+      },
+    ],
+    mixMode: {
+      type: 'auto-mix',
+      fadeDurationMs: 1500,
+      silenceThreshold: 0.01,
+      minSegmentDurationMs: 3000,
+    },
+    globalVolume: 0.2,
+  });
+}
+
 export class RoccoDefaultCartridge implements RoccoCartridge {
   private static readonly GAME_MUSIC_PLAYLIST_ID = 'rocco-game-music';
   private gameRuntime: RpceGameRuntime<
@@ -71,28 +98,7 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     });
 
     try {
-      sdk.jukebox.registerPlaylist({
-        id: RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID,
-        tracks: [
-          {
-            id: 'game-music-1',
-            uri: roccoDefaultGameMusicTrackUrls[0],
-            volume: 0.5,
-          },
-          {
-            id: 'game-music-2',
-            uri: roccoDefaultGameMusicTrackUrls[1],
-            volume: 0.5,
-          },
-        ],
-        mixMode: {
-          type: 'auto-mix',
-          fadeDurationMs: 1500,
-          silenceThreshold: 0.01,
-          minSegmentDurationMs: 3000,
-        },
-        globalVolume: 0.2,
-      });
+      registerGameMusicPlaylist(sdk, RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
 
       const gameRuntime = new RpceGameRuntime<
         RoccoLevelManagerOptions,

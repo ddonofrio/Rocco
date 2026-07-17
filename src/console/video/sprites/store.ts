@@ -21,6 +21,55 @@ function pickMaxSpeed(definition: RoccoSpriteDefinition): number | undefined {
   return Math.max(...candidates.map((value) => Math.abs(value)));
 }
 
+function createBaseInstance(
+  definition: RoccoSpriteDefinition,
+  id: string,
+  defaultFacing: NonNullable<RoccoSpriteInstance['facing']>,
+  defaultAnimationId: string,
+  defaultAnimation: NonNullable<RoccoSpriteDefinition['animations'][string]>,
+): RoccoSpriteInstance {
+  return {
+    id,
+    definitionId: definition.id,
+    transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0, flipX: false, flipY: false },
+    motion: {
+      velocityX: 0,
+      velocityY: 0,
+      accelerationX: definition.defaultMotion?.accelerationX ?? 0,
+      accelerationY: definition.defaultMotion?.accelerationY ?? 0,
+      maxSpeed: pickMaxSpeed(definition),
+      distanceAccumulator: 0,
+    },
+    animation: {
+      animationId: defaultAnimationId,
+      frameIndex: 0,
+      elapsedMs: 0,
+      playing: true,
+      playbackRate: defaultAnimation.playbackRate || 1,
+      motionBinding: defaultAnimation.motionBinding,
+    },
+    action: definition.defaultIdleAction
+      ? { actionId: definition.defaultIdleAction, direction: defaultFacing }
+      : undefined,
+    facing: defaultFacing,
+    visible: true,
+    enabled: true,
+    interactive: false,
+    collisionEnabled: true,
+    renderLayer: definition.render?.renderLayer ?? 'world.actors',
+    zIndex: definition.render?.zIndex ?? 0,
+    depthMode: definition.render?.depthMode ?? 'fixed',
+    opacity: definition.render?.opacity ?? 1,
+    tint: undefined,
+    contrast: undefined,
+    visibleDescription: definition.visibleDescription
+      ? clone(definition.visibleDescription)
+      : undefined,
+    ignoreMessages: definition.ignoreMessages ?? false,
+    state: {},
+  };
+}
+
 export class RoccoSpriteStore {
   private readonly definitions = new Map<string, RoccoSpriteDefinition>();
   private nextInstanceSerial = 1;
@@ -219,56 +268,13 @@ export class RoccoSpriteStore {
       throw new Error(`Sprite definition '${definition.id}' has invalid default animation.`);
     }
 
-    const base: RoccoSpriteInstance = {
-      id: `sprite-${definition.id}-${this.nextInstanceSerial++}`,
-      definitionId: definition.id,
-      transform: {
-        x: 0,
-        y: 0,
-        scaleX: 1,
-        scaleY: 1,
-        rotation: 0,
-        flipX: false,
-        flipY: false,
-      },
-      motion: {
-        velocityX: 0,
-        velocityY: 0,
-        accelerationX: definition.defaultMotion?.accelerationX ?? 0,
-        accelerationY: definition.defaultMotion?.accelerationY ?? 0,
-        maxSpeed: pickMaxSpeed(definition),
-        distanceAccumulator: 0,
-      },
-      animation: {
-        animationId: defaultAnimationId,
-        frameIndex: 0,
-        elapsedMs: 0,
-        playing: true,
-        playbackRate: defaultAnimation.playbackRate || 1,
-        motionBinding: defaultAnimation.motionBinding,
-      },
-      action: definition.defaultIdleAction
-        ? {
-            actionId: definition.defaultIdleAction,
-            direction: defaultFacing,
-          }
-        : undefined,
-      facing: defaultFacing,
-      visible: true,
-      enabled: true,
-      interactive: false,
-      collisionEnabled: true,
-      renderLayer: definition.render?.renderLayer ?? 'world.actors',
-      zIndex: definition.render?.zIndex ?? 0,
-      depthMode: definition.render?.depthMode ?? 'fixed',
-      opacity: definition.render?.opacity ?? 1,
-      tint: undefined,
-      contrast: undefined,
-      visibleDescription: definition.visibleDescription ? clone(definition.visibleDescription) : undefined,
-      ignoreMessages: definition.ignoreMessages ?? false,
-      state: {},
-    };
-
+    const base = createBaseInstance(
+      definition,
+      `sprite-${definition.id}-${this.nextInstanceSerial++}`,
+      defaultFacing,
+      defaultAnimationId,
+      defaultAnimation,
+    );
     const merged = this.mergeInstance(base, options);
     this.ensureAnimationState(merged, definition);
     return merged;

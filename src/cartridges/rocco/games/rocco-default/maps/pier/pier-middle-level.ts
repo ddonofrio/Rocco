@@ -248,11 +248,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     return leftoverDeltaMs;
   }
 
-  async mount(
-    engine: RoccoEngine,
-    options: RoccoLevelMountOptions = {},
-    preloader?: RoccoAssetPreloader,
-  ): Promise<RoccoPlaneScene> {
+  private resetMountState(engine: RoccoEngine, options: RoccoLevelMountOptions): void {
     this.engine = engine;
     this.options = options;
     this.spriteController = undefined;
@@ -264,17 +260,30 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     this.feedingLookSelectionState = undefined;
     this.pendingPelikanTakeoffMs = undefined;
     uninstallDefaultFeedingLookActionMenu(engine);
+  }
 
+  private async loadMiddleScene(
+    engine: RoccoEngine,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
     const scene = await loadOrCreatePierScene(engine, {
       sceneId: PIER_MIDDLE_SCENE_ID,
       backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X,
     });
     await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     engine.loadPlaneScene(scene);
-    await installDefaultWalkMap(engine, {
-      backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X,
-    }, preloader);
+    await installDefaultWalkMap(
+      engine,
+      { backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X },
+      preloader,
+    );
+    return scene;
+  }
 
+  private async preloadMiddleActionMenuAssets(
+    engine: RoccoEngine,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<void> {
     try {
       await preloader?.preloadAssetUrls(engine, [
         roccoDefaultActionMenuAssetUrls.grab,
@@ -285,44 +294,51 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     } catch {
       engine.log('Assets', 'Some action menu icons could not be preloaded.');
     }
+  }
 
-    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
-    const spriteInstallOptions = entryConnector
-      ? {
-          initialFacing: entryConnector.entryFacing,
-          initialPosition: entryConnector.entryPoint,
-          playIntro: false,
-        }
-      : undefined;
-
-    const initialKeysState = this.resolveInitialKeysState();
-    const [
-      cloudController,
-      baitBucketController,
-      keysController,
-      pelikanController,
-      spriteController,
-    ] = await Promise.all([
-      installDefaultCloud(engine, preloader),
-      installDefaultBaitBucket(engine, {
+  private installMiddleBaitBucket(
+    engine: RoccoEngine,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoDefaultBaitBucketController> {
+    return installDefaultBaitBucket(
+      engine,
+      {
         localization: this.localization,
-        initialState: {
-          dropped: this.levelState.baitBucketDropped,
-        },
+        initialState: { dropped: this.levelState.baitBucketDropped },
         onDropped: () => {
           this.levelState.baitBucketDropped = true;
         },
-      }, preloader),
-      installDefaultKeys(engine, {
+      },
+      preloader,
+    );
+  }
+
+  private installMiddleKeys(
+    engine: RoccoEngine,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoDefaultKeysController> {
+    return installDefaultKeys(
+      engine,
+      {
         localization: this.localization,
-        initialState: initialKeysState,
+        initialState: this.resolveInitialKeysState(),
         onCollectRequested: () => this.options.onKeysCollectRequested?.() ?? true,
         onCollected: () => {
           this.levelState.keysStatus = 'collected';
           this.options.onKeysCollected?.();
         },
-      }, preloader),
-      installDefaultPelikan(engine, {
+      },
+      preloader,
+    );
+  }
+
+  private installMiddlePelikan(
+    engine: RoccoEngine,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoDefaultPelikanController> {
+    return installDefaultPelikan(
+      engine,
+      {
         localization: this.localization,
         initialState: this.levelState.pelikanState,
         onTakeoff: () => {
@@ -331,19 +347,60 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
           this.levelState.keysY = DEFAULT_KEYS_Y;
           this.keysController?.revealAt(DEFAULT_KEYS_X, DEFAULT_KEYS_Y);
         },
-      }, preloader),
-      installDefaultSprite(engine, {
-        ...spriteInstallOptions,
+      },
+      preloader,
+    );
+  }
+
+  private installMiddleSprite(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoDefaultSpriteController> {
+    const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
+    return installDefaultSprite(
+      engine,
+      {
+        ...(entryConnector && {
+          initialFacing: entryConnector.entryFacing,
+          initialPosition: entryConnector.entryPoint,
+          playIntro: false,
+        }),
         appearance: options.roccoAppearance,
         localization: this.localization,
-      }, preloader),
-    ]);
+      },
+      preloader,
+    );
+  }
 
-    this.cloudController = cloudController;
-    this.baitBucketController = baitBucketController;
-    this.keysController = keysController;
-    this.pelikanController = pelikanController;
-    this.spriteController = spriteController;
+  private async installMiddleControllers(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions,
+    preloader?: RoccoAssetPreloader,
+  ) {
+    return Promise.all([
+      installDefaultCloud(engine, preloader),
+      this.installMiddleBaitBucket(engine, preloader),
+      this.installMiddleKeys(engine, preloader),
+      this.installMiddlePelikan(engine, preloader),
+      this.installMiddleSprite(engine, options, preloader),
+    ]);
+  }
+
+  async mount(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions = {},
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
+    this.resetMountState(engine, options);
+    const scene = await this.loadMiddleScene(engine, preloader);
+    await this.preloadMiddleActionMenuAssets(engine, preloader);
+    const controllers = await this.installMiddleControllers(engine, options, preloader);
+    this.cloudController = controllers[0];
+    this.baitBucketController = controllers[1];
+    this.keysController = controllers[2];
+    this.pelikanController = controllers[3];
+    this.spriteController = controllers[4];
 
     if (this.levelState.pelikanState === 'feeding') {
       this.installFeedingInteractionsIfReady();

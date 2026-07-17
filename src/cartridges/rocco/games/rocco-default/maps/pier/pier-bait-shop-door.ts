@@ -54,68 +54,9 @@ function createDefaultBaitShopDoorSpriteDefinition(
   return {
     id: DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID,
     name: 'Bait Shop Door',
-    images: [
-      {
-        id: DOOR_IMAGE_CLOSED_ID,
-        uri: pierBaitShopDoorAssetUrls.closed,
-        width: DEFAULT_BAIT_SHOP_DOOR_WIDTH,
-        height: DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
-      },
-      {
-        id: DOOR_IMAGE_OPEN_ID,
-        uri: pierBaitShopDoorAssetUrls.open,
-        width: DEFAULT_BAIT_SHOP_DOOR_WIDTH,
-        height: DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
-      },
-    ],
-    frames: [
-      {
-        id: CLOSED_FRAME_ID,
-        imageId: DOOR_IMAGE_CLOSED_ID,
-        durationMs: 1000,
-        pivot: {
-          x: DEFAULT_BAIT_SHOP_DOOR_PIVOT_X,
-          y: DEFAULT_BAIT_SHOP_DOOR_PIVOT_Y,
-        },
-        hitbox: {
-          kind: 'rect',
-          x: 0,
-          y: 0,
-          width: DEFAULT_BAIT_SHOP_DOOR_WIDTH,
-          height: DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
-        },
-      },
-      {
-        id: OPEN_FRAME_ID,
-        imageId: DOOR_IMAGE_OPEN_ID,
-        durationMs: 1000,
-        pivot: {
-          x: DEFAULT_BAIT_SHOP_DOOR_PIVOT_X,
-          y: DEFAULT_BAIT_SHOP_DOOR_PIVOT_Y,
-        },
-        hitbox: {
-          kind: 'rect',
-          x: 0,
-          y: 0,
-          width: DEFAULT_BAIT_SHOP_DOOR_WIDTH,
-          height: DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
-        },
-      },
-    ],
-    animations: {
-      [DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID]: {
-        id: DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: CLOSED_FRAME_ID, durationMs: 1000 }],
-      },
-      [DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID]: {
-        id: DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: OPEN_FRAME_ID, durationMs: 1000 }],
-      },
-    },
+    images: createDoorImages(),
+    frames: createDoorFrames(),
+    animations: createDoorAnimations(),
     defaultAnimation: DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID,
     render: {
       renderLayer: DEFAULT_BAIT_SHOP_DOOR_RENDER_LAYER,
@@ -129,6 +70,59 @@ function createDefaultBaitShopDoorSpriteDefinition(
     },
     metadata: {
       purpose: 'pier-bait-shop-door',
+    },
+  };
+}
+
+function createDoorImages(): RoccoSpriteDefinition['images'] {
+  return [
+    {
+      id: DOOR_IMAGE_CLOSED_ID,
+      uri: pierBaitShopDoorAssetUrls.closed,
+      width: DEFAULT_BAIT_SHOP_DOOR_WIDTH,
+      height: DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
+    },
+    {
+      id: DOOR_IMAGE_OPEN_ID,
+      uri: pierBaitShopDoorAssetUrls.open,
+      width: DEFAULT_BAIT_SHOP_DOOR_WIDTH,
+      height: DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
+    },
+  ];
+}
+
+function createDoorFrames(): RoccoSpriteDefinition['frames'] {
+  const hitbox = {
+    kind: 'rect' as const,
+    x: 0,
+    y: 0,
+    width: DEFAULT_BAIT_SHOP_DOOR_WIDTH,
+    height: DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
+  };
+  const pivot = {
+    x: DEFAULT_BAIT_SHOP_DOOR_PIVOT_X,
+    y: DEFAULT_BAIT_SHOP_DOOR_PIVOT_Y,
+  };
+
+  return [
+    { id: CLOSED_FRAME_ID, imageId: DOOR_IMAGE_CLOSED_ID, durationMs: 1000, pivot, hitbox },
+    { id: OPEN_FRAME_ID, imageId: DOOR_IMAGE_OPEN_ID, durationMs: 1000, pivot, hitbox },
+  ];
+}
+
+function createDoorAnimations(): RoccoSpriteDefinition['animations'] {
+  return {
+    [DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID]: {
+      id: DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID,
+      loop: false,
+      playbackRate: 1,
+      frames: [{ frameId: CLOSED_FRAME_ID, durationMs: 1000 }],
+    },
+    [DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID]: {
+      id: DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
+      loop: false,
+      playbackRate: 1,
+      frames: [{ frameId: OPEN_FRAME_ID, durationMs: 1000 }],
     },
   };
 }
@@ -214,32 +208,28 @@ class RoccoBaitShopDoorControllerImpl implements RoccoBaitShopDoorController {
   }
 }
 
-export async function installDefaultBaitShopDoor(
-  engine: RoccoEngine,
-  options: RoccoBaitShopDoorInstallOptions = {},
-  preloader?: RoccoAssetPreloader,
-): Promise<RoccoBaitShopDoorController> {
-  const localization = options.localization ?? createRoccoLocalization();
-  const initialState = options.initialState ?? { revealed: true };
-  const definition = createDefaultBaitShopDoorSpriteDefinition(localization);
-
+function registerBaitShopDoorSound(engine: RoccoEngine): void {
   engine.audio.registerSound({
     id: BAIT_SHOP_DOOR_OPENING_SOUND_ID,
     uri: pierDoorOpeningSoundUrl,
     volume: BAIT_SHOP_DOOR_SOUND_VOLUME,
     loop: false,
   });
+}
+
+async function preloadBaitShopDoorSound(engine: RoccoEngine): Promise<void> {
   try {
     await engine.audio.preloadSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
   } catch {
     engine.log('Audio', 'Bait shop door opening sound could not be preloaded.');
   }
-  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
-  engine.video.sprites.loadSpriteDefinition(definition);
-  engine.video.sprites.removeSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
-  engine.video.actionMenus.unregisterMenu(BAIT_SHOP_DOOR_ACTION_MENU_ID);
-  engine.video.actionMenus.registerMenu(createBaitShopDoorActionMenuDefinition(localization));
+}
 
+function createBaitShopDoorSprite(
+  engine: RoccoEngine,
+  localization: RoccoLocalization,
+  initialState: RoccoBaitShopDoorState,
+): void {
   engine.video.sprites.createSpriteFromDefinition(DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID, {
     id: DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
     transform: {
@@ -259,6 +249,25 @@ export async function installDefaultBaitShopDoor(
       text: localization.text.descriptions.baitShopDoor,
     },
   });
+}
+
+export async function installDefaultBaitShopDoor(
+  engine: RoccoEngine,
+  options: RoccoBaitShopDoorInstallOptions = {},
+  preloader?: RoccoAssetPreloader,
+): Promise<RoccoBaitShopDoorController> {
+  const localization = options.localization ?? createRoccoLocalization();
+  const initialState = options.initialState ?? { revealed: true };
+  const definition = createDefaultBaitShopDoorSpriteDefinition(localization);
+
+  registerBaitShopDoorSound(engine);
+  await preloadBaitShopDoorSound(engine);
+  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
+  engine.video.sprites.loadSpriteDefinition(definition);
+  engine.video.sprites.removeSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
+  engine.video.actionMenus.unregisterMenu(BAIT_SHOP_DOOR_ACTION_MENU_ID);
+  engine.video.actionMenus.registerMenu(createBaitShopDoorActionMenuDefinition(localization));
+  createBaitShopDoorSprite(engine, localization, initialState);
 
   engine.video.sprites.playAnimation(
     DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,

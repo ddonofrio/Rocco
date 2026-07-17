@@ -5,18 +5,17 @@ import {
   Container,
   Graphics,
   Sprite,
-  Texture,
   TilingSprite,
   type FederatedPointerEvent,
 } from 'pixi.js';
 
 import type { RoccoPlaneRenderer } from './renderer';
 import {
-  prepareWaterColorImageNode,
   resolvePlaneWaterColorEffect,
   type WaterColorPlaneAnimation,
   updateWaterColorPlaneAnimation,
 } from './pixi-water-color-animation';
+import { createPixiImageNode } from './image-node';
 import type {
   RoccoColorModel,
   RoccoGraphicPlane,
@@ -126,7 +125,10 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
         return this.createSolidNode(plane, plane.source);
       }
       case 'image': {
-        return this.createImageNode(plane, plane.source);
+        return createPixiImageNode(plane, plane.source, {
+          resolvePlaneSize: (currentPlane) => this.resolvePlaneSize(currentPlane),
+          applyImageSourceSize: (sprite, currentSource) => this.applyImageSourceSize(sprite, currentSource),
+        });
       }
       case 'tilemap': {
         return this.createTilemapNode(plane, plane.source);
@@ -152,81 +154,6 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     const container = new Container();
     container.label = 'solid';
     container.addChild(graphics);
-    return {
-      content: container,
-      mode: 'static',
-      wrapSpanX: 0,
-      wrapSpanY: 0,
-    };
-  }
-
-  private createImageNode(plane: RoccoGraphicPlane, source: RoccoImageSource): SourceContainerBuild {
-    const size = this.resolvePlaneSize(plane);
-    const waterEffect = resolvePlaneWaterColorEffect(plane);
-    const container = new Container();
-
-    if (waterEffect && !plane.wrap.x && !plane.wrap.y) {
-      container.label = 'image-water-color';
-      const original = Sprite.from(source.uri);
-      this.applyImageSourceSize(original, source);
-      container.addChild(original);
-
-      const waterAnimation: WaterColorPlaneAnimation = {
-        ready: false,
-        elapsedMs: 0,
-        effect: waterEffect,
-        width: source.width ?? 0,
-        height: source.height ?? 0,
-      };
-
-      void prepareWaterColorImageNode(source, waterEffect).then((prepared) => {
-        if (container.destroyed) {
-          return;
-        }
-
-        waterAnimation.ready = true;
-        waterAnimation.width = prepared.width;
-        waterAnimation.height = prepared.height;
-        waterAnimation.sourceCanvas = prepared.waterSourceCanvas;
-        waterAnimation.frameContext = prepared.waterFrameContext;
-        waterAnimation.texture = prepared.waterTexture;
-
-        original.removeFromParent();
-        container.addChild(prepared.baseSprite);
-        container.addChild(prepared.waterSprite);
-      });
-
-      return {
-        content: container,
-        mode: 'static',
-        wrapSpanX: 0,
-        wrapSpanY: 0,
-        waterAnimation,
-      };
-    }
-
-    if (plane.wrap.x || plane.wrap.y) {
-      container.label = 'image-wrap';
-      const tiling = new TilingSprite({
-        texture: Texture.from(source.uri),
-        width: size.width,
-        height: size.height,
-      });
-      tiling.label = 'image-wrap';
-      container.addChild(tiling);
-      return {
-        content: container,
-        mode: 'tiling',
-        wrapSpanX: source.width ?? size.width,
-        wrapSpanY: source.height ?? size.height,
-      };
-    }
-
-    container.label = 'image';
-    const sprite = Sprite.from(source.uri);
-    this.applyImageSourceSize(sprite, source);
-    sprite.label = 'image';
-    container.addChild(sprite);
     return {
       content: container,
       mode: 'static',

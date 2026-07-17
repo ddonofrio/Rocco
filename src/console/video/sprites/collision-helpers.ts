@@ -63,185 +63,194 @@ export interface RoccoSpriteCollisionHelperOptions {
   ): RoccoSpriteVisualAdjustment | undefined;
 }
 
+function toWorldPoint(
+  options: RoccoSpriteCollisionHelperOptions,
+  instance: RoccoSpriteInstance,
+  definition: RoccoSpriteDefinition,
+  frame: RoccoSpriteFrame,
+  point: RoccoPoint,
+): RoccoPoint {
+  const visualAdjustment = options.resolveVisualAdjustment(instance, definition, frame);
+  const { scaleX, scaleY } = resolveWorldScale(instance);
+  const anchor = definition.anchor ?? { x: 0, y: 0 };
+  const frameSize = resolveFrameSize(definition, frame);
+  const localPoint = {
+    x:
+      (point.x - anchor.x * frameSize.width) * (visualAdjustment?.scaleX ?? 1) +
+      (visualAdjustment?.offsetX ?? 0),
+    y:
+      (point.y - anchor.y * frameSize.height) * (visualAdjustment?.scaleY ?? 1) +
+      (visualAdjustment?.offsetY ?? 0),
+  };
+  return transformLocalPointToWorld(
+    instance,
+    resolveFramePivot(definition, frame),
+    localPoint,
+    scaleX,
+    scaleY,
+  );
+}
+
+function createWorldCircle(
+  options: RoccoSpriteCollisionHelperOptions,
+  instance: RoccoSpriteInstance,
+  definition: RoccoSpriteDefinition,
+  frame: RoccoSpriteFrame,
+  shape: Extract<RoccoCollisionShape, { kind: 'circle' }>,
+): WorldShape {
+  const frameSize = resolveFrameSize(definition, frame);
+  const visualAdjustment = options.resolveVisualAdjustment(instance, definition, frame);
+  const { scaleX, scaleY } = resolveWorldScale(instance);
+  const anchor = definition.anchor ?? { x: 0, y: 0 };
+  const adjustedScaleX = visualAdjustment?.scaleX ?? 1;
+  const adjustedScaleY = visualAdjustment?.scaleY ?? 1;
+  const localCenter = {
+    x: (shape.x - anchor.x * frameSize.width) * adjustedScaleX + (visualAdjustment?.offsetX ?? 0),
+    y: (shape.y - anchor.y * frameSize.height) * adjustedScaleY + (visualAdjustment?.offsetY ?? 0),
+  };
+  const worldCenter = transformLocalPointToWorld(
+    instance,
+    resolveFramePivot(definition, frame),
+    localCenter,
+    scaleX,
+    scaleY,
+  );
+  const radiusScale =
+    (Math.abs(scaleX * adjustedScaleX) + Math.abs(scaleY * adjustedScaleY)) / 2;
+  return {
+    kind: 'circle',
+    circle: {
+      x: worldCenter.x,
+      y: worldCenter.y,
+      radius: Math.abs(shape.radius * radiusScale),
+    },
+  };
+}
+
+function toWorldShape(
+  options: RoccoSpriteCollisionHelperOptions,
+  instance: RoccoSpriteInstance,
+  definition: RoccoSpriteDefinition,
+  frame: RoccoSpriteFrame,
+  shape: RoccoCollisionShape,
+): WorldShape {
+  if (shape.kind === 'rect') {
+    const points = [
+      { x: shape.x, y: shape.y },
+      { x: shape.x + shape.width, y: shape.y },
+      { x: shape.x + shape.width, y: shape.y + shape.height },
+      { x: shape.x, y: shape.y + shape.height },
+    ].map((point) => toWorldPoint(options, instance, definition, frame, point));
+    return { kind: 'polygon', polygon: { points } };
+  }
+  if (shape.kind === 'circle') {
+    return createWorldCircle(options, instance, definition, frame, shape);
+  }
+  return {
+    kind: 'polygon',
+    polygon: {
+      points: shape.points.map((point) => toWorldPoint(options, instance, definition, frame, point)),
+    },
+  };
+}
+
+function resolveCollisionShapes(
+  definition: RoccoSpriteDefinition,
+  frame: RoccoSpriteFrame,
+): RoccoCollisionShape[] {
+  const fromFrame = frame.collisionBoxes ?? [];
+  if (fromFrame.length > 0) {
+    return clone(fromFrame);
+  }
+  const fromDefinition = definition.collisionBoxes ?? [];
+  if (fromDefinition.length > 0) {
+    return clone(fromDefinition);
+  }
+  if (frame.hitbox) {
+    return [clone(frame.hitbox)];
+  }
+  return definition.hitbox ? [clone(definition.hitbox)] : [];
+}
+
+function isPointInShape(
+  options: RoccoSpriteCollisionHelperOptions,
+  instance: RoccoSpriteInstance,
+  definition: RoccoSpriteDefinition,
+  frame: RoccoSpriteFrame,
+  shape: RoccoCollisionShape,
+  point: RoccoPoint,
+): boolean {
+  const world = toWorldShape(options, instance, definition, frame, shape);
+  if (world.kind === 'rect') {
+    return isPointInRect(point, world.rect);
+  }
+  if (world.kind === 'circle') {
+    const dx = point.x - world.circle.x;
+    const dy = point.y - world.circle.y;
+    return dx * dx + dy * dy <= world.circle.radius * world.circle.radius;
+  }
+  return isPointInPolygon(point, world.polygon.points);
+}
+
+function isIntersecting(
+  options: RoccoSpriteCollisionHelperOptions,
+  leftInstance: RoccoSpriteInstance,
+  leftDefinition: RoccoSpriteDefinition,
+  leftFrame: RoccoSpriteFrame,
+  leftShape: RoccoCollisionShape,
+  rightInstance: RoccoSpriteInstance,
+  rightDefinition: RoccoSpriteDefinition,
+  rightFrame: RoccoSpriteFrame,
+  rightShape: RoccoCollisionShape,
+): boolean {
+  const leftWorld = toWorldShape(options, leftInstance, leftDefinition, leftFrame, leftShape);
+  const rightWorld = toWorldShape(options, rightInstance, rightDefinition, rightFrame, rightShape);
+  if (leftWorld.kind === 'rect' && rightWorld.kind === 'rect') {
+    return isRectRectIntersection(leftWorld.rect, rightWorld.rect);
+  }
+  if (leftWorld.kind === 'circle' && rightWorld.kind === 'circle') {
+    const dx = leftWorld.circle.x - rightWorld.circle.x;
+    const dy = leftWorld.circle.y - rightWorld.circle.y;
+    const radius = leftWorld.circle.radius + rightWorld.circle.radius;
+    return dx * dx + dy * dy <= radius * radius;
+  }
+  if (leftWorld.kind === 'circle' && rightWorld.kind === 'rect') {
+    return isCircleRectIntersection(leftWorld.circle, rightWorld.rect);
+  }
+  if (leftWorld.kind === 'rect' && rightWorld.kind === 'circle') {
+    return isCircleRectIntersection(rightWorld.circle, leftWorld.rect);
+  }
+  return isRectRectIntersection(toBounds(leftWorld), toBounds(rightWorld));
+}
+
 export function createRoccoSpriteCollisionHelper(
   options: RoccoSpriteCollisionHelperOptions,
 ): RoccoSpriteCollisionHelper {
-  function toWorldPoint(
-    instance: RoccoSpriteInstance,
-    definition: RoccoSpriteDefinition,
-    frame: RoccoSpriteFrame,
-    point: RoccoPoint,
-  ): RoccoPoint {
-    const visualAdjustment = options.resolveVisualAdjustment(instance, definition, frame);
-    const { scaleX, scaleY } = resolveWorldScale(instance);
-    const anchor = definition.anchor ?? { x: 0, y: 0 };
-    const frameSize = resolveFrameSize(definition, frame);
-    const localPoint = {
-      x:
-        (point.x - anchor.x * frameSize.width) * (visualAdjustment?.scaleX ?? 1) +
-        (visualAdjustment?.offsetX ?? 0),
-      y:
-        (point.y - anchor.y * frameSize.height) * (visualAdjustment?.scaleY ?? 1) +
-        (visualAdjustment?.offsetY ?? 0),
-    };
-
-    return transformLocalPointToWorld(
-      instance,
-      resolveFramePivot(definition, frame),
-      localPoint,
-      scaleX,
-      scaleY,
-    );
-  }
-
-  function toWorldShape(
-    instance: RoccoSpriteInstance,
-    definition: RoccoSpriteDefinition,
-    frame: RoccoSpriteFrame,
-    shape: RoccoCollisionShape,
-  ): WorldShape {
-    if (shape.kind === 'rect') {
-      return {
-        kind: 'polygon',
-        polygon: {
-          points: [
-            toWorldPoint(instance, definition, frame, { x: shape.x, y: shape.y }),
-            toWorldPoint(instance, definition, frame, {
-              x: shape.x + shape.width,
-              y: shape.y,
-            }),
-            toWorldPoint(instance, definition, frame, {
-              x: shape.x + shape.width,
-              y: shape.y + shape.height,
-            }),
-            toWorldPoint(instance, definition, frame, {
-              x: shape.x,
-              y: shape.y + shape.height,
-            }),
-          ],
-        },
-      };
-    }
-
-    if (shape.kind === 'circle') {
-      const frameSize = resolveFrameSize(definition, frame);
-      const visualAdjustment = options.resolveVisualAdjustment(instance, definition, frame);
-      const { scaleX, scaleY } = resolveWorldScale(instance);
-      const anchor = definition.anchor ?? { x: 0, y: 0 };
-      const adjustedScaleX = visualAdjustment?.scaleX ?? 1;
-      const adjustedScaleY = visualAdjustment?.scaleY ?? 1;
-      const localCenter = {
-        x:
-          (shape.x - anchor.x * frameSize.width) * adjustedScaleX +
-          (visualAdjustment?.offsetX ?? 0),
-        y:
-          (shape.y - anchor.y * frameSize.height) * adjustedScaleY +
-          (visualAdjustment?.offsetY ?? 0),
-      };
-      const worldCenter = transformLocalPointToWorld(
-        instance,
-        resolveFramePivot(definition, frame),
-        localCenter,
-        scaleX,
-        scaleY,
-      );
-      const radiusScale =
-        (Math.abs(scaleX * adjustedScaleX) + Math.abs(scaleY * adjustedScaleY)) / 2;
-      return {
-        kind: 'circle',
-        circle: {
-          x: worldCenter.x,
-          y: worldCenter.y,
-          radius: Math.abs(shape.radius * radiusScale),
-        },
-      };
-    }
-
-    return {
-      kind: 'polygon',
-      polygon: {
-        points: shape.points.map((point) => toWorldPoint(instance, definition, frame, point)),
-      },
-    };
-  }
-
   return {
-    resolveCollisionShapes(
-      definition: RoccoSpriteDefinition,
-      frame: RoccoSpriteFrame,
-    ): RoccoCollisionShape[] {
-      const fromFrame = frame.collisionBoxes ?? [];
-      if (fromFrame.length > 0) {
-        return clone(fromFrame);
-      }
-
-      const fromDefinition = definition.collisionBoxes ?? [];
-      if (fromDefinition.length > 0) {
-        return clone(fromDefinition);
-      }
-
-      if (frame.hitbox) {
-        return [clone(frame.hitbox)];
-      }
-      if (definition.hitbox) {
-        return [clone(definition.hitbox)];
-      }
-      return [];
-    },
-
-    isPointInShape(
-      instance: RoccoSpriteInstance,
-      definition: RoccoSpriteDefinition,
-      frame: RoccoSpriteFrame,
-      shape: RoccoCollisionShape,
-      point: RoccoPoint,
-    ): boolean {
-      const world = toWorldShape(instance, definition, frame, shape);
-      if (world.kind === 'rect') {
-        return isPointInRect(point, world.rect);
-      }
-      if (world.kind === 'circle') {
-        const dx = point.x - world.circle.x;
-        const dy = point.y - world.circle.y;
-        return dx * dx + dy * dy <= world.circle.radius * world.circle.radius;
-      }
-
-      return isPointInPolygon(point, world.polygon.points);
-    },
-
-    intersects(
-      leftInstance: RoccoSpriteInstance,
-      leftDefinition: RoccoSpriteDefinition,
-      leftFrame: RoccoSpriteFrame,
-      leftShape: RoccoCollisionShape,
-      rightInstance: RoccoSpriteInstance,
-      rightDefinition: RoccoSpriteDefinition,
-      rightFrame: RoccoSpriteFrame,
-      rightShape: RoccoCollisionShape,
-    ): boolean {
-      const leftWorld = toWorldShape(leftInstance, leftDefinition, leftFrame, leftShape);
-      const rightWorld = toWorldShape(rightInstance, rightDefinition, rightFrame, rightShape);
-
-      if (leftWorld.kind === 'rect' && rightWorld.kind === 'rect') {
-        return isRectRectIntersection(leftWorld.rect, rightWorld.rect);
-      }
-      if (leftWorld.kind === 'circle' && rightWorld.kind === 'circle') {
-        const dx = leftWorld.circle.x - rightWorld.circle.x;
-        const dy = leftWorld.circle.y - rightWorld.circle.y;
-        const radius = leftWorld.circle.radius + rightWorld.circle.radius;
-        return dx * dx + dy * dy <= radius * radius;
-      }
-      if (leftWorld.kind === 'circle' && rightWorld.kind === 'rect') {
-        return isCircleRectIntersection(leftWorld.circle, rightWorld.rect);
-      }
-      if (leftWorld.kind === 'rect' && rightWorld.kind === 'circle') {
-        return isCircleRectIntersection(rightWorld.circle, leftWorld.rect);
-      }
-
-      const leftBounds = toBounds(leftWorld);
-      const rightBounds = toBounds(rightWorld);
-      return isRectRectIntersection(leftBounds, rightBounds);
-    },
+    resolveCollisionShapes,
+    isPointInShape: (instance, definition, frame, shape, point) =>
+      isPointInShape(options, instance, definition, frame, shape, point),
+    intersects: (
+      leftInstance,
+      leftDefinition,
+      leftFrame,
+      leftShape,
+      rightInstance,
+      rightDefinition,
+      rightFrame,
+      rightShape,
+    ) =>
+      isIntersecting(
+        options,
+        leftInstance,
+        leftDefinition,
+        leftFrame,
+        leftShape,
+        rightInstance,
+        rightDefinition,
+        rightFrame,
+        rightShape,
+      ),
   };
 }
 

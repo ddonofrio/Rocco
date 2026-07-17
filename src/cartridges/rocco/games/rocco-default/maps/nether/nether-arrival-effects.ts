@@ -33,6 +33,89 @@ export interface NetherArrivalPortalDefinition {
   initialFrameHeight: number;
 }
 
+type NetherArrivalCrop = Awaited<ReturnType<typeof createRoccoSpriteAutoCroppedFrames>>;
+
+function createNetherArrivalSmokeDefinition(
+  crop: NetherArrivalCrop,
+  frameIds: readonly string[],
+): RoccoSpriteDefinition {
+  return {
+    id: NETHER_ARRIVAL_SMOKE_DEFINITION_ID,
+    name: 'Nether Arrival Smoke',
+    images: crop.images,
+    frames: crop.frames,
+    animations: {
+      [NETHER_ARRIVAL_SMOKE_ANIMATION_ID]: {
+        id: NETHER_ARRIVAL_SMOKE_ANIMATION_ID,
+        loop: false,
+        playbackRate: 1,
+        frames: frameIds.map((frameId) => ({
+          frameId,
+          durationMs: NETHER_ARRIVAL_SMOKE_FRAME_DURATION_MS,
+        })),
+      },
+    },
+    defaultAnimation: NETHER_ARRIVAL_SMOKE_ANIMATION_ID,
+    render: {
+      renderLayer: 'world.front',
+      zIndex: 22,
+      depthMode: 'fixed',
+      opacity: 1,
+    },
+    metadata: {
+      purpose: 'nether-arrival-smoke',
+    },
+    ignoreMessages: true,
+  };
+}
+
+function createNetherArrivalPortalDefinition(
+  crop: NetherArrivalCrop,
+  frameIds: readonly string[],
+): RoccoSpriteDefinition {
+  const openingFrameIds = frameIds.slice(0, 8);
+  const loopFrameIds = frameIds.slice(4, 8);
+
+  return {
+    id: NETHER_ARRIVAL_PORTAL_DEFINITION_ID,
+    name: 'Nether Arrival Portal',
+    images: crop.images,
+    frames: crop.frames,
+    animations: {
+      [NETHER_ARRIVAL_PORTAL_OPEN_ANIMATION_ID]: {
+        id: NETHER_ARRIVAL_PORTAL_OPEN_ANIMATION_ID,
+        loop: false,
+        next: NETHER_ARRIVAL_PORTAL_LOOP_ANIMATION_ID,
+        playbackRate: 1,
+        frames: openingFrameIds.map((frameId) => ({
+          frameId,
+          durationMs: NETHER_ARRIVAL_PORTAL_FRAME_DURATION_MS,
+        })),
+      },
+      [NETHER_ARRIVAL_PORTAL_LOOP_ANIMATION_ID]: {
+        id: NETHER_ARRIVAL_PORTAL_LOOP_ANIMATION_ID,
+        loop: true,
+        playbackRate: 1,
+        frames: loopFrameIds.map((frameId) => ({
+          frameId,
+          durationMs: NETHER_ARRIVAL_PORTAL_FRAME_DURATION_MS,
+        })),
+      },
+    },
+    defaultAnimation: NETHER_ARRIVAL_PORTAL_OPEN_ANIMATION_ID,
+    render: {
+      renderLayer: 'world.front',
+      zIndex: 21,
+      depthMode: 'fixed',
+      opacity: 1,
+    },
+    metadata: {
+      purpose: 'nether-arrival-portal',
+    },
+    ignoreMessages: true,
+  };
+}
+
 export async function createNetherArrivalSmokeSpriteDefinition(): Promise<NetherArrivalSmokeDefinition> {
   const crop = await createRoccoSpriteAutoCroppedFrames({
     mode: 'image-list',
@@ -56,34 +139,7 @@ export async function createNetherArrivalSmokeSpriteDefinition(): Promise<Nether
   return {
     frameCount: frameIds.length,
     initialFrameHeight,
-    definition: {
-      id: NETHER_ARRIVAL_SMOKE_DEFINITION_ID,
-      name: 'Nether Arrival Smoke',
-      images: crop.images,
-      frames: crop.frames,
-      animations: {
-        [NETHER_ARRIVAL_SMOKE_ANIMATION_ID]: {
-          id: NETHER_ARRIVAL_SMOKE_ANIMATION_ID,
-          loop: false,
-          playbackRate: 1,
-          frames: frameIds.map((frameId) => ({
-            frameId,
-            durationMs: NETHER_ARRIVAL_SMOKE_FRAME_DURATION_MS,
-          })),
-        },
-      },
-      defaultAnimation: NETHER_ARRIVAL_SMOKE_ANIMATION_ID,
-      render: {
-        renderLayer: 'world.front',
-        zIndex: 22,
-        depthMode: 'fixed',
-        opacity: 1,
-      },
-      metadata: {
-        purpose: 'nether-arrival-smoke',
-      },
-      ignoreMessages: true,
-    },
+    definition: createNetherArrivalSmokeDefinition(crop, frameIds),
   };
 }
 
@@ -107,49 +163,10 @@ export async function createNetherArrivalPortalSpriteDefinition(): Promise<Nethe
   const initialFrame = crop.frames.find((frame) => frame.id === frameIds[0]) ?? crop.frames[0];
   const initialFrameWidth = initialFrame?.rect?.width ?? 1;
   const initialFrameHeight = initialFrame?.rect?.height ?? 1;
-  const openingFrameIds = frameIds.slice(0, 8);
-  const loopFrameIds = frameIds.slice(4, 8);
 
   return {
     initialFrameWidth,
     initialFrameHeight,
-    definition: {
-      id: NETHER_ARRIVAL_PORTAL_DEFINITION_ID,
-      name: 'Nether Arrival Portal',
-      images: crop.images,
-      frames: crop.frames,
-      animations: {
-        [NETHER_ARRIVAL_PORTAL_OPEN_ANIMATION_ID]: {
-          id: NETHER_ARRIVAL_PORTAL_OPEN_ANIMATION_ID,
-          loop: false,
-          next: NETHER_ARRIVAL_PORTAL_LOOP_ANIMATION_ID,
-          playbackRate: 1,
-          frames: openingFrameIds.map((frameId) => ({
-            frameId,
-            durationMs: NETHER_ARRIVAL_PORTAL_FRAME_DURATION_MS,
-          })),
-        },
-        [NETHER_ARRIVAL_PORTAL_LOOP_ANIMATION_ID]: {
-          id: NETHER_ARRIVAL_PORTAL_LOOP_ANIMATION_ID,
-          loop: true,
-          playbackRate: 1,
-          frames: loopFrameIds.map((frameId) => ({
-            frameId,
-            durationMs: NETHER_ARRIVAL_PORTAL_FRAME_DURATION_MS,
-          })),
-        },
-      },
-      defaultAnimation: NETHER_ARRIVAL_PORTAL_OPEN_ANIMATION_ID,
-      render: {
-        renderLayer: 'world.front',
-        zIndex: 21,
-        depthMode: 'fixed',
-        opacity: 1,
-      },
-      metadata: {
-        purpose: 'nether-arrival-portal',
-      },
-      ignoreMessages: true,
-    },
+    definition: createNetherArrivalPortalDefinition(crop, frameIds),
   };
 }

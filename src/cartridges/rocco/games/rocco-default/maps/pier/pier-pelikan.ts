@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
 import {
   createRoccoSpriteAutoCroppedFrames,
@@ -67,16 +69,19 @@ function smoothStep(value: number): number {
   return value * value * (3 - 2 * value);
 }
 
-async function createDefaultPelikanSpriteDefinition(
-  localization: RoccoLocalization = createRoccoLocalization(),
-): Promise<RoccoSpriteDefinition> {
-  const idleImages = roccoDefaultPelikanAssetUrls.map((uri, index) => ({
+type PelikanCrop = Awaited<ReturnType<typeof createRoccoSpriteAutoCroppedFrames>>;
+
+function createPelikanIdleImages(): RoccoSpriteDefinition['images'] {
+  return roccoDefaultPelikanAssetUrls.map((uri, index) => ({
     id: `rocco-pelikan-${index + 1}`,
     uri,
     width: DEFAULT_PELIKAN_SPRITE_WIDTH,
     height: DEFAULT_PELIKAN_SPRITE_HEIGHT,
   }));
-  const idleFrames = roccoDefaultPelikanAssetUrls.map((_, index) => ({
+}
+
+function createPelikanIdleFrames(): RoccoSpriteDefinition['frames'] {
+  return roccoDefaultPelikanAssetUrls.map((_, index) => ({
     id: makePelikanFrameId(index),
     imageId: `rocco-pelikan-${index + 1}`,
     durationMs: DEFAULT_PELIKAN_FRAME_DURATION_MS,
@@ -92,95 +97,131 @@ async function createDefaultPelikanSpriteDefinition(
       height: 320,
     },
   }));
-  const flightCrop = await createRoccoSpriteAutoCroppedFrames({
+}
+
+function createPelikanCrop(
+  id: string,
+  uri: string,
+  frameIdPrefix: string,
+  durationMs: number,
+  pivot: { x: number; y: number },
+): Promise<PelikanCrop> {
+  return createRoccoSpriteAutoCroppedFrames({
     mode: 'sheet-components',
     sources: [
       {
-        id: PELIKAN_FLIGHT_IMAGE_ID,
-        uri: roccoDefaultPelikanFlightAssetUrl,
+        id,
+        uri,
         width: DEFAULT_PELIKAN_SHEET_WIDTH,
         height: DEFAULT_PELIKAN_SHEET_HEIGHT,
       },
     ],
-    frameIdPrefix: 'pelikan-flight',
-    durationMs: DEFAULT_PELIKAN_FLIGHT_FRAME_DURATION_MS,
+    frameIdPrefix,
+    durationMs,
     alphaThreshold: PELIKAN_SHEET_ALPHA_THRESHOLD,
     padding: PELIKAN_SHEET_FRAME_PADDING,
     minOpaquePixels: PELIKAN_SHEET_MIN_OPAQUE_PIXELS,
-    pivot: { mode: 'relative', x: 0.52, y: 0.55 },
+    pivot: { mode: 'relative', ...pivot },
   });
-  const feedingCrop = await createRoccoSpriteAutoCroppedFrames({
-    mode: 'sheet-components',
-    sources: [
-      {
-        id: PELIKAN_FEEDING_IMAGE_ID,
-        uri: roccoDefaultPelikanFeedingAssetUrl,
-        width: DEFAULT_PELIKAN_SHEET_WIDTH,
-        height: DEFAULT_PELIKAN_SHEET_HEIGHT,
-      },
-    ],
-    frameIdPrefix: 'pelikan-feeding',
-    durationMs: DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS,
-    alphaThreshold: PELIKAN_SHEET_ALPHA_THRESHOLD,
-    padding: PELIKAN_SHEET_FRAME_PADDING,
-    minOpaquePixels: PELIKAN_SHEET_MIN_OPAQUE_PIXELS,
-    pivot: { mode: 'relative', x: 0.55, y: 0.94 },
-  });
+}
+
+async function createPelikanCrops(): Promise<[PelikanCrop, PelikanCrop]> {
+  return Promise.all([
+    createPelikanCrop(
+      PELIKAN_FLIGHT_IMAGE_ID,
+      roccoDefaultPelikanFlightAssetUrl,
+      'pelikan-flight',
+      DEFAULT_PELIKAN_FLIGHT_FRAME_DURATION_MS,
+      { x: 0.52, y: 0.55 },
+    ),
+    createPelikanCrop(
+      PELIKAN_FEEDING_IMAGE_ID,
+      roccoDefaultPelikanFeedingAssetUrl,
+      'pelikan-feeding',
+      DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS,
+      { x: 0.55, y: 0.94 },
+    ),
+  ]);
+}
+
+function createPelikanAnimation(
+  id: string,
+  frameIds: readonly string[],
+  durationMs: number,
+  isLoop: boolean,
+) {
+  return {
+    id,
+    loop: isLoop,
+    playbackRate: 1,
+    frames: frameIds.map((frameId) => ({ frameId, durationMs })),
+  };
+}
+
+function createPelikanAnimations(
+  idleFrames: RoccoSpriteDefinition['frames'],
+  flightCrop: PelikanCrop,
+  feedingCrop: PelikanCrop,
+): RoccoSpriteDefinition['animations'] {
   const feedingWaitFrameId =
     feedingCrop.frameIds.at(-1) ?? feedingCrop.frameIds[0] ?? makePelikanFrameId(0);
+  const poseAnimations = Object.fromEntries(
+    roccoDefaultPelikanAssetUrls.map((_, index) => {
+      const frameId = makePelikanFrameId(index);
+      return [
+        makePelikanPoseAnimationId(index),
+        createPelikanAnimation(
+          makePelikanPoseAnimationId(index),
+          [frameId],
+          DEFAULT_PELIKAN_FRAME_DURATION_MS,
+          false,
+        ),
+      ];
+    }),
+  );
+
+  return {
+    [DEFAULT_PELIKAN_SPRITE_ANIMATION_ID]: createPelikanAnimation(
+      DEFAULT_PELIKAN_SPRITE_ANIMATION_ID,
+      [idleFrames[0]?.id ?? makePelikanFrameId(0)],
+      DEFAULT_PELIKAN_FRAME_DURATION_MS,
+      false,
+    ),
+    [DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID]: createPelikanAnimation(
+      DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID,
+      flightCrop.frameIds,
+      DEFAULT_PELIKAN_FLIGHT_FRAME_DURATION_MS,
+      true,
+    ),
+    [DEFAULT_PELIKAN_FEEDING_ANIMATION_ID]: createPelikanAnimation(
+      DEFAULT_PELIKAN_FEEDING_ANIMATION_ID,
+      feedingCrop.frameIds,
+      DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS,
+      true,
+    ),
+    [DEFAULT_PELIKAN_FEEDING_WAIT_ANIMATION_ID]: createPelikanAnimation(
+      DEFAULT_PELIKAN_FEEDING_WAIT_ANIMATION_ID,
+      [feedingWaitFrameId],
+      DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS,
+      false,
+    ),
+    ...poseAnimations,
+  };
+}
+
+async function createDefaultPelikanSpriteDefinition(
+  localization: RoccoLocalization = createRoccoLocalization(),
+): Promise<RoccoSpriteDefinition> {
+  const idleImages = createPelikanIdleImages();
+  const idleFrames = createPelikanIdleFrames();
+  const [flightCrop, feedingCrop] = await createPelikanCrops();
 
   return {
     id: DEFAULT_PELIKAN_SPRITE_DEFINITION_ID,
     name: 'Rocco Demo Pelikan',
     images: [...idleImages, ...flightCrop.images, ...feedingCrop.images],
     frames: [...idleFrames, ...flightCrop.frames, ...feedingCrop.frames],
-    animations: {
-      [DEFAULT_PELIKAN_SPRITE_ANIMATION_ID]: {
-        id: DEFAULT_PELIKAN_SPRITE_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: makePelikanFrameId(0), durationMs: DEFAULT_PELIKAN_FRAME_DURATION_MS }],
-      },
-      [DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID]: {
-        id: DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID,
-        loop: true,
-        playbackRate: 1,
-        frames: flightCrop.frameIds.map((frameId) => ({
-          frameId,
-          durationMs: DEFAULT_PELIKAN_FLIGHT_FRAME_DURATION_MS,
-        })),
-      },
-      [DEFAULT_PELIKAN_FEEDING_ANIMATION_ID]: {
-        id: DEFAULT_PELIKAN_FEEDING_ANIMATION_ID,
-        loop: true,
-        playbackRate: 1,
-        frames: feedingCrop.frameIds.map((frameId) => ({
-          frameId,
-          durationMs: DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS,
-        })),
-      },
-      [DEFAULT_PELIKAN_FEEDING_WAIT_ANIMATION_ID]: {
-        id: DEFAULT_PELIKAN_FEEDING_WAIT_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [
-          { frameId: feedingWaitFrameId, durationMs: DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS },
-        ],
-      },
-      ...Object.fromEntries(
-        roccoDefaultPelikanAssetUrls.map((_, index) => [
-          makePelikanPoseAnimationId(index),
-          {
-            id: makePelikanPoseAnimationId(index),
-            loop: false,
-            playbackRate: 1,
-            frames: [
-              { frameId: makePelikanFrameId(index), durationMs: DEFAULT_PELIKAN_FRAME_DURATION_MS },
-            ],
-          },
-        ]),
-      ),
-    },
+    animations: createPelikanAnimations(idleFrames, flightCrop, feedingCrop),
     defaultAnimation: DEFAULT_PELIKAN_SPRITE_ANIMATION_ID,
     pivot: {
       x: DEFAULT_PELIKAN_FOOT_PIVOT_X,
@@ -500,14 +541,7 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
   }
 }
 
-export async function installDefaultPelikan(
-  engine: RoccoEngine,
-  options: RoccoDefaultPelikanOptions = {},
-  preloader?: RoccoAssetPreloader,
-): Promise<RoccoDefaultPelikanController> {
-  const definition = await createDefaultPelikanSpriteDefinition(
-    options.localization ?? createRoccoLocalization(),
-  );
+function registerPelikanFlightSound(engine: RoccoEngine): void {
   engine.audio.unregisterSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
   engine.audio.registerSound({
     id: DEFAULT_PELIKAN_FLIGHT_SOUND_ID,
@@ -515,16 +549,22 @@ export async function installDefaultPelikan(
     volume: DEFAULT_PELIKAN_FLIGHT_SOUND_VOLUME,
     loop: false,
   });
+}
+
+async function preloadPelikanAssets(
+  engine: RoccoEngine,
+  definition: RoccoSpriteDefinition,
+  preloader?: RoccoAssetPreloader,
+): Promise<void> {
   try {
     await preloader?.preloadSound(engine, DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
   } catch {
     engine.log('Audio', 'Pelikan flight sound could not be preloaded.');
   }
   await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
-  engine.video.sprites.loadSpriteDefinition(definition);
-  engine.video.sprites.removeSprite(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID);
-  engine.audio.stopSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
+}
 
+function createPelikanSprite(engine: RoccoEngine): void {
   engine.video.sprites.createSpriteFromDefinition(DEFAULT_PELIKAN_SPRITE_DEFINITION_ID, {
     id: DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
     transform: {
@@ -543,6 +583,22 @@ export async function installDefaultPelikan(
     interactive: true,
     collisionEnabled: true,
   });
+}
+
+export async function installDefaultPelikan(
+  engine: RoccoEngine,
+  options: RoccoDefaultPelikanOptions = {},
+  preloader?: RoccoAssetPreloader,
+): Promise<RoccoDefaultPelikanController> {
+  const definition = await createDefaultPelikanSpriteDefinition(
+    options.localization ?? createRoccoLocalization(),
+  );
+  registerPelikanFlightSound(engine);
+  await preloadPelikanAssets(engine, definition, preloader);
+  engine.video.sprites.loadSpriteDefinition(definition);
+  engine.video.sprites.removeSprite(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID);
+  engine.audio.stopSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
+  createPelikanSprite(engine);
   engine.video.render(0);
 
   const feedingCycleDurationMs =

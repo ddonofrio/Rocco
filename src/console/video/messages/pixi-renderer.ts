@@ -2,6 +2,8 @@ import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 
 import type { RoccoRenderableSprite } from '../sprites';
 import type { RoccoSpriteMessageRenderable, RoccoSpriteMessageState } from './types';
+import { drawBubble } from './bubble-renderer';
+import type { BubbleLayout } from './bubble-renderer';
 
 interface MessageNode {
   root: Container;
@@ -15,16 +17,6 @@ interface SpriteBounds {
   y: number;
   width: number;
   height: number;
-}
-
-interface BubbleLayout {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  targetX: number;
-  targetY: number;
-  side: 'left' | 'right' | 'above';
 }
 
 interface BubbleLayoutCandidate {
@@ -42,7 +34,6 @@ const DEFAULT_PADDING_X = 14;
 const DEFAULT_PADDING_Y = 10;
 const DEFAULT_MARGIN = 8;
 const DEFAULT_GAP = 18;
-const DEFAULT_RADIUS = 14;
 
 export class PixiRoccoSpriteMessageRenderer {
   private readonly nodes = new Map<string, MessageNode>();
@@ -134,7 +125,7 @@ export class PixiRoccoSpriteMessageRenderer {
     node.root.visible = true;
     node.text.position.set(DEFAULT_PADDING_X, DEFAULT_PADDING_Y);
 
-    this.drawBubble(node.bubble, message, layout);
+    drawBubble(node.bubble, message, layout);
   }
 
   private resolveObstacleBounds(
@@ -170,76 +161,6 @@ export class PixiRoccoSpriteMessageRenderer {
     };
   }
 
-  private drawBubble(
-    graphics: Graphics,
-    message: RoccoSpriteMessageState,
-    layout: BubbleLayout,
-  ): void {
-    const style = message.style ?? {};
-    const fill = style.bubbleFill ?? (message.mode === 'think' ? '#e6ecd6' : '#dce8c7');
-    const stroke = style.bubbleStroke ?? '#69735f';
-    const strokeWidth = style.bubbleStrokeWidth ?? 2;
-
-    graphics.clear();
-    graphics
-      .roundRect(0, 0, layout.width, layout.height, DEFAULT_RADIUS)
-      .fill(fill)
-      .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
-
-    const targetLocalX = layout.targetX - layout.x;
-    const targetLocalY = layout.targetY - layout.y;
-
-    if (message.mode === 'think') {
-      if (style.showThoughtTrail === false) {
-        return;
-      }
-
-      const dotX = Math.max(18, Math.min(layout.width - 18, targetLocalX));
-      graphics
-        .circle(dotX, layout.height + 8, 5)
-        .fill(fill)
-        .stroke({ color: stroke, width: 1.5, alpha: 1 });
-      graphics
-        .circle((dotX + targetLocalX) / 2, Math.min(targetLocalY - 4, layout.height + 20), 3)
-        .fill(fill);
-      return;
-    }
-
-    if (layout.side === 'right') {
-      const tailY = Math.max(14, Math.min(layout.height - 14, targetLocalY));
-      graphics
-        .poly([0, tailY - 8, 0, tailY + 8, Math.min(-14, targetLocalX), targetLocalY], true)
-        .fill(fill)
-        .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
-      return;
-    }
-
-    if (layout.side === 'left') {
-      const tailY = Math.max(14, Math.min(layout.height - 14, targetLocalY));
-      graphics
-        .poly([layout.width, tailY - 8, layout.width, tailY + 8, Math.max(layout.width + 14, targetLocalX), targetLocalY], true)
-        .fill(fill)
-        .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
-      return;
-    }
-
-    const tailX = Math.max(18, Math.min(layout.width - 18, targetLocalX));
-    graphics
-      .poly(
-        [
-          tailX - 10,
-          layout.height,
-          tailX + 10,
-          layout.height,
-          targetLocalX,
-          Math.max(layout.height + 14, targetLocalY),
-        ],
-        true,
-      )
-      .fill(fill)
-      .stroke({ color: stroke, width: strokeWidth, alpha: 1 });
-  }
-
   private resolveBubbleLayout(
     renderable: RoccoSpriteMessageRenderable,
     spriteBounds: SpriteBounds,
@@ -253,67 +174,99 @@ export class PixiRoccoSpriteMessageRenderer {
     const offsetY = message.offset.y;
 
     if (message.mode === 'think' || message.side === 'above') {
-      return this.chooseBestLayout(
-        [
-          this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX, offsetX, offsetY, 0),
-          this.buildAboveCandidate(
-            renderable,
-            spriteBounds,
-            width,
-            height,
-            targetX - width * 0.45,
-            offsetX,
-            offsetY,
-            20,
-          ),
-          this.buildAboveCandidate(
-            renderable,
-            spriteBounds,
-            width,
-            height,
-            targetX + width * 0.45,
-            offsetX,
-            offsetY,
-            20,
-          ),
-        ],
-        obstacleBounds,
-      );
-  }
-
-  if (message.side === 'left' || message.side === 'right') {
-      return this.chooseBestLayout(
-        [
-          this.buildHorizontalCandidate(
-            renderable,
-            spriteBounds,
-            width,
-            height,
-            message.side,
-            offsetX,
-            offsetY,
-            0,
-          ),
-          this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX, offsetX, offsetY, 240),
-        ],
+      return this.resolveAboveBubbleLayout(
+        renderable,
+        spriteBounds,
+        width,
+        height,
+        targetX,
+        offsetX,
+        offsetY,
         obstacleBounds,
       );
     }
 
+    if (message.side === 'left' || message.side === 'right') {
+      return this.resolveForcedSideBubbleLayout(
+        renderable,
+        spriteBounds,
+        width,
+        height,
+        message.side,
+        targetX,
+        offsetX,
+        offsetY,
+        obstacleBounds,
+      );
+    }
+
+    return this.resolvePreferredSideBubbleLayout(
+      renderable,
+      spriteBounds,
+      width,
+      height,
+      targetX,
+      offsetX,
+      offsetY,
+      obstacleBounds,
+    );
+  }
+
+  private resolveAboveBubbleLayout(
+    renderable: RoccoSpriteMessageRenderable,
+    spriteBounds: SpriteBounds,
+    width: number,
+    height: number,
+    targetX: number,
+    offsetX: number,
+    offsetY: number,
+    obstacleBounds: readonly SpriteBounds[],
+  ): BubbleLayout {
+    return this.chooseBestLayout(
+      [
+        this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX, offsetX, offsetY, 0),
+        this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX - width * 0.45, offsetX, offsetY, 20),
+        this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX + width * 0.45, offsetX, offsetY, 20),
+      ],
+      obstacleBounds,
+    );
+  }
+
+  private resolveForcedSideBubbleLayout(
+    renderable: RoccoSpriteMessageRenderable,
+    spriteBounds: SpriteBounds,
+    width: number,
+    height: number,
+    side: 'left' | 'right',
+    targetX: number,
+    offsetX: number,
+    offsetY: number,
+    obstacleBounds: readonly SpriteBounds[],
+  ): BubbleLayout {
+    return this.chooseBestLayout(
+      [
+        this.buildHorizontalCandidate(renderable, spriteBounds, width, height, side, offsetX, offsetY, 0),
+        this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX, offsetX, offsetY, 240),
+      ],
+      obstacleBounds,
+    );
+  }
+
+  private resolvePreferredSideBubbleLayout(
+    renderable: RoccoSpriteMessageRenderable,
+    spriteBounds: SpriteBounds,
+    width: number,
+    height: number,
+    targetX: number,
+    offsetX: number,
+    offsetY: number,
+    obstacleBounds: readonly SpriteBounds[],
+  ): BubbleLayout {
     const preferredSide = targetX < renderable.designWidth * 0.56 ? 'right' : 'left';
 
     return this.chooseBestLayout(
       [
-        this.buildHorizontalCandidate(
-          renderable,
-          spriteBounds,
-          width,
-          height,
-          preferredSide,
-          offsetX,
-          offsetY,
-          0,
-        ),
+        this.buildHorizontalCandidate(renderable, spriteBounds, width, height, preferredSide, offsetX, offsetY, 0),
         this.buildHorizontalCandidate(
           renderable,
           spriteBounds,

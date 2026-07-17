@@ -54,6 +54,33 @@ function makePierBackgroundScroll(options: RoccoPierSceneOptions) {
   };
 }
 
+function createPierImagePlane(
+  base: ReturnType<typeof makeFullscreenPlaneBase>,
+  options: {
+    id: string;
+    name: string;
+    uri: string;
+    scroll: { x: number; y: number };
+    priority: number;
+    renderLayer: RoccoGraphicPlane['renderLayer'];
+    metadata?: RoccoGraphicPlane['metadata'];
+  },
+): RoccoGraphicPlane {
+  return {
+    ...base,
+    id: options.id,
+    name: options.name,
+    source: {
+      kind: 'image',
+      uri: options.uri,
+    },
+    scroll: options.scroll,
+    priority: options.priority,
+    renderLayer: options.renderLayer,
+    ...(options.metadata && { metadata: options.metadata }),
+  };
+}
+
 function createDefaultRoccoPlanes(options: RoccoPierSceneOptions): RoccoGraphicPlane[] {
   const base = makeFullscreenPlaneBase();
   const backgroundScroll = makePierBackgroundScroll(options);
@@ -70,57 +97,39 @@ function createDefaultRoccoPlanes(options: RoccoPierSceneOptions): RoccoGraphicP
       priority: 0,
       renderLayer: 'background.back',
     },
-    {
-      ...base,
+    createPierImagePlane(base, {
       id: 'rocco-background-back-underlay',
       name: 'Rocco Background Back Underlay',
-      source: {
-        kind: 'image',
-        uri: pierBackgroundAssetUrls.back,
-      },
+      uri: pierBackgroundAssetUrls.back,
       scroll: backgroundScroll,
       priority: -1,
       renderLayer: 'background.main',
-    },
-    {
-      ...base,
+    }),
+    createPierImagePlane(base, {
       id: 'rocco-background-back',
       name: 'Rocco Background Back Layer',
-      source: {
-        kind: 'image',
-        uri: pierBackgroundAssetUrls.back,
-      },
+      uri: pierBackgroundAssetUrls.back,
       scroll: backgroundScroll,
       priority: 0,
       renderLayer: 'background.main',
-      metadata: {
-        waterColorEffect: makeDefaultWaterColorEffect(),
-      },
-    },
-    {
-      ...base,
+      metadata: { waterColorEffect: makeDefaultWaterColorEffect() },
+    }),
+    createPierImagePlane(base, {
       id: 'rocco-background-back-mid',
       name: 'Rocco Background Back Mid Layer',
-      source: {
-        kind: 'image',
-        uri: pierBackgroundAssetUrls.backMid,
-      },
+      uri: pierBackgroundAssetUrls.backMid,
       scroll: backgroundScroll,
       priority: 0,
       renderLayer: 'world.mid',
-    },
-    {
-      ...base,
+    }),
+    createPierImagePlane(base, {
       id: 'rocco-background-front',
       name: 'Rocco Background Front Layer',
-      source: {
-        kind: 'image',
-        uri: pierBackgroundAssetUrls.front,
-      },
+      uri: pierBackgroundAssetUrls.front,
       scroll: backgroundScroll,
       priority: 0,
       renderLayer: 'world.front',
-    },
+    }),
   ];
 }
 

@@ -1,3 +1,6 @@
+
+/* eslint-disable max-lines */
+
 import { Application, Container, Graphics } from 'pixi.js';
 
 import {
@@ -151,140 +154,112 @@ export class RoccoCartridgeMenu {
 
     switch (this.session.page) {
       case 'cartridges': {
-        this.drawBackground(true);
-        this.drawHeader(
-          'SELECT CARTRIDGE',
-          `${this.session.manifests.length} CARTRIDGE${this.session.manifests.length === 1 ? '' : 'S'} AVAILABLE`,
-        );
-        this.drawCartridgeList();
-        this.drawCartridgeDetail();
-        this.drawScrollBar();
-        this.drawFooter([
-          ['UP DOWN', 'NAVIGATE'],
-          ['ENTER', 'LOAD'],
-          ['S', 'SETTINGS'],
-        ]);
-        this.drawSoftButton(
-          DESIGN_W - LIST_X - SOFT_BUTTON_W,
-          FOOTER_Y + 11,
-          SOFT_BUTTON_W,
-          SOFT_BUTTON_H,
-          'SETTINGS',
-          () => {
-            this.session.openSettings();
-            this.render();
-          },
-        );
+        this.renderCartridgePage();
         break;
       }
       case 'settings': {
-        this.drawBackground(true);
-        this.drawHeader('SYSTEM SETTINGS', 'CONSOLE CONFIGURATION');
-        this.settingsRenderer!.drawSettingsHome({
-          settingsOptions: this.getSettingsOptions(),
-          settingsSelectionId: this.settingsSelectionId,
-          displayProfile: this.session.displayProfile,
-          soundProfile: this.session.soundProfile,
-          onSettingsRowPointerDown: (optionId) => {
-            this.onSettingsRowPointerDown(optionId);
-          },
-        });
-        this.drawFooter([
-          ['UP DOWN', 'SELECT'],
-          ['ENTER', 'OPEN'],
-          ['ESC', 'BACK'],
-        ]);
+        this.renderSettingsPage();
         break;
       }
       case 'video': {
-        this.drawBackground(false);
-        this.drawHeader('SYSTEM SETTINGS', 'VIDEO OUTPUT');
-        this.settingsRenderer!.drawVideoSettings({
-          videoSelectionId: this.session.videoSelectionId,
-          displayProfile: this.session.displayProfile,
-          onVideoRowPointerDown: (id) => {
-            this.onVideoRowPointerDown(id);
-          },
-          onVideoDecrease: (id) => {
-            this.session.videoSelectionId = id;
-            this.adjustVideoValue(id, -DISPLAY_STEP);
-          },
-          onVideoIncrease: (id) => {
-            this.session.videoSelectionId = id;
-            this.adjustVideoValue(id, DISPLAY_STEP);
-          },
-        });
-        this.drawFooter([
-          ['UP DOWN', 'SELECT'],
-          ['LEFT RIGHT', 'ADJUST'],
-          ['ESC', 'BACK'],
-        ], {
-          key: 'ESC',
-          label: 'BACK',
-          onPress: () => {
-            this.session.returnFromVideoSettings();
-            this.render();
-          },
-        });
+        this.renderVideoPage();
         break;
       }
       case 'sound': {
-        this.drawBackground(false);
-        this.drawHeader('SYSTEM SETTINGS', 'AUDIO OUTPUT');
-        this.settingsRenderer!.drawSoundSettings({
-          soundSelectionId: this.session.soundSelectionId,
-          soundProfile: this.session.soundProfile,
-          onSoundRowPointerDown: (id) => {
-            this.onSoundRowPointerDown(id);
-          },
-          onSoundDecrease: (id) => {
-            this.session.soundSelectionId = id;
-            this.adjustSoundValue(id, -VOLUME_STEP);
-          },
-          onSoundIncrease: (id) => {
-            this.session.soundSelectionId = id;
-            this.adjustSoundValue(id, VOLUME_STEP);
-          },
-        });
-        this.drawFooter([
-          ['UP DOWN', 'SELECT'],
-          ['LEFT RIGHT', 'ADJUST'],
-          ['ESC', 'BACK'],
-        ], {
-          key: 'ESC',
-          label: 'BACK',
-          onPress: () => {
-            this.session.returnFromSoundSettings();
-            this.render();
-          },
-        });
+        this.renderSoundPage();
         break;
       }
       case 'filters': {
-        this.drawBackground(false);
-        this.drawHeader('SYSTEM SETTINGS', 'VIDEO FILTERS');
-        this.settingsRenderer!.drawFilterSettings({
-          filterSelectionId: this.session.filterSelectionId,
-          displayProfile: this.session.displayProfile,
-          onFilterRowPointerDown: (id) => {
-            this.onFilterRowPointerDown(id);
-          },
-        });
-        this.drawFooter([
-          ['UP DOWN', 'SELECT'],
-          ['LEFT RIGHT', 'TOGGLE'],
-          ['ESC', 'BACK'],
-        ], {
-          key: 'ESC',
-          label: 'BACK',
-          onPress: () => {
-            this.session.returnFromFilterSettings();
-            this.render();
-          },
-        });
+        this.renderFiltersPage();
         break;
       }
     }
+  }
+
+  private renderCartridgePage(): void {
+    this.drawBackground(true);
+    this.drawHeader('SELECT CARTRIDGE', `${this.session.manifests.length} CARTRIDGE${this.session.manifests.length === 1 ? '' : 'S'} AVAILABLE`);
+    this.drawCartridgeList();
+    this.drawCartridgeDetail();
+    this.drawScrollBar();
+    this.drawFooter([['UP DOWN', 'NAVIGATE'], ['ENTER', 'LOAD'], ['S', 'SETTINGS']]);
+    this.drawSoftButton(DESIGN_W - LIST_X - SOFT_BUTTON_W, FOOTER_Y + 11, SOFT_BUTTON_W, SOFT_BUTTON_H, 'SETTINGS', () => {
+      this.session.openSettings();
+      this.render();
+    });
+  }
+
+  private renderSettingsPage(): void {
+    this.drawBackground(true);
+    this.drawHeader('SYSTEM SETTINGS', 'CONSOLE CONFIGURATION');
+    this.settingsRenderer!.drawSettingsHome({
+      settingsOptions: this.getSettingsOptions(),
+      settingsSelectionId: this.settingsSelectionId,
+      displayProfile: this.session.displayProfile,
+      soundProfile: this.session.soundProfile,
+      onSettingsRowPointerDown: (optionId) => this.onSettingsRowPointerDown(optionId),
+    });
+    this.drawFooter([['UP DOWN', 'SELECT'], ['ENTER', 'OPEN'], ['ESC', 'BACK']]);
+  }
+
+  private renderVideoPage(): void {
+    this.drawBackground(false);
+    this.drawHeader('SYSTEM SETTINGS', 'VIDEO OUTPUT');
+    this.settingsRenderer!.drawVideoSettings({
+      videoSelectionId: this.session.videoSelectionId,
+      displayProfile: this.session.displayProfile,
+      onVideoRowPointerDown: (id) => this.onVideoRowPointerDown(id),
+      onVideoDecrease: (id) => {
+        this.session.videoSelectionId = id;
+        this.adjustVideoValue(id, -DISPLAY_STEP);
+      },
+      onVideoIncrease: (id) => {
+        this.session.videoSelectionId = id;
+        this.adjustVideoValue(id, DISPLAY_STEP);
+      },
+    });
+    this.drawSettingsBackFooter(() => this.session.returnFromVideoSettings());
+  }
+
+  private renderSoundPage(): void {
+    this.drawBackground(false);
+    this.drawHeader('SYSTEM SETTINGS', 'AUDIO OUTPUT');
+    this.settingsRenderer!.drawSoundSettings({
+      soundSelectionId: this.session.soundSelectionId,
+      soundProfile: this.session.soundProfile,
+      onSoundRowPointerDown: (id) => this.onSoundRowPointerDown(id),
+      onSoundDecrease: (id) => {
+        this.session.soundSelectionId = id;
+        this.adjustSoundValue(id, -VOLUME_STEP);
+      },
+      onSoundIncrease: (id) => {
+        this.session.soundSelectionId = id;
+        this.adjustSoundValue(id, VOLUME_STEP);
+      },
+    });
+    this.drawSettingsBackFooter(() => this.session.returnFromSoundSettings());
+  }
+
+  private renderFiltersPage(): void {
+    this.drawBackground(false);
+    this.drawHeader('SYSTEM SETTINGS', 'VIDEO FILTERS');
+    this.settingsRenderer!.drawFilterSettings({
+      filterSelectionId: this.session.filterSelectionId,
+      displayProfile: this.session.displayProfile,
+      onFilterRowPointerDown: (id) => this.onFilterRowPointerDown(id),
+    });
+    this.drawSettingsBackFooter(() => this.session.returnFromFilterSettings());
+  }
+
+  private drawSettingsBackFooter(onBack: () => void): void {
+    this.drawFooter([['UP DOWN', 'SELECT'], ['LEFT RIGHT', 'ADJUST'], ['ESC', 'BACK']], {
+      key: 'ESC',
+      label: 'BACK',
+      onPress: () => {
+        onBack();
+        this.render();
+      },
+    });
   }
 
   private drawBackground(isWithDivider: boolean): void {
@@ -418,9 +393,8 @@ export class RoccoCartridgeMenu {
     if (manifest.releaseYear) {
       subParts.push(String(manifest.releaseYear));
     }
-    const subLine = subParts.join(' | ');
-    if (subLine) {
-      const sub = this.makeText(subLine, {
+    if (subParts.length > 0) {
+      const sub = this.makeText(subParts.join(' | '), {
         fontSize: 11,
         fill: C.itemSub,
         letterSpacing: 1,
@@ -486,71 +460,64 @@ export class RoccoCartridgeMenu {
     );
     cy += 14;
 
-    const fields: Array<[string, string | undefined]> = [
-      ['PUBLISHER', localizedManifest.publisher ?? localizedManifest.author],
-      ['YEAR', localizedManifest.releaseYear ? String(localizedManifest.releaseYear) : undefined],
-      ['GENRE', localizedManifest.genre],
-      ['PLAYERS', localizedManifest.players],
-      ['VERSION', localizedManifest.version],
-      ['ID', localizedManifest.id],
-    ];
+    cy = this.drawCartridgeDetailFields(container, localizedManifest, lx, cy);
+    cy = this.drawLocaleOptions(container, manifest, lx, cy);
+    cy = this.drawCartridgeDetailTags(container, localizedManifest.tags, lx, cy);
+    this.drawSoftButton(lx, cy, 100, 30, 'LOAD', () => this.confirm(), true);
+  }
 
+  private drawCartridgeDetailFields(
+    container: Container,
+    manifest: RoccoCartridgeManifest,
+    x: number,
+    startY: number,
+  ): number {
+    const fields: Array<[string, string | undefined]> = [
+      ['PUBLISHER', manifest.publisher ?? manifest.author],
+      ['YEAR', manifest.releaseYear ? String(manifest.releaseYear) : undefined],
+      ['GENRE', manifest.genre],
+      ['PLAYERS', manifest.players],
+      ['VERSION', manifest.version],
+      ['ID', manifest.id],
+    ];
+    let y = startY;
     for (const [label, value] of fields) {
       if (!value) {
         continue;
       }
-
-      const labelText = this.makeText(label, {
-        fontSize: 10,
-        fill: C.detailLabel,
-        letterSpacing: 2,
-      });
-      labelText.x = lx;
-      labelText.y = cy;
+      const labelText = this.makeText(label, { fontSize: 10, fill: C.detailLabel, letterSpacing: 2 });
+      labelText.position.set(x, y);
       container.addChild(labelText);
-
-      const valueText = this.makeText(value, {
-        fontSize: 12,
-        fill: C.detailValue,
-        letterSpacing: 1,
-      });
-      valueText.x = lx + 100;
-      valueText.y = cy;
+      const valueText = this.makeText(value, { fontSize: 12, fill: C.detailValue, letterSpacing: 1 });
+      valueText.position.set(x + 100, y);
       container.addChild(valueText);
-
-      cy += 22;
+      y += 22;
     }
+    return y;
+  }
 
-    cy = this.drawLocaleOptions(container, manifest, lx, cy);
-
-    if (localizedManifest.tags && localizedManifest.tags.length > 0) {
-      cy += 8;
-
-      const tagsLabel = this.makeText('TAGS', {
-        fontSize: 10,
-        fill: C.detailLabel,
-        letterSpacing: 2,
-      });
-      tagsLabel.x = lx;
-      tagsLabel.y = cy;
-      container.addChild(tagsLabel);
-
-      const tagsValue = this.makeText(localizedManifest.tags.join('  '), {
-        fontSize: 10,
-        fill: C.itemSub,
-        letterSpacing: 1,
-        wordWrap: true,
-        wordWrapWidth: DETAIL_W,
-      });
-      tagsValue.x = lx;
-      tagsValue.y = cy + 16;
-      container.addChild(tagsValue);
-      cy += 16 + tagsValue.height + 20;
-    } else {
-      cy += 16;
+  private drawCartridgeDetailTags(
+    container: Container,
+    tags: readonly string[] | undefined,
+    x: number,
+    startY: number,
+  ): number {
+    if (!tags?.length) {
+      return startY + 16;
     }
-
-    this.drawSoftButton(lx, cy, 100, 30, 'LOAD', () => this.confirm(), true);
+    const label = this.makeText('TAGS', { fontSize: 10, fill: C.detailLabel, letterSpacing: 2 });
+    label.position.set(x, startY + 8);
+    container.addChild(label);
+    const value = this.makeText(tags.join('  '), {
+      fontSize: 10,
+      fill: C.itemSub,
+      letterSpacing: 1,
+      wordWrap: true,
+      wordWrapWidth: DETAIL_W,
+    });
+    value.position.set(x, startY + 24);
+    container.addChild(value);
+    return startY + 16 + value.height + 20;
   }
 
   private drawScrollBar(): void {

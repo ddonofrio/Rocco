@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 import { ROCCO_SPRITE_DIRECTIONS } from './types';
 import type {
   RoccoAnimationClip,
@@ -25,6 +27,14 @@ function clamp(value: number, min: number, max: number): number {
 
 function isFiniteNumber(value: number | undefined): value is number {
   return Number.isFinite(value);
+}
+
+function isAtMoveTarget(
+  instance: RoccoSpriteInstance,
+  target: RoccoPoint,
+  stopDistance: number,
+): boolean {
+  return Math.hypot(target.x - instance.transform.x, target.y - instance.transform.y) <= stopDistance;
 }
 
 function toFacingDirection(vx: number, vy: number): RoccoFacingDirection | undefined {
@@ -241,7 +251,7 @@ export class RoccoSpriteMotionAnimationDriver {
     const distance = Math.hypot(dx, dy);
     const stopDistance = options?.stopDistance ?? 1;
 
-    if (distance <= stopDistance) {
+    if (isAtMoveTarget(instance, target, stopDistance)) {
       instance.transform.x = target.x;
       instance.transform.y = target.y;
       instance.motion.velocityX = 0;
@@ -263,20 +273,41 @@ export class RoccoSpriteMotionAnimationDriver {
     const ny = dy / distance;
     const facing = toFacingDirection(nx, ny);
 
-    instance.motion.velocityX = nx * speedX;
-    instance.motion.velocityY = ny * speedY;
-    if (options?.acceleration !== undefined && Number.isFinite(options.acceleration)) {
-      instance.motion.accelerationX = nx * options.acceleration * perspectiveMotionScale.x;
-      instance.motion.accelerationY = ny * options.acceleration * perspectiveMotionScale.y;
-    }
+    this.applyTowardTargetMotion(
+      instance,
+      definition,
+      action,
+      options,
+      nx,
+      ny,
+      speedX,
+      speedY,
+      perspectiveMotionScale,
+      facing,
+    );
 
-    if (facing && options?.facingMode !== 'none') {
-      instance.facing = facing;
-      if (!options?.animation && action) {
-        this.applyAction(instance, definition, action.id, facing, { restart: false });
-      }
-    }
+    return this.advanceTowardTarget(
+      instance,
+      target,
+      options,
+      deltaSeconds,
+      nx,
+      ny,
+      distance,
+      stopDistance,
+    );
+  }
 
+  private advanceTowardTarget(
+    instance: RoccoSpriteInstance,
+    target: RoccoPoint,
+    options: RoccoMoveOptions | undefined,
+    deltaSeconds: number,
+    nx: number,
+    ny: number,
+    distance: number,
+    stopDistance: number,
+  ): boolean {
     const stepX = instance.motion.velocityX * deltaSeconds;
     const stepY = instance.motion.velocityY * deltaSeconds;
     const projectedAdvance = nx * stepX + ny * stepY;
@@ -288,7 +319,6 @@ export class RoccoSpriteMotionAnimationDriver {
       instance.motion.velocityY = 0;
       return true;
     }
-
     const constrained = this.constrainOriginToWalkMap(
       instance,
       instance.transform.x + stepX,
@@ -298,6 +328,32 @@ export class RoccoSpriteMotionAnimationDriver {
     instance.transform.x = constrained.x;
     instance.transform.y = constrained.y;
     return constrained.blocked;
+  }
+
+  private applyTowardTargetMotion(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    action: RoccoSpriteActionProfile | undefined,
+    options: RoccoMoveOptions | undefined,
+    nx: number,
+    ny: number,
+    speedX: number,
+    speedY: number,
+    perspectiveMotionScale: { x: number; y: number },
+    facing: RoccoFacingDirection | undefined,
+  ): void {
+    instance.motion.velocityX = nx * speedX;
+    instance.motion.velocityY = ny * speedY;
+    if (options?.acceleration !== undefined && Number.isFinite(options.acceleration)) {
+      instance.motion.accelerationX = nx * options.acceleration * perspectiveMotionScale.x;
+      instance.motion.accelerationY = ny * options.acceleration * perspectiveMotionScale.y;
+    }
+    if (facing && options?.facingMode !== 'none') {
+      instance.facing = facing;
+      if (!options?.animation && action) {
+        this.applyAction(instance, definition, action.id, facing, { restart: false });
+      }
+    }
   }
 
   private applyMovementOnComplete(

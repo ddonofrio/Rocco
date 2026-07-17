@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
 import type {
@@ -283,6 +285,11 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     this.localization = localization;
     this.options = options;
     this.title = localization.text.levels.baitShopPlaceholderTitle;
+  }
+
+  private syncSecondLevelPresentation(): void {
+    this.syncToiletDoorPresentation();
+    this.syncMagazinePresentation();
   }
 
   private handleMagazineAction(activation: RoccoActionMenuActivation): void {
@@ -696,11 +703,11 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       this.shouldPlayDoorClosingSound = true;
     }
     this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, []);
-    this.syncToiletDoorPresentation();
-    this.syncMagazinePresentation();
+    this.syncSecondLevelPresentation();
 
     return scene;
   }
+
 
   unmount(engine: RoccoEngine): void {
     engine.video.actionMenus.closeMenu();

@@ -1,7 +1,7 @@
 import type { ResourceScope } from '../../lifecycle';
 import type { RoccoCartridgeManifest } from '../types';
 import type { RoccoEngine } from '../../engine-sdk';
-import type { CartridgeSdkV1 } from './api';
+import type { CartridgeCreateSaveRepoOptions, CartridgeSdkV1 } from './api';
 import {
   CARTRIDGE_SDK_V1_CAPABILITIES,
   type CartridgeCapability,
@@ -12,6 +12,76 @@ export interface CreateCartridgeSdkV1Options {
   engine: RoccoEngine;
   scope: ResourceScope;
   manifest: RoccoCartridgeManifest;
+}
+
+function createVideoSdk(engine: RoccoEngine) {
+  return {
+    planes: engine.video.planes,
+    sprites: engine.video.sprites,
+    sceneTargets: engine.video.sceneTargets,
+    actionMenus: engine.video.actionMenus,
+    gridMenus: engine.video.gridMenus,
+    messages: engine.video.messages,
+    primitives: engine.video.primitives,
+    titles: engine.video.titles,
+    display: engine.video.display,
+    preloadAssetUrls: (urls: Parameters<typeof engine.video.preloadAssetUrls>[0]) =>
+      engine.video.preloadAssetUrls(urls),
+    preloadPlaneScene: (scene: Parameters<typeof engine.video.preloadPlaneScene>[0]) =>
+      engine.video.preloadPlaneScene(scene),
+    preloadSpriteDefinition: (
+      definition: Parameters<typeof engine.video.preloadSpriteDefinition>[0],
+    ) => engine.video.preloadSpriteDefinition(definition),
+    preloadSpriteDefinitions: (
+      definitions: Parameters<typeof engine.video.preloadSpriteDefinitions>[0],
+    ) => engine.video.preloadSpriteDefinitions(definitions),
+  };
+}
+
+function createJukeboxSdk(engine: RoccoEngine) {
+  return {
+    registerPlaylist: (playlist: Parameters<typeof engine.jukebox.registerPlaylist>[0]) =>
+      engine.jukebox.registerPlaylist(playlist),
+    unregisterPlaylist: (playlistId: string) => engine.jukebox.unregisterPlaylist(playlistId),
+    playPlaylist: (playlistId: string) => engine.jukebox.playPlaylist(playlistId),
+    stopPlaylist: () => engine.jukebox.stopPlaylist(),
+    isPlaying: () => engine.jukebox.isPlaying(),
+    setVolume: (volume: number) => engine.jukebox.setVolume(volume),
+    getCurrentTrack: () => engine.jukebox.getCurrentTrack(),
+  };
+}
+
+function createEffectsSdk(engine: RoccoEngine) {
+  return {
+    add: (effect: Parameters<typeof engine.effects.add>[0]) => engine.effects.add(effect),
+    remove: (effectId: string) => engine.effects.remove(effectId),
+    enable: (effectId: string) => engine.effects.enable(effectId),
+    disable: (effectId: string) => engine.effects.disable(effectId),
+    update: (effectId: string, patch: Parameters<typeof engine.effects.update>[1]) =>
+      engine.effects.update(effectId, patch),
+  };
+}
+
+function createStorageSdk(engine: RoccoEngine, manifest: RoccoCartridgeManifest) {
+  return {
+    loadPlaneSceneRecord: (sceneId: string) =>
+      engine.persistence.loadPlaneSceneRecord(manifest.id, sceneId),
+    savePlaneScene: (scene: Parameters<typeof engine.persistence.savePlaneScene>[1]) =>
+      engine.persistence.savePlaneScene(manifest.id, scene),
+    createSaveRepository: <TState>(repoOptions: CartridgeCreateSaveRepoOptions<TState>) =>
+      engine.persistence.createSaveRepository<TState>({
+        ...repoOptions,
+        cartridgeId: manifest.id,
+        cartridgeVersion: manifest.version,
+      }),
+  };
+}
+
+function createLoggerSdk(engine: RoccoEngine) {
+  return {
+    log: (channel: string, message: string) => engine.log(channel, message),
+    setStatus: (status: string) => engine.setStatus(status),
+  };
 }
 
 /**
@@ -34,61 +104,17 @@ export function createCartridgeSdkV1(
   ) as readonly CartridgeCapability[];
 
   return {
-    video: {
-      planes: engine.video.planes,
-      sprites: engine.video.sprites,
-      sceneTargets: engine.video.sceneTargets,
-      actionMenus: engine.video.actionMenus,
-      gridMenus: engine.video.gridMenus,
-      messages: engine.video.messages,
-      primitives: engine.video.primitives,
-      titles: engine.video.titles,
-      display: engine.video.display,
-      preloadAssetUrls: (urls) => engine.video.preloadAssetUrls(urls),
-      preloadPlaneScene: (scene) => engine.video.preloadPlaneScene(scene),
-      preloadSpriteDefinition: (definition) =>
-        engine.video.preloadSpriteDefinition(definition),
-      preloadSpriteDefinitions: (definitions) =>
-        engine.video.preloadSpriteDefinitions(definitions),
-    },
+    video: createVideoSdk(engine),
     audio: engine.audio,
-    jukebox: {
-      registerPlaylist: (playlist) => engine.jukebox.registerPlaylist(playlist),
-      unregisterPlaylist: (playlistId) =>
-        engine.jukebox.unregisterPlaylist(playlistId),
-      playPlaylist: (playlistId) => engine.jukebox.playPlaylist(playlistId),
-      stopPlaylist: () => engine.jukebox.stopPlaylist(),
-      isPlaying: () => engine.jukebox.isPlaying(),
-      setVolume: (volume) => engine.jukebox.setVolume(volume),
-      getCurrentTrack: () => engine.jukebox.getCurrentTrack(),
-    },
-    effects: {
-      add: (effect) => engine.effects.add(effect),
-      remove: (effectId) => engine.effects.remove(effectId),
-      enable: (effectId) => engine.effects.enable(effectId),
-      disable: (effectId) => engine.effects.disable(effectId),
-      update: (effectId, patch) => engine.effects.update(effectId, patch),
-    },
+    jukebox: createJukeboxSdk(engine),
+    effects: createEffectsSdk(engine),
     input: {
       acquireInputLease: (ownerId, mode) =>
         engine.acquireInputLease(ownerId, mode),
       getInputMode: () => engine.getInputMode(),
     },
-    storage: {
-      loadPlaneSceneRecord: (sceneId) =>
-        engine.persistence.loadPlaneSceneRecord(manifest.id, sceneId),
-      savePlaneScene: (scene) => engine.persistence.savePlaneScene(manifest.id, scene),
-      createSaveRepository: (repoOptions) =>
-        engine.persistence.createSaveRepository({
-          ...repoOptions,
-          cartridgeId: manifest.id,
-          cartridgeVersion: manifest.version,
-        }),
-    },
-    logger: {
-      log: (channel, message) => engine.log(channel, message),
-      setStatus: (status) => engine.setStatus(status),
-    },
+    storage: createStorageSdk(engine, manifest),
+    logger: createLoggerSdk(engine),
     loadPlaneScene: (scene) => engine.loadPlaneScene(scene),
     serializePlaneScene: (sceneId) => engine.serializePlaneScene(sceneId),
     setPlayerSprite: (instanceId) => engine.setPlayerSprite(instanceId),

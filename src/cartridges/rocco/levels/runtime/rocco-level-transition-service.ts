@@ -1,3 +1,6 @@
+
+/* eslint-disable max-lines */
+
 import type { RoccoEngine } from '../../../../console/engine-sdk';
 import type { RoccoPlaneScene } from '../../../../console/video/planes';
 import type { RoccoSpriteDefinition } from '../../../../console/video/sprites';
@@ -469,41 +472,8 @@ export class RoccoLevelTransitionService {
 
     this.options.setActiveLevel(options.currentLevel);
 
-    let rollbackError: unknown;
-    try {
-      await options.prepared.rollback(options.engine);
-    } catch (error) {
-      rollbackError = error;
-      options.engine.log(
-        'System',
-        `Rollback for level transition '${options.planId}' failed: ${this.describeUnknownError(error)}`,
-      );
-    }
-
-    let restoredScene: RoccoPlaneScene | undefined;
-    let restoreError: unknown;
-    if (!rollbackError && options.currentLevelNeedsRestore) {
-      if (options.currentLevelNeedsCleanupBeforeRestore) {
-        this.safeUnmount(
-          options.engine,
-          options.currentLevel,
-          'previous level while stabilizing a failed unmount',
-        );
-      }
-
-      try {
-        restoredScene =
-          (await options.prepared.remountCurrentLevel?.(
-            options.engine,
-            options.currentLevel,
-          )) ?? (await this.remountCurrentLevel(options.engine, options.currentLevel));
-        if (!restoredScene) {
-          restoreError = new Error('Previous level could not be remounted.');
-        }
-      } catch (error) {
-        restoreError = error;
-      }
-    }
+    const rollbackResult = await this.rollbackAndRestorePreviousLevel(options);
+    const { rollbackError, restoredScene, restoreError } = rollbackResult;
 
     if (rollbackError || restoreError) {
       return {
@@ -536,6 +506,46 @@ export class RoccoLevelTransitionService {
       restoredScene,
       fatalError: undefined,
     };
+  }
+
+  private async rollbackAndRestorePreviousLevel(
+    options: RollbackPreparedTransitionOptions,
+  ): Promise<{
+    rollbackError: unknown;
+    restoredScene: RoccoPlaneScene | undefined;
+    restoreError: unknown;
+  }> {
+    let rollbackError: unknown;
+    try {
+      await options.prepared.rollback(options.engine);
+    } catch (error) {
+      rollbackError = error;
+      options.engine.log(
+        'System',
+        `Rollback for level transition '${options.planId}' failed: ${this.describeUnknownError(error)}`,
+      );
+    }
+
+    if (rollbackError || !options.currentLevelNeedsRestore) {
+      return { rollbackError, restoredScene: undefined, restoreError: undefined };
+    }
+    if (options.currentLevelNeedsCleanupBeforeRestore) {
+      this.safeUnmount(options.engine, options.currentLevel, 'previous level while stabilizing a failed unmount');
+    }
+
+    let restoredScene: RoccoPlaneScene | undefined;
+    let restoreError: unknown;
+    try {
+      restoredScene =
+        (await options.prepared.remountCurrentLevel?.(options.engine, options.currentLevel)) ??
+        (await this.remountCurrentLevel(options.engine, options.currentLevel));
+      if (!restoredScene) {
+        restoreError = new Error('Previous level could not be remounted.');
+      }
+    } catch (error) {
+      restoreError = error;
+    }
+    return { rollbackError, restoredScene, restoreError };
   }
 
   private createClearedActiveLevel(): Parameters<

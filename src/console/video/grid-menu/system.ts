@@ -7,16 +7,16 @@ import type {
   RoccoGridMenuState,
   RoccoGridMenuSystem,
 } from './types';
-
-const DESIGN_WIDTH = 960;
-const DESIGN_HEIGHT = 540;
-const DEFAULT_COLUMNS = 3;
-const DEFAULT_ROWS = 3;
-const DEFAULT_SLOT_SIZE = 72;
-const DEFAULT_GAP = 10;
-const DEFAULT_PADDING = 18;
-const DEFAULT_BUTTON_HEIGHT = 40;
-const DEFAULT_BUTTON_GAP = 14;
+import {
+  DEFAULT_COLUMNS,
+  DEFAULT_ROWS,
+  normalizeDefinition,
+} from './definition';
+import {
+  resolveGridMenuButtonBounds,
+  resolveGridMenuPanelBounds,
+  resolveGridMenuSlotBounds,
+} from './geometry';
 
 interface CarriedGridMenuItem {
   definitionId: string;
@@ -28,120 +28,6 @@ function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
-function resolveDefinitionTitleHeight(definition: RoccoGridMenuDefinition): number {
-  return definition.title && definition.showTitle !== false ? 34 : 0;
-}
-
-function resolveDefinitionHeaderHeight(definition: RoccoGridMenuDefinition): number {
-  return Math.max(0, definition.headerHeight ?? 0);
-}
-
-function resolveColumnOffsets(
-  columns: number,
-  columnOffsets: readonly number[] | undefined,
-): number[] {
-  return Array.from({ length: columns }, (_, index) => {
-    const offset = columnOffsets?.[index];
-    return Number.isFinite(offset) ? Number(offset) : 0;
-  });
-}
-
-function resolveSlotLeft(
-  column: number,
-  slotWidth: number,
-  gap: number,
-  columnOffsets: readonly number[],
-): number {
-  return column * (slotWidth + gap) + (columnOffsets[column] ?? 0);
-}
-
-function resolveContentWidth(
-  columns: number,
-  slotWidth: number,
-  gap: number,
-  columnOffsets: readonly number[],
-): number {
-  let maxRight = 0;
-
-  for (let column = 0; column < columns; column += 1) {
-    const right = resolveSlotLeft(column, slotWidth, gap, columnOffsets) + slotWidth;
-    maxRight = Math.max(maxRight, right);
-  }
-
-  return maxRight;
-}
-
-function normalizeDefinition(definition: RoccoGridMenuDefinition): RoccoGridMenuDefinition {
-  const columns = Math.max(1, Math.floor(definition.columns ?? DEFAULT_COLUMNS));
-  const rows = Math.max(1, Math.floor(definition.rows ?? DEFAULT_ROWS));
-  const slotCount = columns * rows;
-  const slotWidth = Math.max(24, definition.slotWidth ?? definition.slotSize ?? DEFAULT_SLOT_SIZE);
-  const slotHeight = Math.max(
-    24,
-    definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE,
-  );
-  const gap = Math.max(0, definition.gap ?? DEFAULT_GAP);
-  const padding = Math.max(0, definition.padding ?? DEFAULT_PADDING);
-  const headerHeight = resolveDefinitionHeaderHeight(definition);
-  const buttonHeight = Math.max(24, definition.buttonHeight ?? DEFAULT_BUTTON_HEIGHT);
-  const buttonGap = Math.max(0, definition.buttonGap ?? DEFAULT_BUTTON_GAP);
-  const columnOffsets = resolveColumnOffsets(columns, definition.columnOffsets);
-  const contentWidth = resolveContentWidth(columns, slotWidth, gap, columnOffsets);
-  const width = contentWidth + padding * 2;
-  const titleHeight = resolveDefinitionTitleHeight(definition);
-  const buttonSectionHeight =
-    definition.buttons && definition.buttons.length > 0 ? buttonGap + buttonHeight : 0;
-  const height =
-    rows * slotHeight +
-    (rows - 1) * gap +
-    padding * 2 +
-    headerHeight +
-    titleHeight +
-    buttonSectionHeight;
-
-  return {
-    ...clone(definition),
-    layout: definition.layout ?? 'grid',
-    showTitle: definition.showTitle ?? true,
-    columns,
-    rows,
-    slotSize: definition.slotSize ?? DEFAULT_SLOT_SIZE,
-    slotWidth,
-    slotHeight,
-    gap,
-    padding,
-    headerHeight,
-    buttonHeight,
-    buttonGap,
-    columnOffsets,
-    x: definition.x ?? Math.round((DESIGN_WIDTH - width) / 2),
-    y: definition.y ?? Math.round((DESIGN_HEIGHT - height) / 2),
-    renderLayer: definition.renderLayer ?? 'ui',
-    zIndex: definition.zIndex ?? 100,
-    closeOnActivate: definition.closeOnActivate ?? false,
-    closeOnEmptyClick: definition.closeOnEmptyClick ?? false,
-    reorderable: definition.reorderable ?? false,
-    buttons: definition.buttons?.map((button) => clone(button)) ?? [],
-    blockedSlotIndexes: [
-      ...new Set(
-        (definition.blockedSlotIndexes ?? [])
-          .filter((slotIndex) => Number.isFinite(slotIndex))
-          .map((slotIndex) => Math.max(0, Math.min(slotCount - 1, Math.floor(slotIndex)))),
-      ),
-    ],
-    backdropFill: definition.backdropFill ?? '#000000',
-    backdropAlpha: definition.backdropAlpha ?? 0,
-    panelFill: definition.panelFill ?? '#10170f',
-    panelFillAlpha: definition.panelFillAlpha ?? 0.94,
-    panelStroke: definition.panelStroke ?? '#d7e6c5',
-    panelStrokeAlpha: definition.panelStrokeAlpha ?? 0.9,
-    slotFill: definition.slotFill ?? '#182317',
-    slotStroke: definition.slotStroke ?? '#5b704f',
-    hoverStroke: definition.hoverStroke ?? '#8ecf6e',
-    textDecorations: definition.textDecorations?.map((decoration) => clone(decoration)) ?? [],
-    lineDecorations: definition.lineDecorations?.map((decoration) => clone(decoration)) ?? [],
-  };
-}
 
 export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
   private activeDefinition: RoccoGridMenuDefinition | undefined;
@@ -198,28 +84,46 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
 
     const item = this.findItemInSlot(slotIndex);
     if (!this.carriedItem) {
-      if (!item || item.enabled === false) {
-        return undefined;
-      }
+      return this.pickReorderableItem(item, slotIndex);
+    }
 
-      this.removeItem(item.id);
-      this.carriedItem = {
-        definitionId: this.activeDefinition.id,
-        item: clone(item),
-        originSlotIndex: slotIndex,
-      };
-      this.syncCarriedItemState();
+    return this.placeReorderableItem(item, slotIndex);
+  }
 
-      return {
-        kind: 'grid-menu',
-        definitionId: this.activeDefinition.id,
-        interaction: 'pick',
-        itemId: item.id,
-        slotIndex,
-        fromSlotIndex: slotIndex,
-        carriedItem: clone(item),
-        items: this.listActiveItems(),
-      };
+  private pickReorderableItem(
+    item: RoccoGridMenuItem | undefined,
+    slotIndex: number,
+  ): RoccoGridMenuActivation | undefined {
+    if (!this.activeDefinition || !item || item.enabled === false) {
+      return undefined;
+    }
+
+    this.removeItem(item.id);
+    this.carriedItem = {
+      definitionId: this.activeDefinition.id,
+      item: clone(item),
+      originSlotIndex: slotIndex,
+    };
+    this.syncCarriedItemState();
+
+    return {
+      kind: 'grid-menu',
+      definitionId: this.activeDefinition.id,
+      interaction: 'pick',
+      itemId: item.id,
+      slotIndex,
+      fromSlotIndex: slotIndex,
+      carriedItem: clone(item),
+      items: this.listActiveItems(),
+    };
+  }
+
+  private placeReorderableItem(
+    item: RoccoGridMenuItem | undefined,
+    slotIndex: number,
+  ): RoccoGridMenuActivation | undefined {
+    if (!this.activeDefinition || !this.carriedItem) {
+      return undefined;
     }
 
     const placedItem: RoccoGridMenuItem = {
@@ -248,6 +152,20 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
 
     if (item.enabled === false) {
       return undefined;
+    }
+
+    return this.swapReorderableItem(item, placedItem, previousCarriedItem, previousOriginSlotIndex, slotIndex);
+  }
+
+  private swapReorderableItem(
+    item: RoccoGridMenuItem,
+    placedItem: RoccoGridMenuItem,
+    previousCarriedItem: RoccoGridMenuItem,
+    previousOriginSlotIndex: number,
+    slotIndex: number,
+  ): RoccoGridMenuActivation {
+    if (!this.activeDefinition) {
+      throw new Error('Cannot swap an item without an active grid menu.');
     }
 
     this.replaceItem(item.id, placedItem);
@@ -365,7 +283,7 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
       return false;
     }
 
-    const bounds = this.resolvePanelBounds(this.activeDefinition);
+    const bounds = resolveGridMenuPanelBounds(this.activeDefinition);
     return x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
   }
 
@@ -394,7 +312,7 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
         continue;
       }
 
-      const bounds = this.resolveButtonBounds(this.activeDefinition, buttonIndex);
+      const bounds = resolveGridMenuButtonBounds(this.activeDefinition, buttonIndex);
       if (x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height) {
         return button;
       }
@@ -428,7 +346,7 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
         continue;
       }
 
-      const slot = this.resolveSlotBounds(this.activeDefinition, slotIndex);
+      const slot = resolveGridMenuSlotBounds(this.activeDefinition, slotIndex);
       if (x >= slot.x && x <= slot.x + slot.width && y >= slot.y && y <= slot.y + slot.height) {
         return slotIndex;
       }
@@ -463,89 +381,6 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
   private resolveItemSlotIndex(item: RoccoGridMenuItem, fallbackIndex: number): number {
     const rawIndex = item.slotIndex ?? fallbackIndex;
     return Number.isFinite(rawIndex) ? Math.max(0, Math.floor(rawIndex)) : fallbackIndex;
-  }
-
-  private resolvePanelBounds(definition: RoccoGridMenuDefinition): {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } {
-    const columns = definition.columns ?? DEFAULT_COLUMNS;
-    const rows = definition.rows ?? DEFAULT_ROWS;
-    const slotWidth = definition.slotWidth ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
-    const slotHeight = definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
-    const gap = definition.gap ?? DEFAULT_GAP;
-    const padding = definition.padding ?? DEFAULT_PADDING;
-    const headerHeight = resolveDefinitionHeaderHeight(definition);
-    const buttonHeight = definition.buttonHeight ?? DEFAULT_BUTTON_HEIGHT;
-    const buttonGap = definition.buttonGap ?? DEFAULT_BUTTON_GAP;
-    const titleHeight = resolveDefinitionTitleHeight(definition);
-    const buttonSectionHeight =
-      definition.buttons && definition.buttons.length > 0 ? buttonGap + buttonHeight : 0;
-    const columnOffsets = resolveColumnOffsets(columns, definition.columnOffsets);
-
-    return {
-      x: definition.x ?? 0,
-      y: definition.y ?? 0,
-      width: resolveContentWidth(columns, slotWidth, gap, columnOffsets) + padding * 2,
-      height:
-        rows * slotHeight +
-        (rows - 1) * gap +
-        padding * 2 +
-        headerHeight +
-        titleHeight +
-        buttonSectionHeight,
-    };
-  }
-
-  private resolveButtonBounds(
-    definition: RoccoGridMenuDefinition,
-    buttonIndex: number,
-  ): { x: number; y: number; width: number; height: number } {
-    const panel = this.resolvePanelBounds(definition);
-    const padding = definition.padding ?? DEFAULT_PADDING;
-    const buttonGap = definition.buttonGap ?? DEFAULT_BUTTON_GAP;
-    const buttonHeight = definition.buttonHeight ?? DEFAULT_BUTTON_HEIGHT;
-    const buttonCount = Math.max(1, definition.buttons?.length ?? 0);
-    const innerWidth = panel.width - padding * 2;
-    const totalGapWidth = Math.max(0, buttonCount - 1) * buttonGap;
-    const buttonWidth = Math.max(44, (innerWidth - totalGapWidth) / buttonCount);
-    const slotSectionHeight =
-      (definition.rows ?? DEFAULT_ROWS) * (definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE) +
-      (Math.max(0, (definition.rows ?? DEFAULT_ROWS) - 1) * (definition.gap ?? DEFAULT_GAP));
-    const titleHeight = resolveDefinitionTitleHeight(definition);
-    const headerHeight = resolveDefinitionHeaderHeight(definition);
-
-    return {
-      x: panel.x + padding + buttonIndex * (buttonWidth + buttonGap),
-      y: panel.y + padding + headerHeight + titleHeight + slotSectionHeight + buttonGap,
-      width: buttonWidth,
-      height: buttonHeight,
-    };
-  }
-
-  private resolveSlotBounds(
-    definition: RoccoGridMenuDefinition,
-    slotIndex: number,
-  ): { x: number; y: number; width: number; height: number } {
-    const columns = definition.columns ?? DEFAULT_COLUMNS;
-    const slotWidth = definition.slotWidth ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
-    const slotHeight = definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
-    const gap = definition.gap ?? DEFAULT_GAP;
-    const padding = definition.padding ?? DEFAULT_PADDING;
-    const titleHeight = resolveDefinitionTitleHeight(definition);
-    const headerHeight = resolveDefinitionHeaderHeight(definition);
-    const columnOffsets = resolveColumnOffsets(columns, definition.columnOffsets);
-    const column = slotIndex % columns;
-    const row = Math.floor(slotIndex / columns);
-
-    return {
-      x: (definition.x ?? 0) + padding + resolveSlotLeft(column, slotWidth, gap, columnOffsets),
-      y: (definition.y ?? 0) + padding + headerHeight + titleHeight + row * (slotHeight + gap),
-      width: slotWidth,
-      height: slotHeight,
-    };
   }
 
   openMenu(definition: RoccoGridMenuDefinition): void {

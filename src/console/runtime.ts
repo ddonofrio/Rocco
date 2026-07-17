@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 import { Application, Container, Graphics, Text, type Ticker } from 'pixi.js';
 
 import type { RoccoConsoleFlags, RoccoEngine } from './engine-sdk';

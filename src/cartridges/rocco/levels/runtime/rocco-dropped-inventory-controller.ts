@@ -1,3 +1,6 @@
+
+/* eslint-disable max-lines */
+
 import type {
   CartridgeActionDisposition,
   RoccoSceneClickAction,
@@ -214,53 +217,7 @@ export class RoccoDroppedInventoryController {
     const groundSprite = droppedItem.item.groundSprite;
     const scale = Math.max(0.01, groundSprite.scaleRelativeToRoccoBase * playerBaseScale);
 
-    engine.video.sprites.loadSpriteDefinition({
-      id: definitionId,
-      name: `Dropped ${droppedItem.item.label}`,
-      images: [
-        {
-          id: `${definitionId}:image`,
-          uri: groundSprite.imageUri,
-          width: groundSprite.width,
-          height: groundSprite.height,
-        },
-      ],
-      frames: [
-        {
-          id: `${definitionId}:frame`,
-          imageId: `${definitionId}:image`,
-          durationMs: 1000,
-          pivot: {
-            x: groundSprite.width / 2,
-            y: groundSprite.height,
-          },
-        },
-      ],
-      animations: {
-        idle: {
-          id: 'idle',
-          loop: false,
-          playbackRate: 1,
-          frames: [
-            {
-              frameId: `${definitionId}:frame`,
-              durationMs: 1000,
-            },
-          ],
-        },
-      },
-      defaultAnimation: 'idle',
-      render: {
-        renderLayer: groundSprite.renderLayer ?? 'world.behind',
-        zIndex: groundSprite.zIndex ?? 12,
-        depthMode: 'fixed',
-        opacity: 1,
-      },
-      metadata: {
-        pickable: groundSprite.pickable,
-        purpose: 'dropped-inventory-item',
-      },
-    });
+    this.registerDroppedInventorySpriteDefinition(engine, definitionId, droppedItem.item, groundSprite);
     engine.video.sprites.removeSprite(spriteInstanceId);
     engine.video.sprites.createSpriteFromDefinition(definitionId, {
       id: spriteInstanceId,
@@ -284,31 +241,75 @@ export class RoccoDroppedInventoryController {
         pickable: groundSprite.pickable,
       },
     });
-    engine.video.sceneTargets?.unregisterTarget(targetInstanceId);
-    if (groundSprite.pickable) {
-      const paddingX = groundSprite.clickTargetPadding?.x ?? 0;
-      const paddingY = groundSprite.clickTargetPadding?.y ?? 0;
-      const width = Math.max(1, groundSprite.width * scale);
-      const height = Math.max(1, groundSprite.height * scale);
-      engine.video.sceneTargets?.registerTarget({
-        instanceId: targetInstanceId,
-        definitionId: `${definitionId}:target`,
-        shape: {
-          kind: 'rect',
-          x: droppedItem.groundPoint.x - width / 2 - paddingX,
-          y: droppedItem.groundPoint.y - height - paddingY,
-          width: width + paddingX * 2,
-          height: height + paddingY * 2,
-        },
-        priority: DROPPED_INVENTORY_TARGET_PRIORITY,
-        renderLayer: groundSprite.renderLayer ?? 'world.behind',
-        visibleDescription: {
-          enabled: true,
-          text: droppedItem.item.label,
-        },
-      });
-    }
+    this.registerDroppedInventoryTarget(engine, targetInstanceId, definitionId, droppedItem, groundSprite, scale);
     this.activeDroppedInventoryRuntimeIds.add(runtimeId);
+  }
+
+  private registerDroppedInventorySpriteDefinition(
+    engine: RoccoEngine,
+    definitionId: string,
+    item: RoccoInventoryItem,
+    groundSprite: NonNullable<RoccoInventoryItem['groundSprite']>,
+  ): void {
+    engine.video.sprites.loadSpriteDefinition({
+      id: definitionId,
+      name: `Dropped ${item.label}`,
+      images: [{ id: `${definitionId}:image`, uri: groundSprite.imageUri, width: groundSprite.width, height: groundSprite.height }],
+      frames: [{
+        id: `${definitionId}:frame`,
+        imageId: `${definitionId}:image`,
+        durationMs: 1000,
+        pivot: { x: groundSprite.width / 2, y: groundSprite.height },
+      }],
+      animations: {
+        idle: {
+          id: 'idle',
+          loop: false,
+          playbackRate: 1,
+          frames: [{ frameId: `${definitionId}:frame`, durationMs: 1000 }],
+        },
+      },
+      defaultAnimation: 'idle',
+      render: {
+        renderLayer: groundSprite.renderLayer ?? 'world.behind',
+        zIndex: groundSprite.zIndex ?? 12,
+        depthMode: 'fixed',
+        opacity: 1,
+      },
+      metadata: { pickable: groundSprite.pickable, purpose: 'dropped-inventory-item' },
+    });
+  }
+
+  private registerDroppedInventoryTarget(
+    engine: RoccoEngine,
+    targetInstanceId: string,
+    definitionId: string,
+    droppedItem: RoccoDroppedInventoryItemState,
+    groundSprite: NonNullable<RoccoInventoryItem['groundSprite']>,
+    scale: number,
+  ): void {
+    engine.video.sceneTargets?.unregisterTarget(targetInstanceId);
+    if (!groundSprite.pickable) {
+      return;
+    }
+    const paddingX = groundSprite.clickTargetPadding?.x ?? 0;
+    const paddingY = groundSprite.clickTargetPadding?.y ?? 0;
+    const width = Math.max(1, groundSprite.width * scale);
+    const height = Math.max(1, groundSprite.height * scale);
+    engine.video.sceneTargets?.registerTarget({
+      instanceId: targetInstanceId,
+      definitionId: `${definitionId}:target`,
+      shape: {
+        kind: 'rect',
+        x: droppedItem.groundPoint.x - width / 2 - paddingX,
+        y: droppedItem.groundPoint.y - height - paddingY,
+        width: width + paddingX * 2,
+        height: height + paddingY * 2,
+      },
+      priority: DROPPED_INVENTORY_TARGET_PRIORITY,
+      renderLayer: groundSprite.renderLayer ?? 'world.behind',
+      visibleDescription: { enabled: true, text: droppedItem.item.label },
+    });
   }
 
   private findDroppedInventoryItemByTargetInstanceId(

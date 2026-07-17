@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 import type { RoccoGraphicPlane, RoccoImageSource, RoccoPlaneScene } from './planes';
 import type { RoccoSceneTargetDefinition, RoccoSceneTargetHit, RoccoSceneTargetVisibleHit } from './scene-targets';
 import type { RoccoRenderableSprite, RoccoSpriteHit, RoccoSpriteVisiblePixelHit } from './sprites';
@@ -60,14 +62,22 @@ export interface ResolveRuntimeSceneTargetsOptions {
   isPointOnVisibleSpritePixel: (instanceId: string, sceneX: number, sceneY: number) => boolean;
 }
 
-export function resolveRuntimeSceneTargets(
+interface RuntimeSceneTargetLookup {
+  renderableById: ReadonlyMap<string, RoccoRenderableSprite>;
+  spriteSortIndexes: ReadonlyMap<string, number>;
+  runtimePlanesById: ReadonlyMap<string, RoccoGraphicPlane>;
+  planeOccluders: readonly RuntimePlaneOccluder[];
+}
+
+function createRuntimeSceneTargetLookup(
   options: ResolveRuntimeSceneTargetsOptions,
-): RoccoRuntimeResolvedSceneTargets {
+): RuntimeSceneTargetLookup {
+  const renderables = options.renderables;
   const renderableById = new Map(
-    options.renderables.map((renderable) => [renderable.instance.id, renderable] as const),
+    renderables.map((renderable) => [renderable.instance.id, renderable] as const),
   );
   const spriteSortIndexes = new Map(
-    options.renderables.map((renderable, index) => [renderable.instance.id, index] as const),
+    renderables.map((renderable, index) => [renderable.instance.id, index] as const),
   );
   const runtimePlanesById = new Map(
     options.runtimeScene?.planes.map((plane) => [plane.id, plane] as const),
@@ -75,59 +85,108 @@ export function resolveRuntimeSceneTargets(
   const planeOccluders = options.runtimeScene
     ? listRuntimePlaneOccluders(options.runtimeScene, options.resolveRenderLayerZIndex)
     : [];
+  return { renderableById, spriteSortIndexes, runtimePlanesById, planeOccluders };
+}
 
-  const visibleCandidates = [
-    ...options.spriteVisibleHits.flatMap((hit) => {
-      const renderable = renderableById.get(hit.instanceId);
-      const spriteSortIndex = spriteSortIndexes.get(hit.instanceId);
-      if (!renderable || spriteSortIndex === undefined) {
-        return [];
-      }
+function createVisibleSceneTargetCandidates(
+  options: ResolveRuntimeSceneTargetsOptions,
+  lookup: RuntimeSceneTargetLookup,
+): RuntimeSceneTargetCandidate[] {
+  const spriteCandidates = options.spriteVisibleHits.flatMap((hit) => {
+    const renderable = lookup.renderableById.get(hit.instanceId);
+    const spriteSortIndex = lookup.spriteSortIndexes.get(hit.instanceId);
+    if (!renderable || spriteSortIndex === undefined) {
+      return [];
+    }
+    return [{
+      kind: 'sprite' as const,
+      instanceId: hit.instanceId,
+      definitionId: hit.definitionId,
+      renderLayer: renderable.instance.renderLayer,
+      priority: renderable.instance.zIndex,
+      spriteSortIndex,
+      text: hit.text,
+      textKey: hit.textKey,
+    }];
+  });
+  const sceneTargetCandidates = options.sceneTargetVisibleHits.map((hit) => {
+    const definition = options.sceneTargetDefinitions.get(hit.instanceId);
+    return {
+      kind: 'scene-target' as const,
+      instanceId: hit.instanceId,
+      definitionId: hit.definitionId,
+      renderLayer: resolveSceneTargetRenderLayer(definition, lookup.runtimePlanesById),
+      priority: hit.priority,
+      text: hit.text,
+      textKey: hit.textKey,
+    };
+  });
+  return [...spriteCandidates, ...sceneTargetCandidates];
+}
 
-      return [
-        {
-          kind: 'sprite' as const,
-          instanceId: hit.instanceId,
-          definitionId: hit.definitionId,
-          renderLayer: renderable.instance.renderLayer,
-          priority: renderable.instance.zIndex,
-          spriteSortIndex,
-          text: hit.text,
-          textKey: hit.textKey,
-        },
-      ];
-    }),
-    ...options.sceneTargetVisibleHits.map((hit) => {
-      const definition = options.sceneTargetDefinitions.get(hit.instanceId);
-      return {
-        kind: 'scene-target' as const,
-        instanceId: hit.instanceId,
-        definitionId: hit.definitionId,
-        renderLayer: resolveSceneTargetRenderLayer(definition, runtimePlanesById),
-        priority: hit.priority,
-        text: hit.text,
-        textKey: hit.textKey,
-      };
-    }),
-  ];
+function createSceneTargetCandidates(
+  options: ResolveRuntimeSceneTargetsOptions,
+  lookup: RuntimeSceneTargetLookup,
+): RuntimeSceneTargetCandidate[] {
+  const spriteCandidates = options.spriteHits.flatMap((hit) => {
+    const renderable = lookup.renderableById.get(hit.instanceId);
+    const spriteSortIndex = lookup.spriteSortIndexes.get(hit.instanceId);
+    if (!renderable || spriteSortIndex === undefined) {
+      return [];
+    }
+    return [{
+      kind: 'sprite' as const,
+      instanceId: hit.instanceId,
+      definitionId: hit.definitionId,
+      renderLayer: renderable.instance.renderLayer,
+      priority: renderable.instance.zIndex,
+      spriteSortIndex,
+    }];
+  });
+  const sceneTargetCandidates = options.sceneTargetHits.map((hit) => {
+    const definition = options.sceneTargetDefinitions.get(hit.instanceId);
+    return {
+      kind: 'scene-target' as const,
+      instanceId: hit.instanceId,
+      definitionId: hit.definitionId,
+      renderLayer: resolveSceneTargetRenderLayer(definition, lookup.runtimePlanesById),
+      priority: hit.priority,
+    };
+  });
+  return [...spriteCandidates, ...sceneTargetCandidates];
+}
 
-  visibleCandidates.sort((left, right) =>
-    compareSceneCandidatesFrontToBack(left, right, options.resolveRenderLayerZIndex),
-  );
-  const visibleTarget = visibleCandidates.find(
+function findUnoccludedSceneCandidate(
+  candidates: readonly RuntimeSceneTargetCandidate[],
+  options: ResolveRuntimeSceneTargetsOptions,
+  lookup: RuntimeSceneTargetLookup,
+): RuntimeSceneTargetCandidate | undefined {
+  return candidates.find(
     (candidate) =>
       !isSceneCandidateOccluded(
         candidate,
         options.sceneX,
         options.sceneY,
-        planeOccluders,
+        lookup.planeOccluders,
         options.renderables,
-        spriteSortIndexes,
+        lookup.spriteSortIndexes,
         options.resolveRenderLayerZIndex,
         options.isPointOnVisibleSpritePixel,
         options.planeAlphaMasks,
       ),
   );
+}
+
+export function resolveRuntimeSceneTargets(
+  options: ResolveRuntimeSceneTargetsOptions,
+): RoccoRuntimeResolvedSceneTargets {
+  const lookup = createRuntimeSceneTargetLookup(options);
+  const visibleCandidates = createVisibleSceneTargetCandidates(options, lookup);
+
+  visibleCandidates.sort((left, right) =>
+    compareSceneCandidatesFrontToBack(left, right, options.resolveRenderLayerZIndex),
+  );
+  const visibleTarget = findUnoccludedSceneCandidate(visibleCandidates, options, lookup);
   if (visibleTarget?.text) {
     return {
       visibleTarget: {
@@ -141,54 +200,12 @@ export function resolveRuntimeSceneTargets(
     };
   }
 
-  const targetCandidates = [
-    ...options.spriteHits.flatMap((hit) => {
-      const renderable = renderableById.get(hit.instanceId);
-      const spriteSortIndex = spriteSortIndexes.get(hit.instanceId);
-      if (!renderable || spriteSortIndex === undefined) {
-        return [];
-      }
-
-      return [
-        {
-          kind: 'sprite' as const,
-          instanceId: hit.instanceId,
-          definitionId: hit.definitionId,
-          renderLayer: renderable.instance.renderLayer,
-          priority: renderable.instance.zIndex,
-          spriteSortIndex,
-        },
-      ];
-    }),
-    ...options.sceneTargetHits.map((hit) => {
-      const definition = options.sceneTargetDefinitions.get(hit.instanceId);
-      return {
-        kind: 'scene-target' as const,
-        instanceId: hit.instanceId,
-        definitionId: hit.definitionId,
-        renderLayer: resolveSceneTargetRenderLayer(definition, runtimePlanesById),
-        priority: hit.priority,
-      };
-    }),
-  ];
+  const targetCandidates = createSceneTargetCandidates(options, lookup);
 
   targetCandidates.sort((left, right) =>
     compareSceneCandidatesFrontToBack(left, right, options.resolveRenderLayerZIndex),
   );
-  const target = targetCandidates.find(
-    (candidate) =>
-      !isSceneCandidateOccluded(
-        candidate,
-        options.sceneX,
-        options.sceneY,
-        planeOccluders,
-        options.renderables,
-        spriteSortIndexes,
-        options.resolveRenderLayerZIndex,
-        options.isPointOnVisibleSpritePixel,
-        options.planeAlphaMasks,
-      ),
-  );
+  const target = findUnoccludedSceneCandidate(targetCandidates, options, lookup);
 
   return {
     visibleTarget: undefined,

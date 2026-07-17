@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../../../console/engine-sdk';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
@@ -93,6 +95,32 @@ function createDefaultStanPersistentState(): RoccoStanPersistentState {
   return { isIdentified: false };
 }
 
+function createStanAnimations(
+  sleepingFrameId: string,
+  wakingFrameId: string,
+  attentiveFrameId: string,
+  lookLeftFrameId: string,
+  lookRightFrameId: string,
+): RoccoSpriteDefinition['animations'] {
+  return Object.fromEntries(
+    [
+      [DEFAULT_STAN_SLEEPING_ANIMATION_ID, sleepingFrameId],
+      [STAN_WAKE_ANIMATION_ID, wakingFrameId],
+      [STAN_ATTENTIVE_ANIMATION_ID, attentiveFrameId],
+      [STAN_LOOK_LEFT_ANIMATION_ID, lookLeftFrameId],
+      [STAN_LOOK_RIGHT_ANIMATION_ID, lookRightFrameId],
+    ].map(([id, frameId]) => [
+      id,
+      {
+        id,
+        loop: false,
+        playbackRate: 1,
+        frames: [{ frameId, durationMs: STAN_FRAME_DURATION_MS }],
+      },
+    ]),
+  );
+}
+
 async function createDefaultStanSpriteDefinition(
   localization: RoccoLocalization,
   persistentState: RoccoStanPersistentState,
@@ -129,38 +157,13 @@ async function createDefaultStanSpriteDefinition(
     name: 'Pier Beginning Stan',
     images: crop.images,
     frames: crop.frames,
-    animations: {
-      [DEFAULT_STAN_SLEEPING_ANIMATION_ID]: {
-        id: DEFAULT_STAN_SLEEPING_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: sleepingFrameId, durationMs: STAN_FRAME_DURATION_MS }],
-      },
-      [STAN_WAKE_ANIMATION_ID]: {
-        id: STAN_WAKE_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: wakingFrameId, durationMs: STAN_FRAME_DURATION_MS }],
-      },
-      [STAN_ATTENTIVE_ANIMATION_ID]: {
-        id: STAN_ATTENTIVE_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: attentiveFrameId, durationMs: STAN_FRAME_DURATION_MS }],
-      },
-      [STAN_LOOK_LEFT_ANIMATION_ID]: {
-        id: STAN_LOOK_LEFT_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: lookLeftFrameId, durationMs: STAN_FRAME_DURATION_MS }],
-      },
-      [STAN_LOOK_RIGHT_ANIMATION_ID]: {
-        id: STAN_LOOK_RIGHT_ANIMATION_ID,
-        loop: false,
-        playbackRate: 1,
-        frames: [{ frameId: lookRightFrameId, durationMs: STAN_FRAME_DURATION_MS }],
-      },
-    },
+    animations: createStanAnimations(
+      sleepingFrameId,
+      wakingFrameId,
+      attentiveFrameId,
+      lookLeftFrameId,
+      lookRightFrameId,
+    ),
     defaultAnimation: DEFAULT_STAN_SLEEPING_ANIMATION_ID,
     render: {
       renderLayer: DEFAULT_STAN_RENDER_LAYER,

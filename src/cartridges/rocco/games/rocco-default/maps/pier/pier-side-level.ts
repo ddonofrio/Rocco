@@ -80,6 +80,35 @@ export class RoccoPierSideLevel implements RoccoLevel {
     this.mountAmbient = definition.mountAmbient;
   }
 
+  private async installControllers(
+    engine: RoccoEngine,
+    options: RoccoLevelMountOptions,
+    preloader?: RoccoAssetPreloader,
+  ) {
+    const entryConnector =
+      findRoccoLevelConnector(this.connectors, options.entryConnectorId) ?? this.connectors[0];
+    return Promise.all([
+      installDefaultCloud(engine, preloader),
+      installDefaultSprite(
+        engine,
+        {
+          appearance: options.roccoAppearance,
+          initialFacing: entryConnector?.entryFacing ?? 'down',
+          initialPosition: entryConnector?.entryPoint,
+          playIntro: false,
+        },
+        preloader,
+      ),
+      this.mountAmbient?.(
+        engine,
+        this.localization,
+        { stan: { isIdentified: false }, door: { revealed: true } },
+        preloader,
+        options.entryConnectorId,
+      ) ?? Promise.resolve(undefined),
+    ]);
+  }
+
   async mount(
     engine: RoccoEngine,
     options: RoccoLevelMountOptions = {},
@@ -99,24 +128,11 @@ export class RoccoPierSideLevel implements RoccoLevel {
       backgroundScrollX: this.backgroundScrollX,
     }, preloader);
 
-    const entryConnector =
-      findRoccoLevelConnector(this.connectors, options.entryConnectorId) ?? this.connectors[0];
-    const [cloudController, spriteController, ambientController] = await Promise.all([
-      installDefaultCloud(engine, preloader),
-      installDefaultSprite(engine, {
-        appearance: options.roccoAppearance,
-        initialFacing: entryConnector?.entryFacing ?? 'down',
-        initialPosition: entryConnector?.entryPoint,
-        playIntro: false,
-      }, preloader),
-      this.mountAmbient?.(
-        engine,
-        this.localization,
-        { stan: { isIdentified: false }, door: { revealed: true } },
-        preloader,
-        options.entryConnectorId,
-      ) ?? Promise.resolve(undefined),
-    ]);
+    const [cloudController, spriteController, ambientController] = await this.installControllers(
+      engine,
+      options,
+      preloader,
+    );
 
     this.cloudController = cloudController;
     this.spriteController = spriteController;

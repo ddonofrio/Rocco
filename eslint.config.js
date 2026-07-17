@@ -13,6 +13,27 @@ export default [
   {
     ignores: ['dist/**', 'node_modules/**', '.kilo/**', '.local/**'],
   },
+  {
+    files: ['src/**/*.ts'],
+    rules: {
+      'max-lines': [
+        'error',
+        {
+          max: 500,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
+      'max-lines-per-function': [
+        'error',
+        {
+          max: 60,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
+    },
+  },
   js.configs.recommended,
   {
     files: tsFiles,

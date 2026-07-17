@@ -1,3 +1,6 @@
+
+/* eslint-disable max-lines */
+
 import type {
   CartridgeActionDisposition,
   RoccoSceneClickAction,
@@ -344,80 +347,60 @@ export class RoccoDeveloperRuntimeController {
 
   private createDeveloperLevelOptions(): readonly RoccoDeveloperLevelOption[] {
     const resolveLevelTitle = this.options.resolveLevelTitle;
-    const baitShopTitle = resolveLevelTitle(ROCCO_BAIT_SHOP_LEVEL_ID);
+    return [
+      this.createDeveloperPierLevelOption(resolveLevelTitle),
+      this.createDeveloperBaitShopLevelOption(resolveLevelTitle),
+      this.createDeveloperNetherLevelOption(resolveLevelTitle),
+    ];
+  }
+
+  private createDeveloperPierLevelOption(
+    resolveLevelTitle: (levelId: string) => string,
+  ): RoccoDeveloperLevelOption {
+    return {
+      id: 'pier',
+      title: this.localization.text.developer.pierLevelLabel,
+      screens: [ROCCO_PIER_START_LEVEL_ID, ROCCO_PIER_MIDDLE_LEVEL_ID, ROCCO_PIER_END_LEVEL_ID].map(
+        (id) => ({ id, title: resolveLevelTitle(id), targetLevelId: id }),
+      ),
+    };
+  }
+
+  private createDeveloperBaitShopLevelOption(
+    resolveLevelTitle: (levelId: string) => string,
+  ): RoccoDeveloperLevelOption {
+    const title = resolveLevelTitle(ROCCO_BAIT_SHOP_LEVEL_ID);
+    return {
+      id: ROCCO_BAIT_SHOP_LEVEL_ID,
+      title,
+      screens: [
+        { id: ROCCO_BAIT_SHOP_LEVEL_ID, title: `${title} 1`, targetLevelId: ROCCO_BAIT_SHOP_LEVEL_ID },
+        { id: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID, title: `${title} 2`, targetLevelId: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID },
+        {
+          id: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
+          title: resolveLevelTitle(ROCCO_BAIT_SHOP_TOILET_LEVEL_ID),
+          targetLevelId: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
+        },
+      ],
+    };
+  }
+
+  private createDeveloperNetherLevelOption(
+    resolveLevelTitle: (levelId: string) => string,
+  ): RoccoDeveloperLevelOption {
     const netherTitle = resolveLevelTitle(ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID);
     const resetOfficeTitle = resolveLevelTitle(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID);
-
-    return [
-      {
-        id: 'pier',
-        title: this.localization.text.developer.pierLevelLabel,
-        screens: [
-          {
-            id: ROCCO_PIER_START_LEVEL_ID,
-            title: resolveLevelTitle(ROCCO_PIER_START_LEVEL_ID),
-            targetLevelId: ROCCO_PIER_START_LEVEL_ID,
-          },
-          {
-            id: ROCCO_PIER_MIDDLE_LEVEL_ID,
-            title: resolveLevelTitle(ROCCO_PIER_MIDDLE_LEVEL_ID),
-            targetLevelId: ROCCO_PIER_MIDDLE_LEVEL_ID,
-          },
-          {
-            id: ROCCO_PIER_END_LEVEL_ID,
-            title: resolveLevelTitle(ROCCO_PIER_END_LEVEL_ID),
-            targetLevelId: ROCCO_PIER_END_LEVEL_ID,
-          },
-        ],
-      },
-      {
-        id: ROCCO_BAIT_SHOP_LEVEL_ID,
-        title: baitShopTitle,
-        screens: [
-          {
-            id: ROCCO_BAIT_SHOP_LEVEL_ID,
-            title: `${baitShopTitle} 1`,
-            targetLevelId: ROCCO_BAIT_SHOP_LEVEL_ID,
-          },
-          {
-            id: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID,
-            title: `${baitShopTitle} 2`,
-            targetLevelId: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID,
-          },
-          {
-            id: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
-            title: resolveLevelTitle(ROCCO_BAIT_SHOP_TOILET_LEVEL_ID),
-            targetLevelId: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
-          },
-        ],
-      },
-      {
-        id: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
-        title: netherTitle,
-        screens: [
-          {
-            id: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
-            title: `${netherTitle} 1`,
-            targetLevelId: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
-          },
-          {
-            id: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
-            title: `${netherTitle} 2`,
-            targetLevelId: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
-          },
-          {
-            id: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
-            title: `${resetOfficeTitle} 1`,
-            targetLevelId: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
-          },
-          {
-            id: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
-            title: `${resetOfficeTitle} 2`,
-            targetLevelId: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
-          },
-        ],
-      },
-    ];
+    const screens = [
+      [ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID, `${netherTitle} 1`],
+      [ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID, `${netherTitle} 2`],
+      [ROCCO_NETHER_RESET_OFFICE_LEVEL_ID, `${resetOfficeTitle} 1`],
+      [ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID, `${resetOfficeTitle} 2`],
+    ] as const;
+    return {
+      id: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+      title: netherTitle,
+      screens: screens.map(([id, title]) => ({ id, title, targetLevelId: id })),
+    };
   }
 
   private createDeveloperEventLevelOptions(): readonly RoccoDeveloperEventLevelOption[] {

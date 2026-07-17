@@ -4,18 +4,28 @@ import type {
   RoccoGridMenuButton,
   RoccoGridMenuDefinition,
   RoccoGridMenuLineDecoration,
-  RoccoGridMenuItem,
   RoccoGridMenuRenderable,
   RoccoGridMenuTextDecoration,
 } from './types';
-
-interface GridMenuSlotNode {
-  root: Container;
-  frame: Graphics;
-  icon: Sprite;
-  label: Text;
-  imageUri: string;
-}
+import {
+  DEFAULT_BUTTON_GAP,
+  DEFAULT_BUTTON_HEIGHT,
+  DEFAULT_COLUMNS,
+  DEFAULT_GAP,
+  DEFAULT_PADDING,
+  DEFAULT_ROWS,
+  DEFAULT_SLOT_SIZE,
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  resolveColumnOffsets,
+  resolveDefinitionHeaderHeight,
+  resolveDefinitionTitleHeight,
+} from './definition';
+import { resolveGridMenuPanelBounds } from './geometry';
+import {
+  applyGridMenuPanelSlots,
+  type GridMenuSlotNode,
+} from './slot-renderer';
 
 interface GridMenuButtonNode {
   root: Container;
@@ -27,74 +37,6 @@ interface PixiRoccoGridMenuRendererOptions {
   resolveRenderLayerZIndex?: (renderLayer: string) => number;
 }
 
-const DEFAULT_COLUMNS = 3;
-const DEFAULT_ROWS = 3;
-const DEFAULT_SLOT_SIZE = 72;
-const DEFAULT_GAP = 10;
-const DEFAULT_PADDING = 18;
-const DEFAULT_BUTTON_HEIGHT = 40;
-const DEFAULT_BUTTON_GAP = 14;
-const DESIGN_WIDTH = 960;
-const DESIGN_HEIGHT = 540;
-
-function resolveDefinitionTitleHeight(definition: RoccoGridMenuDefinition): number {
-  return definition.title && definition.showTitle !== false ? 34 : 0;
-}
-
-function resolveDefinitionHeaderHeight(definition: RoccoGridMenuDefinition): number {
-  return Math.max(0, definition.headerHeight ?? 0);
-}
-
-function resolveColumnOffsets(
-  columns: number,
-  columnOffsets: readonly number[] | undefined,
-): number[] {
-  return Array.from({ length: columns }, (_, index) => {
-    const offset = columnOffsets?.[index];
-    return Number.isFinite(offset) ? Number(offset) : 0;
-  });
-}
-
-function resolveSlotLeft(
-  column: number,
-  slotWidth: number,
-  gap: number,
-  columnOffsets: readonly number[],
-): number {
-  return column * (slotWidth + gap) + (columnOffsets[column] ?? 0);
-}
-
-function resolveContentWidth(
-  columns: number,
-  slotWidth: number,
-  gap: number,
-  columnOffsets: readonly number[],
-): number {
-  let maxRight = 0;
-
-  for (let column = 0; column < columns; column += 1) {
-    const right = resolveSlotLeft(column, slotWidth, gap, columnOffsets) + slotWidth;
-    maxRight = Math.max(maxRight, right);
-  }
-
-  return maxRight;
-}
-
-function resolveSlotFillAlpha(
-  item: RoccoGridMenuItem | undefined,
-  isHovered: boolean,
-  hasCarriedItem: boolean,
-): number {
-  if (item) {
-    return 0.95;
-  }
-
-  if (isHovered && hasCarriedItem) {
-    return 0.78;
-  }
-
-  return 0.55;
-}
 
 export class PixiRoccoGridMenuRenderer {
   private readonly slotNodes = new Map<number, GridMenuSlotNode>();
@@ -194,81 +136,70 @@ export class PixiRoccoGridMenuRenderer {
     const headerHeight = resolveDefinitionHeaderHeight(definition);
     const titleHeight = resolveDefinitionTitleHeight(definition);
     const columnOffsets = resolveColumnOffsets(columns, definition.columnOffsets);
-    const slotSectionWidth = resolveContentWidth(columns, slotWidth, gap, columnOffsets);
     const slotSectionHeight = rows * slotHeight + (rows - 1) * gap;
-    const buttonSectionHeight =
-      definition.buttons && definition.buttons.length > 0 ? buttonGap + buttonHeight : 0;
-    const width = slotSectionWidth + padding * 2;
-    const height =
-      slotSectionHeight + padding * 2 + headerHeight + titleHeight + buttonSectionHeight;
+    const panelBounds = resolveGridMenuPanelBounds(definition);
 
     panelRoot.position.set(definition.x ?? 0, definition.y ?? 0);
     panelRoot.zIndex = definition.zIndex ?? 100;
 
-    this.panelBackground?.clear();
-    const panelFillAlpha = definition.panelFillAlpha ?? 0.94;
-    const panelStrokeAlpha = definition.panelStrokeAlpha ?? 0.9;
-    if (panelFillAlpha > 0 || panelStrokeAlpha > 0) {
-      const background = this.panelBackground?.roundRect(0, 0, width, height, 10);
-      if (panelFillAlpha > 0) {
-        background?.fill({
-          color: definition.panelFill ?? '#10170f',
-          alpha: panelFillAlpha,
-        });
-      }
-      if (panelStrokeAlpha > 0) {
-        background?.stroke({
-          color: definition.panelStroke ?? '#d7e6c5',
-          width: 2,
-          alpha: panelStrokeAlpha,
-        });
-      }
-    }
+    this.applyPanelBackground(definition, panelBounds.width, panelBounds.height);
 
     this.applyTitle(panelRoot, definition);
     this.applyDecorations(definition);
 
-    const itemsBySlot = new Map<number, RoccoGridMenuItem>();
-    for (const [index, item] of definition.items.entries()) {
-      const slotIndex = Math.max(0, Math.floor(item.slotIndex ?? index));
-      itemsBySlot.set(slotIndex, item);
-    }
-
-    const blockedSlotIndexes = new Set(definition.blockedSlotIndexes);
-    const staleSlots = new Set(this.slotNodes.keys());
-    const slotCount = columns * rows;
-    for (let slotIndex = 0; slotIndex < slotCount; slotIndex += 1) {
-      if (blockedSlotIndexes.has(slotIndex)) {
-        continue;
-      }
-
-      const node = this.ensureSlotNode(panelRoot, slotIndex);
-      const item = itemsBySlot.get(slotIndex);
-      const column = slotIndex % columns;
-      const row = Math.floor(slotIndex / columns);
-      const x = padding + resolveSlotLeft(column, slotWidth, gap, columnOffsets);
-      const y = padding + headerHeight + titleHeight + row * (slotHeight + gap);
-      this.applySlotNode(node, renderable, item, slotIndex, x, y, slotWidth, slotHeight, layout);
-      staleSlots.delete(slotIndex);
-    }
-
-    for (const staleSlot of staleSlots) {
-      const node = this.slotNodes.get(staleSlot);
-      node?.root.removeFromParent();
-      node?.root.destroy({ children: true });
-      this.slotNodes.delete(staleSlot);
-    }
+    applyGridMenuPanelSlots({
+      panelRoot,
+      renderable,
+      columns,
+      columnOffsets,
+      slotCount: columns * rows,
+      padding,
+      headerHeight,
+      titleHeight,
+      slotWidth,
+      slotHeight,
+      gap,
+      layout,
+      slotNodes: this.slotNodes,
+      ensureSlotNode: (root, slotIndex) => this.ensureSlotNode(root, slotIndex),
+      resolveTexture: (imageUri) => this.resolveTexture(imageUri),
+    });
 
     this.applyButtons(
       panelRoot,
       renderable,
-      width,
+      panelBounds.width,
       slotSectionHeight,
       titleHeight,
       padding,
       buttonHeight,
       buttonGap,
     );
+  }
+
+  private applyPanelBackground(
+    definition: RoccoGridMenuDefinition,
+    width: number,
+    height: number,
+  ): void {
+    this.panelBackground?.clear();
+    const panelFillAlpha = definition.panelFillAlpha ?? 0.94;
+    const panelStrokeAlpha = definition.panelStrokeAlpha ?? 0.9;
+    if (panelFillAlpha <= 0 && panelStrokeAlpha <= 0) {
+      return;
+    }
+
+    const background = this.panelBackground?.roundRect(0, 0, width, height, 10);
+    if (panelFillAlpha > 0) {
+      background?.fill({ color: definition.panelFill ?? '#10170f', alpha: panelFillAlpha });
+    }
+    if (panelStrokeAlpha > 0) {
+      background?.stroke({
+        color: definition.panelStroke ?? '#d7e6c5',
+        width: 2,
+        alpha: panelStrokeAlpha,
+      });
+    }
   }
 
   private applyTitle(panelRoot: Container, definition: RoccoGridMenuDefinition): void {
@@ -422,72 +353,6 @@ export class PixiRoccoGridMenuRenderer {
     };
     this.buttonNodes.set(buttonIndex, node);
     return node;
-  }
-
-  private applySlotNode(
-    node: GridMenuSlotNode,
-    renderable: RoccoGridMenuRenderable,
-    item: RoccoGridMenuItem | undefined,
-    slotIndex: number,
-    x: number,
-    y: number,
-    slotWidth: number,
-    slotHeight: number,
-    layout: string,
-  ): void {
-    const definition = renderable.definition;
-    const isHovered = renderable.state.hoveredSlotIndex === slotIndex;
-    const hasCarriedItem = Boolean(renderable.state.carriedItem);
-    const isTextList = layout === 'text-list';
-    const slotFillAlpha = resolveSlotFillAlpha(item, isHovered, hasCarriedItem);
-    node.root.position.set(x, y);
-
-    node.frame.clear();
-    node.frame
-      .roundRect(0, 0, slotWidth, slotHeight, 6)
-      .fill(Object.assign({}, {
-        color: definition.slotFill ?? '#182317',
-        alpha: slotFillAlpha,
-      }))
-      .stroke({
-        color: isHovered ? definition.hoverStroke ?? '#8ecf6e' : definition.slotStroke ?? '#5b704f',
-        width: isHovered ? 3 : 1,
-        alpha: isHovered ? 1 : 0.82,
-      });
-
-    node.icon.visible = Boolean(item?.imageUri) && !isTextList;
-    if (item?.imageUri && !isTextList) {
-      node.icon.texture = this.resolveTexture(item.imageUri);
-      node.imageUri = item.imageUri;
-      const iconSize = Math.round(Math.min(slotWidth, slotHeight) * 0.72);
-      node.icon.position.set(slotWidth / 2, slotHeight / 2 - 4);
-      node.icon.width = iconSize;
-      node.icon.height = iconSize;
-      node.icon.alpha = item.enabled === false ? 0.45 : 1;
-    } else {
-      node.imageUri = '';
-    }
-
-    node.label.text = item?.label ?? '';
-    node.label.visible = Boolean(item?.label);
-    node.label.alpha = item?.enabled === false ? 0.5 : 1;
-    if (isTextList) {
-      node.label.anchor.set(0, 0.5);
-      node.label.x = 16;
-      node.label.y = slotHeight / 2;
-      node.label.style.align = 'left';
-      node.label.style.fontSize = 18;
-      node.label.style.wordWrap = true;
-      node.label.style.wordWrapWidth = Math.max(80, slotWidth - 32);
-    } else {
-      node.label.anchor.set(0.5, 0);
-      node.label.x = slotWidth / 2;
-      node.label.y = slotHeight - 17;
-      node.label.style.align = 'center';
-      node.label.style.fontSize = 10;
-      node.label.style.wordWrap = false;
-      node.label.style.wordWrapWidth = 0;
-    }
   }
 
   private applyButtons(

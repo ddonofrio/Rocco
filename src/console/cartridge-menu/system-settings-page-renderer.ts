@@ -1,3 +1,6 @@
+
+/* eslint-disable max-lines */
+
 import { Container, Graphics } from 'pixi.js';
 
 import {

@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 import { compareRenderableSpritesBackToFront } from './depth';
 import {
   normalizeGoToCompletionOptions,

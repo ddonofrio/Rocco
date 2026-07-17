@@ -18,6 +18,51 @@ function writeBrowserLog(channel: string, message: string): void {
   console.info(formattedMessage);
 }
 
+function createBootErrorPanel(): {
+  panel: HTMLDivElement;
+  title: HTMLHeadingElement;
+  detail: HTMLParagraphElement;
+} {
+  const panel = document.createElement('div');
+  panel.style.width = 'min(560px, 100%)';
+  panel.style.padding = '24px';
+  panel.style.border = '1px solid rgba(248, 113, 113, 0.35)';
+  panel.style.borderRadius = '12px';
+  panel.style.background = 'rgba(17, 19, 15, 0.92)';
+  panel.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.45)';
+
+  const title = document.createElement('h1');
+  title.dataset.roccoBootTitle = 'true';
+  title.style.margin = '0 0 12px';
+  title.style.color = '#fca5a5';
+  title.style.fontFamily = 'Cascadia Mono, Lucida Console, monospace';
+  title.style.fontSize = '20px';
+  title.style.lineHeight = '1.35';
+
+  const detail = document.createElement('p');
+  detail.dataset.roccoBootDetail = 'true';
+  detail.style.margin = '0 0 16px';
+  detail.style.whiteSpace = 'pre-wrap';
+  detail.style.color = '#e5e7eb';
+  detail.style.fontFamily = 'Cascadia Mono, Lucida Console, monospace';
+  detail.style.fontSize = '14px';
+  detail.style.lineHeight = '1.5';
+
+  const retryButton = document.createElement('button');
+  retryButton.dataset.roccoBootRetry = 'true';
+  retryButton.type = 'button';
+  retryButton.textContent = 'Reload';
+  retryButton.style.padding = '10px 14px';
+  retryButton.style.border = '1px solid rgba(252, 165, 165, 0.45)';
+  retryButton.style.borderRadius = '8px';
+  retryButton.style.background = '#2a1717';
+  retryButton.style.color = '#fef2f2';
+  retryButton.style.cursor = 'pointer';
+  retryButton.addEventListener('click', () => location.reload());
+  panel.append(title, detail, retryButton);
+  return { panel, title, detail };
+}
+
 function ensureBootErrorOverlay(host: HTMLElement): {
   overlay: HTMLDivElement;
   title: HTMLHeadingElement;
@@ -37,47 +82,8 @@ function ensureBootErrorOverlay(host: HTMLElement): {
     overlay.style.background =
       'linear-gradient(180deg, rgba(15, 19, 15, 0.96) 0%, rgba(24, 11, 11, 0.96) 100%)';
 
-    const panel = document.createElement('div');
-    panel.style.width = 'min(560px, 100%)';
-    panel.style.padding = '24px';
-    panel.style.border = '1px solid rgba(248, 113, 113, 0.35)';
-    panel.style.borderRadius = '12px';
-    panel.style.background = 'rgba(17, 19, 15, 0.92)';
-    panel.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.45)';
-
-    const title = document.createElement('h1');
-    title.dataset.roccoBootTitle = 'true';
-    title.style.margin = '0 0 12px';
-    title.style.color = '#fca5a5';
-    title.style.fontFamily = 'Cascadia Mono, Lucida Console, monospace';
-    title.style.fontSize = '20px';
-    title.style.lineHeight = '1.35';
-
-    const detail = document.createElement('p');
-    detail.dataset.roccoBootDetail = 'true';
-    detail.style.margin = '0 0 16px';
-    detail.style.whiteSpace = 'pre-wrap';
-    detail.style.color = '#e5e7eb';
-    detail.style.fontFamily = 'Cascadia Mono, Lucida Console, monospace';
-    detail.style.fontSize = '14px';
-    detail.style.lineHeight = '1.5';
-
-    const retryButton = document.createElement('button');
-    retryButton.dataset.roccoBootRetry = 'true';
-    retryButton.type = 'button';
-    retryButton.textContent = 'Reload';
-    retryButton.style.padding = '10px 14px';
-    retryButton.style.border = '1px solid rgba(252, 165, 165, 0.45)';
-    retryButton.style.borderRadius = '8px';
-    retryButton.style.background = '#2a1717';
-    retryButton.style.color = '#fef2f2';
-    retryButton.style.cursor = 'pointer';
-    retryButton.addEventListener('click', () => {
-      location.reload();
-    });
-
-    panel.append(title, detail, retryButton);
-    overlay.append(panel);
+    const panel = createBootErrorPanel();
+    overlay.append(panel.panel);
     host.append(overlay);
   }
 

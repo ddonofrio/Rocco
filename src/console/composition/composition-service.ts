@@ -48,11 +48,7 @@ export interface CompositionService {
    * may update or close its own overlay. When several sessions are open the
    * most recently begun one drives the visible overlay.
    */
-  begin(options: {
-    ownerId: string;
-    mode?: CompositionMode;
-    message?: string;
-  }): CompositionSession;
+  begin(options: { ownerId: string; mode?: CompositionMode; message?: string }): CompositionSession;
 
   /** Message of the active (most recent) session, or `null` when none is open. */
   getActiveMessage(): string | null;
@@ -86,10 +82,6 @@ interface SessionState {
   error: CompositionSerializedError | null;
 }
 
-function nullValue<T>(): T {
-  return JSON.parse('null') as T;
-}
-
 function serializeCompositionError(error: unknown): CompositionSerializedError {
   if (error instanceof Error) {
     return {
@@ -117,7 +109,7 @@ class CompositionSessionImpl implements CompositionSession {
   }
 
   get message(): string | null {
-    return this.service.getSession(this.id)?.message ?? nullValue<string | null>();
+    return this.service.getSession(this.id)?.message ?? null;
   }
 
   get status(): CompositionStatus {
@@ -129,15 +121,15 @@ class CompositionSessionImpl implements CompositionSession {
   }
 
   get completed(): number | null {
-    return this.service.getSession(this.id)?.completed ?? nullValue<number | null>();
+    return this.service.getSession(this.id)?.completed ?? null;
   }
 
   get total(): number | null {
-    return this.service.getSession(this.id)?.total ?? nullValue<number | null>();
+    return this.service.getSession(this.id)?.total ?? null;
   }
 
   get error(): CompositionSerializedError | null {
-    return this.service.getSession(this.id)?.error ?? nullValue<CompositionSerializedError | null>();
+    return this.service.getSession(this.id)?.error ?? null;
   }
 
   report(progress: CompositionProgress): void {
@@ -205,12 +197,12 @@ export class CompositionServiceImpl implements CompositionService {
     const state: SessionState = {
       id,
       ownerId: options.ownerId,
-      message: options.message ?? nullValue<string | null>(),
+      message: options.message ?? null,
       mode: options.mode ?? 'exclusive',
       status: 'active',
-      completed: nullValue<number | null>(),
-      total: nullValue<number | null>(),
-      error: nullValue<CompositionSerializedError | null>(),
+      completed: null,
+      total: null,
+      error: null,
     };
     this.sessions.set(id, state);
     this.order.push(id);
@@ -272,17 +264,17 @@ export class CompositionServiceImpl implements CompositionService {
 
   getActiveMessage(): string | null {
     const active = this.activeSession();
-    return active ? active.message : nullValue<string | null>();
+    return active ? active.message : null;
   }
 
   getActiveStatus(): CompositionStatus | null {
     const active = this.activeSession();
-    return active ? active.status : nullValue<CompositionStatus | null>();
+    return active ? active.status : null;
   }
 
   getActiveSessionInfo(): CompositionSessionInfo | null {
     const active = this.activeSession();
-    return active ? this.toSessionInfo(active) : nullValue<CompositionSessionInfo | null>();
+    return active ? this.toSessionInfo(active) : null;
   }
 
   listSessions(): readonly CompositionSessionInfo[] {

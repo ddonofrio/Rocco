@@ -35,18 +35,13 @@ failed transition disposes the session without ever displaying `100%`.
 ## Wiring
 
 `GameRuntime` owns one `CompositionServiceImpl` and subscribes
-`onChange(() => syncCompositionOverlay())`. Overlay rendering uses the real
-screen dimensions (`app.screen`) instead of the previous hardcoded
-`10000×10000` background and `480,270` text anchor.
-
-## Legacy compatibility
-
-`RoccoEngine.beginComposition` / `endComposition` / `setCompositionText` are
-retained as `@deprecated` shims delegating to a single tracked
-`'legacy-composition'` session. New code must use `beginCompositionSession`.
+`onChange(() => syncCompositionOverlay())`. `RuntimeCompositionPresenter` owns
+the Pixi overlay nodes and renders them using the real screen dimensions
+(`app.screen`) instead of a hardcoded background or text anchor.
 
 ## Files
 
 - `composition-service.ts` — `CompositionSession`, `CompositionService`,
   `CompositionOwnershipError`, and the default implementation.
+- `../runtime-composition-presenter.ts` — Pixi overlay presentation and cleanup.
 - `index.ts` — public barrel.

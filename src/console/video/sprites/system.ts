@@ -1,5 +1,3 @@
-/* eslint-disable max-lines */
-
 import { compareRenderableSpritesBackToFront } from './depth';
 import {
   normalizeGoToCompletionOptions,
@@ -71,9 +69,7 @@ function normalizeExponentialInterpolation(value: number): number {
     return clampedValue;
   }
 
-  return (
-    (Math.exp(DEFAULT_EXPONENTIAL_SCALE_CURVE_STRENGTH * clampedValue) - 1) / denominator
-  );
+  return (Math.exp(DEFAULT_EXPONENTIAL_SCALE_CURVE_STRENGTH * clampedValue) - 1) / denominator;
 }
 
 interface WalkMapConstraintResult {
@@ -161,7 +157,10 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     return definition;
   }
 
-  private assertAnimationExists(definition: RoccoSpriteDefinition, animationId: string): RoccoAnimationClip {
+  private assertAnimationExists(
+    definition: RoccoSpriteDefinition,
+    animationId: string,
+  ): RoccoAnimationClip {
     const clip = definition.animations[animationId];
     if (!clip) {
       throw new Error(`Sprite definition '${definition.id}' has no animation '${animationId}'.`);
@@ -172,7 +171,10 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     return clip;
   }
 
-  private assertActionExists(definition: RoccoSpriteDefinition, actionId: string): RoccoSpriteActionProfile {
+  private assertActionExists(
+    definition: RoccoSpriteDefinition,
+    actionId: string,
+  ): RoccoSpriteActionProfile {
     const action = definition.actions?.[actionId];
     if (!action) {
       throw new Error(`Sprite definition '${definition.id}' has no action '${actionId}'.`);
@@ -273,7 +275,9 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     const interpolation = clamp((groundPoint.y - farY) / (nearY - farY), 0, 1);
     const scaleCurve = this.resolvePerspectiveAutoAdjustScaleCurve(resolvedPerspectiveByY);
     if (scaleCurve === 'logarithmic') {
-      return Math.exp(Math.log(farScale) + (Math.log(nearScale) - Math.log(farScale)) * interpolation);
+      return Math.exp(
+        Math.log(farScale) + (Math.log(nearScale) - Math.log(farScale)) * interpolation,
+      );
     }
 
     if (scaleCurve === 'exponential') {
@@ -440,7 +444,9 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     definition: RoccoSpriteDefinition,
     navigation?: RoccoSpriteNavigationBinding,
   ): RoccoPoint {
-    return navigation?.groundAnchor ?? definition.groundAnchor ?? { x: 0, y: definition.baseline ?? 0 };
+    return (
+      navigation?.groundAnchor ?? definition.groundAnchor ?? { x: 0, y: definition.baseline ?? 0 }
+    );
   }
 
   private shouldConstrainOriginToWalkMap(
@@ -451,7 +457,9 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       return false;
     }
 
-    return Boolean(instance.navigation?.walkMapId) && instance.navigation?.constrainMovement !== false;
+    return (
+      Boolean(instance.navigation?.walkMapId) && instance.navigation?.constrainMovement !== false
+    );
   }
 
   private resolvePerspectiveAutoAdjustConfig(
@@ -524,8 +532,15 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     };
   }
 
-  private constrainInstanceToWalkMap(instance: RoccoSpriteInstance): { instance: RoccoSpriteInstance; blocked: boolean } {
-    const constrained = this.constrainOriginToWalkMap(instance, instance.transform.x, instance.transform.y);
+  private constrainInstanceToWalkMap(instance: RoccoSpriteInstance): {
+    instance: RoccoSpriteInstance;
+    blocked: boolean;
+  } {
+    const constrained = this.constrainOriginToWalkMap(
+      instance,
+      instance.transform.x,
+      instance.transform.y,
+    );
     instance.transform.x = constrained.x;
     instance.transform.y = constrained.y;
     return { instance, blocked: constrained.blocked };
@@ -612,7 +627,8 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       distance = 1;
     }
 
-    const keepDistance = options.keepDistance ?? this.resolveDefaultApproachDistance(instance, definition);
+    const keepDistance =
+      options.keepDistance ?? this.resolveDefaultApproachDistance(instance, definition);
     return {
       x: targetGround.x + (dx / distance) * keepDistance,
       y: targetGround.y + (dy / distance) * keepDistance,
@@ -643,7 +659,10 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
   }
 
   listWalkMaps(): RoccoSpriteWalkMap[] {
-    return this.walkMaps.values().map((walkMap) => clone(walkMap)).toArray();
+    return this.walkMaps
+      .values()
+      .map((walkMap) => clone(walkMap))
+      .toArray();
   }
 
   registerSpriteDefinition(definition: RoccoSpriteDefinition): void {
@@ -681,7 +700,9 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
   }
 
   async preloadDefinitionAssets(definition: RoccoSpriteDefinition): Promise<void> {
-    const loads = definition.images.map((image) => this.visualHelper.queueAlphaMaskLoad(image, definition.id));
+    const loads = definition.images.map((image) =>
+      this.visualHelper.queueAlphaMaskLoad(image, definition.id),
+    );
     await Promise.all(loads);
     this.visualHelper.clearVisualCachesForDefinition(definition.id);
   }
@@ -723,10 +744,17 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
   }
 
   listSprites(): RoccoSpriteInstance[] {
-    return this.instances.values().map((instance) => clone(instance)).toArray();
+    return this.instances
+      .values()
+      .map((instance) => clone(instance))
+      .toArray();
   }
 
-  playAnimation(instanceId: string, animationId: string, options?: RoccoPlayAnimationOptions): void {
+  playAnimation(
+    instanceId: string,
+    animationId: string,
+    options?: RoccoPlayAnimationOptions,
+  ): void {
     const instance = this.requireInstance(instanceId);
     const definition = this.requireDefinition(instance.definitionId);
     this.motionAnimationDriver.playAnimation(instance, definition, animationId, options);
@@ -791,7 +819,10 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     instance.transform.flipY = isFlipY;
   }
 
-  setPresentationTransform(instanceId: string, transform: Partial<RoccoSpritePresentationTransform>): void {
+  setPresentationTransform(
+    instanceId: string,
+    transform: Partial<RoccoSpritePresentationTransform>,
+  ): void {
     const instance = this.requireInstance(instanceId);
     instance.transform.presentation = {
       ...instance.transform.presentation,
@@ -896,7 +927,9 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     if (instance.motion.command) {
       return true;
     }
-    return Math.abs(instance.motion.velocityX) > EPSILON || Math.abs(instance.motion.velocityY) > EPSILON;
+    return (
+      Math.abs(instance.motion.velocityX) > EPSILON || Math.abs(instance.motion.velocityY) > EPSILON
+    );
   }
 
   setFacing(instanceId: string, facing: RoccoFacingDirection): void {
@@ -954,7 +987,11 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
       constrainMovement: binding.constrainMovement ?? true,
       followSurface: binding.followSurface ?? true,
     };
-    const constrained = this.constrainOriginToWalkMap(instance, instance.transform.x, instance.transform.y);
+    const constrained = this.constrainOriginToWalkMap(
+      instance,
+      instance.transform.x,
+      instance.transform.y,
+    );
     instance.transform.x = constrained.x;
     instance.transform.y = constrained.y;
   }
@@ -998,7 +1035,10 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
     );
 
     for (const renderable of renderables) {
-      const description = this.resolveVisibleDescription(renderable.instance, renderable.definition);
+      const description = this.resolveVisibleDescription(
+        renderable.instance,
+        renderable.definition,
+      );
       if (!description) {
         continue;
       }
@@ -1050,7 +1090,10 @@ export class RoccoSpriteSystemSDK implements RoccoSpriteSystem {
 
     const subjectDefinition = this.requireDefinition(subject.definitionId);
     const subjectFrame = this.resolveActiveFrame(subjectDefinition, subject);
-    const subjectShapes = this.collisionHelper.resolveCollisionShapes(subjectDefinition, subjectFrame);
+    const subjectShapes = this.collisionHelper.resolveCollisionShapes(
+      subjectDefinition,
+      subjectFrame,
+    );
     if (subjectShapes.length === 0) {
       return hits;
     }

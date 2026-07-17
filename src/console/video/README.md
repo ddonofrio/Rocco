@@ -29,20 +29,20 @@ display.profile      90
 
 ## Subsystems
 
-| Directory          | Purpose                                                   |
-| ------------------ | --------------------------------------------------------- |
-| `planes/`          | Layered graphic backgrounds and plane scenes              |
-| `sprites/`         | Animated entities, motion, action profiles, and walk maps |
-| `scene-targets/`   | Invisible rect, circle, and polygon hotspots              |
-| `action-menu/`     | SCUMM-style radial action menus                           |
+| Directory          | Purpose                                                                      |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `planes/`          | Layered graphic backgrounds and plane scenes                                 |
+| `sprites/`         | Animated entities, motion, action profiles, and walk maps                    |
+| `scene-targets/`   | Invisible rect, circle, and polygon hotspots                                 |
+| `action-menu/`     | SCUMM-style radial action menus                                              |
 | `grid-menu/`       | Generic slot-panel menus, text choice lists, slot reorder, and item payloads |
-| `messages/`        | Sprite-anchored speech and thought bubbles                |
-| `primitives/`      | Debug shapes                                              |
-| `titles/`          | Temporary text overlays and hover descriptions            |
-| `display/`         | CRT-style display profile                                 |
-| `cursor/`          | Custom cursor, image attachments, and pointer coordinates |
-| `viewport/`        | Runtime-owned fullscreen contain-scaling host             |
-| `post-processing/` | Pixel-level helpers and water effects                     |
+| `messages/`        | Sprite-anchored speech and thought bubbles                                   |
+| `primitives/`      | Debug shapes                                                                 |
+| `titles/`          | Temporary text overlays and hover descriptions                               |
+| `display/`         | CRT-style display profile                                                    |
+| `cursor/`          | Custom cursor, image attachments, and pointer coordinates                    |
+| `viewport/`        | Runtime-owned fullscreen contain-scaling host                                |
+| `post-processing/` | Pixel-level helpers and water effects                                        |
 
 ## Architecture Notes
 
@@ -52,19 +52,20 @@ display.profile      90
 - `sceneTargets` are console-owned interactive regions with no rendered sprite; input resolves hover and clicks across sprites plus scene targets.
 - Plane `depthMode` can resolve a runtime render layer from sprite state, including player-aware front/back swaps driven by the active player sprite.
 - Rendering is initiated by `GameRuntime`; subsystems do not self-render.
-- Cartridges should call `engine.video` SDK modules and avoid Pixi renderer internals.
+- SDK v1 cartridges should call `sdk.video` modules and avoid Pixi renderer internals; legacy cartridges use their explicit engine context.
 
 ## Cartridge-Facing Entry Points
 
 - `engine.video.preloadAssetUrls(assetUrls)` preloads raw image or UI asset URLs that belong to the console video layer.
 - `engine.video.preloadPlaneScene(scene)` and `engine.video.preloadSpriteDefinition(definition)` preload scene and sprite-definition assets.
+- PixiJS `Assets.load` does not accept an `AbortSignal`; transition cancellation therefore invalidates the transition's consumption at its lifecycle boundary, while the in-flight Pixi load remains owned by Pixi and is not described as network cancellation.
 - Use `engine.loadPlaneScene(scene)` through the engine SDK surface when replacing the active scene so runtime bookkeeping stays in sync.
 - `engine.video.planes` handles plane-level inspection and mutation after a scene is active, including planes that resolve their render layer dynamically at render time.
 - `engine.video.sprites`, `sceneTargets`, `actionMenus`, `gridMenus`, `messages`, `primitives`, `titles`, and `display` expose cartridge-facing visual capabilities.
 - The default runtime always wires `sceneTargets`, but the top-level `RoccoVideoSystem` interface keeps it optional so alternative implementations can omit it.
 - `engine.video.viewport` exists for runtime coordination with the browser host. Cartridges should treat viewport lifecycle and DOM ownership as runtime-internal.
 - The active player selected through `engine.setPlayerSprite(id | null)` is also used by player-aware plane depth modes.
-- `engine.video.render(0)` can be used to force an immediate visual sync after scripted changes.
+- The console render loop synchronizes visual state after scripted changes; cartridges do not call the kernel render method.
 
 ## Reading Next
 

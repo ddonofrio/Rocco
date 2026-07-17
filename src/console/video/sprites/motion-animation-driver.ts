@@ -1,5 +1,3 @@
-/* eslint-disable max-lines */
-
 import { ROCCO_SPRITE_DIRECTIONS } from './types';
 import type {
   RoccoAnimationClip,
@@ -34,7 +32,9 @@ function isAtMoveTarget(
   target: RoccoPoint,
   stopDistance: number,
 ): boolean {
-  return Math.hypot(target.x - instance.transform.x, target.y - instance.transform.y) <= stopDistance;
+  return (
+    Math.hypot(target.x - instance.transform.x, target.y - instance.transform.y) <= stopDistance
+  );
 }
 
 function toFacingDirection(vx: number, vy: number): RoccoFacingDirection | undefined {
@@ -47,7 +47,9 @@ function toFacingDirection(vx: number, vy: number): RoccoFacingDirection | undef
   return ROCCO_SPRITE_DIRECTIONS[index] ?? 'right';
 }
 
-function toHorizontalSideFacing(direction: RoccoFacingDirection | undefined): 'left' | 'right' | undefined {
+function toHorizontalSideFacing(
+  direction: RoccoFacingDirection | undefined,
+): 'left' | 'right' | undefined {
   if (!direction) {
     return undefined;
   }
@@ -97,8 +99,14 @@ interface WalkMapConstraintResult {
 
 interface RoccoSpriteMotionAnimationDriverOptions {
   requireDefinition: (definitionId: string) => RoccoSpriteDefinition;
-  assertAnimationExists: (definition: RoccoSpriteDefinition, animationId: string) => RoccoAnimationClip;
-  assertActionExists: (definition: RoccoSpriteDefinition, actionId: string) => RoccoSpriteActionProfile;
+  assertAnimationExists: (
+    definition: RoccoSpriteDefinition,
+    animationId: string,
+  ) => RoccoAnimationClip;
+  assertActionExists: (
+    definition: RoccoSpriteDefinition,
+    actionId: string,
+  ) => RoccoSpriteActionProfile;
   constrainOriginToWalkMap: (
     instance: RoccoSpriteInstance,
     nextX: number,
@@ -156,8 +164,10 @@ export class RoccoSpriteMotionAnimationDriver {
     definition: RoccoSpriteDefinition,
     deltaSeconds: number,
   ): void {
-    const perspectiveMotionScale =
-      this.resolvePerspectiveAutoAdjustMotionScale(instance, definition) ?? { x: 1, y: 1 };
+    const perspectiveMotionScale = this.resolvePerspectiveAutoAdjustMotionScale(
+      instance,
+      definition,
+    ) ?? { x: 1, y: 1 };
 
     instance.motion.velocityX += instance.motion.accelerationX * deltaSeconds;
     instance.motion.velocityY += instance.motion.accelerationY * deltaSeconds;
@@ -217,7 +227,9 @@ export class RoccoSpriteMotionAnimationDriver {
       }
 
       const currentTarget = command.path[command.currentIndex] ?? command.path.at(-1);
-      if (this.driveTowardTarget(instance, definition, currentTarget, command.options, deltaSeconds)) {
+      if (
+        this.driveTowardTarget(instance, definition, currentTarget, command.options, deltaSeconds)
+      ) {
         command.currentIndex += 1;
         if (command.currentIndex >= command.path.length) {
           instance.motion.command = undefined;
@@ -228,7 +240,13 @@ export class RoccoSpriteMotionAnimationDriver {
     }
 
     if (command.kind === 'move-to') {
-      const isReached = this.driveTowardTarget(instance, definition, command.target, command.options, deltaSeconds);
+      const isReached = this.driveTowardTarget(
+        instance,
+        definition,
+        command.target,
+        command.options,
+        deltaSeconds,
+      );
       if (isReached) {
         instance.motion.command = undefined;
         this.applyMovementOnComplete(instance, definition, command.options);
@@ -261,8 +279,10 @@ export class RoccoSpriteMotionAnimationDriver {
 
     const action = this.resolveMovementAction(definition, options);
     const baseSpeed = options?.speed ?? action?.speed ?? instance.motion.maxSpeed ?? 120;
-    const perspectiveMotionScale =
-      this.resolvePerspectiveAutoAdjustMotionScale(instance, definition) ?? { x: 1, y: 1 };
+    const perspectiveMotionScale = this.resolvePerspectiveAutoAdjustMotionScale(
+      instance,
+      definition,
+    ) ?? { x: 1, y: 1 };
     const speedX = baseSpeed * perspectiveMotionScale.x;
     const speedY = baseSpeed * perspectiveMotionScale.y;
     if (speedX <= 0 && speedY <= 0) {
@@ -364,7 +384,9 @@ export class RoccoSpriteMotionAnimationDriver {
     const movementFacing = instance.facing ?? definition.defaultFacing ?? 'down';
     const targetFacing = this.resolveCompletionTargetFacing(instance, definition, options);
     const completionFacing = targetFacing ?? movementFacing;
-    if (this.applyDeferredIdleSettle(instance, definition, movementFacing, completionFacing, options)) {
+    if (
+      this.applyDeferredIdleSettle(instance, definition, movementFacing, completionFacing, options)
+    ) {
       return;
     }
 
@@ -412,7 +434,9 @@ export class RoccoSpriteMotionAnimationDriver {
       settledFacing = toDiagonalFacingFromFacing('down', sideFacing);
     }
 
-    this.applyAction(instance, definition, actionId, sideFacing ?? completionFacing, { restart: true });
+    this.applyAction(instance, definition, actionId, sideFacing ?? completionFacing, {
+      restart: true,
+    });
     instance.motion.idleSettle = {
       elapsedMs: 0,
       delayMs,
@@ -433,7 +457,10 @@ export class RoccoSpriteMotionAnimationDriver {
       return;
     }
 
-    const facing = toFacingDirection(target.x - instance.transform.x, target.y - instance.transform.y);
+    const facing = toFacingDirection(
+      target.x - instance.transform.x,
+      target.y - instance.transform.y,
+    );
     if (!facing || options?.facingMode === 'none') {
       return;
     }
@@ -464,9 +491,15 @@ export class RoccoSpriteMotionAnimationDriver {
       return;
     }
 
-    this.applyAction(instance, definition, actionId, instance.facing ?? definition.defaultFacing ?? 'down', {
-      restart: false,
-    });
+    this.applyAction(
+      instance,
+      definition,
+      actionId,
+      instance.facing ?? definition.defaultFacing ?? 'down',
+      {
+        restart: false,
+      },
+    );
   }
 
   private resolveMovementAction(
@@ -515,7 +548,11 @@ export class RoccoSpriteMotionAnimationDriver {
     action: RoccoSpriteActionProfile,
     direction: RoccoFacingDirection,
   ): string | undefined {
-    return action.directionalAnimations?.[direction] ?? action.directionalAnimations?.default ?? action.animationId;
+    return (
+      action.directionalAnimations?.[direction] ??
+      action.directionalAnimations?.default ??
+      action.animationId
+    );
   }
 
   private updateIdleSettle(instance: RoccoSpriteInstance, deltaMs: number): void {
@@ -524,7 +561,10 @@ export class RoccoSpriteMotionAnimationDriver {
       return;
     }
 
-    if (instance.motion.command || Math.hypot(instance.motion.velocityX, instance.motion.velocityY) > EPSILON) {
+    if (
+      instance.motion.command ||
+      Math.hypot(instance.motion.velocityX, instance.motion.velocityY) > EPSILON
+    ) {
       instance.motion.idleSettle = undefined;
       return;
     }
@@ -640,7 +680,10 @@ export class RoccoSpriteMotionAnimationDriver {
     instance.animation.playing = false;
   }
 
-  private resolveFrameDuration(frameReference: RoccoAnimationFrameReference, definition: RoccoSpriteDefinition): number {
+  private resolveFrameDuration(
+    frameReference: RoccoAnimationFrameReference,
+    definition: RoccoSpriteDefinition,
+  ): number {
     const byReference = Number(frameReference.durationMs ?? NaN);
     if (Number.isFinite(byReference) && byReference > 0) {
       return byReference;
@@ -815,7 +858,8 @@ export class RoccoSpriteMotionAnimationDriver {
     const isHadCommand = instance.motion.command !== undefined;
 
     const isCommandIntegrated = this.applyMovementCommand(instance, definition, deltaSeconds);
-    const isCompletedCommandThisTick = isHadCommand && isCommandIntegrated && instance.motion.command === undefined;
+    const isCompletedCommandThisTick =
+      isHadCommand && isCommandIntegrated && instance.motion.command === undefined;
     if (!isCommandIntegrated) {
       this.integrateMotion(instance, definition, deltaSeconds);
     }

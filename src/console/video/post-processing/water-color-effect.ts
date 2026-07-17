@@ -65,7 +65,6 @@ export function cloneRoccoWaterColorEffect(
 ): RoccoResolvedWaterColorEffect | null {
   if (!effect) {
     // Preserved `null` return: `water-color-effect.test.ts` asserts `.toBeNull()`.
-    // eslint-disable-next-line unicorn/no-null
     return null;
   }
 
@@ -80,7 +79,6 @@ export function parseRoccoWaterColor(value: string): RoccoWaterColorRgb | null {
   const match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/u.exec(normalized);
   if (!match) {
     // Preserved `null` return: callers (incl. tests) assert `.toBeNull()`.
-    // eslint-disable-next-line unicorn/no-null
     return null;
   }
 

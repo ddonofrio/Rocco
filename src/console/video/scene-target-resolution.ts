@@ -1,7 +1,9 @@
-/* eslint-disable max-lines */
-
 import type { RoccoGraphicPlane, RoccoImageSource, RoccoPlaneScene } from './planes';
-import type { RoccoSceneTargetDefinition, RoccoSceneTargetHit, RoccoSceneTargetVisibleHit } from './scene-targets';
+import type {
+  RoccoSceneTargetDefinition,
+  RoccoSceneTargetHit,
+  RoccoSceneTargetVisibleHit,
+} from './scene-targets';
 import type { RoccoRenderableSprite, RoccoSpriteHit, RoccoSpriteVisiblePixelHit } from './sprites';
 
 const DEFAULT_DESIGN_WIDTH = 960;
@@ -98,16 +100,18 @@ function createVisibleSceneTargetCandidates(
     if (!renderable || spriteSortIndex === undefined) {
       return [];
     }
-    return [{
-      kind: 'sprite' as const,
-      instanceId: hit.instanceId,
-      definitionId: hit.definitionId,
-      renderLayer: renderable.instance.renderLayer,
-      priority: renderable.instance.zIndex,
-      spriteSortIndex,
-      text: hit.text,
-      textKey: hit.textKey,
-    }];
+    return [
+      {
+        kind: 'sprite' as const,
+        instanceId: hit.instanceId,
+        definitionId: hit.definitionId,
+        renderLayer: renderable.instance.renderLayer,
+        priority: renderable.instance.zIndex,
+        spriteSortIndex,
+        text: hit.text,
+        textKey: hit.textKey,
+      },
+    ];
   });
   const sceneTargetCandidates = options.sceneTargetVisibleHits.map((hit) => {
     const definition = options.sceneTargetDefinitions.get(hit.instanceId);
@@ -134,14 +138,16 @@ function createSceneTargetCandidates(
     if (!renderable || spriteSortIndex === undefined) {
       return [];
     }
-    return [{
-      kind: 'sprite' as const,
-      instanceId: hit.instanceId,
-      definitionId: hit.definitionId,
-      renderLayer: renderable.instance.renderLayer,
-      priority: renderable.instance.zIndex,
-      spriteSortIndex,
-    }];
+    return [
+      {
+        kind: 'sprite' as const,
+        instanceId: hit.instanceId,
+        definitionId: hit.definitionId,
+        renderLayer: renderable.instance.renderLayer,
+        priority: renderable.instance.zIndex,
+        spriteSortIndex,
+      },
+    ];
   });
   const sceneTargetCandidates = options.sceneTargetHits.map((hit) => {
     const definition = options.sceneTargetDefinitions.get(hit.instanceId);
@@ -226,10 +232,7 @@ function listRuntimePlaneOccluders(
   return scene.planes
     .filter(
       (plane) =>
-        plane.enabled &&
-        plane.visible &&
-        plane.opacity > 0 &&
-        plane.occludesInput !== false,
+        plane.enabled && plane.visible && plane.opacity > 0 && plane.occludesInput !== false,
     )
     .map((plane, sceneOrder) => ({
       plane,
@@ -451,10 +454,7 @@ function isPointOnOpaquePlanePixel(
       const { width, height } = resolvePlaneRenderableSize(plane, planeAlphaMasks);
       const samplePoint = resolvePlaneSourcePoint(plane, localPoint.x, localPoint.y, width, height);
       return (
-        samplePoint.x >= 0 &&
-        samplePoint.y >= 0 &&
-        samplePoint.x < width &&
-        samplePoint.y < height
+        samplePoint.x >= 0 && samplePoint.y >= 0 && samplePoint.x < width && samplePoint.y < height
       );
     }
     case 'image': {

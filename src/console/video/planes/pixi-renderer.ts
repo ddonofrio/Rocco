@@ -115,7 +115,9 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     return JSON.stringify({
       source: plane.source,
       wrap: plane.wrap,
-      waterColorEffect: resolvePlaneWaterColorEffect(plane)?.enabled ? plane.metadata?.waterColorEffect : undefined,
+      waterColorEffect: resolvePlaneWaterColorEffect(plane)?.enabled
+        ? plane.metadata?.waterColorEffect
+        : undefined,
     });
   }
 
@@ -127,7 +129,8 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
       case 'image': {
         return createPixiImageNode(plane, plane.source, {
           resolvePlaneSize: (currentPlane) => this.resolvePlaneSize(currentPlane),
-          applyImageSourceSize: (sprite, currentSource) => this.applyImageSourceSize(sprite, currentSource),
+          applyImageSourceSize: (sprite, currentSource) =>
+            this.applyImageSourceSize(sprite, currentSource),
         });
       }
       case 'tilemap': {
@@ -147,7 +150,10 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     }
   }
 
-  private createSolidNode(plane: RoccoGraphicPlane, source: RoccoSolidSource): SourceContainerBuild {
+  private createSolidNode(
+    plane: RoccoGraphicPlane,
+    source: RoccoSolidSource,
+  ): SourceContainerBuild {
     const size = this.resolvePlaneSize(plane);
     const graphics = new Graphics().rect(0, 0, size.width, size.height).fill(source.color);
     graphics.label = 'solid';
@@ -162,12 +168,19 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
     };
   }
 
-  private createTilemapNode(plane: RoccoGraphicPlane, tilemap: RoccoTilemapSource): SourceContainerBuild {
+  private createTilemapNode(
+    plane: RoccoGraphicPlane,
+    tilemap: RoccoTilemapSource,
+  ): SourceContainerBuild {
     const mapWidth = tilemap.width * tilemap.tileWidth;
     const mapHeight = tilemap.height * tilemap.tileHeight;
     const shouldWrap = plane.wrap.x || plane.wrap.y;
     const container = shouldWrap
-      ? this.createRepeatedPatternContainer(() => this.buildTilemapPattern(tilemap), mapWidth, mapHeight)
+      ? this.createRepeatedPatternContainer(
+          () => this.buildTilemapPattern(tilemap),
+          mapWidth,
+          mapHeight,
+        )
       : this.buildTilemapPattern(tilemap);
     container.label = shouldWrap ? 'tilemap-wrap' : 'tilemap';
 
@@ -287,13 +300,15 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
         node.viewportMask = undefined;
       }
       // Pixi uses `null` to clear a container mask.
-      // eslint-disable-next-line unicorn/no-null -- Pixi mask API requires `null` to clear the mask.
       root.mask = null;
       return;
     }
 
     const mask = node.viewportMask ?? new Graphics();
-    mask.clear().rect(plane.viewport.x, plane.viewport.y, plane.viewport.width, plane.viewport.height).fill('white');
+    mask
+      .clear()
+      .rect(plane.viewport.x, plane.viewport.y, plane.viewport.width, plane.viewport.height)
+      .fill('white');
     node.viewportMask = mask;
     if (!mask.parent) {
       root.addChild(mask);
@@ -321,7 +336,12 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
   }
 
   private expectedContentLabel(plane: RoccoGraphicPlane): string {
-    if (plane.source.kind === 'image' && resolvePlaneWaterColorEffect(plane) && !plane.wrap.x && !plane.wrap.y) {
+    if (
+      plane.source.kind === 'image' &&
+      resolvePlaneWaterColorEffect(plane) &&
+      !plane.wrap.x &&
+      !plane.wrap.y
+    ) {
       return 'image-water-color';
     }
     if (plane.source.kind === 'image' && (plane.wrap.x || plane.wrap.y)) {

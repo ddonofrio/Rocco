@@ -1,7 +1,7 @@
 import { ROCCO_SPRITE_DIRECTIONS } from './types';
 import type {
   RoccoAnimationClip,
-  RoccoAnimationFrameRef as RoccoAnimationFrameReference,
+  RoccoAnimationFrameReference,
   RoccoAnimationMotionBinding,
   RoccoFacingDirection,
   RoccoMoveOptions,
@@ -16,11 +16,7 @@ import type {
 const EPSILON = 0.0001;
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -60,10 +56,22 @@ function toDiagonalFacingFromFacing(
 ): RoccoFacingDirection {
   const side = toHorizontalSideFacing(direction) ?? sideFallback;
   if (direction.includes('up')) {
-    return side === 'left' ? 'up-left' : side === 'right' ? 'up-right' : 'up';
+    if (side === 'left') {
+      return 'up-left';
+    }
+    if (side === 'right') {
+      return 'up-right';
+    }
+    return 'up';
   }
   if (direction.includes('down')) {
-    return side === 'left' ? 'down-left' : side === 'right' ? 'down-right' : 'down';
+    if (side === 'left') {
+      return 'down-left';
+    }
+    if (side === 'right') {
+      return 'down-right';
+    }
+    return 'down';
   }
   if (side) {
     return side === 'left' ? 'down-left' : 'down-right';
@@ -131,183 +139,6 @@ export class RoccoSpriteMotionAnimationDriver {
     this.constrainOriginToWalkMap = options.constrainOriginToWalkMap;
     this.resolvePerspectiveAutoAdjustMotionScale = options.resolvePerspectiveAutoAdjustMotionScale;
     this.resolveCompletionTargetFacing = options.resolveCompletionTargetFacing;
-  }
-
-  playAnimation(
-    instance: RoccoSpriteInstance,
-    definition: RoccoSpriteDefinition,
-    animationId: string,
-    options?: RoccoPlayAnimationOptions,
-  ): void {
-    const clip = this.assertAnimationExists(definition, animationId);
-    const shouldRestart = options?.restart ?? instance.animation.animationId !== animationId;
-    instance.animation.animationId = animationId;
-    if (shouldRestart) {
-      this.resetAnimationProgress(instance);
-    }
-    instance.animation.playing = true;
-    instance.animation.playbackRate =
-      options?.playbackRate ??
-      (isFiniteNumber(instance.animation.playbackRate)
-        ? instance.animation.playbackRate
-        : clip.playbackRate || 1);
-    instance.animation.motionBinding = clip.motionBinding;
-    instance.action = undefined;
-  }
-
-  playAction(
-    instance: RoccoSpriteInstance,
-    definition: RoccoSpriteDefinition,
-    actionId: string,
-    options?: RoccoPlayActionOptions,
-  ): void {
-    const direction = options?.direction ?? instance.facing ?? definition.defaultFacing ?? 'down';
-    this.applyAction(instance, definition, actionId, direction, {
-      restart: options?.restart,
-      playbackRate: options?.playbackRate,
-    });
-  }
-
-  setVelocity(
-    instance: RoccoSpriteInstance,
-    definition: RoccoSpriteDefinition,
-    velocityX: number,
-    velocityY: number,
-  ): void {
-    if (Math.abs(velocityX) > EPSILON || Math.abs(velocityY) > EPSILON) {
-      instance.motion.idleSettle = undefined;
-    }
-    instance.motion.velocityX = velocityX;
-    instance.motion.velocityY = velocityY;
-    const facing = toFacingDirection(velocityX, velocityY);
-    if (facing) {
-      instance.facing = facing;
-      this.applyVelocityDrivenAction(instance, definition, facing);
-    } else {
-      this.applyIdleAction(instance, definition);
-    }
-  }
-
-  stopMovement(instance: RoccoSpriteInstance, definition: RoccoSpriteDefinition): void {
-    instance.motion.velocityX = 0;
-    instance.motion.velocityY = 0;
-    instance.motion.accelerationX = 0;
-    instance.motion.accelerationY = 0;
-    instance.motion.command = undefined;
-    this.applyIdleAction(instance, definition);
-  }
-
-  moveTo(
-    instance: RoccoSpriteInstance,
-    definition: RoccoSpriteDefinition,
-    x: number,
-    y: number,
-    options?: RoccoMoveOptions,
-  ): void {
-    instance.motion.idleSettle = undefined;
-    instance.motion.command = {
-      kind: 'move-to',
-      target: { x, y },
-      options: clone(options),
-    };
-    if (options?.animation) {
-      this.playAnimation(instance, definition, options.animation, { restart: false });
-      return;
-    }
-
-    this.primeMoveAction(instance, definition, { x, y }, options);
-  }
-
-  moveBy(
-    instance: RoccoSpriteInstance,
-    definition: RoccoSpriteDefinition,
-    dx: number,
-    dy: number,
-    options?: RoccoMoveOptions,
-  ): void {
-    instance.motion.idleSettle = undefined;
-    instance.motion.command = {
-      kind: 'move-by',
-      delta: { x: dx, y: dy },
-      options: clone(options),
-    };
-    if (options?.animation) {
-      this.playAnimation(instance, definition, options.animation, { restart: false });
-      return;
-    }
-
-    this.primeMoveAction(
-      instance,
-      definition,
-      { x: instance.transform.x + dx, y: instance.transform.y + dy },
-      options,
-    );
-  }
-
-  followPath(
-    instance: RoccoSpriteInstance,
-    definition: RoccoSpriteDefinition,
-    path: RoccoPoint[],
-    options?: RoccoMoveOptions,
-  ): void {
-    instance.motion.idleSettle = undefined;
-    instance.motion.command = {
-      kind: 'follow-path',
-      path: clone(path),
-      currentIndex: 0,
-      options: clone(options),
-    };
-    if (options?.animation) {
-      this.playAnimation(instance, definition, options.animation, { restart: false });
-      return;
-    }
-
-    if (path.length > 0) {
-      this.primeMoveAction(instance, definition, path[0], options);
-    }
-  }
-
-  cancelMovement(instance: RoccoSpriteInstance, definition: RoccoSpriteDefinition): void {
-    instance.motion.command = undefined;
-    instance.motion.idleSettle = undefined;
-    instance.motion.velocityX = 0;
-    instance.motion.velocityY = 0;
-    this.applyIdleAction(instance, definition);
-  }
-
-  update(instance: RoccoSpriteInstance, deltaMs: number): void {
-    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
-      return;
-    }
-
-    const definition = this.requireDefinition(instance.definitionId);
-    const deltaSeconds = deltaMs / 1000;
-    const previousX = instance.transform.x;
-    const previousY = instance.transform.y;
-    const isHadCommand = instance.motion.command !== undefined;
-
-    const isCommandIntegrated = this.applyMovementCommand(instance, definition, deltaSeconds);
-    const isCompletedCommandThisTick = isHadCommand && isCommandIntegrated && instance.motion.command === undefined;
-    if (!isCommandIntegrated) {
-      this.integrateMotion(instance, definition, deltaSeconds);
-    }
-
-    const movedX = instance.transform.x - previousX;
-    const movedY = instance.transform.y - previousY;
-    const movedDistance = Math.hypot(movedX, movedY);
-    if (movedDistance > EPSILON) {
-      instance.motion.distanceAccumulator += movedDistance;
-      const facing = toFacingDirection(movedX, movedY);
-      if (facing && !isCompletedCommandThisTick) {
-        instance.facing = facing;
-        if (!isCommandIntegrated && !instance.motion.command) {
-          this.applyVelocityDrivenAction(instance, definition, facing);
-        }
-      }
-    }
-
-    this.updateAnimation(instance, definition, deltaMs);
-    this.updateIdleSettle(instance, deltaMs);
   }
 
   private integrateMotion(
@@ -492,7 +323,7 @@ export class RoccoSpriteMotionAnimationDriver {
       return;
     }
 
-    if (options?.onComplete && definition.animations[options.onComplete]) {
+    if (options?.onComplete && Object.hasOwn(definition.animations, options.onComplete)) {
       this.playAnimation(instance, definition, options.onComplete, { restart: true });
       return;
     }
@@ -513,15 +344,16 @@ export class RoccoSpriteMotionAnimationDriver {
 
     const delayMs = options.idleSettleDelayMs ?? 0;
     const actionId = options.idleAction ?? definition.defaultIdleAction;
-    const sideFacing = toHorizontalSideFacing(movementFacing);
-    const settledFacing =
-      options.idleSettleFacing === 'diagonal-from-facing'
-        ? toDiagonalFacingFromFacing(completionFacing, sideFacing)
-        : sideFacing
-          ? toDiagonalFacingFromFacing('down', sideFacing)
-          : completionFacing;
-    if (!actionId || !definition.actions?.[actionId] || delayMs <= 0) {
+    if (!actionId || !Object.hasOwn(definition.actions ?? {}, actionId) || delayMs <= 0) {
       return false;
+    }
+
+    const sideFacing = toHorizontalSideFacing(movementFacing);
+    let settledFacing = completionFacing;
+    if (options.idleSettleFacing === 'diagonal-from-facing') {
+      settledFacing = toDiagonalFacingFromFacing(completionFacing, sideFacing);
+    } else if (sideFacing) {
+      settledFacing = toDiagonalFacingFromFacing('down', sideFacing);
     }
 
     this.applyAction(instance, definition, actionId, sideFacing ?? completionFacing, { restart: true });
@@ -559,7 +391,7 @@ export class RoccoSpriteMotionAnimationDriver {
     facing: RoccoFacingDirection,
   ): void {
     const actionId = definition.defaultMoveAction;
-    if (!actionId || !definition.actions?.[actionId]) {
+    if (!actionId || !Object.hasOwn(definition.actions ?? {}, actionId)) {
       return;
     }
 
@@ -572,7 +404,7 @@ export class RoccoSpriteMotionAnimationDriver {
     options?: RoccoMoveOptions,
   ): void {
     const actionId = options?.idleAction ?? definition.defaultIdleAction;
-    if (!actionId || !definition.actions?.[actionId]) {
+    if (!actionId || !Object.hasOwn(definition.actions ?? {}, actionId)) {
       return;
     }
 
@@ -740,7 +572,7 @@ export class RoccoSpriteMotionAnimationDriver {
       return;
     }
 
-    if (clip.next && definition.animations[clip.next]) {
+    if (clip.next && Object.hasOwn(definition.animations, clip.next)) {
       instance.animation.animationId = clip.next;
       instance.animation.frameIndex = 0;
       instance.animation.elapsedMs = 0;
@@ -771,5 +603,182 @@ export class RoccoSpriteMotionAnimationDriver {
     instance.animation.frameIndex = 0;
     instance.animation.elapsedMs = 0;
     instance.motion.distanceAccumulator = 0;
+  }
+
+  playAnimation(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    animationId: string,
+    options?: RoccoPlayAnimationOptions,
+  ): void {
+    const clip = this.assertAnimationExists(definition, animationId);
+    const shouldRestart = options?.restart ?? instance.animation.animationId !== animationId;
+    instance.animation.animationId = animationId;
+    if (shouldRestart) {
+      this.resetAnimationProgress(instance);
+    }
+    instance.animation.playing = true;
+    instance.animation.playbackRate =
+      options?.playbackRate ??
+      (isFiniteNumber(instance.animation.playbackRate)
+        ? instance.animation.playbackRate
+        : clip.playbackRate || 1);
+    instance.animation.motionBinding = clip.motionBinding;
+    instance.action = undefined;
+  }
+
+  playAction(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    actionId: string,
+    options?: RoccoPlayActionOptions,
+  ): void {
+    const direction = options?.direction ?? instance.facing ?? definition.defaultFacing ?? 'down';
+    this.applyAction(instance, definition, actionId, direction, {
+      restart: options?.restart,
+      playbackRate: options?.playbackRate,
+    });
+  }
+
+  setVelocity(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    velocityX: number,
+    velocityY: number,
+  ): void {
+    if (Math.abs(velocityX) > EPSILON || Math.abs(velocityY) > EPSILON) {
+      instance.motion.idleSettle = undefined;
+    }
+    instance.motion.velocityX = velocityX;
+    instance.motion.velocityY = velocityY;
+    const facing = toFacingDirection(velocityX, velocityY);
+    if (facing) {
+      instance.facing = facing;
+      this.applyVelocityDrivenAction(instance, definition, facing);
+    } else {
+      this.applyIdleAction(instance, definition);
+    }
+  }
+
+  stopMovement(instance: RoccoSpriteInstance, definition: RoccoSpriteDefinition): void {
+    instance.motion.velocityX = 0;
+    instance.motion.velocityY = 0;
+    instance.motion.accelerationX = 0;
+    instance.motion.accelerationY = 0;
+    instance.motion.command = undefined;
+    this.applyIdleAction(instance, definition);
+  }
+
+  moveTo(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    x: number,
+    y: number,
+    options?: RoccoMoveOptions,
+  ): void {
+    instance.motion.idleSettle = undefined;
+    instance.motion.command = {
+      kind: 'move-to',
+      target: { x, y },
+      options: clone(options),
+    };
+    if (options?.animation) {
+      this.playAnimation(instance, definition, options.animation, { restart: false });
+      return;
+    }
+
+    this.primeMoveAction(instance, definition, { x, y }, options);
+  }
+
+  moveBy(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    dx: number,
+    dy: number,
+    options?: RoccoMoveOptions,
+  ): void {
+    instance.motion.idleSettle = undefined;
+    instance.motion.command = {
+      kind: 'move-by',
+      delta: { x: dx, y: dy },
+      options: clone(options),
+    };
+    if (options?.animation) {
+      this.playAnimation(instance, definition, options.animation, { restart: false });
+      return;
+    }
+
+    this.primeMoveAction(
+      instance,
+      definition,
+      { x: instance.transform.x + dx, y: instance.transform.y + dy },
+      options,
+    );
+  }
+
+  followPath(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+    path: RoccoPoint[],
+    options?: RoccoMoveOptions,
+  ): void {
+    instance.motion.idleSettle = undefined;
+    instance.motion.command = {
+      kind: 'follow-path',
+      path: clone(path),
+      currentIndex: 0,
+      options: clone(options),
+    };
+    if (options?.animation) {
+      this.playAnimation(instance, definition, options.animation, { restart: false });
+      return;
+    }
+
+    if (path.length > 0) {
+      this.primeMoveAction(instance, definition, path[0], options);
+    }
+  }
+
+  cancelMovement(instance: RoccoSpriteInstance, definition: RoccoSpriteDefinition): void {
+    instance.motion.command = undefined;
+    instance.motion.idleSettle = undefined;
+    instance.motion.velocityX = 0;
+    instance.motion.velocityY = 0;
+    this.applyIdleAction(instance, definition);
+  }
+
+  update(instance: RoccoSpriteInstance, deltaMs: number): void {
+    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return;
+    }
+
+    const definition = this.requireDefinition(instance.definitionId);
+    const deltaSeconds = deltaMs / 1000;
+    const previousX = instance.transform.x;
+    const previousY = instance.transform.y;
+    const isHadCommand = instance.motion.command !== undefined;
+
+    const isCommandIntegrated = this.applyMovementCommand(instance, definition, deltaSeconds);
+    const isCompletedCommandThisTick = isHadCommand && isCommandIntegrated && instance.motion.command === undefined;
+    if (!isCommandIntegrated) {
+      this.integrateMotion(instance, definition, deltaSeconds);
+    }
+
+    const movedX = instance.transform.x - previousX;
+    const movedY = instance.transform.y - previousY;
+    const movedDistance = Math.hypot(movedX, movedY);
+    if (movedDistance > EPSILON) {
+      instance.motion.distanceAccumulator += movedDistance;
+      const facing = toFacingDirection(movedX, movedY);
+      if (facing && !isCompletedCommandThisTick) {
+        instance.facing = facing;
+        if (!isCommandIntegrated && !instance.motion.command) {
+          this.applyVelocityDrivenAction(instance, definition, facing);
+        }
+      }
+    }
+
+    this.updateAnimation(instance, definition, deltaMs);
+    this.updateIdleSettle(instance, deltaMs);
   }
 }

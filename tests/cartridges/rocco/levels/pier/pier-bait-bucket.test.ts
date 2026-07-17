@@ -115,6 +115,12 @@ function createEngineMock(state: TestState): RoccoEngine {
       unregisterSound: () => {},
     } as unknown as RoccoEngine['audio'],
     setInputEnabled: () => {},
+    acquireInputLease: () => ({
+      ownerId: 'test',
+      mode: 'blocked' as const,
+      acquiredAt: 0,
+      dispose() {},
+    }),
   } as unknown as RoccoEngine;
 }
 

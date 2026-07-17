@@ -19,16 +19,32 @@ class FakeGainNode {
 }
 
 class FakeAudioBufferSourceNode {
+  private readonly endedListeners = new Set<() => void>();
+
   buffer: AudioBuffer | undefined;
   loop = false;
-  onended: (() => void) | undefined;
+  onended: (() => void) | undefined = undefined;
 
   connect(): void {}
+
+  addEventListener(type: string, listener: () => void): void {
+    if (type === 'ended') {
+      this.endedListeners.add(listener);
+    }
+  }
+
+  removeEventListener(type: string, listener: () => void): void {
+    if (type === 'ended') {
+      this.endedListeners.delete(listener);
+    }
+  }
 
   start(): void {}
 
   stop(): void {
-    this.onended?.();
+    for (const listener of this.endedListeners) {
+      listener();
+    }
   }
 }
 
@@ -238,7 +254,7 @@ describe('RoccoRuntimeAudioSystem', () => {
 
     const context = FakeAudioContext.instances[0];
     await expect(ended).resolves.toBeUndefined();
-    expect(context?.createdSources[0].onended).toBeNull();
+    expect(context?.createdSources[0].onended).toBeUndefined();
   });
 
   it('re-registering a sound invalidates a previously cached buffer', async () => {

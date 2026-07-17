@@ -343,7 +343,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       {
         count: 1,
         historyKey,
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);
@@ -601,7 +601,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       {
         count: 1,
         historyKey: 'stan-shop-exit-door-thought',
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);

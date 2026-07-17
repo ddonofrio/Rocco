@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { RoccoDatabase } from '../../../src/console/persistence/database';
 import { DexieSaveStore } from '../../../src/console/persistence/store';
-import { createSaveRepository as createSaveRepo } from '../../../src/console/persistence/save-repository';
+import { createSaveRepo } from '../../../src/console/persistence/save-repo';
 import type {
   CartridgeSaveProvider,
   SaveEnvelopeRow,
@@ -21,9 +21,9 @@ async function resetPersistenceDatabase(): Promise<void> {
 
   await new Promise<void>((resolve, reject) => {
     const request = indexedDB.deleteDatabase('rocco_db');
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error ?? new Error('indexeddb delete failed'));
-    request.onblocked = () => reject(new Error('indexeddb delete blocked'));
+    request.addEventListener('success', () => resolve());
+    request.addEventListener('error', () => reject(request.error ?? new Error('indexeddb delete failed')));
+    request.addEventListener('blocked', () => reject(new Error('indexeddb delete blocked')));
   });
 }
 
@@ -137,9 +137,12 @@ describe('Dexie persistence with real IndexedDB', () => {
         store,
       });
 
-      expect((await repo.save('p', 's')).revision).toBe(1);
-      expect((await repo.save('p', 's')).revision).toBe(2);
-      expect((await repo.save('p', 's')).revision).toBe(3);
+      const firstSave = await repo.save('p', 's');
+      const secondSave = await repo.save('p', 's');
+      const thirdSave = await repo.save('p', 's');
+      expect(firstSave.revision).toBe(1);
+      expect(secondSave.revision).toBe(2);
+      expect(thirdSave.revision).toBe(3);
     });
 
     it('rejects a stale expectedRevision when the slot does not exist', async () => {
@@ -157,7 +160,7 @@ describe('Dexie persistence with real IndexedDB', () => {
       ).rejects.toBeInstanceOf(SaveRevisionConflictError);
     });
 
-    it('deletes a slot and load returns null', async () => {
+    it('deletes a slot and load returns undefined', async () => {
       const database = new RoccoDatabase();
       const store = new DexieSaveStore(database);
       const repo = createSaveRepo<TestState>({
@@ -171,7 +174,7 @@ describe('Dexie persistence with real IndexedDB', () => {
       expect(await repo.load('p', 's')).toEqual({ level: 1 });
 
       await repo.delete('p', 's');
-      expect(await repo.load('p', 's')).toBeNull();
+      expect(await repo.load('p', 's')).toBeUndefined();
     });
 
     it('rejects import from a different cartridge', async () => {

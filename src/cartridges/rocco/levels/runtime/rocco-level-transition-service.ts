@@ -175,7 +175,7 @@ export interface RoccoPreparedLevelTransition {
   remountCurrentLevel?(
     engine: RoccoEngine,
     currentLevel: RoccoLevel,
-  ): Promise<RoccoPlaneScene | undefined>;
+  ): Promise<RoccoPlaneScene | null>;
 
   dispose?(): void | Promise<void>;
 }

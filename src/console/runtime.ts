@@ -40,11 +40,7 @@ import {
 import type { CompositionSessionInfo } from './composition';
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function describeUnknownError(error: unknown): string {
@@ -55,9 +51,9 @@ function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
-function combineErrors(message: string, errors: readonly unknown[]): Error | null {
+function combineErrors(message: string, errors: readonly unknown[]): Error | undefined {
   if (errors.length === 0) {
-    return null;
+    return undefined;
   }
   if (errors.length === 1) {
     return toError(errors[0]);
@@ -109,32 +105,64 @@ interface RuntimeOptions {
 
 export class GameRuntime implements RoccoEngine {
   private readonly options: RuntimeOptions;
-  private app: Application | null = null;
+  private app: Application | undefined;
   private readonly effectRegistry = new RoccoDefaultEffectRegistry();
   private effectElapsedMs = 0;
   private readonly cartridgeManager = new RoccoCartridgeManager();
-  private inputHandler: RoccoInputHandler | null = null;
-  private activePlaneSceneId: string | null = null;
-  private activePlayerSpriteId: string | undefined = undefined;
+  private inputHandler: RoccoInputHandler | undefined;
+  private activePlaneSceneId: string | undefined;
+  private activePlayerSpriteId: string | undefined;
   private statusMessage = 'Engine bootstrapping cartridge...';
-  private compositionOverlay: Container | null = null;
-  private compositionBackground: Graphics | null = null;
-  private compositionText: Text | null = null;
+  private compositionOverlay: Container | undefined;
+  private compositionBackground: Graphics | undefined;
+  private compositionText: Text | undefined;
   private readonly inputPolicy = new InputPolicyStackImpl();
   private readonly compositionService = new CompositionServiceImpl();
-  private compositionListener: Disposer | null = null;
+  private compositionListener: Disposer | undefined;
   private readonly legacyInputLocks = new Map<string, InputPolicyLease>();
   private readonly legacyInputRefCounts = new Map<string, number>();
-  private legacyCompositionSession: CompositionSession | null = null;
+  private legacyCompositionSession: CompositionSession | undefined;
   private soundProfile: RoccoSoundProfile = { ...defaultSoundProfile };
   private consoleFlags: RoccoConsoleFlags;
 
   private readonly lifecycle = new LifecycleStateMachine();
   private rootScope!: ResourceScope;
-  private cartridgeScope: ResourceScope | null = null;
-  private initPromise: Promise<void> | null = null;
-  private disposePromise: Promise<void> | null = null;
+  private cartridgeScope: ResourceScope | undefined;
+  private initPromise: Promise<void> | undefined;
+  private disposePromise: Promise<void> | undefined;
   private appInitialized = false;
+  private readonly handleResize = (): void => {
+    if (this.compositionService.getActiveSessionInfo()) {
+      this.syncCompositionOverlay();
+    }
+    this.video.render(0);
+  };
+  private readonly renderTick = (ticker: Ticker): void => {
+    if (this.lifecycle.current !== 'ready') {
+      return;
+    }
+
+    this.effectElapsedMs += ticker.deltaMS;
+    this.effects.tick({
+      deltaMs: ticker.deltaMS,
+      deltaSeconds: ticker.deltaMS / 1000,
+      elapsedMs: this.effectElapsedMs,
+      elapsedSeconds: this.effectElapsedMs / 1000,
+    });
+
+    this.video.update(ticker.deltaMS);
+    this.cartridgeManager.getActiveCartridge()?.update?.(ticker.deltaMS);
+    this.video.render(ticker.deltaTime);
+  };
+  private readonly resolveEffectTarget: RoccoEffectTargetResolver = (targetType, targetId) => {
+    if (!this.activePlaneSceneId) {
+      return;
+    }
+
+    if (targetType === 'graphic-plane') {
+      return this.video.planes.resolvePlane(this.activePlaneSceneId, targetId);
+    }
+  };
 
   // Public subsystem access
   readonly video: RoccoRuntimeVideoSystem;
@@ -189,12 +217,12 @@ export class GameRuntime implements RoccoEngine {
       if (this.appInitialized) {
         this.app?.destroy({ removeView: true }, true);
       }
-      this.app = null;
+      this.app = undefined;
       this.appInitialized = false;
     });
     scope.defer(() => this.audio.destroy());
     scope.defer(() => this.jukebox.destroy());
-    scope.defer(() => void this.persistence.dispose());
+    scope.defer(() => this.persistence.dispose());
     scope.defer(() => {
       if (this.appInitialized) {
         this.video.destroy();
@@ -206,8 +234,8 @@ export class GameRuntime implements RoccoEngine {
     this.cartridgeScope = cartridgeScope;
     scope.defer(() => {
       const disposeListener = this.compositionListener;
-      this.compositionListener = null;
-      void disposeListener?.();
+      this.compositionListener = undefined;
+      return disposeListener?.();
     });
     scope.defer(() => this.cartridgeManager.dispose());
 
@@ -221,50 +249,56 @@ export class GameRuntime implements RoccoEngine {
     this.rootScope = scope;
   }
 
-  init(): Promise<void> {
-    if (this.initPromise) {
-      return this.initPromise;
+  private async trackInitPromise(initPromise: Promise<void>): Promise<void> {
+    try {
+      await initPromise;
+    } finally {
+      this.initPromise = undefined;
     }
-    if (this.lifecycle.current === 'ready') {
-      return Promise.resolve();
-    }
-    if (this.lifecycle.current === 'failed') {
-      return Promise.reject(
-        new Error('GameRuntime init failed previously; create a new instance to run again'),
-      );
-    }
-    if (this.lifecycle.isTerminal()) {
-      return Promise.reject(
-        new Error('GameRuntime has been disposed; create a new instance to run again'),
-      );
-    }
-
-    this.initPromise = this.initInternal();
-    void this.initPromise.then(
-      () => {
-        this.initPromise = null;
-      },
-      () => {
-        this.initPromise = null;
-      },
-    );
-    return this.initPromise;
   }
 
-  dispose(): Promise<void> {
-    if (this.disposePromise) {
-      return this.disposePromise;
-    }
-    if (this.lifecycle.current === 'disposed' || this.lifecycle.current === 'failed') {
-      return Promise.resolve();
-    }
-    if (this.lifecycle.current === 'initializing' && this.initPromise) {
-      this.disposePromise = this.initPromise.then(() => this.disposeInternal());
-      return this.disposePromise;
+  private async disposeInternal(): Promise<void> {
+    this.lifecycle.markDisposing();
+    let disposalError: unknown;
+    try {
+      await this.rootScope.dispose();
+    } catch (error) {
+      disposalError = error;
     }
 
-    this.disposePromise = this.disposeInternal();
-    return this.disposePromise;
+    this.lifecycle.markDisposed();
+    this.resetRuntimeReferences();
+
+    if (disposalError) {
+      throw toError(disposalError);
+    }
+  }
+
+  private async disposeRootScope(): Promise<Error | undefined> {
+    try {
+      await this.rootScope.dispose();
+      return undefined;
+    } catch (error) {
+      return toError(error);
+    }
+  }
+
+  private resetRuntimeReferences(): void {
+    if (this.compositionOverlay) {
+      this.compositionOverlay.destroy({ children: true });
+    }
+    this.compositionOverlay = undefined;
+    this.compositionBackground = undefined;
+    this.compositionText = undefined;
+
+    this.inputHandler = undefined;
+    this.activePlaneSceneId = undefined;
+    this.activePlayerSpriteId = undefined;
+    this.legacyCompositionSession = undefined;
+    this.legacyInputLocks.clear();
+    this.legacyInputRefCounts.clear();
+    this.cartridgeScope = undefined;
+    this.appInitialized = false;
   }
 
   private async initInternal(): Promise<void> {
@@ -320,54 +354,128 @@ export class GameRuntime implements RoccoEngine {
       this.resetRuntimeReferences();
       const combinedError = combineErrors(
         `GameRuntime init failed: ${describeUnknownError(error)}`,
-        [error, cleanupError].filter((item) => item !== null),
+        [error, cleanupError].filter((item) => item !== undefined),
       );
       throw combinedError ?? toError(error);
     }
   }
 
-  private async disposeInternal(): Promise<void> {
-    this.lifecycle.markDisposing();
-    let disposalError: unknown = null;
-    try {
-      await this.rootScope.dispose();
-    } catch (error) {
-      disposalError = error;
-    }
-
-    this.lifecycle.markDisposed();
-    this.resetRuntimeReferences();
-
-    if (disposalError) {
-      throw toError(disposalError);
-    }
+  private applySoundProfile(): void {
+    this.audio.setVolume(getEffectiveSfxVolume(this.soundProfile));
+    this.jukebox.setVolume(getEffectiveMusicVolume(this.soundProfile));
   }
 
-  private async disposeRootScope(): Promise<Error | null> {
-    try {
-      await this.rootScope.dispose();
-      return null;
-    } catch (error) {
-      return toError(error);
+  private syncCompositionOverlay(): void {
+    if (!this.app) {
+      return;
     }
+    const session = this.compositionService.getActiveSessionInfo();
+    if (!session) {
+      this.hideCompositionOverlay();
+      return;
+    }
+    this.showCompositionOverlay(session);
   }
 
-  private resetRuntimeReferences(): void {
-    if (this.compositionOverlay) {
-      this.compositionOverlay.destroy({ children: true });
+  private showCompositionOverlay(session: CompositionSessionInfo): void {
+    if (!this.app) {
+      return;
     }
-    this.compositionOverlay = null;
-    this.compositionBackground = null;
-    this.compositionText = null;
+    if (!this.compositionOverlay) {
+      this.compositionOverlay = new Container();
+      this.compositionOverlay.label = 'composition-overlay';
+      this.compositionOverlay.zIndex = 10_000;
+      this.compositionOverlay.sortableChildren = true;
+      this.compositionBackground = new Graphics();
+      this.compositionOverlay.addChild(this.compositionBackground);
+      this.app.stage.addChild(this.compositionOverlay);
+    }
 
-    this.inputHandler = null;
-    this.activePlaneSceneId = null;
-    this.activePlayerSpriteId = undefined;
-    this.legacyCompositionSession = null;
-    this.legacyInputLocks.clear();
-    this.legacyInputRefCounts.clear();
-    this.cartridgeScope = null;
-    this.appInitialized = false;
+    const overlayBackgroundColor = session.status === 'failed' ? 0x1a_0b_0b : 0x0d_11_0c;
+    this.compositionBackground ??= new Graphics();
+    this.compositionBackground
+      .clear()
+      .rect(0, 0, this.app.screen.width, this.app.screen.height)
+      .fill(overlayBackgroundColor);
+
+    const overlayText = formatCompositionOverlayText(session);
+
+    if (this.compositionText) {
+      this.compositionText.text = overlayText;
+      this.compositionText.style.fill = session.status === 'failed' ? '#fca5a5' : '#9ca3af';
+    } else {
+      this.compositionText = new Text({
+        text: overlayText,
+        style: {
+          fill: session.status === 'failed' ? '#fca5a5' : '#9ca3af',
+          fontFamily: 'Cascadia Mono, Lucida Console, monospace',
+          fontSize: 18,
+          fontWeight: '700',
+          align: 'center',
+          letterSpacing: 1,
+        },
+      });
+      this.compositionText.anchor.set(0.5);
+      this.compositionText.zIndex = 10_001;
+      this.compositionOverlay.addChild(this.compositionText);
+    }
+
+    this.compositionText.x = this.app.screen.width / 2;
+    this.compositionText.y = this.app.screen.height / 2;
+    this.app.render();
+  }
+
+  private hideCompositionOverlay(): void {
+    if (!this.app || !this.compositionOverlay) {
+      return;
+    }
+    this.compositionOverlay.removeFromParent();
+    this.compositionOverlay.destroy({ children: true });
+    this.compositionOverlay = undefined;
+    this.compositionBackground = undefined;
+    this.compositionText = undefined;
+  }
+
+  init(): Promise<void> {
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    if (this.lifecycle.current === 'ready') {
+      return Promise.resolve();
+    }
+    if (this.lifecycle.current === 'failed') {
+      return Promise.reject(
+        new Error('GameRuntime init failed previously; create a new instance to run again'),
+      );
+    }
+    if (this.lifecycle.isTerminal()) {
+      return Promise.reject(
+        new Error('GameRuntime has been disposed; create a new instance to run again'),
+      );
+    }
+
+    const initPromise = this.initInternal();
+    this.initPromise = this.trackInitPromise(initPromise);
+    return this.initPromise;
+  }
+
+  dispose(): Promise<void> {
+    if (this.disposePromise) {
+      return this.disposePromise;
+    }
+    if (this.lifecycle.current === 'disposed' || this.lifecycle.current === 'failed') {
+      return Promise.resolve();
+    }
+    if (this.lifecycle.current === 'initializing' && this.initPromise) {
+      this.disposePromise = (async () => {
+        await this.initPromise;
+        await this.disposeInternal();
+      })();
+      return this.disposePromise;
+    }
+
+    this.disposePromise = this.disposeInternal();
+    return this.disposePromise;
   }
 
   get lifecycleState(): LifecycleState {
@@ -416,8 +524,8 @@ export class GameRuntime implements RoccoEngine {
    * per-owner ref-counted leases, so it still participates in the composed
    * policy stack and each caller only releases its own lock.
    */
-  setInputEnabled(enabled: boolean, ownerId = 'legacy-input'): void {
-    if (!enabled) {
+  setInputEnabled(isEnabled: boolean, ownerId = 'legacy-input'): void {
+    if (!isEnabled) {
       const current = this.legacyInputRefCounts.get(ownerId) ?? 0;
       this.legacyInputRefCounts.set(ownerId, current + 1);
       if (current === 0) {
@@ -482,77 +590,6 @@ export class GameRuntime implements RoccoEngine {
     return session;
   }
 
-  private syncCompositionOverlay(): void {
-    if (!this.app) {
-      return;
-    }
-    const session = this.compositionService.getActiveSessionInfo();
-    if (session === null) {
-      this.hideCompositionOverlay();
-      return;
-    }
-    this.showCompositionOverlay(session);
-  }
-
-  private showCompositionOverlay(session: CompositionSessionInfo): void {
-    if (!this.app) {
-      return;
-    }
-    if (!this.compositionOverlay) {
-      this.compositionOverlay = new Container();
-      this.compositionOverlay.label = 'composition-overlay';
-      this.compositionOverlay.zIndex = 10_000;
-      this.compositionOverlay.sortableChildren = true;
-      this.compositionBackground = new Graphics();
-      this.compositionOverlay.addChild(this.compositionBackground);
-      this.app.stage.addChild(this.compositionOverlay);
-    }
-
-    const overlayBackgroundColor = session.status === 'failed' ? 0x1a_0b_0b : 0x0d_11_0c;
-    this.compositionBackground ??= new Graphics();
-    this.compositionBackground
-      .clear()
-      .rect(0, 0, this.app.screen.width, this.app.screen.height)
-      .fill(overlayBackgroundColor);
-
-    const overlayText = formatCompositionOverlayText(session);
-
-    if (this.compositionText) {
-      this.compositionText.text = overlayText;
-      this.compositionText.style.fill = session.status === 'failed' ? '#fca5a5' : '#9ca3af';
-    } else {
-      this.compositionText = new Text({
-        text: overlayText,
-        style: {
-          fill: session.status === 'failed' ? '#fca5a5' : '#9ca3af',
-          fontFamily: 'Cascadia Mono, Lucida Console, monospace',
-          fontSize: 18,
-          fontWeight: '700',
-          align: 'center',
-          letterSpacing: 1,
-        },
-      });
-      this.compositionText.anchor.set(0.5);
-      this.compositionText.zIndex = 10_001;
-      this.compositionOverlay.addChild(this.compositionText);
-    }
-
-    this.compositionText.x = this.app.screen.width / 2;
-    this.compositionText.y = this.app.screen.height / 2;
-    this.app.render();
-  }
-
-  private hideCompositionOverlay(): void {
-    if (!this.app || !this.compositionOverlay) {
-      return;
-    }
-    this.compositionOverlay.removeFromParent();
-    this.compositionOverlay.destroy({ children: true });
-    this.compositionOverlay = null;
-    this.compositionBackground = null;
-    this.compositionText = null;
-  }
-
   /**
    * @deprecated Retained for legacy callers. Use `beginCompositionSession`.
    */
@@ -570,7 +607,7 @@ export class GameRuntime implements RoccoEngine {
    */
   endComposition(): void {
     this.legacyCompositionSession?.dispose();
-    this.legacyCompositionSession = null;
+    this.legacyCompositionSession = undefined;
   }
 
   /**
@@ -613,44 +650,4 @@ export class GameRuntime implements RoccoEngine {
     this.applySoundProfile();
   }
 
-  private handleResize = (): void => {
-    if (this.compositionService.getActiveSessionInfo()) {
-      this.syncCompositionOverlay();
-    }
-    this.video.render(0);
-  };
-
-  private renderTick = (ticker: Ticker): void => {
-    if (this.lifecycle.current !== 'ready') {
-      return;
-    }
-
-    this.effectElapsedMs += ticker.deltaMS;
-    this.effects.tick({
-      deltaMs: ticker.deltaMS,
-      deltaSeconds: ticker.deltaMS / 1000,
-      elapsedMs: this.effectElapsedMs,
-      elapsedSeconds: this.effectElapsedMs / 1000,
-    });
-
-    this.video.update(ticker.deltaMS);
-    this.cartridgeManager.getActiveCartridge()?.update?.(ticker.deltaMS);
-    this.video.render(ticker.deltaTime);
-  };
-
-  private readonly resolveEffectTarget: RoccoEffectTargetResolver = (targetType, targetId) => {
-    if (!this.activePlaneSceneId) {
-      return;
-    }
-
-    if (targetType === 'graphic-plane') {
-      return this.video.planes.resolvePlane(this.activePlaneSceneId, targetId);
-    }
-    return;
-  };
-
-  private applySoundProfile(): void {
-    this.audio.setVolume(getEffectiveSfxVolume(this.soundProfile));
-    this.jukebox.setVolume(getEffectiveMusicVolume(this.soundProfile));
-  }
 }

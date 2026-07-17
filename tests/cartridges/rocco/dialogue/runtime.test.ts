@@ -24,6 +24,8 @@ interface DialogueEngineMockState {
   renderCalls: number;
 }
 
+type DialogueInputMode = 'interactive' | 'advance-only' | 'blocked';
+
 function serializeMessageText(text: RoccoSpriteMessageText): string {
   return Array.isArray(text) ? text.join('|') : text;
 }
@@ -48,10 +50,10 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
   let isLegacyInputEnabled = state.inputEnabled;
   const activeInputLeases: Array<{
     ownerId: string;
-    mode: 'interactive' | 'advance-only' | 'blocked';
+    mode: DialogueInputMode;
   }> = [];
 
-  const recomputeInputMode = (): 'interactive' | 'advance-only' | 'blocked' => {
+  const recomputeInputMode = (): DialogueInputMode => {
     if (!isLegacyInputEnabled) {
       return 'blocked';
     }
@@ -142,8 +144,8 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
         state.renderCalls += 1;
       },
     },
-    setInputEnabled(enabled: boolean) {
-      isLegacyInputEnabled = enabled;
+    setInputEnabled(isEnabled: boolean) {
+      isLegacyInputEnabled = isEnabled;
       syncLegacyInputState();
     },
     isInputEnabled() {
@@ -173,7 +175,7 @@ function createEngineMock(state: DialogueEngineMockState): RoccoEngine {
     beginCompositionSession: () => ({
       id: 'test',
       ownerId: 'test',
-      message: null,
+      message: undefined,
       status: 'active' as const,
       report() {},
       fail() {},

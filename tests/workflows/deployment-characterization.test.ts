@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = join(fileURLToPath(import.meta.url), '..', '..', '..');
-const workflowPath = join(repoRoot, '.github', 'workflows', 'build.yml');
-const deployScriptPath = join(repoRoot, 'scripts', 'deploy-web.sh');
+const repoRoot = path.join(fileURLToPath(import.meta.url), '..', '..', '..');
+const workflowPath = path.join(repoRoot, '.github', 'workflows', 'build.yml');
+const deployScriptPath = path.join(repoRoot, 'scripts', 'deploy-web.sh');
 
 describe('Deployment workflow characterization', () => {
   it('SEC-001: workflow verifies the SSH host and fails closed', async () => {
@@ -47,7 +47,7 @@ describe('Deployment workflow characterization', () => {
 
   it('CLOSE-011: deploy and rollback share a remote lock and cleanup trap', async () => {
     const deployScript = await readFile(deployScriptPath, 'utf8');
-    const rollbackScript = await readFile(join(repoRoot, 'scripts', 'rollback-web.sh'), 'utf8');
+    const rollbackScript = await readFile(path.join(repoRoot, 'scripts', 'rollback-web.sh'), 'utf8');
 
     expect(deployScript).toContain('.deploy-lock');
     expect(deployScript).toContain('trap cleanup EXIT');

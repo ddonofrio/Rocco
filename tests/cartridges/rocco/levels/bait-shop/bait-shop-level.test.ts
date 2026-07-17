@@ -47,8 +47,8 @@ vi.mock('../../../../../src/console/video/sprites', async (importOriginal) => {
 });
 
 interface TestState {
-  restoredRecord: RoccoPlaneSceneRecord | null;
-  loadedScene: RoccoPlaneScene | null;
+  restoredRecord: RoccoPlaneSceneRecord | undefined;
+  loadedScene: RoccoPlaneScene | undefined;
   savedScenes: RoccoPlaneScene[];
   preloadedPlaneSceneIds: string[];
   preloadedSpriteDefinitionIds: string[];
@@ -58,7 +58,7 @@ interface TestState {
   createdSprites: RoccoSpriteInstance[];
   removedSpriteIds: string[];
   walkMapBindings: string[];
-  playerSpriteId: string | null;
+  playerSpriteId: string | undefined;
   playedSpriteActionDirections: string[];
   sceneTargetsById: Map<string, unknown>;
   unregisteredSceneTargetIds: string[];
@@ -75,8 +75,8 @@ interface TestState {
 
 function createState(overrides: Partial<TestState> = {}): TestState {
   return {
-    restoredRecord: null,
-    loadedScene: null,
+    restoredRecord: undefined,
+    loadedScene: undefined,
     savedScenes: [],
     preloadedPlaneSceneIds: [],
     preloadedSpriteDefinitionIds: [],
@@ -86,7 +86,7 @@ function createState(overrides: Partial<TestState> = {}): TestState {
     createdSprites: [],
     removedSpriteIds: [],
     walkMapBindings: [],
-    playerSpriteId: null,
+    playerSpriteId: undefined,
     playedSpriteActionDirections: [],
     sceneTargetsById: new Map(),
     unregisteredSceneTargetIds: [],
@@ -114,8 +114,7 @@ function getRegisteredSceneTarget<T>(state: TestState, instanceId: string): T | 
 function createEngineMock(state: TestState): RoccoEngine {
   return {
     video: {
-      preloadAssetUrls: (assetUrls: readonly string[]) => {
-        void assetUrls;
+      preloadAssetUrls: () => {
         return Promise.resolve();
       },
       preloadPlaneScene: (scene: RoccoPlaneScene) => {
@@ -247,8 +246,8 @@ function createEngineMock(state: TestState): RoccoEngine {
     loadPlaneScene: (scene: RoccoPlaneScene) => {
       state.loadedScene = scene;
     },
-    setInputEnabled: (enabled: boolean) => {
-      state.inputEnabled = enabled;
+    setInputEnabled: (isEnabled: boolean) => {
+      state.inputEnabled = isEnabled;
     },
     isInputEnabled: () => state.inputEnabled,
     getInputMode: () => (state.inputEnabled ? 'interactive' : 'blocked'),
@@ -269,13 +268,13 @@ function createEngineMock(state: TestState): RoccoEngine {
     beginCompositionSession: () => ({
       id: 'test',
       ownerId: 'test',
-      message: null,
+      message: undefined,
       status: 'active' as const,
       report() {},
       fail() {},
       dispose() {},
     }),
-    setPlayerSprite: (instanceId: string | null) => {
+    setPlayerSprite: (instanceId: string | undefined) => {
       state.playerSpriteId = instanceId;
     },
     log: () => {},
@@ -322,7 +321,7 @@ describe('RoccoBaitShopLevel', () => {
         height: 0,
         getContext: (contextId: string) => {
           if (contextId !== '2d') {
-            return null;
+            return;
           }
 
           return {

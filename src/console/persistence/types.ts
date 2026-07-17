@@ -97,16 +97,16 @@ export interface SaveOptions {
  * `cartridgeId` + `CartridgeSaveProvider` at creation time, so the methods
  * only take `profileId` + `slotId` (audit §6.6).
  */
-export interface CartridgeSaveRepository<TState> {
+export interface CartridgeSaveRepo<TState> {
   listSlots(profileId: string): Promise<readonly SaveMetadata[]>;
-  load(profileId: string, slotId: string): Promise<TState | null>;
+  load(profileId: string, slotId: string): Promise<TState | undefined>;
   save(profileId: string, slotId: string, options?: SaveOptions): Promise<SaveMetadata>;
   delete(profileId: string, slotId: string): Promise<void>;
-  exportSave(profileId: string, slotId: string): Promise<PortableSaveEnvelope<TState> | null>;
+  exportSave(profileId: string, slotId: string): Promise<PortableSaveEnvelope<TState> | undefined>;
   importSave(envelope: PortableSaveEnvelope<TState>): Promise<SaveMetadata>;
 }
 
-export interface CreateSaveRepositoryOptions<TState> {
+export interface CreateSaveRepoOptions<TState> {
   readonly cartridgeId: string;
   readonly cartridgeVersion: string;
   readonly provider: CartridgeSaveProvider<TState>;

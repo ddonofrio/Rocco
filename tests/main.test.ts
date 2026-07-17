@@ -9,8 +9,8 @@ const mainTestState = vi.hoisted(() => ({
   viewportMount: vi.fn(),
   viewportUnmount: vi.fn(),
   viewportSetDisplayProfile: vi.fn(),
-  stageElement: null as HTMLDivElement | null,
-  rootElement: null as HTMLDivElement | null,
+  stageElement: undefined as HTMLDivElement | undefined,
+  rootElement: undefined as HTMLDivElement | undefined,
 }));
 
 vi.mock('virtual:pwa-register', () => ({
@@ -29,13 +29,13 @@ vi.mock('../src/console/video', () => ({
     RoccoViewportHost: class MockViewportHost {
       mount = mainTestState.viewportMount;
       unmount = mainTestState.viewportUnmount;
+      setDisplayProfile = mainTestState.viewportSetDisplayProfile;
       getStageElement() {
         return mainTestState.stageElement ?? document.createElement('div');
       }
       getRootElement() {
         return mainTestState.rootElement ?? document.createElement('div');
       }
-      setDisplayProfile = mainTestState.viewportSetDisplayProfile;
     },
   },
 }));
@@ -90,7 +90,7 @@ describe('src/main.ts bootstrap', () => {
 
     await import('../src/main.ts');
 
-    globalThis.dispatchEvent(
+    dispatchEvent(
       new ErrorEvent('error', {
         message: 'boom',
         error: new Error('boom'),

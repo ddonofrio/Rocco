@@ -58,9 +58,60 @@ export class RoccoViewportHost {
   private panY = 0;
   private readonly panThreshold = 5;
   private panState = { active: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 };
-  private panPointerId: number | null = null;
+  private panPointerId: number | undefined;
   private metrics: RoccoViewportMetrics;
   private hostListenersAttached = false;
+  private readonly onWindowResize = (): void => {
+    this.resize();
+  };
+  private readonly onPointerDown = (event: PointerEvent): void => {
+    if (this.scaleMode !== 'cover' || event.button !== 0) {
+      return;
+    }
+
+    this.panState.active = false;
+    this.panState.startX = event.clientX;
+    this.panState.startY = event.clientY;
+    this.panState.startPanX = this.panX;
+    this.panState.startPanY = this.panY;
+    this.panPointerId = event.pointerId;
+    this.hostElement.setPointerCapture(event.pointerId);
+  };
+  private readonly onPointerMove = (event: PointerEvent): void => {
+    if (this.scaleMode !== 'cover' || event.pointerId !== this.panPointerId) {
+      return;
+    }
+
+    const dx = event.clientX - this.panState.startX;
+    const dy = event.clientY - this.panState.startY;
+
+    if (!this.panState.active) {
+      if (Math.abs(dx) <= this.panThreshold && Math.abs(dy) <= this.panThreshold) {
+        return;
+      }
+
+      this.panState.active = true;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+
+    this.panX = this.panState.startPanX + dx;
+    this.panY = this.panState.startPanY + dy;
+    this.resize();
+  };
+  private readonly onPointerUp = (event: PointerEvent): void => {
+    if (this.scaleMode !== 'cover' || event.pointerId !== this.panPointerId) {
+      return;
+    }
+
+    if (this.panState.active) {
+      event.stopImmediatePropagation();
+    }
+
+    this.panState.active = false;
+    this.panPointerId = undefined;
+    this.hostElement.releasePointerCapture(event.pointerId);
+  };
 
   constructor(options: RoccoViewportHostOptions) {
     if (!Number.isFinite(options.designWidth) || options.designWidth <= 0) {
@@ -128,6 +179,41 @@ export class RoccoViewportHost {
 
     this.scaleMode = options.scaleMode ?? 'contain';
     this.explicitScaleMode = options.scaleMode;
+  }
+
+  private applyRootStyles(): void {
+    this.rootElement.style.margin = '0';
+    this.rootElement.style.padding = '0';
+    this.rootElement.style.width = '100%';
+    this.rootElement.style.height = '100%';
+    this.rootElement.style.overflow = 'hidden';
+    this.rootElement.style.backgroundColor = this.backgroundColor;
+  }
+
+  private attachHostListeners(): void {
+    if (this.hostListenersAttached) {
+      return;
+    }
+
+    this.hostElement.addEventListener('pointerdown', this.onPointerDown);
+    this.hostElement.addEventListener('pointermove', this.onPointerMove);
+    this.hostElement.addEventListener('pointerup', this.onPointerUp);
+    this.hostElement.addEventListener('pointercancel', this.onPointerUp);
+    this.hostElement.addEventListener('lostpointercapture', this.onPointerUp);
+    this.hostListenersAttached = true;
+  }
+
+  private detachHostListeners(): void {
+    if (!this.hostListenersAttached) {
+      return;
+    }
+
+    this.hostElement.removeEventListener('pointerdown', this.onPointerDown);
+    this.hostElement.removeEventListener('pointermove', this.onPointerMove);
+    this.hostElement.removeEventListener('pointerup', this.onPointerUp);
+    this.hostElement.removeEventListener('pointercancel', this.onPointerUp);
+    this.hostElement.removeEventListener('lostpointercapture', this.onPointerUp);
+    this.hostListenersAttached = false;
   }
 
   mount(): void {
@@ -285,94 +371,4 @@ export class RoccoViewportHost {
   getCursorHost(): RoccoCursorHost {
     return this.cursorHost;
   }
-
-  private applyRootStyles(): void {
-    this.rootElement.style.margin = '0';
-    this.rootElement.style.padding = '0';
-    this.rootElement.style.width = '100%';
-    this.rootElement.style.height = '100%';
-    this.rootElement.style.overflow = 'hidden';
-    this.rootElement.style.backgroundColor = this.backgroundColor;
-  }
-
-  private attachHostListeners(): void {
-    if (this.hostListenersAttached) {
-      return;
-    }
-
-    this.hostElement.addEventListener('pointerdown', this.onPointerDown);
-    this.hostElement.addEventListener('pointermove', this.onPointerMove);
-    this.hostElement.addEventListener('pointerup', this.onPointerUp);
-    this.hostElement.addEventListener('pointercancel', this.onPointerUp);
-    this.hostElement.addEventListener('lostpointercapture', this.onPointerUp);
-    this.hostListenersAttached = true;
-  }
-
-  private detachHostListeners(): void {
-    if (!this.hostListenersAttached) {
-      return;
-    }
-
-    this.hostElement.removeEventListener('pointerdown', this.onPointerDown);
-    this.hostElement.removeEventListener('pointermove', this.onPointerMove);
-    this.hostElement.removeEventListener('pointerup', this.onPointerUp);
-    this.hostElement.removeEventListener('pointercancel', this.onPointerUp);
-    this.hostElement.removeEventListener('lostpointercapture', this.onPointerUp);
-    this.hostListenersAttached = false;
-  }
-
-  private readonly onWindowResize = (): void => {
-    this.resize();
-  };
-
-  private readonly onPointerDown = (event: PointerEvent): void => {
-    if (this.scaleMode !== 'cover' || event.button !== 0) {
-      return;
-    }
-
-    this.panState.active = false;
-    this.panState.startX = event.clientX;
-    this.panState.startY = event.clientY;
-    this.panState.startPanX = this.panX;
-    this.panState.startPanY = this.panY;
-    this.panPointerId = event.pointerId;
-    this.hostElement.setPointerCapture(event.pointerId);
-  };
-
-  private readonly onPointerMove = (event: PointerEvent): void => {
-    if (this.scaleMode !== 'cover' || event.pointerId !== this.panPointerId) {
-      return;
-    }
-
-    const dx = event.clientX - this.panState.startX;
-    const dy = event.clientY - this.panState.startY;
-
-    if (!this.panState.active) {
-      if (Math.abs(dx) <= this.panThreshold && Math.abs(dy) <= this.panThreshold) {
-        return;
-      }
-
-      this.panState.active = true;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    }
-
-    this.panX = this.panState.startPanX + dx;
-    this.panY = this.panState.startPanY + dy;
-    this.resize();
-  };
-
-  private readonly onPointerUp = (event: PointerEvent): void => {
-    if (this.scaleMode !== 'cover' || event.pointerId !== this.panPointerId) {
-      return;
-    }
-
-    if (this.panState.active) {
-      event.stopImmediatePropagation();
-    }
-
-    this.panState.active = false;
-    this.panPointerId = null;
-    this.hostElement.releasePointerCapture(event.pointerId);
-  };
 }

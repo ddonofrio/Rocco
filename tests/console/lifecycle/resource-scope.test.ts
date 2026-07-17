@@ -52,13 +52,10 @@ describe('ResourceScope', () => {
   it('returns the same promise for concurrent disposal and waits for cleanup once', async () => {
     const scope = createResourceScope('test');
     let resolveDisposer!: () => void;
+    const disposer = Promise.withResolvers<void>();
 
-    scope.defer(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveDisposer = resolve;
-        }),
-    );
+    resolveDisposer = disposer.resolve;
+    scope.defer(() => disposer.promise);
 
     const firstDispose = scope.dispose();
     const secondDispose = scope.dispose();
@@ -176,12 +173,9 @@ describe('ResourceScope', () => {
     const child = parent.createChild('child');
     let rejectChild!: (error: Error) => void;
 
-    child.defer(
-      () =>
-        new Promise<void>((_resolve, reject) => {
-          rejectChild = reject;
-        }),
-    );
+    const childDisposer = Promise.withResolvers<void>();
+    rejectChild = childDisposer.reject;
+    child.defer(() => childDisposer.promise);
 
     const childDispose = child.dispose();
     const parentDispose = parent.dispose();

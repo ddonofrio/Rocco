@@ -289,7 +289,7 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
       {
         count: 1,
         historyKey,
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);

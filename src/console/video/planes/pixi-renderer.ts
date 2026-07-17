@@ -359,7 +359,9 @@ export class PixiRoccoPlaneRenderer implements RoccoPlaneRenderer {
         node.viewportMask.destroy();
         node.viewportMask = undefined;
       }
-      root.mask = undefined;
+      // Pixi uses `null` to clear a container mask.
+      // eslint-disable-next-line unicorn/no-null -- Pixi mask API requires `null` to clear the mask.
+      root.mask = null;
       return;
     }
 

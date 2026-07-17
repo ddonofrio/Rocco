@@ -42,7 +42,7 @@ export default defineConfig({
         statements: 95,
         branches: 80,
       },
-      '**/src/console/persistence/save-repository.ts': {
+      '**/src/console/persistence/save-repo.ts': {
         lines: 88,
         functions: 100,
         statements: 88,

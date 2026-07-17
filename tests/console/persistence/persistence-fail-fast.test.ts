@@ -21,7 +21,7 @@ class MockTable<T extends { id: string }> {
   }
 
   toArray(): Promise<T[]> {
-    return Promise.resolve([...this.rows.values()].map((row) => structuredClone(row)));
+    return Promise.resolve(this.rows.values().map((row) => structuredClone(row)).toArray());
   }
 
   get(key: PrimitiveKey): Promise<T | undefined> {
@@ -57,10 +57,21 @@ class MockDexie {
   version(_version: number) {
     return {
       stores: (schema: Record<string, string | null>) => {
-        const tables = this as unknown as Record<string, MockTable<{ id: string }> | undefined>;
         for (const tableName of Object.keys(schema)) {
-          if (!tables[tableName]) {
-            tables[tableName] = new MockTable<{ id: string }>();
+          if (tableName === 'scenes') {
+            this.scenes ??= new MockTable<{
+              id: string;
+              updatedAt: number;
+              scene: unknown;
+            }>();
+          } else if (tableName === 'scenes_v4') {
+            this.scenes_v4 ??= new MockTable<{
+              id: string;
+              cartridgeId: string;
+              sceneId: string;
+              scene: unknown;
+              updatedAt: number;
+            }>();
           }
         }
         return this;

@@ -3,7 +3,7 @@
  * §6.6, ROCCO-014).
  *
  * A cartridge obtains one repository bound to its `cartridgeId` and a
- * `CartridgeSaveProvider` via `createSaveRepository`. The console owns the
+ * `CartridgeSaveProvider` via `createSaveRepo`. The console owns the
  * envelope, key, revision, and transactional write; the cartridge owns how
  * the `payload` is produced and migrated. The console never imports
  * game-internal fields.
@@ -16,8 +16,8 @@ import {
   SaveQuotaExceededError,
   SaveRevisionConflictError,
   SaveSchemaError,
-  type CartridgeSaveRepository as CartridgeSaveRepo,
-  type CreateSaveRepositoryOptions as CreateSaveRepoOptions,
+  type CartridgeSaveRepo,
+  type CreateSaveRepoOptions,
   type PortableSaveEnvelope,
   type SaveEnvelopeRow,
   type SaveMetadata,
@@ -81,7 +81,7 @@ function toMetadata(row: SaveEnvelopeRow): SaveMetadata {
   };
 }
 
-export function createSaveRepository<TState>(
+export function createSaveRepo<TState>(
   options: CreateSaveRepoOptions<TState>,
 ): CartridgeSaveRepo<TState> {
   const { cartridgeId, cartridgeVersion, provider } = options;
@@ -243,17 +243,17 @@ export function createSaveRepository<TState>(
     }
   }
 
-  async function load(profileId: string, slotId: string): Promise<TState | null> {
+  async function load(profileId: string, slotId: string): Promise<TState | undefined> {
     const row = await store.get(keyOf(profileId, slotId));
     if (!row) {
-      return null;
+      return undefined;
     }
     return materialize(row);
   }
 
   async function listSlots(profileId: string): Promise<readonly SaveMetadata[]> {
     const rows = await store.queryByProfile(cartridgeId, profileId);
-    return rows.map(toMetadata);
+    return rows.map((row) => toMetadata(row));
   }
 
   async function deleteSlot(profileId: string, slotId: string): Promise<void> {
@@ -264,16 +264,16 @@ export function createSaveRepository<TState>(
   async function exportSave(
     profileId: string,
     slotId: string,
-  ): Promise<PortableSaveEnvelope<TState> | null> {
+  ): Promise<PortableSaveEnvelope<TState> | undefined> {
     const key = keyOf(profileId, slotId);
     const row = await store.get(key);
     if (!row) {
-      return null;
+      return undefined;
     }
     const payload = await materialize(row);
     const updatedRow = await store.get(key);
     if (!updatedRow) {
-      return null;
+      return undefined;
     }
     return {
       cartridgeId: updatedRow.cartridgeId,

@@ -1,5 +1,5 @@
 import type {
-  RoccoCartridgeActionResult,
+  CartridgeActionDisposition,
   RoccoSceneClickAction,
 } from '../../../../console/cartridges';
 import type { RoccoEngine } from '../../../../console/engine-sdk';
@@ -80,7 +80,7 @@ interface RoccoDeveloperSpriteCyclePreview {
 export interface RoccoDeveloperRuntimeSnapshot {
   allowToiletReuseDuringUrgency: boolean;
   developerJumpPending: boolean;
-  developerEventScreenSelectionId: string | null;
+  developerEventScreenSelectionId: string | undefined;
 }
 
 export interface RoccoDeveloperRuntimeControllerOptions {
@@ -88,7 +88,7 @@ export interface RoccoDeveloperRuntimeControllerOptions {
   inventory: RoccoInventory;
   resolveLevelTitle: (levelId: string) => string;
   switchToLevel: (levelId: string) => Promise<boolean>;
-  canCollectInventoryItem: (itemId: string, showFullMessage?: boolean) => boolean;
+  canCollectInventoryItem: (itemId: string, isShowFullMessage?: boolean) => boolean;
   refreshStatus: () => void;
   onToiletReuseEventChanged?: () => void;
 }
@@ -110,194 +110,18 @@ export class RoccoDeveloperRuntimeController {
   };
   private developerJumpPending = false;
   private developerSpriteCycleActive = false;
-  private developerEventScreenSelectionId: string | null = null;
+  private developerEventScreenSelectionId: string | undefined;
   private readonly developerSpriteCycleIndexes = new Map<string, number>();
   private readonly developerSpriteCycleOriginalStates = new Map<
     string,
     RoccoDeveloperSpriteCycleOriginalState
   >();
-  private developerSpriteCyclePreviousCursorAttachment: RoccoCursorAttachment | null = null;
+  private developerSpriteCyclePreviousCursorAttachment: RoccoCursorAttachment | undefined;
 
   constructor(options: RoccoDeveloperRuntimeControllerOptions) {
     this.options = options;
     this.localization = options.localization;
     this.inventory = options.inventory;
-  }
-
-  get isSpriteCycleActive(): boolean {
-    return this.developerSpriteCycleActive;
-  }
-
-  get isJumpPending(): boolean {
-    return this.developerJumpPending;
-  }
-
-  isToiletReuseAllowedDuringUrgency(): boolean {
-    return this.developerEvents.allowToiletReuseDuringUrgency;
-  }
-
-  buildStatusMessage(baseStatus: string): string {
-    if (this.developerSpriteCycleActive) {
-      return `${baseStatus} | ${this.localization.text.developer.clickToCycleSpriteStatus}`;
-    }
-
-    if (!this.developerJumpPending) {
-      return baseStatus;
-    }
-
-    return `${baseStatus} | ${this.localization.text.developer.clickToJumpStatus}`;
-  }
-
-  createSnapshot(): RoccoDeveloperRuntimeSnapshot {
-    return {
-      allowToiletReuseDuringUrgency: this.developerEvents.allowToiletReuseDuringUrgency,
-      developerJumpPending: this.developerJumpPending,
-      developerEventScreenSelectionId: this.developerEventScreenSelectionId,
-    };
-  }
-
-  restoreSnapshot(
-    snapshot: RoccoDeveloperRuntimeSnapshot,
-    engine?: RoccoEngine | null,
-  ): void {
-    const isEventChanged =
-      this.developerEvents.allowToiletReuseDuringUrgency !==
-      snapshot.allowToiletReuseDuringUrgency;
-    this.deactivateSpriteCycleMode(engine);
-    this.developerJumpPending = snapshot.developerJumpPending;
-    this.developerEventScreenSelectionId = snapshot.developerEventScreenSelectionId;
-    this.developerEvents.allowToiletReuseDuringUrgency =
-      snapshot.allowToiletReuseDuringUrgency;
-    if (isEventChanged) {
-      this.options.onToiletReuseEventChanged?.();
-    }
-  }
-
-  resetRuntimeState(engine?: RoccoEngine | null): void {
-    this.clearTransientState(engine);
-    this.developerEvents.allowToiletReuseDuringUrgency = false;
-    this.developerEventScreenSelectionId = null;
-  }
-
-  clearTransientState(engine?: RoccoEngine | null): void {
-    this.developerJumpPending = false;
-    this.deactivateSpriteCycleMode(engine);
-  }
-
-  canHandlePlayerAction(engine: RoccoEngine, activation: RoccoActionMenuActivation): boolean {
-    return this.isDeveloperModeEnabled(engine) && isRoccoPlayerDeveloperAction(activation);
-  }
-
-  handlePlayerAction(engine: RoccoEngine, activation: RoccoActionMenuActivation): boolean {
-    if (!this.canHandlePlayerAction(engine, activation)) {
-      return false;
-    }
-
-    this.openDeveloperRootMenu(engine);
-    return true;
-  }
-
-  canHandleSceneClick(
-    engine: RoccoEngine,
-    _activation?: RoccoSceneClickAction,
-  ): boolean {
-    return (
-      this.isDeveloperModeEnabled(engine) &&
-      (this.developerSpriteCycleActive || this.developerJumpPending)
-    );
-  }
-
-  canHandleGridMenuAction(engine: RoccoEngine, activation: RoccoGridMenuActivation): boolean {
-    return this.isDeveloperModeEnabled(engine) && this.isDeveloperGridMenuId(activation.definitionId);
-  }
-
-  handleGridMenuAction(engine: RoccoEngine, activation: RoccoGridMenuActivation): boolean {
-    if (!this.canHandleGridMenuAction(engine, activation)) {
-      return false;
-    }
-
-    if (activation.definitionId === ROCCO_DEVELOPER_ROOT_MENU_ID) {
-      if (activation.interaction === 'activate') {
-        this.handleDeveloperRootSelection(engine, activation.itemId);
-      }
-      return true;
-    }
-
-    if (activation.definitionId === ROCCO_DEVELOPER_LEVEL_MENU_ID) {
-      if (activation.interaction === 'activate' && activation.itemId) {
-        this.openDeveloperScreenMenu(engine, activation.itemId);
-      }
-      return true;
-    }
-
-    if (activation.definitionId === ROCCO_DEVELOPER_SCREEN_MENU_ID) {
-      if (activation.interaction === 'activate' && activation.itemId) {
-        void this.prepareDeveloperJump(engine, activation.itemId);
-      }
-      return true;
-    }
-
-    if (activation.definitionId === ROCCO_DEVELOPER_INVENTORY_MENU_ID) {
-      if (activation.interaction === 'activate' && activation.itemId) {
-        this.toggleDeveloperInventoryItem(engine, activation.itemId);
-      }
-      return true;
-    }
-
-    if (activation.definitionId === ROCCO_DEVELOPER_EVENT_LEVEL_MENU_ID) {
-      if (activation.interaction === 'activate' && activation.itemId) {
-        this.openDeveloperEventScreenMenu(engine, activation.itemId);
-      }
-      return true;
-    }
-
-    if (activation.definitionId === ROCCO_DEVELOPER_EVENT_SCREEN_MENU_ID) {
-      if (activation.interaction === 'activate' && activation.itemId) {
-        this.openDeveloperEventMenu(engine, activation.itemId);
-      }
-      return true;
-    }
-
-    if (activation.definitionId === ROCCO_DEVELOPER_EVENT_MENU_ID) {
-      if (activation.interaction === 'activate' && activation.itemId) {
-        this.toggleDeveloperEvent(engine, activation.itemId);
-      }
-      return true;
-    }
-
-    return false;
-  }
-  handleSceneClick(
-    engine: RoccoEngine,
-    activation: RoccoSceneClickAction,
-  ): RoccoCartridgeActionResult | false {
-    if (this.handleDeveloperSpriteCycleSceneClick(engine, activation)) {
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    if (this.handleDeveloperJumpSceneClick(engine, activation)) {
-      return { suppressDefaultPlayerMove: true };
-    }
-
-    return false;
-  }
-
-  deactivateSpriteCycleMode(engine?: RoccoEngine | null): void {
-    if (engine) {
-      for (const [instanceId, originalState] of this.developerSpriteCycleOriginalStates) {
-        this.restoreDeveloperSpriteCycleState(engine, instanceId, originalState);
-      }
-      engine.video.viewport
-        .getHost()
-        ?.setCursorAttachment(this.developerSpriteCyclePreviousCursorAttachment ?? undefined);
-      engine.video.titles.removeTitle(DEVELOPER_SPRITE_CYCLE_TOP_TITLE_ID);
-      engine.video.titles.removeTitle(DEVELOPER_SPRITE_CYCLE_SPRITE_TITLE_ID);
-    }
-
-    this.developerSpriteCycleActive = false;
-    this.developerSpriteCycleIndexes.clear();
-    this.developerSpriteCycleOriginalStates.clear();
-    this.developerSpriteCyclePreviousCursorAttachment = null;
   }
 
   private openDeveloperRootMenu(engine: RoccoEngine): void {
@@ -306,7 +130,6 @@ export class RoccoDeveloperRuntimeController {
     }
 
     this.clearTransientState(engine);
-    engine.setInputEnabled(true);
     engine.video.actionMenus.closeMenu();
     engine.video.gridMenus.openMenu(createRoccoDeveloperRootMenuDefinition(this.localization));
     this.options.refreshStatus();
@@ -347,7 +170,6 @@ export class RoccoDeveloperRuntimeController {
     }
 
     this.clearTransientState(engine);
-    engine.setInputEnabled(true);
     engine.video.gridMenus.openMenu(
       createRoccoDeveloperLevelMenuDefinition(this.localization, this.createDeveloperLevelOptions()),
     );
@@ -371,7 +193,6 @@ export class RoccoDeveloperRuntimeController {
     }
 
     this.clearTransientState(engine);
-    engine.setInputEnabled(true);
     engine.video.gridMenus.openMenu(
       createRoccoDeveloperScreenMenuDefinition(this.localization, levelOption.screens),
     );
@@ -385,7 +206,6 @@ export class RoccoDeveloperRuntimeController {
     }
 
     this.clearTransientState(engine);
-    engine.setInputEnabled(true);
     engine.video.gridMenus.openMenu(
       createRoccoDeveloperInventoryMenuDefinition(this.localization, this.inventory),
     );
@@ -399,8 +219,7 @@ export class RoccoDeveloperRuntimeController {
     }
 
     this.clearTransientState(engine);
-    this.developerEventScreenSelectionId = null;
-    engine.setInputEnabled(true);
+    this.developerEventScreenSelectionId = undefined;
     engine.video.gridMenus.openMenu(
       createRoccoDeveloperEventLevelMenuDefinition(
         this.localization,
@@ -422,8 +241,7 @@ export class RoccoDeveloperRuntimeController {
     }
 
     this.clearTransientState(engine);
-    this.developerEventScreenSelectionId = null;
-    engine.setInputEnabled(true);
+    this.developerEventScreenSelectionId = undefined;
     engine.video.gridMenus.openMenu(
       createRoccoDeveloperEventScreenMenuDefinition(this.localization, levelOption.screens),
     );
@@ -443,7 +261,6 @@ export class RoccoDeveloperRuntimeController {
 
     this.clearTransientState(engine);
     this.developerEventScreenSelectionId = screenId;
-    engine.setInputEnabled(true);
     engine.video.gridMenus.openMenu(
       createRoccoDeveloperEventMenuDefinition(this.localization, screenOption.events),
     );
@@ -706,7 +523,7 @@ export class RoccoDeveloperRuntimeController {
 
     const previousCursorAttachment = this.developerSpriteCycleActive
       ? this.developerSpriteCyclePreviousCursorAttachment
-      : engine.video.viewport.getHost()?.getCursorAttachment() ?? null;
+      : engine.video.viewport.getHost()?.getCursorAttachment();
 
     this.developerJumpPending = false;
     this.deactivateSpriteCycleMode(engine);
@@ -801,7 +618,7 @@ export class RoccoDeveloperRuntimeController {
       return undefined;
     }
 
-    if (definition.animations[DEVELOPER_SPRITE_CYCLE_ANIMATION_ID]) {
+    if (Object.hasOwn(definition.animations, DEVELOPER_SPRITE_CYCLE_ANIMATION_ID)) {
       return definition;
     }
 
@@ -995,5 +812,181 @@ export class RoccoDeveloperRuntimeController {
       ROCCO_DEVELOPER_EVENT_SCREEN_MENU_ID,
       ROCCO_DEVELOPER_EVENT_MENU_ID,
     ].includes(definitionId);
+  }
+
+  canHandleGridMenuAction(engine: RoccoEngine, activation: RoccoGridMenuActivation): boolean {
+    return this.isDeveloperModeEnabled(engine) && this.isDeveloperGridMenuId(activation.definitionId);
+  }
+
+  canHandleSceneClick(
+    engine: RoccoEngine,
+    _activation?: RoccoSceneClickAction,
+  ): boolean {
+    return (
+      this.isDeveloperModeEnabled(engine) &&
+      (this.developerSpriteCycleActive || this.developerJumpPending)
+    );
+  }
+
+  canHandlePlayerAction(engine: RoccoEngine, activation: RoccoActionMenuActivation): boolean {
+    return this.isDeveloperModeEnabled(engine) && isRoccoPlayerDeveloperAction(activation);
+  }
+
+  clearTransientState(engine?: RoccoEngine | null): void {
+    this.developerJumpPending = false;
+    this.deactivateSpriteCycleMode(engine);
+  }
+
+  resetRuntimeState(engine?: RoccoEngine | null): void {
+    this.clearTransientState(engine);
+    this.developerEvents.allowToiletReuseDuringUrgency = false;
+    this.developerEventScreenSelectionId = undefined;
+  }
+
+  restoreSnapshot(
+    snapshot: RoccoDeveloperRuntimeSnapshot,
+    engine?: RoccoEngine | null,
+  ): void {
+    const isEventChanged =
+      this.developerEvents.allowToiletReuseDuringUrgency !==
+      snapshot.allowToiletReuseDuringUrgency;
+    this.deactivateSpriteCycleMode(engine);
+    this.developerJumpPending = snapshot.developerJumpPending;
+    this.developerEventScreenSelectionId = snapshot.developerEventScreenSelectionId;
+    this.developerEvents.allowToiletReuseDuringUrgency =
+      snapshot.allowToiletReuseDuringUrgency;
+    if (isEventChanged) {
+      this.options.onToiletReuseEventChanged?.();
+    }
+  }
+
+  createSnapshot(): RoccoDeveloperRuntimeSnapshot {
+    return {
+      allowToiletReuseDuringUrgency: this.developerEvents.allowToiletReuseDuringUrgency,
+      developerJumpPending: this.developerJumpPending,
+      developerEventScreenSelectionId: this.developerEventScreenSelectionId,
+    };
+  }
+
+  buildStatusMessage(baseStatus: string): string {
+    if (this.developerSpriteCycleActive) {
+      return `${baseStatus} | ${this.localization.text.developer.clickToCycleSpriteStatus}`;
+    }
+
+    if (!this.developerJumpPending) {
+      return baseStatus;
+    }
+
+    return `${baseStatus} | ${this.localization.text.developer.clickToJumpStatus}`;
+  }
+
+  isToiletReuseAllowedDuringUrgency(): boolean {
+    return this.developerEvents.allowToiletReuseDuringUrgency;
+  }
+
+  get isJumpPending(): boolean {
+    return this.developerJumpPending;
+  }
+
+  get isSpriteCycleActive(): boolean {
+    return this.developerSpriteCycleActive;
+  }
+
+  handlePlayerAction(engine: RoccoEngine, activation: RoccoActionMenuActivation): boolean {
+    if (!this.canHandlePlayerAction(engine, activation)) {
+      return false;
+    }
+
+    this.openDeveloperRootMenu(engine);
+    return true;
+  }
+
+  handleGridMenuAction(engine: RoccoEngine, activation: RoccoGridMenuActivation): boolean {
+    if (!this.canHandleGridMenuAction(engine, activation)) {
+      return false;
+    }
+
+    if (activation.interaction !== 'activate') {
+      return true;
+    }
+
+    switch (activation.definitionId) {
+      case ROCCO_DEVELOPER_ROOT_MENU_ID: {
+        this.handleDeveloperRootSelection(engine, activation.itemId);
+        return true;
+      }
+      case ROCCO_DEVELOPER_LEVEL_MENU_ID: {
+        if (activation.itemId) {
+          this.openDeveloperScreenMenu(engine, activation.itemId);
+        }
+        return true;
+      }
+      case ROCCO_DEVELOPER_SCREEN_MENU_ID: {
+        if (activation.itemId) {
+          void this.prepareDeveloperJump(engine, activation.itemId);
+        }
+        return true;
+      }
+      case ROCCO_DEVELOPER_INVENTORY_MENU_ID: {
+        if (activation.itemId) {
+          this.toggleDeveloperInventoryItem(engine, activation.itemId);
+        }
+        return true;
+      }
+      case ROCCO_DEVELOPER_EVENT_LEVEL_MENU_ID: {
+        if (activation.itemId) {
+          this.openDeveloperEventScreenMenu(engine, activation.itemId);
+        }
+        return true;
+      }
+      case ROCCO_DEVELOPER_EVENT_SCREEN_MENU_ID: {
+        if (activation.itemId) {
+          this.openDeveloperEventMenu(engine, activation.itemId);
+        }
+        return true;
+      }
+      case ROCCO_DEVELOPER_EVENT_MENU_ID: {
+        if (activation.itemId) {
+          this.toggleDeveloperEvent(engine, activation.itemId);
+        }
+        return true;
+      }
+      default: {
+        return false;
+      }
+    }
+  }
+
+  handleSceneClick(
+    engine: RoccoEngine,
+    activation: RoccoSceneClickAction,
+  ): CartridgeActionDisposition | undefined {
+    if (this.handleDeveloperSpriteCycleSceneClick(engine, activation)) {
+      return { consumed: true, defaultPlayerMovement: 'suppress' };
+    }
+
+    if (this.handleDeveloperJumpSceneClick(engine, activation)) {
+      return { consumed: true, defaultPlayerMovement: 'suppress' };
+    }
+
+    return undefined;
+  }
+
+  deactivateSpriteCycleMode(engine?: RoccoEngine | null): void {
+    if (engine) {
+      for (const [instanceId, originalState] of this.developerSpriteCycleOriginalStates) {
+        this.restoreDeveloperSpriteCycleState(engine, instanceId, originalState);
+      }
+      engine.video.viewport
+        .getHost()
+        ?.setCursorAttachment(this.developerSpriteCyclePreviousCursorAttachment);
+      engine.video.titles.removeTitle(DEVELOPER_SPRITE_CYCLE_TOP_TITLE_ID);
+      engine.video.titles.removeTitle(DEVELOPER_SPRITE_CYCLE_SPRITE_TITLE_ID);
+    }
+
+    this.developerSpriteCycleActive = false;
+    this.developerSpriteCycleIndexes.clear();
+    this.developerSpriteCycleOriginalStates.clear();
+    this.developerSpriteCyclePreviousCursorAttachment = undefined;
   }
 }

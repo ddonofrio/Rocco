@@ -34,12 +34,9 @@ describe('GameRuntime lifecycle', () => {
   it('returns the same promise for concurrent init calls', async () => {
     const runtime = createRuntime();
     let rejectInit!: (error: Error) => void;
-    vi.spyOn(Application.prototype, 'init').mockImplementation(
-      () =>
-        new Promise<void>((_resolve, reject) => {
-          rejectInit = reject;
-        }),
-    );
+    const initDeferred = Promise.withResolvers<void>();
+    rejectInit = initDeferred.reject;
+    vi.spyOn(Application.prototype, 'init').mockImplementation(() => initDeferred.promise);
 
     const firstInit = runtime.init();
     const secondInit = runtime.init();
@@ -55,12 +52,9 @@ describe('GameRuntime lifecycle', () => {
   it('returns the same promise for concurrent dispose calls and waits for cleanup', async () => {
     const runtime = createRuntime();
     let resolveCleanup!: () => void;
-    runtime.scope.defer(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveCleanup = resolve;
-        }),
-    );
+    const cleanupDeferred = Promise.withResolvers<void>();
+    resolveCleanup = cleanupDeferred.resolve;
+    runtime.scope.defer(() => cleanupDeferred.promise);
 
     const firstDispose = runtime.dispose();
     const secondDispose = runtime.dispose();

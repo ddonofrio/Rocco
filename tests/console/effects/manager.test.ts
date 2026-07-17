@@ -58,7 +58,6 @@ describe('Rocco effects manager', () => {
         if (targetType === 'graphic-plane' && targetId === plane.id) {
           return plane;
         }
-        return;
       },
     });
 
@@ -136,7 +135,6 @@ describe('Rocco effects manager', () => {
         if (targetType === 'graphic-plane' && targetId === plane.id) {
           return plane;
         }
-        return;
       },
     });
 

@@ -1,11 +1,7 @@
 import type { RoccoSpriteDefinition, RoccoSpriteInstance } from './types';
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function isFiniteNumber(value: number | undefined): value is number {
@@ -28,6 +24,155 @@ function pickMaxSpeed(definition: RoccoSpriteDefinition): number | undefined {
 export class RoccoSpriteStore {
   private readonly definitions = new Map<string, RoccoSpriteDefinition>();
   private nextInstanceSerial = 1;
+
+  private mergeInstance(base: RoccoSpriteInstance, options?: Partial<RoccoSpriteInstance>): RoccoSpriteInstance {
+    if (!options) {
+      return clone(base);
+    }
+
+    return {
+      ...base,
+      ...clone(options),
+      definitionId: base.definitionId,
+      transform: {
+        ...base.transform,
+        ...options.transform,
+      },
+      motion: {
+        ...base.motion,
+        ...options.motion,
+      },
+      animation: {
+        ...base.animation,
+        ...options.animation,
+      },
+      state: options.state ? clone(options.state) : base.state,
+    };
+  }
+
+  private ensureAnimationState(instance: RoccoSpriteInstance, definition: RoccoSpriteDefinition): void {
+    const clip = definition.animations[instance.animation.animationId];
+    if (!clip || clip.frames.length === 0) {
+      throw new Error(
+        `Sprite instance '${instance.id}' references animation '${instance.animation.animationId}' that does not exist.`,
+      );
+    }
+
+    if (!Number.isFinite(instance.animation.frameIndex) || instance.animation.frameIndex < 0) {
+      instance.animation.frameIndex = 0;
+      return;
+    }
+
+    if (instance.animation.frameIndex >= clip.frames.length) {
+      instance.animation.frameIndex = clip.frames.length - 1;
+    }
+  }
+
+  private requireDefinition(definitionId: string): RoccoSpriteDefinition {
+    const definition = this.definitions.get(definitionId);
+    if (!definition) {
+      throw new Error(`Sprite definition '${definitionId}' was not found.`);
+    }
+
+    return clone(definition);
+  }
+
+  private validateDefinition(definition: RoccoSpriteDefinition): void {
+    if (!definition.id) {
+      throw new Error('Sprite definition id is required.');
+    }
+    if (definition.images.length === 0) {
+      throw new Error(`Sprite definition '${definition.id}' must include at least one image.`);
+    }
+    if (definition.frames.length === 0) {
+      throw new Error(`Sprite definition '${definition.id}' must include at least one frame.`);
+    }
+    if (!Object.hasOwn(definition.animations, definition.defaultAnimation)) {
+      throw new Error(
+        `Sprite definition '${definition.id}' default animation '${definition.defaultAnimation}' was not found.`,
+      );
+    }
+    this.validateActions(definition);
+
+    const imageIds = new Set(definition.images.map((image) => image.id));
+    for (const frame of definition.frames) {
+      if (!imageIds.has(frame.imageId)) {
+        throw new Error(
+          `Sprite definition '${definition.id}' frame '${frame.id}' references missing image '${frame.imageId}'.`,
+        );
+      }
+    }
+
+    const frameIds = new Set(definition.frames.map((frame) => frame.id));
+    for (const animation of Object.values(definition.animations)) {
+      if (animation.frames.length === 0) {
+        throw new Error(`Sprite definition '${definition.id}' animation '${animation.id}' has no frames.`);
+      }
+
+      for (const frameReference of animation.frames) {
+        if (!frameIds.has(frameReference.frameId)) {
+          throw new Error(
+            `Sprite definition '${definition.id}' animation '${animation.id}' references missing frame '${frameReference.frameId}'.`,
+          );
+        }
+      }
+    }
+  }
+
+  private validateActions(definition: RoccoSpriteDefinition): void {
+    const actions = definition.actions ?? {};
+    this.validateConfiguredAction(definition, actions, definition.defaultMoveAction, 'move');
+    this.validateConfiguredAction(definition, actions, definition.defaultIdleAction, 'idle');
+
+    for (const [actionId, action] of Object.entries(actions)) {
+      this.validateAction(definition, actionId, action);
+    }
+  }
+
+  private validateConfiguredAction(
+    definition: RoccoSpriteDefinition,
+    actions: NonNullable<RoccoSpriteDefinition['actions']>,
+    actionId: string | undefined,
+    actionKind: string,
+  ): void {
+    if (actionId && !Object.hasOwn(actions, actionId)) {
+      throw new Error(
+        `Sprite definition '${definition.id}' default ${actionKind} action '${actionId}' was not found.`,
+      );
+    }
+  }
+
+  private validateAction(
+    definition: RoccoSpriteDefinition,
+    actionId: string,
+    action: NonNullable<RoccoSpriteDefinition['actions']>[string],
+  ): void {
+    if (!action.id) {
+      throw new Error(`Sprite definition '${definition.id}' action '${actionId}' must include an id.`);
+    }
+    if (action.id !== actionId) {
+      throw new Error(`Sprite definition '${definition.id}' action '${actionId}' has mismatched id '${action.id}'.`);
+    }
+    if (action.speed !== undefined && (!Number.isFinite(action.speed) || action.speed <= 0)) {
+      throw new Error(`Sprite definition '${definition.id}' action '${actionId}' has invalid speed.`);
+    }
+    if (action.playbackRate !== undefined && (!Number.isFinite(action.playbackRate) || action.playbackRate <= 0)) {
+      throw new Error(`Sprite definition '${definition.id}' action '${actionId}' has invalid playback rate.`);
+    }
+
+    const animationIds = [
+      action.animationId,
+      action.directionalAnimations?.default,
+      ...Object.values(action.directionalAnimations ?? {}),
+    ].filter((animationId): animationId is string => typeof animationId === 'string' && animationId.length > 0);
+    for (const animationId of animationIds) {
+      if (!Object.hasOwn(definition.animations, animationId)) {
+        throw new Error(
+          `Sprite definition '${definition.id}' action '${actionId}' references missing animation '${animationId}'.`,
+        );
+      }
+    }
+  }
 
   register(definition: RoccoSpriteDefinition): void {
     this.validateDefinition(definition);
@@ -55,10 +200,6 @@ export class RoccoSpriteStore {
   get(definitionId: string): RoccoSpriteDefinition | undefined {
     const definition = this.definitions.get(definitionId);
     return definition ? clone(definition) : undefined;
-  }
-
-  list(): RoccoSpriteDefinition[] {
-    return [...this.definitions.values()].map((definition) => clone(definition));
   }
 
   createInstanceFromDefinition(
@@ -133,139 +274,7 @@ export class RoccoSpriteStore {
     return merged;
   }
 
-  private mergeInstance(base: RoccoSpriteInstance, options?: Partial<RoccoSpriteInstance>): RoccoSpriteInstance {
-    if (!options) {
-      return clone(base);
-    }
-
-    return {
-      ...base,
-      ...clone(options),
-      definitionId: base.definitionId,
-      transform: {
-        ...base.transform,
-        ...options.transform,
-      },
-      motion: {
-        ...base.motion,
-        ...options.motion,
-      },
-      animation: {
-        ...base.animation,
-        ...options.animation,
-      },
-      state: options.state ? clone(options.state) : base.state,
-    };
-  }
-
-  private ensureAnimationState(instance: RoccoSpriteInstance, definition: RoccoSpriteDefinition): void {
-    const clip = definition.animations[instance.animation.animationId];
-    if (!clip || clip.frames.length === 0) {
-      throw new Error(
-        `Sprite instance '${instance.id}' references animation '${instance.animation.animationId}' that does not exist.`,
-      );
-    }
-
-    if (!Number.isFinite(instance.animation.frameIndex) || instance.animation.frameIndex < 0) {
-      instance.animation.frameIndex = 0;
-      return;
-    }
-
-    if (instance.animation.frameIndex >= clip.frames.length) {
-      instance.animation.frameIndex = clip.frames.length - 1;
-    }
-  }
-
-  private requireDefinition(definitionId: string): RoccoSpriteDefinition {
-    const definition = this.definitions.get(definitionId);
-    if (!definition) {
-      throw new Error(`Sprite definition '${definitionId}' was not found.`);
-    }
-
-    return clone(definition);
-  }
-
-  private validateDefinition(definition: RoccoSpriteDefinition): void {
-    if (!definition.id) {
-      throw new Error('Sprite definition id is required.');
-    }
-    if (definition.images.length === 0) {
-      throw new Error(`Sprite definition '${definition.id}' must include at least one image.`);
-    }
-    if (definition.frames.length === 0) {
-      throw new Error(`Sprite definition '${definition.id}' must include at least one frame.`);
-    }
-    if (!definition.animations[definition.defaultAnimation]) {
-      throw new Error(
-        `Sprite definition '${definition.id}' default animation '${definition.defaultAnimation}' was not found.`,
-      );
-    }
-    this.validateActions(definition);
-
-    const imageIds = new Set(definition.images.map((image) => image.id));
-    for (const frame of definition.frames) {
-      if (!imageIds.has(frame.imageId)) {
-        throw new Error(
-          `Sprite definition '${definition.id}' frame '${frame.id}' references missing image '${frame.imageId}'.`,
-        );
-      }
-    }
-
-    const frameIds = new Set(definition.frames.map((frame) => frame.id));
-    for (const animation of Object.values(definition.animations)) {
-      if (animation.frames.length === 0) {
-        throw new Error(`Sprite definition '${definition.id}' animation '${animation.id}' has no frames.`);
-      }
-
-      for (const frameReference of animation.frames) {
-        if (!frameIds.has(frameReference.frameId)) {
-          throw new Error(
-            `Sprite definition '${definition.id}' animation '${animation.id}' references missing frame '${frameReference.frameId}'.`,
-          );
-        }
-      }
-    }
-  }
-
-  private validateActions(definition: RoccoSpriteDefinition): void {
-    const actions = definition.actions ?? {};
-    if (definition.defaultMoveAction && !actions[definition.defaultMoveAction]) {
-      throw new Error(
-        `Sprite definition '${definition.id}' default move action '${definition.defaultMoveAction}' was not found.`,
-      );
-    }
-    if (definition.defaultIdleAction && !actions[definition.defaultIdleAction]) {
-      throw new Error(
-        `Sprite definition '${definition.id}' default idle action '${definition.defaultIdleAction}' was not found.`,
-      );
-    }
-
-    for (const [actionId, action] of Object.entries(actions)) {
-      if (!action.id) {
-        throw new Error(`Sprite definition '${definition.id}' action '${actionId}' must include an id.`);
-      }
-      if (action.id !== actionId) {
-        throw new Error(`Sprite definition '${definition.id}' action '${actionId}' has mismatched id '${action.id}'.`);
-      }
-      if (action.speed !== undefined && (!Number.isFinite(action.speed) || action.speed <= 0)) {
-        throw new Error(`Sprite definition '${definition.id}' action '${actionId}' has invalid speed.`);
-      }
-      if (action.playbackRate !== undefined && (!Number.isFinite(action.playbackRate) || action.playbackRate <= 0)) {
-        throw new Error(`Sprite definition '${definition.id}' action '${actionId}' has invalid playback rate.`);
-      }
-
-      const animationIds = [
-        action.animationId,
-        action.directionalAnimations?.default,
-        ...Object.values(action.directionalAnimations ?? {}),
-      ].filter((animationId): animationId is string => typeof animationId === 'string' && animationId.length > 0);
-      for (const animationId of animationIds) {
-        if (!definition.animations[animationId]) {
-          throw new Error(
-            `Sprite definition '${definition.id}' action '${actionId}' references missing animation '${animationId}'.`,
-          );
-        }
-      }
-    }
+  list(): RoccoSpriteDefinition[] {
+    return this.definitions.values().map((definition) => clone(definition)).toArray();
   }
 }

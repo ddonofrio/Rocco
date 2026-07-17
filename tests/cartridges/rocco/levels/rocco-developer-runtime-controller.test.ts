@@ -243,8 +243,8 @@ function createDeveloperEngine(
         state.renderCalls += 1;
       },
     },
-    setInputEnabled: (enabled: boolean) => {
-      state.inputEnabledChanges.push(enabled);
+    setInputEnabled: (isEnabled: boolean) => {
+      state.inputEnabledChanges.push(isEnabled);
     },
     getInputMode: () => 'interactive',
     acquireInputLease: () => ({
@@ -256,7 +256,7 @@ function createDeveloperEngine(
     beginCompositionSession: () => ({
       id: 'test',
       ownerId: 'test',
-      message: null,
+      message: undefined,
       status: 'active' as const,
       report() {},
       fail() {},

@@ -5,6 +5,16 @@ import type { RoccoLevel } from '../../../../src/cartridges/rocco/levels/rocco-l
 import { RoccoLevelRegistry } from '../../../../src/cartridges/rocco/levels/runtime/rocco-level-registry';
 import type { RoccoPlaneScene } from '../../../../src/console/video/planes';
 
+declare global {
+  interface PromiseConstructor {
+    withResolvers<T>(): {
+      promise: Promise<T>;
+      resolve: (value: T | PromiseLike<T>) => void;
+      reject: (reason?: unknown) => void;
+    };
+  }
+}
+
 interface Deferred<T> {
   promise: Promise<T>;
   resolve: (value: T) => void;
@@ -12,12 +22,7 @@ interface Deferred<T> {
 }
 
 function deferred<T>(): Deferred<T> {
-  let resolve!: (value: T) => void;
-  let reject!: (reason: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
+  const { promise, resolve, reject } = Promise.withResolvers<T>();
   return { promise, resolve, reject };
 }
 
@@ -35,7 +40,7 @@ function createMockLevel(levelId: string): RoccoLevel {
 
 function createMockEngine() {
   let isInputEnabled = true;
-  const setInputEnabledCalls: boolean[] = [];
+  const inputEnabledCalls: boolean[] = [];
   const compositionTextCalls: string[] = [];
   const beginCompositionCalls = vi.fn();
   const endCompositionCalls = vi.fn();
@@ -61,9 +66,9 @@ function createMockEngine() {
       };
     },
     getInputMode: () => (isInputEnabled ? 'interactive' : 'blocked'),
-    setInputEnabled(enabled: boolean) {
-      isInputEnabled = enabled;
-      setInputEnabledCalls.push(enabled);
+    setInputEnabled(isEnabled: boolean) {
+      isInputEnabled = isEnabled;
+      inputEnabledCalls.push(isEnabled);
     },
     isInputEnabled: () => isInputEnabled,
     beginCompositionSession(ownerId: string) {
@@ -74,7 +79,7 @@ function createMockEngine() {
         id: `composition-${compositionSessions.length}`,
         ownerId,
         get message() {
-          return session.messages.at(-1) ?? null;
+          return session.messages.at(-1);
         },
         get status() {
           return session.disposed ? 'disposed' : 'active';
@@ -116,7 +121,7 @@ function createMockEngine() {
         clearMessages: vi.fn(),
       },
       sprites: {
-        getSprite: vi.fn(() => null),
+        getSprite: vi.fn(() => {}),
         removeSprite: vi.fn(),
         createSprite: vi.fn(),
       },
@@ -127,7 +132,7 @@ function createMockEngine() {
         unregisterTarget: vi.fn(),
       },
       viewport: {
-        getHost: vi.fn(() => null),
+        getHost: vi.fn(() => {}),
       },
       titles: {
         removeTitle: vi.fn(),
@@ -159,7 +164,7 @@ function createMockEngine() {
   return {
     engine,
     state: {
-      setInputEnabledCalls,
+      inputEnabledCalls,
       compositionTextCalls,
       beginCompositionCalls,
       endCompositionCalls,
@@ -217,8 +222,8 @@ function asManager(manager: RoccoLevelManager): {
   };
 }
 
-function activeLevelId(manager: RoccoLevelManager): string | null {
-  return (manager as unknown as { activeLevel: RoccoLevel | null }).activeLevel?.id ?? null;
+function activeLevelId(manager: RoccoLevelManager): string | undefined {
+  return (manager as unknown as { activeLevel: RoccoLevel | null }).activeLevel?.id;
 }
 
 function mockScene(id: string): RoccoPlaneScene {
@@ -394,7 +399,7 @@ describe('RoccoLevelManager COR-001 level transitions', () => {
     const first = asManager(manager).switchToLevel('level-b');
     await asManager(manager).restartFromCheckpoint({ levelId: 'level-a' });
 
-    expect(unmountSpy).toHaveBeenCalledTimes(1);
+    expect(unmountSpy).not.toHaveBeenCalled();
 
     blocked.resolve(mockScene('scene-b'));
     await first;

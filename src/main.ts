@@ -122,12 +122,12 @@ function installGlobalErrorHandlers(
     onFatalError('A runtime error occurred.', event.reason);
   };
 
-  globalThis.addEventListener('error', handleWindowError);
-  globalThis.addEventListener('unhandledrejection', handleUnhandledRejection);
+  addEventListener('error', handleWindowError);
+  addEventListener('unhandledrejection', handleUnhandledRejection);
 
   return () => {
-    globalThis.removeEventListener('error', handleWindowError);
-    globalThis.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    removeEventListener('error', handleWindowError);
+    removeEventListener('unhandledrejection', handleUnhandledRejection);
   };
 }
 
@@ -147,22 +147,21 @@ async function bootstrapRoccoApp(): Promise<void> {
   });
   viewportHost.mount();
 
-  const log = (channel: string, message: string): void => {
-    writeBrowserLog(channel, message);
-  };
   const renderFatalError = (title: string, error: unknown): void => {
     renderBootError(viewportHost.getRootElement(), title, error);
   };
-  const removeGlobalErrorHandlers = installGlobalErrorHandlers(log, renderFatalError);
+  const removeGlobalErrorHandlers = installGlobalErrorHandlers(writeBrowserLog, renderFatalError);
 
-  let runtime: GameRuntime | null = null;
+  let runtime: GameRuntime | undefined;
+  const handleBeforeUnload = (): void => {
+    removeGlobalErrorHandlers();
+    // The unload event cannot await asynchronous runtime teardown.
+    void runtime?.dispose();
+    viewportHost.unmount();
+  };
   window.addEventListener(
     'beforeunload',
-    () => {
-      removeGlobalErrorHandlers();
-      void runtime?.dispose();
-      viewportHost.unmount();
-    },
+    handleBeforeUnload,
     { once: true },
   );
 
@@ -174,24 +173,26 @@ async function bootstrapRoccoApp(): Promise<void> {
       onDisplayProfileChange: (profile) => {
         viewportHost.setDisplayProfile(profile);
       },
-      onLog: log,
+      onLog: writeBrowserLog,
     });
     await runtime.init();
     clearBootError(viewportHost.getRootElement());
   } catch (error) {
-    log('System', `Boot failed: ${describeUnknownError(error)}`);
+    writeBrowserLog('System', `Boot failed: ${describeUnknownError(error)}`);
     renderFatalError('ROCCO could not start.', error);
     if (runtime) {
       try {
         await runtime.dispose();
       } catch (disposeError) {
-        log('System', `Boot cleanup failed: ${describeUnknownError(disposeError)}`);
+        writeBrowserLog('System', `Boot cleanup failed: ${describeUnknownError(disposeError)}`);
       }
     }
   }
 }
 
-void bootstrapRoccoApp().catch((error) => {
+try {
+  await bootstrapRoccoApp();
+} catch (error) {
   writeBrowserLog('System', `Bootstrap failed before mount: ${describeUnknownError(error)}`);
   renderBootError(document.querySelector<HTMLElement>('#app') ?? document.body, 'ROCCO could not start.', error);
-});
+}

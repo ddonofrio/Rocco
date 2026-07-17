@@ -81,8 +81,8 @@ vi.mock('../../../../../src/console/video/sprites', async (importOriginal) => {
 });
 
 interface TestState {
-  restoredRecord: RoccoPlaneSceneRecord | null;
-  loadedScene: RoccoPlaneScene | null;
+  restoredRecord: RoccoPlaneSceneRecord | undefined;
+  loadedScene: RoccoPlaneScene | undefined;
   savedScenes: RoccoPlaneScene[];
   preloadedPlaneSceneIds: string[];
   preloadedSpriteDefinitionIds: string[];
@@ -92,7 +92,7 @@ interface TestState {
   createdSprites: RoccoSpriteInstance[];
   removedSpriteIds: string[];
   walkMapBindings: string[];
-  playerSpriteId: string | null;
+  playerSpriteId: string | undefined;
   spriteMessages: string[];
   playedSpriteActions: string[];
   playedSpriteAnimations: string[];
@@ -113,8 +113,8 @@ interface TestState {
 
 function createState(overrides: Partial<TestState> = {}): TestState {
   return {
-    restoredRecord: null,
-    loadedScene: null,
+    restoredRecord: undefined,
+    loadedScene: undefined,
     savedScenes: [],
     preloadedPlaneSceneIds: [],
     preloadedSpriteDefinitionIds: [],
@@ -124,7 +124,7 @@ function createState(overrides: Partial<TestState> = {}): TestState {
     createdSprites: [],
     removedSpriteIds: [],
     walkMapBindings: [],
-    playerSpriteId: null,
+    playerSpriteId: undefined,
     spriteMessages: [],
     playedSpriteActions: [],
     playedSpriteAnimations: [],
@@ -156,8 +156,7 @@ function getRegisteredSceneTarget<T>(state: TestState, instanceId: string): T | 
 function createEngineMock(state: TestState): RoccoEngine {
   return {
     video: {
-      preloadAssetUrls: (assetUrls: readonly string[]) => {
-        void assetUrls;
+      preloadAssetUrls: () => {
         return Promise.resolve();
       },
       preloadPlaneScene: (scene: RoccoPlaneScene) => {
@@ -325,8 +324,7 @@ function createEngineMock(state: TestState): RoccoEngine {
         stopMovement: () => {
           state.isSpriteMovingValue = false;
         },
-        goTo: (...arguments_: [string, number, number]) => {
-          void arguments_;
+    goTo: () => {
           state.isSpriteMovingValue = true;
           return true;
         },
@@ -384,27 +382,32 @@ function createEngineMock(state: TestState): RoccoEngine {
     loadPlaneScene: (scene: RoccoPlaneScene) => {
       state.loadedScene = scene;
     },
-    setInputEnabled: (enabled: boolean) => {
-      state.inputEnabled = enabled;
+    setInputEnabled: (isEnabled: boolean) => {
+      state.inputEnabled = isEnabled;
     },
     isInputEnabled: () => state.inputEnabled,
     getInputMode: () => (state.inputEnabled ? 'interactive' : 'blocked'),
-    acquireInputLease: () => ({
-      ownerId: 'test',
-      mode: 'blocked' as const,
-      acquiredAt: 0,
-      dispose() {},
-    }),
+    acquireInputLease: () => {
+      state.inputEnabled = false;
+      return {
+        ownerId: 'test',
+        mode: 'blocked' as const,
+        acquiredAt: 0,
+        dispose() {
+          state.inputEnabled = true;
+        },
+      };
+    },
     beginCompositionSession: () => ({
       id: 'test',
       ownerId: 'test',
-      message: null,
+      message: undefined,
       status: 'active' as const,
       report() {},
       fail() {},
       dispose() {},
     }),
-    setPlayerSprite: (instanceId: string | null) => {
+    setPlayerSprite: (instanceId: string | undefined) => {
       state.playerSpriteId = instanceId;
     },
     log: () => {},
@@ -496,7 +499,7 @@ describe('RoccoBaitShopToiletLevel', () => {
       .mockImplementation(
         ((contextId: string) => {
           if (contextId !== '2d') {
-            return null;
+            return;
           }
 
           return {
@@ -521,7 +524,7 @@ describe('RoccoBaitShopToiletLevel', () => {
         height: 0,
         getContext: (contextId: string) => {
           if (contextId !== '2d') {
-            return null;
+            return;
           }
 
           return {
@@ -850,7 +853,8 @@ describe('RoccoBaitShopToiletLevel', () => {
     ).toBeUndefined();
 
     expect(level.handleSceneClick({ kind: 'scene-click', sceneX: 0, sceneY: 0 })).toEqual({
-      suppressDefaultPlayerMove: true,
+      consumed: true,
+      defaultPlayerMovement: 'suppress',
     });
   });
 });

@@ -265,7 +265,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       {
         count: 1,
         historyKey,
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);
@@ -322,7 +322,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       {
         count: 1,
         historyKey,
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);
@@ -360,7 +360,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       {
         count: 1,
         historyKey: NETHER_END_OF_HALLWAY_ASCENDING_PIPES_HISTORY_KEY,
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);
@@ -419,7 +419,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       {
         count: 1,
         historyKey,
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);

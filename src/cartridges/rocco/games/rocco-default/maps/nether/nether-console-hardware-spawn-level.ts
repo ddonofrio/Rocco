@@ -1057,7 +1057,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       {
         count: 1,
         historyKey,
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);
@@ -1391,7 +1391,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       {
         count: 1,
         historyKey,
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);
@@ -1512,7 +1512,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       {
         count: 1,
         historyKey,
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);
@@ -1533,7 +1533,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       {
         count: 1,
         historyKey,
-        avoidImmediateRepeat: true,
+        isAvoidImmediateRepeat: true,
       },
     );
     this.engine.video.render(0);

@@ -25,16 +25,16 @@ export function buildWalkMapGroundPath(
   columnIndex: ReadonlyMap<number, RoccoSpriteWalkMapColumn> | undefined,
   startGround: RoccoPoint,
   goalGround: RoccoPoint,
-): RoccoPoint[] | null {
+): RoccoPoint[] | undefined {
   const startNode = resolveWalkMapPathNode(walkMap, columnIndex, startGround);
   const goalNode = resolveWalkMapPathNode(walkMap, columnIndex, goalGround);
   if (!startNode || !goalNode) {
-    return null;
+    return undefined;
   }
 
   const nodePath = findWalkMapNodePath(columnIndex, startNode, goalNode);
   if (!nodePath) {
-    return null;
+    return undefined;
   }
 
   return buildGroundWaypointsFromWalkMapNodePath(walkMap, columnIndex, nodePath, startGround, goalGround);
@@ -129,7 +129,7 @@ function findWalkMapNodePath(
   const goalKey = createWalkMapPathNodeKey(goalNode);
   const queue: WalkMapPathNode[] = [startNode];
   const visited = new Set<string>([startKey]);
-  const parentByKey = new Map<string, string | null>([[startKey, null]]);
+  const parentByKey = new Map<string, string | undefined>([[startKey, undefined]]);
   const nodeByKey = new Map<string, WalkMapPathNode>([[startKey, startNode]]);
 
   for (let index = 0; index < queue.length; index += 1) {
@@ -145,14 +145,12 @@ function findWalkMapNodePath(
 
     for (const nextNode of listAdjacentWalkMapPathNodes(columnIndex, node)) {
       const nextKey = createWalkMapPathNodeKey(nextNode);
-      if (visited.has(nextKey)) {
-        continue;
+      if (!visited.has(nextKey)) {
+        visited.add(nextKey);
+        parentByKey.set(nextKey, nodeKey);
+        nodeByKey.set(nextKey, nextNode);
+        queue.push(nextNode);
       }
-
-      visited.add(nextKey);
-      parentByKey.set(nextKey, nodeKey);
-      nodeByKey.set(nextKey, nextNode);
-      queue.push(nextNode);
     }
   }
 
@@ -161,14 +159,14 @@ function findWalkMapNodePath(
   }
 
   const path: WalkMapPathNode[] = [];
-  let cursorKey: string | null = goalKey;
+  let cursorKey: string | undefined = goalKey;
   while (cursorKey) {
     const node = nodeByKey.get(cursorKey);
     if (!node) {
       break;
     }
     path.push(node);
-    cursorKey = parentByKey.get(cursorKey) ?? null;
+    cursorKey = parentByKey.get(cursorKey);
   }
 
   path.reverse();
@@ -190,23 +188,21 @@ function listAdjacentWalkMapPathNodes(
 
     for (let spanIndex = 0; spanIndex < neighborColumn.spans.length; spanIndex += 1) {
       const span = neighborColumn.spans[spanIndex];
-      if (!span || !walkMapSpansOverlap(currentSpan, span)) {
-        continue;
+      if (span && isWalkMapSpansOverlap(currentSpan, span)) {
+        adjacent.push({
+          x: neighborColumn.x,
+          spanIndex,
+          yMin: span.yMin,
+          yMax: span.yMax,
+        });
       }
-
-      adjacent.push({
-        x: neighborColumn.x,
-        spanIndex,
-        yMin: span.yMin,
-        yMax: span.yMax,
-      });
     }
   }
 
   return adjacent;
 }
 
-function walkMapSpansOverlap(left: { yMin: number; yMax: number }, right: { yMin: number; yMax: number }): boolean {
+function isWalkMapSpansOverlap(left: { yMin: number; yMax: number }, right: { yMin: number; yMax: number }): boolean {
   return Math.max(left.yMin, right.yMin) <= Math.min(left.yMax, right.yMax);
 }
 
@@ -304,13 +300,14 @@ function simplifyWalkMapGroundPath(
     }
 
     let nextIndex = anchorIndex + 1;
-    while (nextIndex + 1 < points.length) {
+    let canAdvance = true;
+    while (nextIndex + 1 < points.length && canAdvance) {
       const candidatePoint = points[nextIndex + 1];
-      if (!candidatePoint || !isWalkMapSegmentTraversable(walkMap, columnIndex, anchorPoint, candidatePoint)) {
-        break;
+      if (candidatePoint && isWalkMapSegmentTraversable(walkMap, columnIndex, anchorPoint, candidatePoint)) {
+        nextIndex += 1;
+      } else {
+        canAdvance = false;
       }
-
-      nextIndex += 1;
     }
 
     const nextPoint = points[nextIndex];
@@ -360,7 +357,8 @@ function isWalkMapSegmentTraversable(
 ): boolean {
   const deltaX = end.x - start.x;
   const deltaY = end.y - start.y;
-  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(deltaX), Math.abs(deltaY))));
+  const maximumDelta = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+  const steps = Math.max(1, Math.ceil(maximumDelta));
   for (let step = 0; step <= steps; step += 1) {
     const progress = step / steps;
     const sampleX = start.x + deltaX * progress;

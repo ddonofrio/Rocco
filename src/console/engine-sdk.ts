@@ -6,8 +6,8 @@ import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from './video/planes';
 import type { InputMode, InputPolicyLease } from './input/input-policy-stack';
 import type { CompositionSession } from './composition/composition-service';
 import type {
-  CartridgeSaveRepository as CartridgeSaveRepo,
-  CreateSaveRepositoryOptions as CreateSaveRepoOptions,
+  CartridgeSaveRepo,
+  CreateSaveRepoOptions,
 } from './persistence/types';
 
 export interface RoccoEnginePersistence {

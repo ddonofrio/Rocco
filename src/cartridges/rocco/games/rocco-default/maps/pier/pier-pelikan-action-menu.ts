@@ -87,7 +87,7 @@ export function showDefaultPelikanTalkReaction(
     {
       count: 1,
       historyKey: 'pelikan-talk',
-      avoidImmediateRepeat: true,
+      isAvoidImmediateRepeat: true,
     },
   );
   engine.video.render(0);
@@ -143,7 +143,7 @@ export function showDefaultPelikanSimpleReaction(
     {
       count: selection.count,
       historyKey: selection.historyKey,
-      avoidImmediateRepeat: true,
+      isAvoidImmediateRepeat: true,
     },
   );
   engine.video.render(0);

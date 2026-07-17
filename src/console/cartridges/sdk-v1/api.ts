@@ -26,8 +26,8 @@ import type { InputMode, InputPolicyLease } from '../../input/input-policy-stack
 import type { ResourceScope } from '../../lifecycle';
 import type { CompositionSession } from '../../composition/composition-service';
 import type {
-  CartridgeSaveRepository as CartridgeSaveRepo,
-  CreateSaveRepositoryOptions as CreateSaveRepoOptions,
+  CartridgeSaveRepo,
+  CreateSaveRepoOptions,
 } from '../../persistence/types';
 import type { CartridgeCapability } from './capabilities';
 

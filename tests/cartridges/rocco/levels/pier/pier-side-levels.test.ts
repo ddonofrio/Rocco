@@ -118,7 +118,7 @@ function createEngineMock(state: TestState): RoccoEngine {
       } as unknown as RoccoEngine['video']['sprites'],
     } as unknown as RoccoEngine['video'],
     persistence: {
-      loadPlaneSceneRecord: () => Promise.resolve(null),
+      loadPlaneSceneRecord: () => Promise.resolve(undefined),
       savePlaneScene: () => Promise.resolve(),
     } as unknown as RoccoEngine['persistence'],
     loadPlaneScene: () => {},
@@ -134,7 +134,7 @@ function createEngineMock(state: TestState): RoccoEngine {
     beginCompositionSession: () => ({
       id: 'test',
       ownerId: 'test',
-      message: null,
+      message: undefined,
       status: 'active' as const,
       report() {},
       fail() {},

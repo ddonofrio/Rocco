@@ -54,6 +54,10 @@ function isTrackedAssetPath(assetPath: string): boolean {
   return TRACKED_ASSET_EXTENSIONS.has(path.extname(assetPath).toLowerCase());
 }
 
+function normalizeModuleRelativeAssetPath(assetPath: string): string {
+  return assetPath.startsWith('assets/') ? `./${assetPath}` : assetPath;
+}
+
 function toPosixPath(filePath: string): string {
   return filePath.split(path.sep).join('/');
 }
@@ -71,40 +75,37 @@ function collectDeclaredAssetReferences(): DeclaredAssetReference[] {
 
     NEW_URL_ASSET_PATTERN.lastIndex = 0;
     for (const match of source.matchAll(NEW_URL_ASSET_PATTERN)) {
-      const assetPath = match[2];
-      if (!assetPath || !isTrackedAssetPath(assetPath)) {
-        continue;
+      const sourceAssetPath = match[2];
+      if (sourceAssetPath && isTrackedAssetPath(sourceAssetPath)) {
+        const assetPath = normalizeModuleRelativeAssetPath(sourceAssetPath);
+        const resolvedPath = path.resolve(path.dirname(filePath), sourceAssetPath);
+        const key = `module-relative:${sourceFile}:${assetPath}`;
+        references.set(key, {
+          sourceFile,
+          assetPath,
+          resolvedPath,
+          resolutionKind: 'module-relative',
+        });
       }
-
-      const resolvedPath = path.resolve(path.dirname(filePath), assetPath);
-      const key = `module-relative:${sourceFile}:${assetPath}`;
-      references.set(key, {
-        sourceFile,
-        assetPath,
-        resolvedPath,
-        resolutionKind: 'module-relative',
-      });
     }
 
     BASE_URL_ASSET_PATTERN.lastIndex = 0;
     for (const match of source.matchAll(BASE_URL_ASSET_PATTERN)) {
       const assetPath = match[1];
-      if (!assetPath || !isTrackedAssetPath(assetPath)) {
-        continue;
+      if (assetPath && isTrackedAssetPath(assetPath)) {
+        const resolvedPath = path.join(PUBLIC_ROOT, ...assetPath.split('/'));
+        const key = `public-base-url:${sourceFile}:${assetPath}`;
+        references.set(key, {
+          sourceFile,
+          assetPath,
+          resolvedPath,
+          resolutionKind: 'public-base-url',
+        });
       }
-
-      const resolvedPath = path.join(PUBLIC_ROOT, ...assetPath.split('/'));
-      const key = `public-base-url:${sourceFile}:${assetPath}`;
-      references.set(key, {
-        sourceFile,
-        assetPath,
-        resolvedPath,
-        resolutionKind: 'public-base-url',
-      });
     }
   }
 
-  return [...references.values()].sort((left, right) => {
+  const sortedReferences = references.values().toArray().toSorted((left, right) => {
     const sourceComparison = left.sourceFile.localeCompare(right.sourceFile);
     if (sourceComparison !== 0) {
       return sourceComparison;
@@ -117,6 +118,7 @@ function collectDeclaredAssetReferences(): DeclaredAssetReference[] {
 
     return left.resolutionKind.localeCompare(right.resolutionKind);
   });
+  return sortedReferences;
 }
 
 describe('Rocco asset references', () => {

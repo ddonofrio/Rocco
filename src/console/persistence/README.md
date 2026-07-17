@@ -8,11 +8,11 @@ saves in IndexedDB through Dexie.
 - `db.ts` - Database schema, tables, lazy/disposable connection, and the
   scene-cache functions.
 - `types.ts` - Persistence domain contracts: save envelope, metadata,
-  `CartridgeSaveProvider`, `CartridgeSaveRepository`, `SaveStore`, and the
+  `CartridgeSaveProvider`, `CartridgeSaveRepo`, `SaveStore`, and the
   typed errors (`SaveQuotaExceededError`, `SaveRevisionConflictError`,
   `SaveSchemaError`).
 - `store.ts` - Dexie-backed `SaveStore` adapter.
-- `save-repository.ts` - Versioned, slot/profile-scoped save repository.
+- `save-repo.ts` - Versioned, slot/profile-scoped save repository.
 - `README.md` - This file.
 
 ## Tables
@@ -34,7 +34,7 @@ separate from domain saves.
 
 ## Versioned saves (audit DAT-001 / ROCCO-014)
 
-A cartridge obtains a `CartridgeSaveRepository` bound to its `cartridgeId`
+A cartridge obtains a `CartridgeSaveRepo` bound to its `cartridgeId`
 and a `CartridgeSaveProvider`:
 
 ```ts
@@ -49,7 +49,7 @@ const saves = engine.persistence.createSaveRepository<MyState>({
 });
 
 await saves.save(profileId, slotId);          // transactional, revision + 1
-const state = await saves.load(profileId, slotId); // null if absent
+const state = await saves.load(profileId, slotId); // undefined if absent
 ```
 
 The console owns the envelope, key, transaction, revision guard and quota

@@ -106,41 +106,15 @@ export class RoccoCartridgeMenu {
     | ((profile: Partial<RoccoSoundProfile>) => void)
     | undefined;
 
-  private root: Container | null = null;
-  private ui: RoccoCartridgeMenuPixiUiPrimitives | null = null;
-  private settingsRenderer: RoccoCartridgeMenuSystemSettingsRenderer | null = null;
-  private resolveSelection: ((result: CartridgeMenuResult) => void) | null = null;
-  private readonly boundKeyDown: (e: KeyboardEvent) => void;
+  private root: Container | undefined;
+  private ui: RoccoCartridgeMenuPixiUiPrimitives | undefined;
+  private settingsRenderer: RoccoCartridgeMenuSystemSettingsRenderer | undefined;
+  private resolveSelection: ((result: CartridgeMenuResult) => void) | undefined;
+  private readonly boundKeyDown: (event: KeyboardEvent) => void;
 
   constructor(app: Application) {
     this.stage = app.stage;
     this.boundKeyDown = this.onKeyDown.bind(this);
-  }
-
-  async show(
-    manifests: RoccoCartridgeManifest[],
-    options: CartridgeMenuOptions = {},
-  ): Promise<CartridgeMenuResult> {
-    this.session.begin(manifests, options);
-    this.onDisplayProfileChange = options.onDisplayProfileChange;
-    this.onSoundProfileChange = options.onSoundProfileChange;
-
-    this.mount();
-    this.render();
-
-    globalThis.addEventListener('keydown', this.boundKeyDown);
-
-    return new Promise<CartridgeMenuResult>((resolve) => {
-      this.resolveSelection = resolve;
-    });
-  }
-
-  dispose(): void {
-    globalThis.removeEventListener('keydown', this.boundKeyDown);
-    this.unmount();
-    this.resolveSelection = null;
-    this.onDisplayProfileChange = undefined;
-    this.onSoundProfileChange = undefined;
   }
 
   private mount(): void {
@@ -163,9 +137,9 @@ export class RoccoCartridgeMenu {
 
     this.root.removeFromParent();
     this.root.destroy({ children: true });
-    this.root = null;
-    this.ui = null;
-    this.settingsRenderer = null;
+    this.root = undefined;
+    this.ui = undefined;
+    this.settingsRenderer = undefined;
   }
 
   private render(): void {
@@ -313,22 +287,22 @@ export class RoccoCartridgeMenu {
     }
   }
 
-  private drawBackground(withDivider: boolean): void {
+  private drawBackground(isWithDivider: boolean): void {
     const root = this.root!;
 
     root.addChild(new Graphics().rect(0, 0, DESIGN_W, DESIGN_H).fill(C.bg));
 
     const scanlines = new Graphics();
     for (let y = 0; y < DESIGN_H; y += 4) {
-      scanlines.rect(0, y, DESIGN_W, 1).fill({ color: C.scanline, alpha: 0.18 });
+      scanlines.rect(0, y, DESIGN_W, 1).fill(Object.assign({}, { color: C.scanline, alpha: 0.18 }));
     }
     root.addChild(scanlines);
 
-    if (withDivider) {
+    if (isWithDivider) {
       root.addChild(
         new Graphics()
           .rect(DETAIL_X - 16, LIST_TOP, 1, LIST_H)
-          .fill({ color: C.bgLine, alpha: 0.9 }),
+          .fill(Object.assign({}, { color: C.bgLine, alpha: 0.9 })),
       );
     }
   }
@@ -336,9 +310,13 @@ export class RoccoCartridgeMenu {
   private drawHeader(subtitle: string, rightText: string): void {
     const root = this.root!;
 
-    root.addChild(new Graphics().rect(0, 0, DESIGN_W, HEADER_H).fill({ color: 0x0a_0f_09, alpha: 1 }));
     root.addChild(
-      new Graphics().rect(0, HEADER_H - 1, DESIGN_W, 1).fill({ color: C.titleBrand, alpha: 0.25 }),
+      new Graphics().rect(0, 0, DESIGN_W, HEADER_H).fill(Object.assign({}, { color: 0x0a_0f_09, alpha: 1 })),
+    );
+    root.addChild(
+      new Graphics()
+        .rect(0, HEADER_H - 1, DESIGN_W, 1)
+        .fill(Object.assign({}, { color: C.titleBrand, alpha: 0.25 })),
     );
 
     const brand = this.makeText('ROCCO', {
@@ -400,7 +378,7 @@ export class RoccoCartridgeMenu {
     manifest: RoccoCartridgeManifest,
     y: number,
     width: number,
-    selected: boolean,
+    isSelected: boolean,
     dataIndex: number,
   ): void {
     const item = this.createInteractiveContainer(LIST_X, y, width, ITEM_H, () => {
@@ -411,19 +389,19 @@ export class RoccoCartridgeMenu {
     item.addChild(
       new Graphics()
         .rect(0, 0, width, ITEM_H)
-        .fill(selected ? C.itemBgSelected : C.itemBg)
+        .fill(isSelected ? C.itemBgSelected : C.itemBg)
         .rect(0, 0, width, ITEM_H)
-        .stroke({ color: selected ? C.itemBorderSelected : C.itemBorder, width: selected ? 1.5 : 1 }),
+        .stroke({ color: isSelected ? C.itemBorderSelected : C.itemBorder, width: isSelected ? 1.5 : 1 }),
     );
 
-    if (selected) {
+    if (isSelected) {
       item.addChild(new Graphics().rect(0, 4, 3, ITEM_H - 8).fill(C.itemBorderSelected));
     }
 
     const title = this.makeText(manifest.title.toUpperCase(), {
       fontSize: 18,
-      fontWeight: selected ? '700' : '400',
-      fill: selected ? C.itemTitleSelected : C.itemTitle,
+      fontWeight: isSelected ? '700' : '400',
+      fill: isSelected ? C.itemTitleSelected : C.itemTitle,
       letterSpacing: 2,
     });
     title.x = 16;
@@ -504,7 +482,7 @@ export class RoccoCartridgeMenu {
     }
 
     container.addChild(
-      new Graphics().rect(lx, cy, DETAIL_W, 1).fill({ color: C.bgLine, alpha: 1 }),
+      new Graphics().rect(lx, cy, DETAIL_W, 1).fill(Object.assign({}, { color: C.bgLine, alpha: 1 })),
     );
     cy += 14;
 
@@ -599,7 +577,9 @@ export class RoccoCartridgeMenu {
         this.render();
       }
     });
-    upButton.addChild(new Graphics().rect(0, 0, 16, 16).fill({ color: 0x00_00_00, alpha: 0.01 }));
+    upButton.addChild(
+      new Graphics().rect(0, 0, 16, 16).fill(Object.assign({}, { color: 0x00_00_00, alpha: 0.01 })),
+    );
     const upText = this.makeText('^', {
       fontSize: 10,
       fill: this.session.scrollOffset > 0 ? C.titleBrand : C.scrollBar,
@@ -614,7 +594,9 @@ export class RoccoCartridgeMenu {
         this.render();
       }
     });
-    downButton.addChild(new Graphics().rect(0, 0, 16, 16).fill({ color: 0x00_00_00, alpha: 0.01 }));
+    downButton.addChild(
+      new Graphics().rect(0, 0, 16, 16).fill(Object.assign({}, { color: 0x00_00_00, alpha: 0.01 })),
+    );
     const downText = this.makeText('v', {
       fontSize: 10,
       fill: this.session.scrollOffset < maxScroll ? C.titleBrand : C.scrollBar,
@@ -654,7 +636,9 @@ export class RoccoCartridgeMenu {
         this.render();
       });
 
-      option.addChild(new Graphics().rect(0, 0, 54, 22).fill({ color: 0x00_00_00, alpha: 0.01 }));
+      option.addChild(
+        new Graphics().rect(0, 0, 54, 22).fill(Object.assign({}, { color: 0x00_00_00, alpha: 0.01 })),
+      );
       option.addChild(
         new Graphics().circle(7, 9, 6).stroke({
           color: isSelected ? C.titleBrand : C.detailLabel,
@@ -721,9 +705,9 @@ export class RoccoCartridgeMenu {
     height: number,
     label: string,
     onPress: () => void,
-    primary = false,
+    isPrimary = false,
   ): void {
-    this.ui!.drawSoftButton(x, y, width, height, label, onPress, primary);
+    this.ui!.drawSoftButton(x, y, width, height, label, onPress, isPrimary);
   }
 
   private createInteractiveContainer(
@@ -740,54 +724,54 @@ export class RoccoCartridgeMenu {
     return this.ui!.makeText(text, style);
   }
 
-  private onKeyDown(e: KeyboardEvent): void {
+  private onKeyDown(event: KeyboardEvent): void {
     switch (this.session.page) {
       case 'cartridges': {
-        this.onCartridgeKeyDown(e);
+        this.onCartridgeKeyDown(event);
         break;
       }
       case 'settings': {
-        this.onSettingsKeyDown(e);
+        this.onSettingsKeyDown(event);
         break;
       }
       case 'video': {
-        this.onVideoKeyDown(e);
+        this.onVideoKeyDown(event);
         break;
       }
       case 'sound': {
-        this.onSoundKeyDown(e);
+        this.onSoundKeyDown(event);
         break;
       }
       case 'filters': {
-        this.onFilterKeyDown(e);
+        this.onFilterKeyDown(event);
         break;
       }
     }
   }
 
-  private onCartridgeKeyDown(e: KeyboardEvent): void {
-    switch (e.key) {
+  private onCartridgeKeyDown(event: KeyboardEvent): void {
+    switch (event.key) {
       case 'ArrowUp':
       case 'Up': {
-        e.preventDefault();
+        event.preventDefault();
         this.moveSelection(-1);
         break;
       }
       case 'ArrowDown':
       case 'Down': {
-        e.preventDefault();
+        event.preventDefault();
         this.moveSelection(1);
         break;
       }
       case 'Enter':
       case ' ': {
-        e.preventDefault();
+        event.preventDefault();
         this.confirm();
         break;
       }
       case 's':
       case 'S': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.openSettings();
         this.render();
         break;
@@ -795,33 +779,33 @@ export class RoccoCartridgeMenu {
     }
   }
 
-  private onSettingsKeyDown(e: KeyboardEvent): void {
+  private onSettingsKeyDown(event: KeyboardEvent): void {
     const settingsOptionIds = this.getSettingsOptions().map((option) => option.id);
 
-    switch (e.key) {
+    switch (event.key) {
       case 'ArrowUp':
       case 'Up': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.moveSettingsSelection(settingsOptionIds, -1);
         this.render();
         break;
       }
       case 'ArrowDown':
       case 'Down': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.moveSettingsSelection(settingsOptionIds, 1);
         this.render();
         break;
       }
       case 'Enter':
       case ' ': {
-        e.preventDefault();
+        event.preventDefault();
         this.activateSettingsSelection();
         break;
       }
       case 'Escape':
       case 'Backspace': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.openCartridgeSelection();
         this.render();
         break;
@@ -829,43 +813,43 @@ export class RoccoCartridgeMenu {
     }
   }
 
-  private onVideoKeyDown(e: KeyboardEvent): void {
-    switch (e.key) {
+  private onVideoKeyDown(event: KeyboardEvent): void {
+    switch (event.key) {
       case 'ArrowUp':
       case 'Up': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.moveVideoSelection(VIDEO_ROW_IDS, -1);
         this.render();
         break;
       }
       case 'ArrowDown':
       case 'Down': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.moveVideoSelection(VIDEO_ROW_IDS, 1);
         this.render();
         break;
       }
       case 'ArrowLeft':
       case 'Left': {
-        e.preventDefault();
+        event.preventDefault();
         this.adjustSelectedVideoValue(-DISPLAY_STEP);
         break;
       }
       case 'ArrowRight':
       case 'Right': {
-        e.preventDefault();
+        event.preventDefault();
         this.adjustSelectedVideoValue(DISPLAY_STEP);
         break;
       }
       case 'Enter':
       case ' ': {
-        e.preventDefault();
+        event.preventDefault();
         this.activateVideoSelection();
         break;
       }
       case 'Escape':
       case 'Backspace': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.returnFromVideoSettings();
         this.render();
         break;
@@ -873,43 +857,43 @@ export class RoccoCartridgeMenu {
     }
   }
 
-  private onFilterKeyDown(e: KeyboardEvent): void {
-    switch (e.key) {
+  private onFilterKeyDown(event: KeyboardEvent): void {
+    switch (event.key) {
       case 'ArrowUp':
       case 'Up': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.moveFilterSelection(FILTER_ROW_IDS, -1);
         this.render();
         break;
       }
       case 'ArrowDown':
       case 'Down': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.moveFilterSelection(FILTER_ROW_IDS, 1);
         this.render();
         break;
       }
       case 'ArrowLeft':
       case 'Left': {
-        e.preventDefault();
+        event.preventDefault();
         this.applySelectedFilterValue(false);
         break;
       }
       case 'ArrowRight':
       case 'Right': {
-        e.preventDefault();
+        event.preventDefault();
         this.applySelectedFilterValue(true);
         break;
       }
       case 'Enter':
       case ' ': {
-        e.preventDefault();
+        event.preventDefault();
         this.toggleFilter(this.session.filterSelectionId);
         break;
       }
       case 'Escape':
       case 'Backspace': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.returnFromFilterSettings();
         this.render();
         break;
@@ -917,43 +901,43 @@ export class RoccoCartridgeMenu {
     }
   }
 
-  private onSoundKeyDown(e: KeyboardEvent): void {
-    switch (e.key) {
+  private onSoundKeyDown(event: KeyboardEvent): void {
+    switch (event.key) {
       case 'ArrowUp':
       case 'Up': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.moveSoundSelection(SOUND_ROW_IDS, -1);
         this.render();
         break;
       }
       case 'ArrowDown':
       case 'Down': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.moveSoundSelection(SOUND_ROW_IDS, 1);
         this.render();
         break;
       }
       case 'ArrowLeft':
       case 'Left': {
-        e.preventDefault();
+        event.preventDefault();
         this.adjustSelectedSoundValue(-VOLUME_STEP);
         break;
       }
       case 'ArrowRight':
       case 'Right': {
-        e.preventDefault();
+        event.preventDefault();
         this.adjustSelectedSoundValue(VOLUME_STEP);
         break;
       }
       case 'Enter':
       case ' ': {
-        e.preventDefault();
+        event.preventDefault();
         this.activateSoundSelection();
         break;
       }
       case 'Escape':
       case 'Backspace': {
-        e.preventDefault();
+        event.preventDefault();
         this.session.returnFromSoundSettings();
         this.render();
         break;
@@ -1072,25 +1056,19 @@ export class RoccoCartridgeMenu {
     }
 
     if (id === 'music') {
-      this.updateSoundProfile(
-        setEffectiveMusicVolume(
-          this.session.soundProfile,
-          this.clamp(this.getMusicOutputVolume() + delta, 0, 1),
-        ),
-      );
+      const nextMusicVolume = this.clamp(this.getMusicOutputVolume() + delta, 0, 1);
+      const nextSoundProfile = setEffectiveMusicVolume(this.session.soundProfile, nextMusicVolume);
+      this.updateSoundProfile(nextSoundProfile);
       return;
     }
 
-    this.updateSoundProfile(
-      setEffectiveSfxVolume(
-        this.session.soundProfile,
-        this.clamp(this.getSfxOutputVolume() + delta, 0, 1),
-      ),
-    );
+    const nextSfxVolume = this.clamp(this.getSfxOutputVolume() + delta, 0, 1);
+    const nextSoundProfile = setEffectiveSfxVolume(this.session.soundProfile, nextSfxVolume);
+    this.updateSoundProfile(nextSoundProfile);
   }
 
-  private applySelectedFilterValue(enabled: boolean): void {
-    this.updateDisplayProfile({ [this.session.filterSelectionId]: enabled });
+  private applySelectedFilterValue(isEnabled: boolean): void {
+    this.updateDisplayProfile({ [this.session.filterSelectionId]: isEnabled });
   }
 
   private toggleFilter(id: FilterRowId): void {
@@ -1139,5 +1117,31 @@ export class RoccoCartridgeMenu {
 
   private clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
+  }
+
+  async show(
+    manifests: RoccoCartridgeManifest[],
+    options: CartridgeMenuOptions = {},
+  ): Promise<CartridgeMenuResult> {
+    this.session.begin(manifests, options);
+    this.onDisplayProfileChange = options.onDisplayProfileChange;
+    this.onSoundProfileChange = options.onSoundProfileChange;
+
+    this.mount();
+    this.render();
+
+    addEventListener('keydown', this.boundKeyDown);
+
+    return new Promise<CartridgeMenuResult>((resolve) => {
+      this.resolveSelection = resolve;
+    });
+  }
+
+  dispose(): void {
+    removeEventListener('keydown', this.boundKeyDown);
+    this.unmount();
+    this.resolveSelection = undefined;
+    this.onDisplayProfileChange = undefined;
+    this.onSoundProfileChange = undefined;
   }
 }

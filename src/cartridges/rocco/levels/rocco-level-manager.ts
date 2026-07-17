@@ -763,12 +763,13 @@ export class RoccoLevelManager {
           return;
         }
 
-        if (!this.engine) {
+        const engine = this.engine;
+        if (!engine) {
           return;
         }
 
         roccoCartridgeMessageRuntime.think(
-          this.engine,
+          engine,
           DEFAULT_SPRITE_INSTANCE_ID,
           this.localization.text.keys.collectedLines,
           {
@@ -777,10 +778,10 @@ export class RoccoLevelManager {
           {
             count: 1,
             historyKey: 'keys-collected',
-            avoidImmediateRepeat: true,
+            isAvoidImmediateRepeat: true,
           },
         );
-        this.engine.video.render(0);
+        engine.video.render(0);
       },
       onConnectorTransitionRequested: (connectorId: string) =>
         this.requestScriptedConnectorTransition(connectorId),
@@ -798,27 +799,28 @@ export class RoccoLevelManager {
           return;
         }
 
-        if (!this.engine) {
+        const engine = this.engine;
+        if (!engine) {
           return;
         }
 
         if (item.id === ROCCO_INVENTORY_BATA_ITEM_ID) {
           const spriteDefinition = createRoccoAppearanceSpriteDefinition(
-            this.engine,
+            engine,
             ROCCO_LAB_COAT_PLAYER_APPEARANCE,
             this.localization,
           );
           void (async () => {
             try {
-              await this.engine.video.preloadSpriteDefinition(spriteDefinition);
+              await engine.video.preloadSpriteDefinition(spriteDefinition);
             } catch {
-              this.engine?.log('Assets', 'Rocco lab coat assets could not be preloaded.');
+              engine.log('Assets', 'Rocco lab coat assets could not be preloaded.');
             }
           })();
         }
 
         roccoCartridgeMessageRuntime.think(
-          this.engine,
+          engine,
           DEFAULT_SPRITE_INSTANCE_ID,
           this.localization.text.inventory.pickupLine,
           {
@@ -827,10 +829,10 @@ export class RoccoLevelManager {
           {
             count: 1,
             historyKey: `pickup-${item.id}`,
-            avoidImmediateRepeat: true,
+            isAvoidImmediateRepeat: true,
           },
         );
-        this.engine.video.render(0);
+        engine.video.render(0);
       },
     };
   }
@@ -1005,6 +1007,9 @@ export class RoccoLevelManager {
   }
 
   private clearActiveLevelDroppedInventoryPresentation(): void {
+    if (!this.engine) {
+      return;
+    }
     this.droppedInventory.clearActiveLevelPresentation(this.engine);
   }
 
@@ -1230,8 +1235,8 @@ export class RoccoLevelManager {
     return this.actionRouter.handleAction(activation, context);
   }
 
-  getActiveLevelId(): string | null {
-    return this.activeLevel?.id ?? nullValue<string | null>();
+  getActiveLevelId(): string | undefined {
+    return this.activeLevel?.id;
   }
 
   getActiveLevel(): RoccoLevel | null {

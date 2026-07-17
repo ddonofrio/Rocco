@@ -25,8 +25,9 @@ export async function preloadPlaneAlphaMasks(options: PreloadPlaneAlphaMasksOpti
     }
   }
 
+  const sources = imageSources.values().toArray();
   await Promise.all(
-    [...imageSources.values()].map((source) =>
+    sources.map((source) =>
       queuePlaneAlphaMaskLoad({
         source,
         planeAlphaMasks: options.planeAlphaMasks,
@@ -36,10 +37,10 @@ export async function preloadPlaneAlphaMasks(options: PreloadPlaneAlphaMasksOpti
   );
 }
 
-export function queuePlaneAlphaMaskLoad(options: QueuePlaneAlphaMaskLoadOptions): Promise<void> {
+export async function queuePlaneAlphaMaskLoad(options: QueuePlaneAlphaMaskLoadOptions): Promise<void> {
   const key = options.source.uri;
   if (options.planeAlphaMasks.has(key)) {
-    return Promise.resolve();
+    return;
   }
 
   const pending = options.pendingPlaneAlphaMaskLoads.get(key);
@@ -47,13 +48,14 @@ export function queuePlaneAlphaMaskLoad(options: QueuePlaneAlphaMaskLoadOptions)
     return pending;
   }
 
-  const load = createPlaneAlphaMask(options.source)
-    .then((mask) => {
+  const load = (async () => {
+    try {
+      const mask = await createPlaneAlphaMask(options.source);
       options.planeAlphaMasks.set(key, mask);
-    })
-    .finally(() => {
+    } finally {
       options.pendingPlaneAlphaMaskLoads.delete(key);
-    });
+    }
+  })();
   options.pendingPlaneAlphaMaskLoads.set(key, load);
   return load;
 }
@@ -102,16 +104,17 @@ export function createOpaquePlaneAlphaMask(width: number, height: number): Plane
   };
 }
 
-export function loadPlaneMaskImage(uri: string): Promise<HTMLImageElement> {
+export async function loadPlaneMaskImage(uri: string): Promise<HTMLImageElement> {
   const image = new Image();
   image.src = uri;
 
   if (typeof image.decode === 'function') {
-    return image.decode().then(() => image);
+    await image.decode();
+    return image;
   }
 
   return new Promise((resolve, reject) => {
     image.addEventListener('load', () => resolve(image));
-    image.onerror = () => reject(new Error(`Could not load plane image '${uri}'.`));
+    image.addEventListener('error', () => reject(new Error(`Could not load plane image '${uri}'.`)));
   });
 }

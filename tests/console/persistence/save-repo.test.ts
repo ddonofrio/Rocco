@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createSaveRepository as createSaveRepo } from '../../../src/console/persistence/save-repository';
+import { createSaveRepo } from '../../../src/console/persistence/save-repo';
 import type {
   CartridgeSaveProvider,
   SaveEnvelopeRow,
@@ -19,7 +19,7 @@ interface TestState {
 }
 
 function clone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function serializeKey(key: SaveStoreKey): string {
@@ -46,9 +46,10 @@ class MemorySaveStore implements SaveStore {
     profileId: string,
   ): Promise<SaveEnvelopeRow[]> {
     await Promise.resolve();
-    return [...this.rows.values()]
+    return this.rows.values()
       .filter((row) => row.cartridgeId === cartridgeId && row.profileId === profileId)
-      .map((row) => clone(row));
+      .map((row) => clone(row))
+      .toArray();
   }
 
   async delete(key: SaveStoreKey): Promise<void> {
@@ -74,8 +75,7 @@ class MemorySaveStore implements SaveStore {
 class QuotaSaveStore extends MemorySaveStore {
   override async put(row: SaveEnvelopeRow): Promise<void> {
     await super.put(row);
-    const error = new Error('quota') as Error & { name: string };
-    error.name = 'QuotaExceededError';
+    const error = new DOMException('quota', 'QuotaExceededError');
     throw error;
   }
 }
@@ -169,9 +169,12 @@ describe('versioned save repository', () => {
       store,
     });
 
-    expect((await repo.save('p', 's')).revision).toBe(1);
-    expect((await repo.save('p', 's')).revision).toBe(2);
-    expect((await repo.save('p', 's')).revision).toBe(3);
+    const firstSave = await repo.save('p', 's');
+    const secondSave = await repo.save('p', 's');
+    const thirdSave = await repo.save('p', 's');
+    expect(firstSave.revision).toBe(1);
+    expect(secondSave.revision).toBe(2);
+    expect(thirdSave.revision).toBe(3);
 
     const loaded = await repo.load('p', 's');
     expect(loaded).toEqual({ level: 1 });
@@ -309,7 +312,7 @@ describe('versioned save repository', () => {
     const pSlots = await repo.listSlots('p');
     const qSlots = await repo.listSlots('q');
 
-    expect(pSlots.map((s) => s.slotId).sort()).toEqual(['s1', 's2']);
+    expect(pSlots.map((s) => s.slotId).toSorted((left, right) => left.localeCompare(right))).toEqual(['s1', 's2']);
     expect(qSlots.map((s) => s.slotId)).toEqual(['s3']);
   });
 
@@ -323,10 +326,10 @@ describe('versioned save repository', () => {
     });
 
     await repo.save('p', 's');
-    expect(await repo.load('p', 's')).not.toBeNull();
+    expect(await repo.load('p', 's')).toBeDefined();
 
     await repo.delete('p', 's');
-    expect(await repo.load('p', 's')).toBeNull();
+    expect(await repo.load('p', 's')).toBeUndefined();
   });
 
   it('migrates on exportSave then round-trips through importSave', async () => {

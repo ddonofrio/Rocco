@@ -219,7 +219,7 @@ function listRuntimePlaneOccluders(
       renderLayerZIndex: resolveRenderLayerZIndex(plane.renderLayer ?? 'background.main'),
       sceneOrder,
     }))
-    .sort((left, right) => {
+    .toSorted((left, right) => {
       if (left.renderLayerZIndex !== right.renderLayerZIndex) {
         return right.renderLayerZIndex - left.renderLayerZIndex;
       }
@@ -449,8 +449,6 @@ function isPointOnOpaquePlanePixel(
         planeAlphaMasks,
       );
     }
-    case 'bitmap':
-    case 'tileset':
     default: {
       return false;
     }
@@ -481,14 +479,10 @@ function isPointOnOpaqueImagePlanePixel(
     return true;
   }
 
-  const sourceX = Math.min(
-    mask.width - 1,
-    Math.max(0, Math.floor((samplePoint.x / Math.max(renderWidth, 1)) * mask.width)),
-  );
-  const sourceY = Math.min(
-    mask.height - 1,
-    Math.max(0, Math.floor((samplePoint.y / Math.max(renderHeight, 1)) * mask.height)),
-  );
+  const normalizedX = (samplePoint.x / Math.max(renderWidth, 1)) * mask.width;
+  const normalizedY = (samplePoint.y / Math.max(renderHeight, 1)) * mask.height;
+  const sourceX = Math.min(mask.width - 1, Math.max(0, Math.floor(normalizedX)));
+  const sourceY = Math.min(mask.height - 1, Math.max(0, Math.floor(normalizedY)));
   return (mask.alpha[sourceY * mask.width + sourceX] ?? 0) > 0;
 }
 

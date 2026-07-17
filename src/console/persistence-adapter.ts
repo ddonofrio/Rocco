@@ -1,9 +1,9 @@
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from './video/planes';
 import { loadPlaneSceneRecord, savePlaneScene, closeRoccoDatabase } from './persistence/database';
-import { createSaveRepository as createSaveRepo } from './persistence/save-repository';
+import { createSaveRepo } from './persistence/save-repo';
 import type {
-  CartridgeSaveRepository as CartridgeSaveRepo,
-  CreateSaveRepositoryOptions as CreateSaveRepoOptions,
+  CartridgeSaveRepo,
+  CreateSaveRepoOptions,
 } from './persistence/types';
 import type { RoccoEnginePersistence } from './engine-sdk';
 

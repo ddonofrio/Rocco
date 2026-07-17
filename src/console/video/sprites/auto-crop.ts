@@ -131,16 +131,21 @@ async function loadAutoCropImage(source: RoccoSpriteAutoCropImageSource): Promis
   };
 }
 
-function loadImage(uri: string): Promise<HTMLImageElement> {
+async function loadImage(uri: string): Promise<HTMLImageElement> {
   const image = new Image();
   const loaded = new Promise<HTMLImageElement>((resolve, reject) => {
     image.addEventListener('load', () => resolve(image));
-    image.onerror = () => reject(new Error(`Could not load sprite auto-crop image '${uri}'.`));
+    image.addEventListener('error', () => reject(new Error(`Could not load sprite auto-crop image '${uri}'.`)));
   });
 
   image.src = uri;
   if (typeof image.decode === 'function') {
-    return image.decode().then(() => image, () => loaded);
+    try {
+      await image.decode();
+      return image;
+    } catch {
+      return loaded;
+    }
   }
 
   return loaded;
@@ -157,18 +162,18 @@ function findVisibleRect(
   let maxY = -1;
   let opaquePixels = 0;
 
-  for (let y = 0; y < image.height; y += 1) {
-    for (let x = 0; x < image.width; x += 1) {
-      if (!isOpaque(image, x, y, threshold)) {
-        continue;
-      }
-
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-      opaquePixels += 1;
+  for (let index = 0; index < image.width * image.height; index += 1) {
+    const x = index % image.width;
+    const y = Math.floor(index / image.width);
+    if (!isOpaque(image, x, y, threshold)) {
+      continue;
     }
+
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+    opaquePixels += 1;
   }
 
   if (maxX < minX || maxY < minY) {
@@ -197,18 +202,21 @@ function findComponentRects(
   const visited = new Uint8Array(image.width * image.height);
   const rects: ComponentRect[] = [];
 
-  for (let y = 0; y < image.height; y += 1) {
-    for (let x = 0; x < image.width; x += 1) {
-      const index = y * image.width + x;
-      if (visited[index] || !isOpaque(image, x, y, threshold)) {
-        visited[index] = 1;
-        continue;
-      }
+  for (let index = 0; index < image.width * image.height; index += 1) {
+    const x = index % image.width;
+    const y = Math.floor(index / image.width);
+    if (visited.at(index) === 1) {
+      continue;
+    }
 
-      const component = floodFillComponent(image, x, y, visited, threshold);
-      if (component.opaquePixels >= minOpaquePixels) {
-        rects.push(padRect(component, image, options));
-      }
+    visited[index] = 1;
+    if (!isOpaque(image, x, y, threshold)) {
+      continue;
+    }
+
+    const component = floodFillComponent(image, x, y, visited, threshold);
+    if (component.opaquePixels >= minOpaquePixels) {
+      rects.push(padRect(component, image, options));
     }
   }
 
@@ -268,7 +276,7 @@ function visitNeighbor(
   }
 
   const index = y * image.width + x;
-  if (visited[index]) {
+  if (visited.at(index) === 1) {
     return;
   }
 
@@ -286,7 +294,8 @@ function sortRects(rects: ComponentRect[], options: RoccoSpriteAutoCropOptions):
 
   const rowTolerance = resolveRowTolerance(rects, options);
   const rows: RowGroup[] = [];
-  for (const rect of [...rects].sort((left, right) => centerY(left) - centerY(right))) {
+  const sortedRects = rects.toSorted((left, right) => centerY(left) - centerY(right));
+  for (const rect of sortedRects) {
     const row = rows.find((candidate) => Math.abs(candidate.centerY - centerY(rect)) <= rowTolerance);
     if (!row) {
       rows.push({
@@ -300,9 +309,8 @@ function sortRects(rects: ComponentRect[], options: RoccoSpriteAutoCropOptions):
     row.centerY = row.rects.reduce((sum, item) => sum + centerY(item), 0) / row.rects.length;
   }
 
-  return rows
-    .sort((left, right) => left.centerY - right.centerY)
-    .flatMap((row) => row.rects.sort((left, right) => left.x - right.x));
+  const sortedRows = rows.toSorted((left, right) => left.centerY - right.centerY);
+  return sortedRows.flatMap((row) => row.rects.toSorted((left, right) => left.x - right.x));
 }
 
 function resolveRowTolerance(rects: ComponentRect[], options: RoccoSpriteAutoCropOptions): number {
@@ -310,7 +318,7 @@ function resolveRowTolerance(rects: ComponentRect[], options: RoccoSpriteAutoCro
     return 0;
   }
 
-  const heights = [...rects].map((rect) => rect.height).sort((left, right) => left - right);
+  const heights = rects.map((rect) => rect.height).toSorted((left, right) => left - right);
   const medianHeight = heights[Math.floor(heights.length / 2)] ?? 0;
   return medianHeight * (options.rowToleranceFactor ?? DEFAULT_ROW_TOLERANCE_FACTOR);
 }

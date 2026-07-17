@@ -12,7 +12,7 @@ export interface RpceGameRuntimeController<TMountResult = unknown> {
   unmount(): void;
   update(deltaMs: number): void;
   handleAction(action: RoccoCartridgeAction, context?: CartridgeActionContext): CartridgeActionDisposition | void;
-  getActiveLevelId?(): string | null;
+  getActiveLevelId?(): string | undefined;
 }
 
 export interface RpceGameRuntimeOptions<
@@ -59,6 +59,6 @@ export class RpceGameRuntime<TControllerOptions, TMountResult = unknown>
   }
 
   getActiveLevelId(): string | undefined {
-    return this.controller.getActiveLevelId?.() ?? undefined;
+    return this.controller.getActiveLevelId?.();
   }
 }

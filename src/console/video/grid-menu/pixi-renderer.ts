@@ -80,66 +80,39 @@ function resolveContentWidth(
   return maxRight;
 }
 
+function resolveSlotFillAlpha(
+  item: RoccoGridMenuItem | undefined,
+  isHovered: boolean,
+  hasCarriedItem: boolean,
+): number {
+  if (item) {
+    return 0.95;
+  }
+
+  if (isHovered && hasCarriedItem) {
+    return 0.78;
+  }
+
+  return 0.55;
+}
+
 export class PixiRoccoGridMenuRenderer {
   private readonly slotNodes = new Map<number, GridMenuSlotNode>();
   private readonly buttonNodes = new Map<number, GridMenuButtonNode>();
   private readonly textures = new Map<string, Texture>();
   private readonly pendingTextureLoads = new Map<string, Promise<Texture>>();
   private readonly resolveRenderLayerZIndex: (renderLayer: string) => number;
-  private stage: Container | null = null;
-  private layerRoot: Container | null = null;
-  private backdrop: Graphics | null = null;
-  private panelRoot: Container | null = null;
-  private panelBackground: Graphics | null = null;
-  private decorationRoot: Container | null = null;
-  private title: Text | null = null;
+  private stage: Container | undefined;
+  private layerRoot: Container | undefined;
+  private backdrop: Graphics | undefined;
+  private panelRoot: Container | undefined;
+  private panelBackground: Graphics | undefined;
+  private decorationRoot: Container | undefined;
+  private title: Text | undefined;
   private renderLayer = 'ui';
 
   constructor(options?: PixiRoccoGridMenuRendererOptions) {
     this.resolveRenderLayerZIndex = options?.resolveRenderLayerZIndex ?? (() => 0);
-  }
-
-  mount(stage: Container): void {
-    if (this.stage === stage) {
-      return;
-    }
-
-    this.unmount();
-    this.stage = stage;
-  }
-
-  unmount(): void {
-    this.clearPanel();
-    this.layerRoot?.parent?.removeChild(this.layerRoot);
-    this.layerRoot?.destroy({ children: true });
-    this.layerRoot = null;
-    this.stage = null;
-  }
-
-  sync(renderable: RoccoGridMenuRenderable | undefined): void {
-    if (!this.stage) {
-      return;
-    }
-
-    if (!renderable) {
-      this.clearPanel();
-      return;
-    }
-
-    this.renderLayer = renderable.definition.renderLayer ?? 'ui';
-    const layerRoot = this.ensureLayerRoot();
-    this.applyBackdrop(layerRoot, renderable);
-    const panelRoot = this.ensurePanelRoot(layerRoot);
-    this.applyPanel(panelRoot, renderable);
-  }
-
-  destroy(): void {
-    this.unmount();
-    for (const texture of this.textures.values()) {
-      texture.destroy(false);
-    }
-    this.textures.clear();
-    this.pendingTextureLoads.clear();
   }
 
   private ensureLayerRoot(): Container {
@@ -164,7 +137,7 @@ export class PixiRoccoGridMenuRenderer {
   private ensurePanelRoot(layerRoot: Container): Container {
     if (this.panelRoot) {
       if (this.panelRoot.parent !== layerRoot) {
-        this.panelRoot.parent?.removeChild(this.panelRoot);
+        this.panelRoot.removeFromParent();
         layerRoot.addChild(this.panelRoot);
       }
       return this.panelRoot;
@@ -192,7 +165,7 @@ export class PixiRoccoGridMenuRenderer {
       this.backdrop.zIndex = 0;
       layerRoot.addChild(this.backdrop);
     } else if (this.backdrop.parent !== layerRoot) {
-      this.backdrop.parent?.removeChild(this.backdrop);
+      this.backdrop.removeFromParent();
       layerRoot.addChild(this.backdrop);
     }
 
@@ -204,7 +177,7 @@ export class PixiRoccoGridMenuRenderer {
 
     this.backdrop
       .rect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT)
-      .fill({ color: definition.backdropFill ?? '#000000', alpha });
+      .fill(Object.assign({}, { color: definition.backdropFill ?? '#000000', alpha }));
   }
 
   private applyPanel(panelRoot: Container, renderable: RoccoGridMenuRenderable): void {
@@ -281,7 +254,7 @@ export class PixiRoccoGridMenuRenderer {
 
     for (const staleSlot of staleSlots) {
       const node = this.slotNodes.get(staleSlot);
-      node?.root.parent?.removeChild(node.root);
+      node?.root.removeFromParent();
       node?.root.destroy({ children: true });
       this.slotNodes.delete(staleSlot);
     }
@@ -300,9 +273,9 @@ export class PixiRoccoGridMenuRenderer {
 
   private applyTitle(panelRoot: Container, definition: RoccoGridMenuDefinition): void {
     if (!definition.title || definition.showTitle === false) {
-      this.title?.parent?.removeChild(this.title);
+      this.title?.removeFromParent();
       this.title?.destroy();
-      this.title = null;
+      this.title = undefined;
       return;
     }
 
@@ -335,11 +308,13 @@ export class PixiRoccoGridMenuRenderer {
       child.destroy({ children: true });
     }
 
-    for (const line of definition.lineDecorations ?? []) {
+    const lineDecorations = definition.lineDecorations ?? [];
+    for (const line of lineDecorations) {
       this.decorationRoot.addChild(this.createLineDecorationNode(line));
     }
 
-    for (const decoration of definition.textDecorations ?? []) {
+    const textDecorations = definition.textDecorations ?? [];
+    for (const decoration of textDecorations) {
       this.decorationRoot.addChild(this.createTextDecorationNode(decoration));
     }
   }
@@ -464,15 +439,16 @@ export class PixiRoccoGridMenuRenderer {
     const isHovered = renderable.state.hoveredSlotIndex === slotIndex;
     const hasCarriedItem = Boolean(renderable.state.carriedItem);
     const isTextList = layout === 'text-list';
+    const slotFillAlpha = resolveSlotFillAlpha(item, isHovered, hasCarriedItem);
     node.root.position.set(x, y);
 
     node.frame.clear();
     node.frame
       .roundRect(0, 0, slotWidth, slotHeight, 6)
-      .fill({
+      .fill(Object.assign({}, {
         color: definition.slotFill ?? '#182317',
-        alpha: item ? 0.95 : isHovered && hasCarriedItem ? 0.78 : 0.55,
-      })
+        alpha: slotFillAlpha,
+      }))
       .stroke({
         color: isHovered ? definition.hoverStroke ?? '#8ecf6e' : definition.slotStroke ?? '#5b704f',
         width: isHovered ? 3 : 1,
@@ -563,10 +539,10 @@ export class PixiRoccoGridMenuRenderer {
     node.frame.clear();
     node.frame
       .roundRect(0, 0, width, height, 8)
-      .fill({
+      .fill(Object.assign({}, {
         color: '#101810',
         alpha: isEnabled ? 0.9 : 0.42,
-      })
+      }))
       .stroke({
         color: isHovered && isEnabled ? '#8ecf6e' : '#d7e6c5',
         width: isHovered && isEnabled ? 3 : 2,
@@ -594,22 +570,22 @@ export class PixiRoccoGridMenuRenderer {
   private clearButtonNodes(buttonIndexes: Set<number>): void {
     for (const buttonIndex of buttonIndexes) {
       const node = this.buttonNodes.get(buttonIndex);
-      node?.root.parent?.removeChild(node.root);
+      node?.root.removeFromParent();
       node?.root.destroy({ children: true });
       this.buttonNodes.delete(buttonIndex);
     }
   }
 
   private clearPanel(): void {
-    this.backdrop?.parent?.removeChild(this.backdrop);
+    this.backdrop?.removeFromParent();
     this.backdrop?.destroy();
-    this.backdrop = null;
-    this.panelRoot?.parent?.removeChild(this.panelRoot);
+    this.backdrop = undefined;
+    this.panelRoot?.removeFromParent();
     this.panelRoot?.destroy({ children: true });
-    this.panelRoot = null;
-    this.panelBackground = null;
-    this.decorationRoot = null;
-    this.title = null;
+    this.panelRoot = undefined;
+    this.panelBackground = undefined;
+    this.decorationRoot = undefined;
+    this.title = undefined;
     this.slotNodes.clear();
     this.buttonNodes.clear();
   }
@@ -647,16 +623,61 @@ export class PixiRoccoGridMenuRenderer {
       return pending;
     }
 
-    const load = Assets.load<Texture>(imageUri)
-      .then((texture) => {
+    const load = (async (): Promise<Texture> => {
+      try {
+        const texture = await Assets.load<Texture>(imageUri);
         this.textures.set(imageUri, texture);
         return texture;
-      })
-      .catch(() => Texture.EMPTY)
-      .finally(() => {
+      } catch {
+        return Texture.EMPTY;
+      } finally {
         this.pendingTextureLoads.delete(imageUri);
-      });
+      }
+    })();
     this.pendingTextureLoads.set(imageUri, load);
     return load;
+  }
+
+  mount(stage: Container): void {
+    if (this.stage === stage) {
+      return;
+    }
+
+    this.unmount();
+    this.stage = stage;
+  }
+
+  unmount(): void {
+    this.clearPanel();
+    this.layerRoot?.removeFromParent();
+    this.layerRoot?.destroy({ children: true });
+    this.layerRoot = undefined;
+    this.stage = undefined;
+  }
+
+  sync(renderable: RoccoGridMenuRenderable | undefined): void {
+    if (!this.stage) {
+      return;
+    }
+
+    if (!renderable) {
+      this.clearPanel();
+      return;
+    }
+
+    this.renderLayer = renderable.definition.renderLayer ?? 'ui';
+    const layerRoot = this.ensureLayerRoot();
+    this.applyBackdrop(layerRoot, renderable);
+    const panelRoot = this.ensurePanelRoot(layerRoot);
+    this.applyPanel(panelRoot, renderable);
+  }
+
+  destroy(): void {
+    this.unmount();
+    for (const texture of this.textures.values()) {
+      texture.destroy(false);
+    }
+    this.textures.clear();
+    this.pendingTextureLoads.clear();
   }
 }

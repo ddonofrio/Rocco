@@ -67,7 +67,7 @@ export interface RoccoSpriteFrame {
   collisionBoxes?: RoccoCollisionShape[];
 }
 
-export interface RoccoAnimationFrameRef {
+export interface RoccoAnimationFrameReference {
   frameId: string;
   durationMs: number;
 }
@@ -80,7 +80,7 @@ export interface RoccoAnimationMotionBinding {
 
 export interface RoccoAnimationClip {
   id: string;
-  frames: RoccoAnimationFrameRef[];
+  frames: RoccoAnimationFrameReference[];
   loop: boolean;
   playbackRate: number;
   next?: string;
@@ -424,7 +424,7 @@ export interface RoccoSpriteSystem {
 
   setPosition(instanceId: string, x: number, y: number, options?: RoccoSpritePlacementOptions): void;
   setScale(instanceId: string, scaleX: number, scaleY: number): void;
-  setFlip(instanceId: string, flipX: boolean, flipY: boolean): void;
+  setFlip(instanceId: string, isFlipX: boolean, isFlipY: boolean): void;
   setPresentationTransform(instanceId: string, transform: Partial<RoccoSpritePresentationTransform>): void;
   setVisibleDescription(
     instanceId: string,
@@ -447,8 +447,8 @@ export interface RoccoSpriteSystem {
   setZIndex(instanceId: string, zIndex: number): void;
   setDepthMode(instanceId: string, depthMode: RoccoDepthMode): void;
   setContrast(instanceId: string, contrast?: number): void;
-  setInteractive(instanceId: string, interactive: boolean): void;
-  setCollisionEnabled(instanceId: string, enabled: boolean): void;
+  setInteractive(instanceId: string, isInteractive: boolean): void;
+  setCollisionEnabled(instanceId: string, isEnabled: boolean): void;
   bindToWalkMap(instanceId: string, binding: RoccoSpriteNavigationBinding): void;
   clearWalkMapBinding(instanceId: string): void;
 

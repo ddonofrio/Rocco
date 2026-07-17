@@ -124,7 +124,7 @@ function createDroppedInventoryEngine(): { engine: RoccoEngine; state: DroppedEn
     beginCompositionSession: () => ({
       id: 'test',
       ownerId: 'test',
-      message: null,
+      message: undefined,
       status: 'active' as const,
       report() {},
       fail() {},
@@ -179,7 +179,7 @@ describe('RoccoDroppedInventoryController', () => {
       targetInstanceId: spriteInstanceId,
     });
 
-    expect(result).toEqual({ suppressDefaultPlayerMove: true });
+    expect(result).toEqual({ consumed: true, defaultPlayerMovement: 'suppress' });
     expect(tryAddItemToInventory).toHaveBeenCalledWith(expect.objectContaining({ id: keys.id }));
     expect(controller.hasAccessibleItem(level.id, [], keys.id)).toBe(false);
     expect(state.removedSpriteIds).toContain(spriteInstanceId);

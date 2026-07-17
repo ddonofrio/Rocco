@@ -58,11 +58,11 @@ function createRenderable(): RoccoSpriteMessageRenderable {
   };
 }
 
-function createRenderableSprite(instanceId: string, ignoreMessages: boolean): RoccoRenderableSprite {
+function createRenderableSprite(instanceId: string, isIgnoreMessages: boolean): RoccoRenderableSprite {
   return {
     instance: {
       id: instanceId,
-      ignoreMessages,
+      ignoreMessages: isIgnoreMessages,
     },
   } as unknown as RoccoRenderableSprite;
 }

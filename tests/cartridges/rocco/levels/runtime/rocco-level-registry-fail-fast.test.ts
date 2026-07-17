@@ -38,16 +38,20 @@ function compileGame(maps: RpceMapDefinition<RoccoLevel>[]): RpceGameGraph<Rocco
 
 describe('RoccoLevelRegistry', () => {
   it('registers maps and levels', () => {
+    const game = compileGame([makeMap('map-a', ['level-1'])]);
+    const compiledGame = new RpceGameCompiler().compile(game);
     const registry = new RoccoLevelRegistry({
-      compiledGame: new RpceGameCompiler().compile(compileGame([makeMap('map-a', ['level-1'])])),
+      compiledGame,
     });
 
     expect(registry.listLevels()).toHaveLength(1);
   });
 
   it('resetMap replaces a map level with a fresh instance', () => {
+    const game = compileGame([makeMap('map-a', ['level-1'])]);
+    const compiledGame = new RpceGameCompiler().compile(game);
     const registry = new RoccoLevelRegistry({
-      compiledGame: new RpceGameCompiler().compile(compileGame([makeMap('map-a', ['level-1'])])),
+      compiledGame,
     });
 
     const firstInstance = registry.requireLevel('level-1');
@@ -59,8 +63,10 @@ describe('RoccoLevelRegistry', () => {
   });
 
   it('prepareMapReset delays publication until commit and can restore the previous instances', () => {
+    const game = compileGame([makeMap('map-a', ['level-1'])]);
+    const compiledGame = new RpceGameCompiler().compile(game);
     const registry = new RoccoLevelRegistry({
-      compiledGame: new RpceGameCompiler().compile(compileGame([makeMap('map-a', ['level-1'])])),
+      compiledGame,
     });
 
     const firstInstance = registry.requireLevel('level-1');
@@ -78,22 +84,18 @@ describe('RoccoLevelRegistry', () => {
   });
 
   it('throws on duplicate map id', () => {
-    expect(() =>
-      new RoccoLevelRegistry({
-        compiledGame: new RpceGameCompiler().compile(
-          compileGame([makeMap('map-a', ['level-1']), makeMap('map-a', ['level-2'])]),
-        ),
-      }),
-    ).toThrow("Duplicate map id 'map-a'.");
+    expect(() => {
+      const game = compileGame([makeMap('map-a', ['level-1']), makeMap('map-a', ['level-2'])]);
+      const compiledGame = new RpceGameCompiler().compile(game);
+      return new RoccoLevelRegistry({ compiledGame });
+    }).toThrow("Duplicate map id 'map-a'.");
   });
 
   it('throws on duplicate level id', () => {
-    expect(() =>
-      new RoccoLevelRegistry({
-        compiledGame: new RpceGameCompiler().compile(
-          compileGame([makeMap('map-a', ['level-1']), makeMap('map-b', ['level-1'])]),
-        ),
-      }),
-    ).toThrow("Duplicate level id 'level-1' across maps.");
+    expect(() => {
+      const game = compileGame([makeMap('map-a', ['level-1']), makeMap('map-b', ['level-1'])]);
+      const compiledGame = new RpceGameCompiler().compile(game);
+      return new RoccoLevelRegistry({ compiledGame });
+    }).toThrow("Duplicate level id 'level-1' across maps.");
   });
 });

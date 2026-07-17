@@ -35,8 +35,8 @@ vi.mock('../../../../../src/console/video/sprites', async (importOriginal) => {
 });
 
 interface TestState {
-  restoredRecord: RoccoPlaneSceneRecord | null;
-  loadedScene: RoccoPlaneScene | null;
+  restoredRecord: RoccoPlaneSceneRecord | undefined;
+  loadedScene: RoccoPlaneScene | undefined;
   savedScenes: RoccoPlaneScene[];
   createdSprites: RoccoSpriteInstance[];
   registeredSounds: Map<string, RoccoSoundDefinition>;
@@ -48,8 +48,8 @@ interface TestState {
 
 function createState(overrides: Partial<TestState> = {}): TestState {
   return {
-    restoredRecord: null,
-    loadedScene: null,
+    restoredRecord: undefined,
+    loadedScene: undefined,
     savedScenes: [],
     createdSprites: [],
     registeredSounds: new Map(),
@@ -197,8 +197,8 @@ function createEngineMock(state: TestState): RoccoEngine {
     loadPlaneScene: (scene: RoccoPlaneScene) => {
       state.loadedScene = scene;
     },
-    setInputEnabled: (enabled: boolean) => {
-      state.inputEnabled = enabled;
+    setInputEnabled: (isEnabled: boolean) => {
+      state.inputEnabled = isEnabled;
     },
     isInputEnabled: () => state.inputEnabled,
     getInputMode: () => (state.inputEnabled ? 'interactive' : 'blocked'),
@@ -219,7 +219,7 @@ function createEngineMock(state: TestState): RoccoEngine {
     beginCompositionSession: () => ({
       id: 'test',
       ownerId: 'test',
-      message: null,
+      message: undefined,
       status: 'active' as const,
       report() {},
       fail() {},
@@ -252,7 +252,7 @@ describe('RoccoBaitShopSecondLevel', () => {
         height: 0,
         getContext: (contextId: string) => {
           if (contextId !== '2d') {
-            return null;
+            return;
           }
 
           return {

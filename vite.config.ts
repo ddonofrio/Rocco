@@ -60,7 +60,7 @@ export default defineConfig(({ mode }) => {
       // code-splits its renderers on demand, so raise the warning threshold
       // above the known entry-chunk size instead of forcing brittle manual
       // chunks that would defeat Pixi's lazy loading.
-      chunkSizeWarningLimit: 800,
+      chunkSizeWarningLimit: 1000,
     },
     server: {
       // Temporary: expose the dev server on the local network for playtests.

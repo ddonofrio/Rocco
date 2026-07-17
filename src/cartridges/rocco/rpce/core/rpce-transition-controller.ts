@@ -33,13 +33,9 @@ export interface RpceTransitionControllerOptions {
   resolvePlayerGroundPoint: () => RoccoPoint | undefined;
 }
 
-function nullValue<T>(): T {
-  return JSON.parse('null') as T;
-}
-
 export class RpceTransitionController {
   private readonly options: RpceTransitionControllerOptions;
-  private pendingExitIntent: RpcePendingExitIntent | null = nullValue();
+  private pendingExitIntent: RpcePendingExitIntent | null = null;
   private transitionCooldownMs = 0;
 
   constructor(options: RpceTransitionControllerOptions) {
@@ -53,8 +49,7 @@ export class RpceTransitionController {
     }
 
     return level.connectors.find(
-      (connector) =>
-        connector.exitArea && isRpceLevelRectPoint(connector.exitArea, playerGround),
+      (connector) => connector.exitArea && isRpceLevelRectPoint(connector.exitArea, playerGround),
     );
   }
 
@@ -63,8 +58,7 @@ export class RpceTransitionController {
     scenePoint: RoccoPoint,
   ): RpceLevelConnector | undefined {
     return level.connectors.find(
-      (connector) =>
-        connector.exitArea && isRpceLevelRectPoint(connector.exitArea, scenePoint),
+      (connector) => connector.exitArea && isRpceLevelRectPoint(connector.exitArea, scenePoint),
     );
   }
 
@@ -76,7 +70,7 @@ export class RpceTransitionController {
   }
 
   private clearPendingExitIntentState(): void {
-    this.pendingExitIntent = nullValue();
+    this.pendingExitIntent = null;
   }
 
   private resolveTransition(
@@ -85,7 +79,7 @@ export class RpceTransitionController {
   ): RpceResolvedLevelTransition | null {
     const targetEndpoint = this.options.resolveConnectedEndpoint(fromLevelId, connector.id);
     if (!targetEndpoint) {
-      return nullValue();
+      return null;
     }
 
     return {
@@ -110,31 +104,29 @@ export class RpceTransitionController {
 
   createSnapshot(): RpceTransitionControllerSnapshot {
     return {
-      pendingExitIntent: this.pendingExitIntent ? { ...this.pendingExitIntent } : nullValue(),
+      pendingExitIntent: this.pendingExitIntent ? { ...this.pendingExitIntent } : null,
       transitionCooldownMs: this.transitionCooldownMs,
     };
   }
 
   restoreSnapshot(snapshot: RpceTransitionControllerSnapshot): void {
-    this.pendingExitIntent = snapshot.pendingExitIntent
-      ? { ...snapshot.pendingExitIntent }
-      : nullValue();
+    this.pendingExitIntent = snapshot.pendingExitIntent ? { ...snapshot.pendingExitIntent } : null;
     this.transitionCooldownMs = Math.max(0, Math.round(snapshot.transitionCooldownMs));
   }
 
   update(level: RpceLevel | null, deltaMs: number): RpceResolvedLevelTransition | null {
     this.transitionCooldownMs = Math.max(0, this.transitionCooldownMs - Math.max(0, deltaMs));
     if (!level || this.transitionCooldownMs > 0) {
-      return nullValue();
+      return null;
     }
 
     const connector = this.resolveTouchedConnector(level);
     if (!connector || !this.options.canTraverseConnector(connector)) {
-      return nullValue();
+      return null;
     }
 
     if (!this.matchesPendingExitIntent(level.id, connector.id)) {
-      return nullValue();
+      return null;
     }
 
     return this.resolveTransition(level.id, connector);
@@ -155,7 +147,7 @@ export class RpceTransitionController {
           levelId: level.id,
           connectorId: connector.id,
         }
-      : nullValue();
+      : null;
   }
 
   resolveScriptedTransition(
@@ -163,12 +155,12 @@ export class RpceTransitionController {
     connectorId: string,
   ): RpceResolvedLevelTransition | null {
     if (!level) {
-      return nullValue();
+      return null;
     }
 
     const connector = findRpceLevelConnector(level.connectors, connectorId);
     if (!connector || !this.options.canTraverseConnector(connector)) {
-      return nullValue();
+      return null;
     }
 
     return this.resolveTransition(level.id, connector);

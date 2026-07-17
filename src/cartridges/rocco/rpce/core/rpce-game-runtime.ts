@@ -3,29 +3,30 @@ import type {
   CartridgeActionContext,
   RoccoCartridgeAction,
 } from '../../../../console/cartridges';
-import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RpceAssetPreloader } from './rpce-asset-preloader';
 import type { RpceGameDefinition } from './rpce-map';
 
 export interface RpceGameRuntimeController<TMountResult = unknown> {
-  mount(engine: RoccoEngine, preloader?: RpceAssetPreloader): Promise<TMountResult>;
+  mount(engine: CartridgeSdkV1Runtime, preloader?: RpceAssetPreloader): Promise<TMountResult>;
   unmount(): void;
   update(deltaMs: number): void;
-  handleAction(action: RoccoCartridgeAction, context?: CartridgeActionContext): CartridgeActionDisposition | void;
+  handleAction(
+    action: RoccoCartridgeAction,
+    context?: CartridgeActionContext,
+  ): CartridgeActionDisposition | void;
   getActiveLevelId?(): string | undefined;
 }
 
-export interface RpceGameRuntimeOptions<
-  TControllerOptions,
-  TMountResult = unknown,
-> {
+export interface RpceGameRuntimeOptions<TControllerOptions, TMountResult = unknown> {
   game: RpceGameDefinition<TControllerOptions, TMountResult>;
   controllerOptions: TControllerOptions;
 }
 
-export class RpceGameRuntime<TControllerOptions, TMountResult = unknown>
-  implements RpceGameRuntimeController<TMountResult>
-{
+export class RpceGameRuntime<
+  TControllerOptions,
+  TMountResult = unknown,
+> implements RpceGameRuntimeController<TMountResult> {
   private readonly game: RpceGameDefinition<TControllerOptions, TMountResult>;
   private readonly controller: RpceGameRuntimeController<TMountResult>;
 
@@ -38,7 +39,10 @@ export class RpceGameRuntime<TControllerOptions, TMountResult = unknown>
     return this.game;
   }
 
-  async mount(engine: RoccoEngine, preloader?: RpceAssetPreloader): Promise<TMountResult> {
+  async mount(
+    engine: CartridgeSdkV1Runtime,
+    preloader?: RpceAssetPreloader,
+  ): Promise<TMountResult> {
     this.game.hooks?.beforeMount?.();
     const result = await this.controller.mount(engine, preloader);
     this.game.hooks?.afterMount?.();
@@ -54,7 +58,10 @@ export class RpceGameRuntime<TControllerOptions, TMountResult = unknown>
     this.controller.update(deltaMs);
   }
 
-  handleAction(action: RoccoCartridgeAction, context?: CartridgeActionContext): CartridgeActionDisposition | void {
+  handleAction(
+    action: RoccoCartridgeAction,
+    context?: CartridgeActionContext,
+  ): CartridgeActionDisposition | void {
     return this.controller.handleAction(action, context);
   }
 

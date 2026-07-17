@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type {
   RoccoSpriteMessageOptions,
   RoccoSpriteMessageRequest,
@@ -43,7 +43,7 @@ export class RoccoCartridgeMessageRuntime {
   }
 
   showMessage(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     message: RoccoSpriteMessageRequest,
     selection?: RoccoCartridgeMessageLineSelection,
   ): void {
@@ -54,7 +54,7 @@ export class RoccoCartridgeMessageRuntime {
   }
 
   say(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     spriteInstanceId: string,
     text: RoccoSpriteMessageText,
     options?: RoccoSpriteMessageOptions,
@@ -73,7 +73,7 @@ export class RoccoCartridgeMessageRuntime {
   }
 
   think(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     spriteInstanceId: string,
     text: RoccoSpriteMessageText,
     options?: RoccoSpriteMessageOptions,

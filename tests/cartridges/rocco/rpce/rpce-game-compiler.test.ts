@@ -3,10 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   RpceGameCompiler,
   RpceGameCompilationError,
-  createConnectedEndpointResolver,
   type RpceGameGraph,
 } from '../../../../src/cartridges/rocco/rpce/core';
-import type { RpceLevelDefinition, RpceMapDefinition, RpceLevelConnection } from '../../../../src/cartridges/rocco/rpce/core';
+import type {
+  RpceLevelDefinition,
+  RpceMapDefinition,
+  RpceLevelConnection,
+} from '../../../../src/cartridges/rocco/rpce/core';
 import {
   createRoccoDefaultGameDefinition,
   createRoccoLocalization,
@@ -26,7 +29,7 @@ function makeLevel(id: string): unknown {
 }
 
 function level(id: string): RpceLevelDefinition<RoccoLevel> {
-  return { id, createLevel: () => makeLevel(id) as RoccoLevel };
+  return { id, connectorIds: [], createLevel: () => makeLevel(id) as RoccoLevel };
 }
 
 function map(
@@ -35,11 +38,24 @@ function map(
   connections: readonly RpceLevelConnection[] = [],
   initialLevelId: string = levelIds[0],
 ): RpceMapDefinition<RoccoLevel> {
+  const connectorIdsByLevel = new Map<string, string[]>();
+  for (const item of connections) {
+    for (const endpoint of [item.a, item.b]) {
+      const connectorIds = connectorIdsByLevel.get(endpoint.levelId) ?? [];
+      if (!connectorIds.includes(endpoint.connectorId)) {
+        connectorIds.push(endpoint.connectorId);
+      }
+      connectorIdsByLevel.set(endpoint.levelId, connectorIds);
+    }
+  }
   return {
     id,
     title: id,
     initialLevelId,
-    levels: levelIds.map((levelId) => level(levelId)),
+    levels: levelIds.map((levelId) => ({
+      ...level(levelId),
+      connectorIds: connectorIdsByLevel.get(levelId) ?? [],
+    })),
     connections,
   };
 }
@@ -105,15 +121,15 @@ describe('RpceGameCompiler', () => {
   });
 
   it('throws on a duplicate map id', () => {
-    expect(() =>
-      compiler.compile(graph([map('map-a', ['l1']), map('map-a', ['l2'])])),
-    ).toThrow(RpceGameCompilationError);
+    expect(() => compiler.compile(graph([map('map-a', ['l1']), map('map-a', ['l2'])]))).toThrow(
+      RpceGameCompilationError,
+    );
   });
 
   it('throws on a duplicate level id across maps', () => {
-    expect(() =>
-      compiler.compile(graph([map('map-a', ['l1']), map('map-b', ['l1'])])),
-    ).toThrow(RpceGameCompilationError);
+    expect(() => compiler.compile(graph([map('map-a', ['l1']), map('map-b', ['l1'])]))).toThrow(
+      RpceGameCompilationError,
+    );
   });
 
   it('throws when a connection references an unknown level', () => {
@@ -122,6 +138,49 @@ describe('RpceGameCompiler', () => {
     ]);
 
     expect(() => compiler.compile(broken)).toThrow(/unknown level 'missing'/);
+  });
+
+  it('fails fast when a level factory throws', () => {
+    const broken = graph([
+      {
+        ...map('map-a', ['l1']),
+        levels: [
+          {
+            id: 'l1',
+            connectorIds: [],
+            createLevel: () => {
+              throw new Error('factory exploded');
+            },
+          },
+        ],
+      },
+    ]);
+
+    expect(() => compiler.compile(broken)).toThrow(/factory exploded/);
+    try {
+      compiler.compile(broken);
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: 'level-factory-failed',
+        mapId: 'map-a',
+        levelId: 'l1',
+      });
+    }
+  });
+
+  it('rejects a connection on a level that explicitly declares zero connectors', () => {
+    const broken = graph([
+      {
+        ...map('map-a', ['l1', 'l2']),
+        levels: [
+          { id: 'l1', connectorIds: [] },
+          { id: 'l2', connectorIds: ['south'] },
+        ],
+        connections: [connection(['l1', 'north'], ['l2', 'south'])],
+      },
+    ]);
+
+    expect(() => compiler.compile(broken)).toThrow(/unknown connector 'north'/);
   });
 
   it('throws when no initial map is declared', () => {
@@ -138,29 +197,30 @@ describe('RpceGameCompiler', () => {
 
   it('throws on a duplicate connection', () => {
     const broken = graph([
-      map('map-a', ['l1', 'l2'], [
-        connection(['l1', 'north'], ['l2', 'south']),
-        connection(['l2', 'south'], ['l1', 'north']),
-      ]),
+      map(
+        'map-a',
+        ['l1', 'l2'],
+        [
+          connection(['l1', 'north'], ['l2', 'south']),
+          connection(['l2', 'south'], ['l1', 'north']),
+        ],
+      ),
     ]);
 
     expect(() => compiler.compile(broken)).toThrow(/Duplicate connection/);
   });
 
   it('throws on a self-loop connection', () => {
-    const broken = graph([
-      map('map-a', ['l1'], [connection(['l1', 'loop'], ['l1', 'loop'])]),
-    ]);
+    const broken = graph([map('map-a', ['l1'], [connection(['l1', 'loop'], ['l1', 'loop'])])]);
 
     expect(() => compiler.compile(broken)).toThrow(/loops to itself/);
   });
 
-  it('exposes a linear-scan resolver for flat connection lists', () => {
-    const connections = [connection(['l1', 'north'], ['l2', 'south'])];
-    const resolve = createConnectedEndpointResolver(connections);
+  it('reports inaccessible levels as structured diagnostics', () => {
+    const game = compiler.compile(graph([map('map-a', ['l1', 'l2'])]));
 
-    expect(resolve('l1', 'north')).toEqual({ levelId: 'l2', connectorId: 'south' });
-    expect(resolve('l2', 'south')).toEqual({ levelId: 'l1', connectorId: 'north' });
-    expect(resolve('l1', 'west')).toBeNull();
+    expect(game.diagnostics).toEqual([
+      { code: 'inaccessible-level', mapId: 'map-a', levelId: 'l2' },
+    ]);
   });
 });

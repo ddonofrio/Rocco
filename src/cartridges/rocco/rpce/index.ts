@@ -1,4 +1,4 @@
-﻿export * from './core';
+export * from './core';
 export * as dialogue from './dialogue';
 export * as inventory from './inventory';
 export * as interaction from './interaction';

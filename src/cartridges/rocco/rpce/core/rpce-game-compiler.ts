@@ -1,7 +1,6 @@
 import type {
   RpceLevelConnection,
   RpceLevelConnectionEndpoint,
-  RpceLevelDefinition,
   RpceMapDefinition,
   RpceScriptedConnection,
 } from './rpce-map';
@@ -32,16 +31,34 @@ export type RpceGameCompilationCode =
   | 'missing-map-initial-level'
   | 'duplicate-connection'
   | 'ambiguous-connection-endpoint'
-  | 'self-loop-connection';
+  | 'self-loop-connection'
+  | 'level-factory-failed'
+  | 'inaccessible-level';
 
 export class RpceGameCompilationError extends Error {
   readonly code: RpceGameCompilationCode;
+  readonly mapId: string | undefined;
+  readonly levelId: string | undefined;
+  readonly connectorId: string | undefined;
 
-  constructor(code: RpceGameCompilationCode, message: string) {
+  constructor(
+    code: RpceGameCompilationCode,
+    message: string,
+    details: { mapId?: string; levelId?: string; connectorId?: string } = {},
+  ) {
     super(message);
     this.name = 'RpceGameCompilationError';
     this.code = code;
+    this.mapId = details.mapId;
+    this.levelId = details.levelId;
+    this.connectorId = details.connectorId;
   }
+}
+
+export interface RpceGameCompilationDiagnostic {
+  readonly code: 'inaccessible-level';
+  readonly mapId: string;
+  readonly levelId: string;
 }
 
 export function rpceEndpointKey(levelId: string, connectorId: string): string {
@@ -81,6 +98,7 @@ export interface RpceCompiledGame<TLevel extends RpceLevel = RpceLevel> {
   readonly levelsById: ReadonlyMap<string, RpceCompiledLevel<TLevel>>;
   readonly transitionsByEndpoint: ReadonlyMap<string, RpceCompiledEndpoint>;
   readonly reachableLevelIds: ReadonlySet<string>;
+  readonly diagnostics: readonly RpceGameCompilationDiagnostic[];
   resolveConnectedEndpoint(
     levelId: string,
     connectorId: string,
@@ -90,10 +108,6 @@ export interface RpceCompiledGame<TLevel extends RpceLevel = RpceLevel> {
 interface RpceCollectedConnections {
   readonly connections: readonly RpceLevelConnection[];
   readonly scriptedConnections: readonly RpceScriptedConnection[];
-}
-
-function nullValue<T>(): T {
-  return JSON.parse('null') as T;
 }
 
 export class RpceGameCompiler {
@@ -116,8 +130,21 @@ export class RpceGameCompiler {
         );
       }
 
-      const connectorIds = this.collectConnectorIds(level);
+      const connectorIds = [...level.connectorIds];
       this.assertUniqueConnectorIds(level.id, connectorIds);
+
+      if (level.createLevel) {
+        try {
+          level.createLevel();
+        } catch (error) {
+          const cause = error instanceof Error ? error.message : String(error);
+          throw new RpceGameCompilationError(
+            'level-factory-failed',
+            'Level factory failed for map ' + map.id + ', level ' + level.id + ': ' + cause,
+            { mapId: map.id, levelId: level.id },
+          );
+        }
+      }
 
       levelIds.push(level.id);
       levelsById.set(level.id, {
@@ -151,24 +178,6 @@ export class RpceGameCompiler {
       developerOnly: Boolean(map.developerOnly),
       levelIds: Object.freeze([...levelIds]),
     });
-  }
-
-  private collectConnectorIds<TLevel extends RpceLevel>(
-    level: RpceLevelDefinition<TLevel>,
-  ): readonly string[] {
-    if (level.connectorIds) {
-      return [...level.connectorIds];
-    }
-
-    if (typeof level.createLevel !== 'function') {
-      return [];
-    }
-
-    try {
-      return level.createLevel().connectors.map((connector) => connector.id);
-    } catch {
-      return [];
-    }
   }
 
   private assertUniqueConnectorIds(levelId: string, connectorIds: readonly string[]): void {
@@ -273,17 +282,15 @@ export class RpceGameCompiler {
       throw new RpceGameCompilationError(
         'missing-connection-endpoint',
         `Connection references unknown level '${endpoint.levelId}'.`,
+        { levelId: endpoint.levelId, connectorId: endpoint.connectorId },
       );
-    }
-
-    if (level.connectorIds.length === 0) {
-      return;
     }
 
     if (!level.connectorIds.includes(endpoint.connectorId)) {
       throw new RpceGameCompilationError(
         'missing-connection-endpoint',
         `Connection references unknown connector '${endpoint.connectorId}' on level '${endpoint.levelId}'.`,
+        { mapId: level.mapId, levelId: endpoint.levelId, connectorId: endpoint.connectorId },
       );
     }
   }
@@ -326,7 +333,10 @@ export class RpceGameCompiler {
     a: RpceLevelConnectionEndpoint,
     b: RpceLevelConnectionEndpoint,
   ): string {
-    const keys = [rpceEndpointKey(a.levelId, a.connectorId), rpceEndpointKey(b.levelId, b.connectorId)];
+    const keys = [
+      rpceEndpointKey(a.levelId, a.connectorId),
+      rpceEndpointKey(b.levelId, b.connectorId),
+    ];
     keys.sort((left, right) => left.localeCompare(right));
     return keys.join('|');
   }
@@ -424,6 +434,17 @@ export class RpceGameCompiler {
     const initialLevelId = this.resolveInitialLevelId(initialMapId, mapsById);
 
     const reachableLevelIds = this.computeReachableLevelIds(initialLevelId, transitionsByEndpoint);
+    const inaccessibleLevels = levelsById
+      .values()
+      .filter((level) => !reachableLevelIds.has(level.id))
+      .toArray();
+    const diagnostics = inaccessibleLevels.map(
+      (level): RpceGameCompilationDiagnostic => ({
+        code: 'inaccessible-level',
+        mapId: level.mapId,
+        levelId: level.id,
+      }),
+    );
     const readonlyMapsById = new ReadonlyMapView(mapsById);
     const readonlyLevelsById = new ReadonlyMapView(levelsById);
     const readonlyTransitionsByEndpoint = new ReadonlyMapView(transitionsByEndpoint);
@@ -438,11 +459,12 @@ export class RpceGameCompiler {
       levelsById: readonlyLevelsById,
       transitionsByEndpoint: readonlyTransitionsByEndpoint,
       reachableLevelIds: readonlyReachableLevelIds,
+      diagnostics: Object.freeze(diagnostics),
       resolveConnectedEndpoint: (levelId, connectorId) => {
         const targetEndpoint = readonlyTransitionsByEndpoint.get(
           rpceEndpointKey(levelId, connectorId),
         )?.target;
-        return targetEndpoint ?? nullValue<RpceLevelConnectionEndpoint>();
+        return targetEndpoint ?? null;
       },
     };
 
@@ -534,22 +556,4 @@ class ReadonlySetView<T> implements ReadonlySet<T> {
   [Symbol.iterator](): ReturnType<Set<T>['values']> {
     return this.source[Symbol.iterator]();
   }
-}
-
-export function createConnectedEndpointResolver(
-  connections: readonly RpceLevelConnection[],
-): (levelId: string, connectorId: string) => RpceLevelConnectionEndpoint | null {
-  return (levelId, connectorId) => {
-    for (const connection of connections) {
-      if (connection.a.levelId === levelId && connection.a.connectorId === connectorId) {
-        return connection.b;
-      }
-
-      if (connection.b.levelId === levelId && connection.b.connectorId === connectorId) {
-        return connection.a;
-      }
-    }
-
-    return nullValue<RpceLevelConnectionEndpoint | null>();
-  };
 }

@@ -1,6 +1,7 @@
-import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoPlaneScene } from '../../../../console/video/planes';
 import type { RoccoSpriteDefinition } from '../../../../console/video/sprites';
+import type { RoccoAudioPreloadOptions } from '../../../../console/audio/types';
 
 export interface RpceAssetPreloaderProgress {
   loaded: number;
@@ -33,13 +34,13 @@ export class RpceAssetPreloader {
     this.report();
   }
 
-  async preloadAssetUrls(engine: RoccoEngine, urls: readonly string[]): Promise<void> {
+  async preloadAssetUrls(engine: CartridgeSdkV1Runtime, urls: readonly string[]): Promise<void> {
     this.add(urls.length);
     await engine.video.preloadAssetUrls(urls);
     this.increment(urls.length);
   }
 
-  async preloadPlaneScene(engine: RoccoEngine, scene: RoccoPlaneScene): Promise<void> {
+  async preloadPlaneScene(engine: CartridgeSdkV1Runtime, scene: RoccoPlaneScene): Promise<void> {
     const imageCount = scene.planes.filter((plane) => plane.source.kind === 'image').length;
     this.add(Math.max(1, imageCount));
     await engine.video.preloadPlaneScene(scene);
@@ -47,7 +48,7 @@ export class RpceAssetPreloader {
   }
 
   async preloadSpriteDefinition(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     definition: RoccoSpriteDefinition,
   ): Promise<void> {
     const imageCount = definition.images?.length ?? 1;
@@ -56,9 +57,13 @@ export class RpceAssetPreloader {
     this.increment(Math.max(1, imageCount));
   }
 
-  async preloadSound(engine: RoccoEngine, id: string): Promise<void> {
+  async preloadSound(
+    engine: CartridgeSdkV1Runtime,
+    id: string,
+    options?: RoccoAudioPreloadOptions,
+  ): Promise<void> {
     this.add(1);
-    await engine.audio.preloadSound(id);
+    await engine.audio.preloadSound(id, options);
     this.increment(1);
   }
 

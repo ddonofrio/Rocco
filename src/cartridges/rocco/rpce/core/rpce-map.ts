@@ -23,7 +23,7 @@ export interface RpceScriptedConnection {
 export interface RpceLevelDefinition<TLevel extends RpceLevel = RpceLevel> {
   id: string;
   title?: string;
-  connectorIds?: readonly string[];
+  connectorIds: readonly string[];
   createLevel?: () => TLevel;
 }
 
@@ -60,7 +60,5 @@ export interface RpceGameDefinition<
   connections?: readonly RpceLevelConnection[];
   scriptedConnections?: readonly RpceScriptedConnection[];
   hooks?: RpceGameRuntimeHooks;
-  createRuntimeController: (
-    options: TControllerOptions,
-  ) => RpceGameRuntimeController<TMountResult>;
+  createRuntimeController: (options: TControllerOptions) => RpceGameRuntimeController<TMountResult>;
 }

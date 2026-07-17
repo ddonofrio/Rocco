@@ -22,10 +22,12 @@ export {
   type RpceScriptedConnection,
   type RpceScriptedConnectionKind,
 } from './rpce-map';
-export { RpceTransitionController, type RpceResolvedLevelTransition } from './rpce-transition-controller';
+export {
+  RpceTransitionController,
+  type RpceResolvedLevelTransition,
+} from './rpce-transition-controller';
 export {
   RpceGameCompiler,
-  createConnectedEndpointResolver,
   RpceGameCompilationError,
   rpceEndpointKey,
   type RpceCompiledGame,
@@ -34,6 +36,7 @@ export {
   type RpceCompiledEndpoint,
   type RpceGameCompilationCode,
   type RpceGameGraph,
+  type RpceGameCompilationDiagnostic,
 } from './rpce-game-compiler';
 export {
   RpceGameRuntime,

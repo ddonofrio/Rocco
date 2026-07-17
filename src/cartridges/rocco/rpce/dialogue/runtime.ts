@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoGridMenuActivation } from '../../../../console/video/grid-menu';
 import type {
   RoccoSpriteMessageOptions,
@@ -44,7 +44,7 @@ export interface RoccoDialogueSessionHooks {
 
 export interface RoccoDialogueSessionOptions {
   id: string;
-  engine: RoccoEngine;
+  engine: CartridgeSdkV1Runtime;
   playerSpriteInstanceId: string;
   npcSpriteInstanceId: string;
   menuY?: number;
@@ -70,7 +70,7 @@ export interface RoccoDialogueLinearSequenceStart {
 }
 
 export class RoccoDialogueSession {
-  private readonly engine: RoccoEngine;
+  private readonly engine: CartridgeSdkV1Runtime;
   private readonly id: string;
   private readonly playerSpriteInstanceId: string;
   private readonly npcSpriteInstanceId: string;
@@ -85,7 +85,8 @@ export class RoccoDialogueSession {
   private currentChoices: readonly RoccoDialogueChoiceNode[] = [];
   private pendingStep: RoccoDialoguePendingStep | undefined;
   private linearSequence: RoccoDialogueLinearSequence | undefined;
-  private advanceOnlyLease: ReturnType<RoccoEngine['acquireInputLease']> | undefined = undefined;
+  private advanceOnlyLease: ReturnType<CartridgeSdkV1Runtime['acquireInputLease']> | undefined =
+    undefined;
 
   constructor(options: RoccoDialogueSessionOptions) {
     this.id = options.id;
@@ -127,7 +128,6 @@ export class RoccoDialogueSession {
       },
       this.playerSpriteInstanceId,
     );
-    this.engine.video.render(0);
   }
 
   private showNpcLine(choice: RoccoDialogueChoiceNode): void {
@@ -153,7 +153,6 @@ export class RoccoDialogueSession {
       },
       this.npcSpriteInstanceId,
     );
-    this.engine.video.render(0);
   }
 
   private openChoices(choices: readonly RoccoDialogueChoiceNode[]): void {
@@ -169,14 +168,12 @@ export class RoccoDialogueSession {
         })),
       }).gridMenu,
     );
-    this.engine.video.render(0);
   }
 
   private finishConversation(): void {
     this.pendingStep = undefined;
     this.currentChoices = [];
     this.setPhase('idle');
-    this.engine.video.render(0);
   }
 
   private finishLinearSequence(): void {
@@ -185,7 +182,6 @@ export class RoccoDialogueSession {
     this.currentChoices = [];
     this.linearSequence = undefined;
     this.setPhase('idle');
-    this.engine.video.render(0);
     onComplete?.();
   }
 
@@ -241,9 +237,7 @@ export class RoccoDialogueSession {
     }
 
     const spriteInstanceId =
-      sequence.speaker === 'player'
-        ? this.playerSpriteInstanceId
-        : this.npcSpriteInstanceId;
+      sequence.speaker === 'player' ? this.playerSpriteInstanceId : this.npcSpriteInstanceId;
     const messageOptions: RoccoSpriteMessageOptions = {
       ttlMs: sequence.ttlMs,
       ...sequence.messageOptions,
@@ -269,7 +263,6 @@ export class RoccoDialogueSession {
       spriteInstanceId,
       sequence.messageOptions?.id,
     );
-    this.engine.video.render(0);
   }
 
   private advanceLinearSequence(): void {
@@ -327,10 +320,7 @@ export class RoccoDialogueSession {
   }
 
   private acquireAdvanceOnlyLease(): void {
-    this.advanceOnlyLease ??= this.engine.acquireInputLease(
-      this.inputLeaseOwnerId,
-      'advance-only',
-    );
+    this.advanceOnlyLease ??= this.engine.acquireInputLease(this.inputLeaseOwnerId, 'advance-only');
   }
 
   private releaseAdvanceOnlyLease(): void {
@@ -362,7 +352,6 @@ export class RoccoDialogueSession {
       },
       this.npcSpriteInstanceId,
     );
-    this.engine.video.render(0);
   }
 
   handleGridMenu(activation: RoccoGridMenuActivation): boolean {
@@ -406,8 +395,7 @@ export class RoccoDialogueSession {
       messageKind: start.messageKind ?? 'say',
       ttlMs: Math.max(
         1,
-        start.lineTtlMs ??
-          (start.speaker === 'player' ? this.playerLineTtlMs : this.npcLineTtlMs),
+        start.lineTtlMs ?? (start.speaker === 'player' ? this.playerLineTtlMs : this.npcLineTtlMs),
       ),
       messageOptions: start.messageOptions,
       onComplete: start.onComplete,
@@ -451,7 +439,6 @@ export class RoccoDialogueSession {
     if (this.engine.video.gridMenus.isOpen(this.id)) {
       this.engine.video.gridMenus.closeMenu();
     }
-    this.engine.video.render(0);
   }
 
   isActive(): boolean {

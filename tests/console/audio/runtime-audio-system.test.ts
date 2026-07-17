@@ -99,9 +99,7 @@ function resolveRequestUrl(input: RequestInfo | URL): string {
   return input.url;
 }
 
-async function createFetchResponse(
-  arrayBufferPromise: Promise<ArrayBuffer>,
-): Promise<Response> {
+async function createFetchResponse(arrayBufferPromise: Promise<ArrayBuffer>): Promise<Response> {
   const arrayBuffer = await arrayBufferPromise;
   return {
     ok: true,
@@ -146,6 +144,41 @@ describe('RoccoRuntimeAudioSystem', () => {
     await system.preloadSound('pier-bell');
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('passes cancellation to fetch and rejects when the response body is aborted', async () => {
+    const controller = new AbortController();
+    let fetchSignal: AbortSignal | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockImplementation((_input, init) => {
+        fetchSignal = init?.signal ?? undefined;
+        return Promise.resolve({
+          ok: true,
+          arrayBuffer: () =>
+            new Promise<ArrayBuffer>((_resolve, reject) => {
+              fetchSignal?.addEventListener('abort', () => reject(new Error('fetch aborted')), {
+                once: true,
+              });
+            }),
+        } as Response);
+      }),
+    );
+
+    const system = new RoccoRuntimeAudioSystem();
+    system.registerSound({
+      id: 'cancelled-sound',
+      uri: '/sounds/cancelled.mp3',
+    });
+
+    const preload = system.preloadSound('cancelled-sound', { signal: controller.signal });
+    await vi.waitFor(() => {
+      expect(fetchSignal).toBe(controller.signal);
+    });
+    controller.abort(new Error('transition invalidated'));
+
+    await expect(preload).rejects.toThrow('fetch aborted');
+    expect(fetchSignal?.aborted).toBe(true);
   });
 
   it('updates the gain of active sound instances without restarting playback', async () => {
@@ -260,13 +293,15 @@ describe('RoccoRuntimeAudioSystem', () => {
   it('re-registering a sound invalidates a previously cached buffer', async () => {
     const fetchMock = vi.fn<typeof fetch>();
 
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
-    } as Response).mockResolvedValueOnce({
-      ok: true,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(16)),
-    } as Response);
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(16)),
+      } as Response);
 
     vi.stubGlobal('fetch', fetchMock);
 
@@ -303,9 +338,7 @@ describe('RoccoRuntimeAudioSystem', () => {
 
     vi.stubGlobal(
       'fetch',
-      vi.fn<typeof fetch>().mockReturnValue(
-        createFetchResponse(fetchPromise),
-      ),
+      vi.fn<typeof fetch>().mockReturnValue(createFetchResponse(fetchPromise)),
     );
 
     const system = new RoccoRuntimeAudioSystem();

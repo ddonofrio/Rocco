@@ -1,4 +1,10 @@
-import type { RoccoAudioSystem, RoccoSoundDefinition, RoccoSoundPlayOptions, SoundHandle } from './types';
+import type {
+  RoccoAudioPreloadOptions,
+  RoccoAudioSystem,
+  RoccoSoundDefinition,
+  RoccoSoundPlayOptions,
+  SoundHandle,
+} from './types';
 
 interface Deferred<T> {
   readonly promise: Promise<T>;
@@ -49,10 +55,61 @@ function clampVolume(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+function throwIfAudioPreloadAborted(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) {
+    return;
+  }
+
+  throw createAudioAbortError(signal);
+}
+
+function awaitWithInvalidation<T>(
+  promise: Promise<T>,
+  signal: AbortSignal | undefined,
+): Promise<T> {
+  throwIfAudioPreloadAborted(signal);
+  if (!signal) {
+    return promise;
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => {
+      cleanup();
+      reject(createAudioAbortError(signal));
+    };
+    const cleanup = (): void => signal.removeEventListener('abort', onAbort);
+    signal.addEventListener('abort', onAbort, { once: true });
+    const settle = async (): Promise<void> => {
+      try {
+        const value = await promise;
+        cleanup();
+        resolve(value);
+      } catch (error) {
+        cleanup();
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    };
+    void settle();
+  });
+}
+
+function createAudioAbortError(signal: AbortSignal): Error {
+  if (signal.reason instanceof Error) {
+    return signal.reason;
+  }
+  if (signal.reason) {
+    return new Error(String(signal.reason));
+  }
+  return new Error('Audio preload aborted.');
+}
+
 export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   private readonly definitions = new Map<string, RoccoSoundDefinition>();
   private readonly bufferRevisions = new Map<string, number>();
-  private readonly buffers = new Map<string, { revision: number; promise: Promise<AudioBuffer | undefined> }>();
+  private readonly buffers = new Map<
+    string,
+    { revision: number; promise: Promise<AudioBuffer | undefined> }
+  >();
   private readonly activePlaybacks = new Map<string, ActiveSoundPlayback>();
   private readonly soundPlaybackIds = new Map<string, Set<string>>();
   private context: AudioContext | undefined;
@@ -60,10 +117,7 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
   private masterVolume = 1;
   private nextPlaybackId = 1;
 
-  private createPlayback(
-    soundId: string,
-    options?: RoccoSoundPlayOptions,
-  ): ActiveSoundPlayback {
+  private createPlayback(soundId: string, options?: RoccoSoundPlayOptions): ActiveSoundPlayback {
     const definition = this.definitions.get(soundId);
     const playback: ActiveSoundPlayback = {
       playbackId: `sound-playback-${this.nextPlaybackId++}`,
@@ -168,26 +222,37 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     }
   }
 
-  private async loadBuffer(soundId: string): Promise<AudioBuffer | undefined> {
+  private async loadBuffer(
+    soundId: string,
+    options?: RoccoAudioPreloadOptions,
+  ): Promise<AudioBuffer | undefined> {
     const expectedRevision = this.bufferRevisions.get(soundId) ?? 0;
     const existing = this.buffers.get(soundId);
     if (existing && existing.revision === expectedRevision) {
-      return existing.promise;
+      return awaitWithInvalidation(existing.promise, options?.signal);
     }
 
     const pending = (async (): Promise<AudioBuffer | undefined> => {
-      const buffer = await this.fetchAndDecode(soundId);
-      if (!buffer) {
-        this.buffers.delete(soundId);
-      }
+      try {
+        const buffer = await this.fetchAndDecode(soundId, options?.signal);
+        if (!buffer) {
+          this.buffers.delete(soundId);
+        }
 
-      return buffer;
+        return buffer;
+      } catch (error) {
+        this.buffers.delete(soundId);
+        throw error;
+      }
     })();
     this.buffers.set(soundId, { revision: expectedRevision, promise: pending });
     return pending;
   }
 
-  private async fetchAndDecode(soundId: string): Promise<AudioBuffer | undefined> {
+  private async fetchAndDecode(
+    soundId: string,
+    signal?: AbortSignal,
+  ): Promise<AudioBuffer | undefined> {
     const definition = this.definitions.get(soundId);
     const context = this.ensureContext();
     if (!definition || !context) {
@@ -195,13 +260,21 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     }
 
     try {
-      const response = await fetch(definition.uri);
+      const response = await fetch(definition.uri, { signal });
       if (!response.ok) {
         return undefined;
       }
       const audioData = await response.arrayBuffer();
-      return await context.decodeAudioData(audioData);
-    } catch {
+      throwIfAudioPreloadAborted(signal);
+      const decoded = await context.decodeAudioData(audioData);
+      // decodeAudioData has no cancellation API. If invalidated while decoding,
+      // discard its result and let the transition own cleanup of the wait.
+      throwIfAudioPreloadAborted(signal);
+      return decoded;
+    } catch (error) {
+      if (signal?.aborted) {
+        throw error;
+      }
       return undefined;
     }
   }
@@ -335,13 +408,13 @@ export class RoccoRuntimeAudioSystem implements RoccoAudioSystem {
     this.buffers.delete(soundId);
   }
 
-  async preloadSound(soundId: string): Promise<void> {
+  async preloadSound(soundId: string, options?: RoccoAudioPreloadOptions): Promise<void> {
     const definition = this.definitions.get(soundId);
     if (!definition) {
       return;
     }
 
-    await this.loadBuffer(soundId);
+    await this.loadBuffer(soundId, options);
   }
 
   playSound(soundId: string, options?: RoccoSoundPlayOptions): SoundHandle {

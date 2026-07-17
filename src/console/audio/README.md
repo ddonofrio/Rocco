@@ -30,3 +30,4 @@ engine.audio.unregisterSound('footstep');
 - `engine.audio.setSoundVolume()` updates the gain of currently playing instances, which is useful for ambience that reacts to scene state without restarting the loop.
 - `engine.audio.unregisterSound()` removes a definition and stops any active instances for that sound.
 - `engine.audio.stopAllSounds()` is the broad cleanup helper for scene teardown or cartridge shutdown.
+- `preloadSound()` accepts an optional `AbortSignal` for transition-owned preloads. The signal reaches the underlying `fetch`; if decoding has started, `decodeAudioData` cannot be cancelled, so an invalidated result is discarded and the pending buffer entry is cleaned up.

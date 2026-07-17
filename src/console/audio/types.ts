@@ -20,9 +20,13 @@ export interface RoccoSoundPlayOptions {
 export interface RoccoAudioSystem {
   registerSound(definition: RoccoSoundDefinition): void;
   unregisterSound(soundId: string): void;
-  preloadSound(soundId: string): Promise<void>;
+  preloadSound(soundId: string, options?: RoccoAudioPreloadOptions): Promise<void>;
   playSound(soundId: string, options?: RoccoSoundPlayOptions): SoundHandle;
   setSoundVolume(soundId: string, volume: number): void;
   stopSound(soundId: string): void;
   stopAllSounds(): void;
+}
+
+export interface RoccoAudioPreloadOptions {
+  signal?: AbortSignal;
 }

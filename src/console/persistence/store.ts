@@ -1,7 +1,7 @@
 /**
  * Dexie-backed implementation of {@link SaveStore}.
  *
- * Closes over the singleton database from `./db` and exposes the minimal
+ * Closes over the singleton database from `./database` and exposes the minimal
  * surface the versioned repository needs. Compound indexes are used so a single
  * slot key (`[cartridgeId+profileId+slotId]`) and profile listing
  * (`[cartridgeId+profileId]`) are both efficient.
@@ -26,10 +26,7 @@ export class DexieSaveStore implements SaveStore {
     await this.db.saves.put(row);
   }
 
-  queryByProfile(
-    cartridgeId: string,
-    profileId: string,
-  ): Promise<SaveEnvelopeRow[]> {
+  queryByProfile(cartridgeId: string, profileId: string): Promise<SaveEnvelopeRow[]> {
     return this.db.saves
       .where('[cartridgeId+profileId]')
       .equals([cartridgeId, profileId])

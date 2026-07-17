@@ -5,7 +5,7 @@ saves in IndexedDB through Dexie.
 
 ## Files
 
-- `db.ts` - Database schema, tables, lazy/disposable connection, and the
+- `database.ts` - Database schema, tables, lazy/disposable connection, and the
   scene-cache functions.
 - `types.ts` - Persistence domain contracts: save envelope, metadata,
   `CartridgeSaveProvider`, `CartridgeSaveRepo`, `SaveStore`, and the
@@ -17,10 +17,32 @@ saves in IndexedDB through Dexie.
 
 ## Tables
 
-| Table | Key | Description |
-| --- | --- | --- |
-| `scenes_v4` | `[cartridgeId+sceneId]` | Recreatable visual scene cache |
-| `saves` | `[cartridgeId+profileId+slotId]` | Versioned domain saves (v5) |
+| Table       | Key                              | Description                    |
+| ----------- | -------------------------------- | ------------------------------ |
+| `scenes_v4` | `[cartridgeId+sceneId]`          | Recreatable visual scene cache |
+| `saves`     | `[cartridgeId+profileId+slotId]` | Versioned domain saves (v5)    |
+
+`legacy_saves` is a temporary migration store. It exists only while a v2
+database is upgrading and is removed after the v5 save envelope is restored.
+
+## Historical schema policy
+
+- v2 stores saves with an auto-increment key and stores scenes and plane assets.
+- v2.5 stages valid v2 save rows before the v3 schema removes the old `saves`
+  store.
+- v3 intentionally removes saves. A database that is already at v3 has no save
+  data available for recovery; the upgrade proceeds without inventing it.
+- v4 adds the compound-key `scenes_v4` cache.
+- v4.5 creates the current `saves` envelope and restores staged v2 rows before
+  v5 removes the temporary `legacy_saves` store.
+- v5 keeps the current save indexes and removes the temporary `legacy_saves`
+  store.
+
+The v2 policy is conservative preservation: valid legacy metadata and
+timestamps are retained, missing dimensions receive documented defaults, and
+re-running or reopening the migration does not duplicate rows. IndexedDB
+upgrade transactions roll back all staged writes if a row fails to normalize;
+repairing the source row allows the upgrade to be retried.
 
 ## Scene cache
 
@@ -29,7 +51,7 @@ saves in IndexedDB through Dexie.
 - `savePlaneScene(cartridgeId, scene)` upserts a scene.
 
 The engine normalizes restored scenes on boot so missing default planes can be
-repaired. This is a *technical, recreatable* cache and is intentionally
+repaired. This is a _technical, recreatable_ cache and is intentionally
 separate from domain saves.
 
 ## Versioned saves (audit DAT-001 / ROCCO-014)
@@ -38,7 +60,7 @@ A cartridge obtains a `CartridgeSaveRepo` bound to its `cartridgeId`
 and a `CartridgeSaveProvider`:
 
 ```ts
-const saves = engine.persistence.createSaveRepository<MyState>({
+const saves = sdk.storage.createSaveRepository<MyState>({
   cartridgeId: manifest.id,
   cartridgeVersion: manifest.version,
   provider: {
@@ -95,8 +117,8 @@ profiles, or slots never collide.
 
 ## Notes
 
-- Cartridges use persistence through `engine.persistence` on the `RoccoEngine`
-  SDK surface (and therefore `CartridgeSdkV1.storage`).
+- SDK v1 cartridges use persistence through `sdk.storage`; legacy cartridges use
+  the explicit `LegacyCartridgeContext.engine.persistence` surface.
 - Cartridges do not access Dexie directly.
 - Plane scenes are stored as plain JSON.
 - The database connection is lazily opened and released by

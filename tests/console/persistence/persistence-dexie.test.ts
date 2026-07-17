@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import Dexie from 'dexie';
 
 import { RoccoDatabase } from '../../../src/console/persistence/database';
 import { DexieSaveStore } from '../../../src/console/persistence/store';
@@ -15,6 +16,29 @@ interface TestState {
   level: number;
 }
 
+type HistoricalStoreSchema = Record<string, string | null>;
+
+async function seedHistoricalDatabase(
+  version: number,
+  stores: HistoricalStoreSchema,
+  seed: (database: Dexie) => Promise<void>,
+): Promise<void> {
+  const database = new Dexie('rocco_db');
+  database.version(version).stores(stores);
+  await database.open();
+  try {
+    await seed(database);
+  } finally {
+    database.close();
+  }
+}
+
+const historicalV2Stores: HistoricalStoreSchema = {
+  saves: '++id, sceneId, updatedAt',
+  scenes: 'id, updatedAt',
+  planeAssets: 'id, kind, updatedAt',
+};
+
 async function resetPersistenceDatabase(): Promise<void> {
   const { closeRoccoDatabase } = await import('../../../src/console/persistence/database');
   closeRoccoDatabase();
@@ -22,8 +46,25 @@ async function resetPersistenceDatabase(): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const request = indexedDB.deleteDatabase('rocco_db');
     request.addEventListener('success', () => resolve());
-    request.addEventListener('error', () => reject(request.error ?? new Error('indexeddb delete failed')));
+    request.addEventListener('error', () =>
+      reject(request.error ?? new Error('indexeddb delete failed')),
+    );
     request.addEventListener('blocked', () => reject(new Error('indexeddb delete blocked')));
+  });
+}
+
+async function listIndexedDatabaseStores(databaseName: string): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(databaseName);
+    request.addEventListener('success', () => {
+      const database = request.result;
+      const stores = [...database.objectStoreNames];
+      database.close();
+      resolve(stores);
+    });
+    request.addEventListener('error', () => {
+      reject(request.error ?? new Error('indexeddb inspect failed'));
+    });
   });
 }
 
@@ -69,7 +110,8 @@ describe('Dexie persistence with real IndexedDB', () => {
 
   describe('scene store', () => {
     it('round-trips a scene through savePlaneScene and loadPlaneSceneRecord', async () => {
-      const { loadPlaneSceneRecord, savePlaneScene } = await import('../../../src/console/persistence/database');
+      const { loadPlaneSceneRecord, savePlaneScene } =
+        await import('../../../src/console/persistence/database');
       const scene = makeScene();
 
       await savePlaneScene('cart', scene);
@@ -104,7 +146,22 @@ describe('Dexie persistence with real IndexedDB', () => {
         id: 'cart-a:scene-1',
         cartridgeId: 'cart-a',
         sceneId: 'scene-1',
-        scene: makeScene({ planes: [{ id: 'plane-a', enabled: true, source: { kind: 'solid', color: '#000000' }, colorModel: { kind: 'native' }, transform: { x: 0, y: 0, scaleX: 1, scaleY: 1 }, scroll: { x: 0, y: 0 }, wrap: { x: false, y: false }, opacity: 1, priority: 0, visible: true }] }),
+        scene: makeScene({
+          planes: [
+            {
+              id: 'plane-a',
+              enabled: true,
+              source: { kind: 'solid', color: '#000000' },
+              colorModel: { kind: 'native' },
+              transform: { x: 0, y: 0, scaleX: 1, scaleY: 1 },
+              scroll: { x: 0, y: 0 },
+              wrap: { x: false, y: false },
+              opacity: 1,
+              priority: 0,
+              visible: true,
+            },
+          ],
+        }),
         updatedAt: Date.now(),
       });
 
@@ -112,7 +169,22 @@ describe('Dexie persistence with real IndexedDB', () => {
         id: 'cart-b:scene-1',
         cartridgeId: 'cart-b',
         sceneId: 'scene-1',
-        scene: makeScene({ planes: [{ id: 'plane-b', enabled: true, source: { kind: 'solid', color: '#000000' }, colorModel: { kind: 'native' }, transform: { x: 0, y: 0, scaleX: 1, scaleY: 1 }, scroll: { x: 0, y: 0 }, wrap: { x: false, y: false }, opacity: 1, priority: 0, visible: true }] }),
+        scene: makeScene({
+          planes: [
+            {
+              id: 'plane-b',
+              enabled: true,
+              source: { kind: 'solid', color: '#000000' },
+              colorModel: { kind: 'native' },
+              transform: { x: 0, y: 0, scaleX: 1, scaleY: 1 },
+              scroll: { x: 0, y: 0 },
+              wrap: { x: false, y: false },
+              opacity: 1,
+              priority: 0,
+              visible: true,
+            },
+          ],
+        }),
         updatedAt: Date.now(),
       });
 
@@ -123,6 +195,142 @@ describe('Dexie persistence with real IndexedDB', () => {
       expect(rowB?.cartridgeId).toBe('cart-b');
       expect(rowA?.scene.planes[0].id).toBe('plane-a');
       expect(rowB?.scene.planes[0].id).toBe('plane-b');
+    });
+  });
+
+  describe('historical schema upgrades', () => {
+    it('upgrades v2 saves through the staging store, removes it, and reopens without duplicates', async () => {
+      await seedHistoricalDatabase(2, historicalV2Stores, async (database) => {
+        await database.table('saves').add({
+          cartridgeId: 'cart-a',
+          cartridgeVersion: '0.2.0',
+          profileId: 'profile-a',
+          slotId: 'slot-a',
+          schemaVersion: 3,
+          revision: 4,
+          createdAt: 100,
+          updatedAt: 200,
+          payload: { level: 7 },
+        });
+        await database.table('saves').add({
+          cartridgeId: 'cart-a',
+          cartridgeVersion: '0.2.0',
+          profileId: 'profile-b',
+          slotId: 'slot-a',
+          schemaVersion: 3,
+          revision: 2,
+          createdAt: 300,
+          updatedAt: 400,
+          payload: { level: 9 },
+        });
+      });
+
+      const { closeRoccoDatabase, getRoccoDatabase } =
+        await import('../../../src/console/persistence/database');
+      const database = getRoccoDatabase();
+      await database.open();
+
+      const rows = await database.saves.toArray();
+      expect(
+        rows.map((row) => row.key).toSorted((left, right) => left.localeCompare(right)),
+      ).toEqual(['cart-a:profile-a:slot-a', 'cart-a:profile-b:slot-a']);
+      expect(rows.find((row) => row.profileId === 'profile-a')).toMatchObject({
+        cartridgeVersion: '0.2.0',
+        revision: 4,
+        createdAt: 100,
+        updatedAt: 200,
+        payload: { level: 7 },
+      });
+      expect(database.tables.some((table) => table.name === 'legacy_saves')).toBe(false);
+
+      closeRoccoDatabase();
+      const reopened = getRoccoDatabase();
+      await reopened.open();
+      expect(await reopened.saves.count()).toBe(2);
+      expect(reopened.tables.some((table) => table.name === 'legacy_saves')).toBe(false);
+      closeRoccoDatabase();
+    });
+
+    it('opens a v3 database without attempting to recover saves that were already deleted', async () => {
+      await seedHistoricalDatabase(3, { scenes: 'id, updatedAt' }, async (database) => {
+        await database.table('scenes').put({
+          id: 'scene-v3',
+          scene: makeScene({ id: 'scene-v3' }),
+          updatedAt: 500,
+        });
+      });
+
+      const database = new RoccoDatabase();
+      await database.open();
+
+      expect(await database.saves.count()).toBe(0);
+      expect(database.tables.some((table) => table.name === 'legacy_saves')).toBe(false);
+      database.close();
+    });
+
+    it('opens a v4 database with its scene key intact and no legacy save store', async () => {
+      await seedHistoricalDatabase(
+        4,
+        { scenes_v4: '[cartridgeId+sceneId], updatedAt' },
+        async (database) => {
+          await database.table('scenes_v4').put({
+            id: 'cart-v4:scene-1',
+            cartridgeId: 'cart-v4',
+            sceneId: 'scene-1',
+            scene: makeScene(),
+            updatedAt: 600,
+          });
+        },
+      );
+
+      const database = new RoccoDatabase();
+      await database.open();
+
+      expect(await database.scenes_v4.get(['cart-v4', 'scene-1'])).toMatchObject({
+        cartridgeId: 'cart-v4',
+        sceneId: 'scene-1',
+      });
+      expect(await database.saves.count()).toBe(0);
+      expect(database.tables.some((table) => table.name === 'legacy_saves')).toBe(false);
+      database.close();
+    });
+
+    it('rolls back a failed v2 migration and resumes after the invalid row is repaired', async () => {
+      let invalidRowId!: number;
+      await seedHistoricalDatabase(2, historicalV2Stores, async (database) => {
+        await database.table('saves').add({
+          cartridgeId: 'cart-retry',
+          profileId: 'profile',
+          slotId: 'slot',
+          payload: { level: 11 },
+        });
+        invalidRowId = Number(
+          await database.table('saves').add({
+            cartridgeId: 42,
+            profileId: 'profile',
+            slotId: 'invalid',
+            payload: { level: 0 },
+          }),
+        );
+      });
+
+      const failedMigration = new RoccoDatabase();
+      await expect(failedMigration.open()).rejects.toThrow();
+      failedMigration.close();
+      expect(await listIndexedDatabaseStores('rocco_db')).not.toContain('legacy_saves');
+
+      await seedHistoricalDatabase(2, historicalV2Stores, async (database) => {
+        await database.table('saves').delete(invalidRowId);
+      });
+
+      const repaired = new RoccoDatabase();
+      await repaired.open();
+      expect(await repaired.saves.get(['cart-retry', 'profile', 'slot'])).toMatchObject({
+        payload: { level: 11 },
+      });
+      expect(await repaired.saves.count()).toBe(1);
+      expect(repaired.tables.some((table) => table.name === 'legacy_saves')).toBe(false);
+      repaired.close();
     });
   });
 
@@ -155,9 +363,9 @@ describe('Dexie persistence with real IndexedDB', () => {
         store,
       });
 
-      await expect(
-        repo.save('p', 's', { expectedRevision: 5 }),
-      ).rejects.toBeInstanceOf(SaveRevisionConflictError);
+      await expect(repo.save('p', 's', { expectedRevision: 5 })).rejects.toBeInstanceOf(
+        SaveRevisionConflictError,
+      );
     });
 
     it('deletes a slot and load returns undefined', async () => {
@@ -316,7 +524,8 @@ describe('Dexie persistence with real IndexedDB', () => {
 
   describe('legacy scene migration', () => {
     it('migrates partial legacy rows and resumes pending ones', async () => {
-      const { closeRoccoDatabase, loadPlaneSceneRecord } = await import('../../../src/console/persistence/database');
+      const { closeRoccoDatabase, loadPlaneSceneRecord } =
+        await import('../../../src/console/persistence/database');
 
       closeRoccoDatabase();
       await resetPersistenceDatabase();

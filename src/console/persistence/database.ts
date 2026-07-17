@@ -1,7 +1,12 @@
-import Dexie, { type Table } from 'dexie';
+import Dexie, { type Table, type Transaction } from 'dexie';
 
 import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../video/planes';
-import type { SaveEnvelopeRow, SceneStoreKey, SaveStoreKey } from './types';
+import {
+  formatSaveKey,
+  type SaveEnvelopeRow,
+  type SceneStoreKey,
+  type SaveStoreKey,
+} from './types';
 
 interface RoccoLegacyPlaneSceneRecordRow {
   id: string;
@@ -9,6 +14,35 @@ interface RoccoLegacyPlaneSceneRecordRow {
   sceneId?: string;
   scene: RoccoPlaneScene;
   updatedAt: number;
+}
+
+interface RoccoLegacySaveRecordRow {
+  id?: number | string;
+  key?: string;
+  cartridgeId?: string;
+  cartridgeVersion?: string;
+  profileId?: string;
+  slotId?: string;
+  schemaVersion?: number;
+  revision?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  payload?: unknown;
+  state?: unknown;
+  data?: unknown;
+}
+
+interface RoccoStagedSaveRecordRow {
+  key: string;
+  cartridgeId: string;
+  cartridgeVersion: string;
+  profileId: string;
+  slotId: string;
+  schemaVersion: number;
+  revision: number;
+  createdAt: number;
+  updatedAt: number;
+  payload: unknown;
 }
 
 export interface RoccoPlaneSceneRecordRow {
@@ -23,6 +57,7 @@ export class RoccoDatabase extends Dexie {
   scenes!: Table<RoccoLegacyPlaneSceneRecordRow, string>;
   scenes_v4!: Table<RoccoPlaneSceneRecordRow, SceneStoreKey>;
   saves!: Table<SaveEnvelopeRow, SaveStoreKey>;
+  legacy_saves!: Table<RoccoStagedSaveRecordRow, string>;
 
   constructor() {
     super('rocco_db');
@@ -31,20 +66,108 @@ export class RoccoDatabase extends Dexie {
       scenes: 'id, updatedAt',
       planeAssets: 'id, kind, updatedAt',
     });
+    this.version(2.5)
+      .stores({
+        legacy_saves: 'key, cartridgeId, profileId, slotId, updatedAt',
+      })
+      .upgrade(stageLegacySaves);
     this.version(3).stores({
-      // eslint-disable-next-line unicorn/no-null -- Dexie uses `null` to drop an object store on upgrade.
       saves: null,
+      legacy_saves: 'key, cartridgeId, profileId, slotId, updatedAt',
       scenes: 'id, updatedAt',
-      // eslint-disable-next-line unicorn/no-null -- Dexie uses `null` to drop an object store on upgrade.
       planeAssets: null,
     });
     this.version(4).stores({
       scenes_v4: '[cartridgeId+sceneId], updatedAt',
     });
+    this.version(4.5)
+      .stores({
+        saves: '[cartridgeId+profileId+slotId], [cartridgeId+profileId], updatedAt',
+      })
+      .upgrade(restoreLegacySaves);
     this.version(5).stores({
       saves: '[cartridgeId+profileId+slotId], [cartridgeId+profileId], updatedAt',
+      legacy_saves: null,
     });
   }
+}
+
+async function stageLegacySaves(transaction: Transaction): Promise<void> {
+  const oldSaves = transaction.table<RoccoLegacySaveRecordRow>('saves');
+  const stagedSaves = transaction.table<RoccoStagedSaveRecordRow>('legacy_saves');
+  const rows = await oldSaves.toArray();
+
+  for (const row of rows) {
+    const staged = normalizeLegacySave(row);
+    const existing = await stagedSaves.get(staged.key);
+    if (!existing) {
+      await stagedSaves.put(staged);
+    }
+  }
+}
+
+async function restoreLegacySaves(transaction: Transaction): Promise<void> {
+  const stagedSaves = transaction.idbtrans.objectStoreNames.contains('legacy_saves')
+    ? transaction.table<RoccoStagedSaveRecordRow>('legacy_saves')
+    : undefined;
+  if (!stagedSaves) {
+    return;
+  }
+
+  const saves = transaction.table<SaveEnvelopeRow>('saves');
+  const stagedRows = await stagedSaves.toArray();
+  for (const staged of stagedRows) {
+    const key: SaveStoreKey = [staged.cartridgeId, staged.profileId, staged.slotId];
+    if (await saves.get(key)) {
+      continue;
+    }
+    await saves.put({
+      key: formatSaveKey(key),
+      cartridgeId: staged.cartridgeId,
+      cartridgeVersion: staged.cartridgeVersion,
+      schemaVersion: staged.schemaVersion,
+      profileId: staged.profileId,
+      slotId: staged.slotId,
+      revision: staged.revision,
+      createdAt: staged.createdAt,
+      updatedAt: staged.updatedAt,
+      payload: staged.payload,
+    });
+  }
+}
+
+function normalizeLegacySave(row: RoccoLegacySaveRecordRow): RoccoStagedSaveRecordRow {
+  const cartridgeId = row.cartridgeId?.trim() || 'rocco-default';
+  const profileId = row.profileId?.trim() || 'default';
+  const slotId = row.slotId?.trim() || 'legacy-' + String(row.id ?? '0');
+  const updatedAt = normalizeTimestamp(row.updatedAt);
+  const createdAt = normalizeTimestamp(row.createdAt) ?? updatedAt;
+  const revision = normalizeRevision(row.revision);
+
+  return {
+    key: formatSaveKey([cartridgeId, profileId, slotId]),
+    cartridgeId,
+    cartridgeVersion: row.cartridgeVersion?.trim() || 'legacy',
+    profileId,
+    slotId,
+    schemaVersion: normalizeSchemaVersion(row.schemaVersion),
+    revision,
+    createdAt,
+    updatedAt,
+    payload: row.payload ?? row.state ?? row.data ?? row,
+  };
+}
+
+function normalizeTimestamp(value: number | undefined): number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : Date.now();
+}
+
+function normalizeRevision(value: number | undefined): number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : 1;
+}
+
+function normalizeSchemaVersion(value: number | undefined): number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0;
 }
 
 const databaseState = {
@@ -126,7 +249,6 @@ export async function loadPlaneSceneRecord(
   const key: SceneStoreKey = [cartridgeId, sceneId];
   const row = await database_.scenes_v4.get(key);
   if (!row) {
-    // eslint-disable-next-line unicorn/no-null -- public contract returns `| null` to keep SDK callers stable.
     return null;
   }
 

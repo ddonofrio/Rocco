@@ -21,7 +21,12 @@ class MockTable<T extends { id: string }> {
   }
 
   toArray(): Promise<T[]> {
-    return Promise.resolve(this.rows.values().map((row) => structuredClone(row)).toArray());
+    return Promise.resolve(
+      this.rows
+        .values()
+        .map((row) => structuredClone(row))
+        .toArray(),
+    );
   }
 
   get(key: PrimitiveKey): Promise<T | undefined> {
@@ -77,6 +82,10 @@ class MockDexie {
         return this;
       },
     };
+  }
+
+  upgrade(_upgrade: unknown) {
+    return this;
   }
 }
 

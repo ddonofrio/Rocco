@@ -38,7 +38,13 @@ export function createRoccoDefaultPierMap(
   const mountAmbient =
     options.mountPierBeginningAmbient ??
     ((engine, localization, persistentState, preloader, entryConnectorId) =>
-      installPierBeginningAmbient(engine, localization, persistentState, preloader, entryConnectorId));
+      installPierBeginningAmbient(
+        engine,
+        localization,
+        persistentState,
+        preloader,
+        entryConnectorId,
+      ));
 
   const structure = createRoccoDefaultPierMapStructure();
   const factories: Record<string, () => RoccoLevel> = {
@@ -48,9 +54,10 @@ export function createRoccoDefaultPierMap(
         localization: options.localization,
         mountAmbient,
       }),
-    [ROCCO_PIER_END_LEVEL_ID]: () => new RoccoPierEndLevel({
-      localization: options.localization,
-    }),
+    [ROCCO_PIER_END_LEVEL_ID]: () =>
+      new RoccoPierEndLevel({
+        localization: options.localization,
+      }),
   };
 
   return {
@@ -68,9 +75,9 @@ export function createRoccoDefaultPierMapStructure(): RpceMapDefinition {
     title: 'Pier',
     initialLevelId: ROCCO_PIER_MIDDLE_LEVEL_ID,
     levels: [
-      { id: ROCCO_PIER_START_LEVEL_ID },
-      { id: ROCCO_PIER_MIDDLE_LEVEL_ID },
-      { id: ROCCO_PIER_END_LEVEL_ID },
+      { id: ROCCO_PIER_START_LEVEL_ID, connectorIds: ['west'] },
+      { id: ROCCO_PIER_MIDDLE_LEVEL_ID, connectorIds: ['east', 'west'] },
+      { id: ROCCO_PIER_END_LEVEL_ID, connectorIds: ['east'] },
     ],
     connections: ROCCO_DEFAULT_PIER_CONNECTIONS,
   };

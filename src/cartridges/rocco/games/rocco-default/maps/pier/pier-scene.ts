@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../../../../../console/video/planes';
 import {
   DEFAULT_CENTERED_BACKGROUND_SCROLL_X,
@@ -10,7 +10,6 @@ import {
 } from '../../constants';
 import { pierBackgroundAssetUrls } from './pier-assets';
 import { makeDefaultWaterColorEffect } from './pier-video-effects';
-import { roccoDefaultCartridgeManifest } from '../../../../rocco-default-manifest';
 
 const DEFAULT_PLANE_IDS = new Set([
   'rocco-green-black-backplate',
@@ -189,16 +188,13 @@ function normalizeDefaultRoccoScene(
 }
 
 export async function loadOrCreatePierScene(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   options: RoccoPierSceneOptions,
 ): Promise<RoccoPlaneScene> {
-  const restoredRecord = await engine.persistence.loadPlaneSceneRecord(
-    roccoDefaultCartridgeManifest.id,
-    options.sceneId,
-  );
+  const restoredRecord = await engine.storage.loadPlaneSceneRecord(options.sceneId);
   if (!restoredRecord) {
     const created = createDefaultRoccoScene(options);
-    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, created);
+    await engine.storage.savePlaneScene(created);
     engine.log('System', `Pier scene '${options.sceneId}' initialized.`);
     return created;
   }
@@ -206,14 +202,16 @@ export async function loadOrCreatePierScene(
   engine.log('System', `Pier scene '${options.sceneId}' restored from IndexedDB.`);
   const normalized = normalizeDefaultRoccoScene(restoredRecord.scene, options);
   if (normalized.changed) {
-    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, normalized.scene);
+    await engine.storage.savePlaneScene(normalized.scene);
     engine.log('System', `Pier scene '${options.sceneId}' refreshed.`);
   }
 
   return normalized.scene;
 }
 
-export async function loadOrCreateDefaultScene(engine: RoccoEngine): Promise<RoccoPlaneScene> {
+export async function loadOrCreateDefaultScene(
+  engine: CartridgeSdkV1Runtime,
+): Promise<RoccoPlaneScene> {
   return loadOrCreatePierScene(engine, {
     sceneId: DEFAULT_SCENE_ID,
     backgroundScrollX: DEFAULT_CENTERED_BACKGROUND_SCROLL_X,

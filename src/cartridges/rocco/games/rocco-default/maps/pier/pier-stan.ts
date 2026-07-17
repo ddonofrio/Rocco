@@ -1,7 +1,5 @@
-/* eslint-disable max-lines */
-
 import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
 import {
@@ -184,7 +182,7 @@ async function createDefaultStanSpriteDefinition(
 }
 
 class RoccoStanController implements RoccoPierSideAmbientController {
-  private readonly engine: RoccoEngine;
+  private readonly engine: CartridgeSdkV1Runtime;
   private readonly localization: RoccoLocalization;
   private readonly persistentState: RoccoStanPersistentState;
   private readonly dialogue: RoccoDialogueSession;
@@ -197,7 +195,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
   private sequence: RoccoStanSequence | undefined;
 
   constructor(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     localization: RoccoLocalization,
     persistentState: RoccoStanPersistentState,
     options: RoccoStanInstallOptions = {},
@@ -276,10 +274,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     return true;
   }
 
-  private updateAwaitingChoiceState(
-    deltaMs: number,
-    isRoccoBehindStan: boolean,
-  ): boolean {
+  private updateAwaitingChoiceState(deltaMs: number, isRoccoBehindStan: boolean): boolean {
     if (!this.dialogue.isAwaitingChoice()) {
       return false;
     }
@@ -349,7 +344,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private wakeForRearPresence(): void {
@@ -386,7 +380,10 @@ class RoccoStanController implements RoccoPierSideAmbientController {
           this.startSequence('look-around');
         }
       });
-      return STAN_WAKE_STEP_DURATION_MS * 2 + (shouldLookAround ? STAN_LOOK_AROUND_STEP_DURATION_MS * 2 : 0);
+      return (
+        STAN_WAKE_STEP_DURATION_MS * 2 +
+        (shouldLookAround ? STAN_LOOK_AROUND_STEP_DURATION_MS * 2 : 0)
+      );
     }
 
     if (shouldLookAround) {
@@ -408,7 +405,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       enabled: true,
       text: this.localization.text.descriptions.stan,
     });
-    this.engine.video.render(0);
   }
 
   private startSequence(kind: RoccoStanSequenceKind, onComplete?: () => void): void {
@@ -423,7 +419,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     this.engine.video.sprites.playAnimation(DEFAULT_STAN_SPRITE_INSTANCE_ID, animationIds[0], {
       restart: true,
     });
-    this.engine.video.render(0);
   }
 
   private advanceSequence(deltaMs: number): number {
@@ -451,7 +446,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
           restart: true,
         },
       );
-      this.engine.video.render(0);
       return leftoverDeltaMs;
     }
 
@@ -464,7 +458,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
           restart: true,
         },
       );
-      this.engine.video.render(0);
     }
 
     currentSequence.onComplete?.();
@@ -484,7 +477,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
         restart: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private resolveSequenceAnimationIds(kind: RoccoStanSequenceKind): readonly string[] {
@@ -524,7 +516,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
         restart: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private resolveStanRestingAnimationId(): string {
@@ -567,7 +558,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     this.engine.video.sprites.playAnimation(DEFAULT_STAN_SPRITE_INSTANCE_ID, animationId, {
       restart: true,
     });
-    this.engine.video.render(0);
   }
 
   private updateSleepThought(deltaMs: number): void {
@@ -607,7 +597,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private showSleepThought(): void {
@@ -621,7 +610,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
         side: 'above',
       },
     );
-    this.engine.video.render(0);
   }
 
   private resetSleepThoughtCycle(): void {
@@ -698,7 +686,6 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     }
 
     this.awakeIdleMs = 0;
-    this.engine.video.render(0);
   }
 
   handleSceneClick(_activation: RoccoSceneClickAction): RoccoStanSceneClickResult {
@@ -710,18 +697,17 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     return { suppressDefaultPlayerMove: true };
   }
 
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     this.sequence = undefined;
     this.dialogue.cancel();
     this.resetSleepThoughtCycle();
     uninstallDefaultStanActionMenu(engine);
     engine.video.sprites.removeSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
-    engine.video.render(0);
   }
 }
 
 export async function installDefaultStan(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   localization: RoccoLocalization = createRoccoLocalization(),
   persistentState?: RoccoStanPersistentState,
   options: RoccoStanInstallOptions = {},
@@ -729,7 +715,8 @@ export async function installDefaultStan(
 ): Promise<RoccoPierSideAmbientController> {
   const resolvedPersistentState = persistentState ?? createDefaultStanPersistentState();
   const definition = await createDefaultStanSpriteDefinition(localization, resolvedPersistentState);
-  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
+  await (preloader?.preloadSpriteDefinition(engine, definition) ??
+    engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
 
@@ -748,11 +735,14 @@ export async function installDefaultStan(
     interactive: true,
     collisionEnabled: false,
   });
-  engine.video.sprites.playAnimation(DEFAULT_STAN_SPRITE_INSTANCE_ID, DEFAULT_STAN_SLEEPING_ANIMATION_ID, {
-    restart: true,
-  });
+  engine.video.sprites.playAnimation(
+    DEFAULT_STAN_SPRITE_INSTANCE_ID,
+    DEFAULT_STAN_SLEEPING_ANIMATION_ID,
+    {
+      restart: true,
+    },
+  );
   installDefaultStanActionMenu(engine, localization);
-  engine.video.render(0);
 
   return new RoccoStanController(engine, localization, resolvedPersistentState, options);
 }

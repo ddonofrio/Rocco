@@ -1,10 +1,8 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuDefinition } from '../../../../../../console/video/action-menu';
 import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import {
-  DEFAULT_STAN_SPRITE_INSTANCE_ID,
-} from '../../constants';
+import { DEFAULT_STAN_SPRITE_INSTANCE_ID } from '../../constants';
 
 export const DEFAULT_STAN_ACTION_MENU_ID = 'rocco-stan-action-menu';
 
@@ -57,15 +55,13 @@ export function createDefaultStanActionMenuDefinition(
 }
 
 export function installDefaultStanActionMenu(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   localization: RoccoLocalization = createRoccoLocalization(),
 ): void {
   engine.video.actionMenus.unregisterMenu(DEFAULT_STAN_ACTION_MENU_ID);
   engine.video.actionMenus.registerMenu(createDefaultStanActionMenuDefinition(localization));
-  engine.video.render(0);
 }
 
-export function uninstallDefaultStanActionMenu(engine: RoccoEngine): void {
+export function uninstallDefaultStanActionMenu(engine: CartridgeSdkV1Runtime): void {
   engine.video.actionMenus.unregisterMenu(DEFAULT_STAN_ACTION_MENU_ID);
-  engine.video.render(0);
 }

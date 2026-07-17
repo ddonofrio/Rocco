@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuDefinition } from '../../../../../../console/video/action-menu';
 import {
   selectNonRepeatingLines,
@@ -46,17 +46,15 @@ export function createDefaultFeedingLookActionMenu(
 }
 
 export function installDefaultFeedingLookActionMenu(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   localization: RoccoLocalization = createRoccoLocalization(),
 ): void {
   engine.video.actionMenus.unregisterMenu(DEFAULT_FEEDING_LOOK_ACTION_MENU_ID);
   engine.video.actionMenus.registerMenu(createDefaultFeedingLookActionMenu(localization));
-  engine.video.render(0);
 }
 
-export function uninstallDefaultFeedingLookActionMenu(engine: RoccoEngine): void {
+export function uninstallDefaultFeedingLookActionMenu(engine: CartridgeSdkV1Runtime): void {
   engine.video.actionMenus.unregisterMenu(DEFAULT_FEEDING_LOOK_ACTION_MENU_ID);
-  engine.video.render(0);
 }
 
 export function isDefaultFeedingLookTarget(instanceId: string): boolean {

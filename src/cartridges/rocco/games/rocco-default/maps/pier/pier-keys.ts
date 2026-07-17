@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { InputPolicyLease } from '../../../../../../console/input';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
@@ -69,7 +69,7 @@ type KeysControllerState =
   | 'collected';
 
 class RoccoKeysController implements RoccoDefaultKeysController {
-  private readonly engine: RoccoEngine;
+  private readonly engine: CartridgeSdkV1Runtime;
   private readonly localization: RoccoLocalization;
   private readonly onCollectRequested: (() => boolean) | undefined;
   private readonly onCollected: (() => void) | undefined;
@@ -82,7 +82,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   private revealed = false;
   private collectInputLease: InputPolicyLease | undefined;
 
-  constructor(engine: RoccoEngine, options?: RoccoDefaultKeysControllerOptions) {
+  constructor(engine: CartridgeSdkV1Runtime, options?: RoccoDefaultKeysControllerOptions) {
     this.engine = engine;
     this.localization = options?.localization ?? createRoccoLocalization();
     this.onCollectRequested = options?.onCollectRequested;
@@ -101,7 +101,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
       this.revealed = false;
       this.engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
       this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
-      this.engine.video.render(0);
     }
   }
 
@@ -137,11 +136,13 @@ class RoccoKeysController implements RoccoDefaultKeysController {
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private acquireCollectInputLease(): void {
-    this.collectInputLease ??= this.engine.acquireInputLease(KEYS_COLLECT_INPUT_LEASE_ID, 'blocked');
+    this.collectInputLease ??= this.engine.acquireInputLease(
+      KEYS_COLLECT_INPUT_LEASE_ID,
+      'blocked',
+    );
   }
 
   private releaseCollectInputLease(): void {
@@ -161,22 +162,26 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     this.keysY = keys.transform.y;
     this.state = 'approaching-grab';
     this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
-    const isStarted = this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, this.keysX, this.keysY, {
-      targetInstanceId: DEFAULT_KEYS_SPRITE_INSTANCE_ID,
-      keepDistance: KEYS_APPROACH_KEEP_DISTANCE,
-      action: DEFAULT_SPRITE_RUN_ACTION_ID,
-      idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-      stopDistance: 1,
-      faceTargetOnComplete: true,
-      idleSettleDelayMs: 0,
-      idleSettleFacing: 'diagonal-from-facing',
-    });
+    const isStarted = this.engine.video.sprites.goTo(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      this.keysX,
+      this.keysY,
+      {
+        targetInstanceId: DEFAULT_KEYS_SPRITE_INSTANCE_ID,
+        keepDistance: KEYS_APPROACH_KEEP_DISTANCE,
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        stopDistance: 1,
+        faceTargetOnComplete: true,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
     if (!isStarted) {
       this.state = 'revealed';
       this.releaseCollectInputLease();
       this.engine.video.actionMenus.registerMenu(createDefaultKeysActionMenu(this.localization));
     }
-    this.engine.video.render(0);
   }
 
   private updateApproach(): void {
@@ -224,7 +229,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
         restart: true,
       },
     );
-    this.engine.video.render(0);
     this.playKeysSound();
   }
 
@@ -248,7 +252,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
 
     this.engine.video.sprites.setPosition(DEFAULT_KEYS_SPRITE_INSTANCE_ID, x, y);
     this.engine.video.sprites.setScale(DEFAULT_KEYS_SPRITE_INSTANCE_ID, scale, scale);
-    this.engine.video.render(0);
     if (this.elapsedMs >= KEYS_COLLECT_DURATION_MS) {
       this.engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
       this.engine.video.sprites.playAction(
@@ -259,7 +262,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
           restart: true,
         },
       );
-      this.engine.video.render(0);
       this.state = 'collected';
       this.revealed = false;
       this.onCollected?.();
@@ -275,7 +277,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
       this.roccoBaseX,
       this.roccoBaseY,
     );
-    this.engine.video.render(0);
   }
 
   private playKeysSound(): void {
@@ -329,7 +330,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
         this.keysY = keys.transform.y;
       }
       this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
-      this.engine.video.render(0);
     } else {
       this.startGrabApproach();
     }
@@ -365,7 +365,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
       collisionEnabled: true,
     });
     this.engine.video.actionMenus.registerMenu(createDefaultKeysActionMenu(this.localization));
-    this.engine.video.render(0);
   }
 
   isRevealed(): boolean {
@@ -385,7 +384,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
 }
 
 export async function installDefaultKeys(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   options?: RoccoDefaultKeysControllerOptions,
   preloader?: RoccoAssetPreloader,
 ): Promise<RoccoDefaultKeysController> {
@@ -403,22 +402,21 @@ export async function installDefaultKeys(
   } catch {
     engine.log('Audio', 'Keys sound could not be preloaded.');
   }
-  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
+  await (preloader?.preloadSpriteDefinition(engine, definition) ??
+    engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
   engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
   engine.audio.stopSound(KEYS_SOUND_ID);
-  engine.video.render(0);
   return new RoccoKeysController(engine, {
     ...options,
     localization,
   });
 }
 
-export function uninstallDefaultKeys(engine: RoccoEngine): void {
+export function uninstallDefaultKeys(engine: CartridgeSdkV1Runtime): void {
   engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
   engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
   engine.audio.stopSound(KEYS_SOUND_ID);
   engine.audio.unregisterSound(KEYS_SOUND_ID);
-  engine.video.render(0);
 }

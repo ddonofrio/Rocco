@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
@@ -36,7 +36,7 @@ export interface RoccoPierSideAmbientController {
   handleAction?(activation: RoccoActionMenuActivation): void;
   handleGridMenu?(activation: RoccoGridMenuActivation): void;
   handleSceneClick?(activation: RoccoSceneClickAction): RoccoSceneClickResult | void;
-  unmount(engine: RoccoEngine): void;
+  unmount(engine: CartridgeSdkV1Runtime): void;
 }
 
 export interface RoccoPierSideLevelDefinition {
@@ -47,7 +47,7 @@ export interface RoccoPierSideLevelDefinition {
   readonly connectors: readonly RoccoLevelConnector[];
   readonly localization: RoccoLocalization;
   readonly mountAmbient?: (
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     localization: RoccoLocalization,
     persistentState: RoccoPierBeginningAmbientPersistentState,
     preloader?: RoccoAssetPreloader,
@@ -81,7 +81,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
   }
 
   private async installControllers(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions,
     preloader?: RoccoAssetPreloader,
   ) {
@@ -110,7 +110,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
   }
 
   async mount(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
@@ -124,9 +124,13 @@ export class RoccoPierSideLevel implements RoccoLevel {
     });
     await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     engine.loadPlaneScene(scene);
-    await installDefaultWalkMap(engine, {
-      backgroundScrollX: this.backgroundScrollX,
-    }, preloader);
+    await installDefaultWalkMap(
+      engine,
+      {
+        backgroundScrollX: this.backgroundScrollX,
+      },
+      preloader,
+    );
 
     const [cloudController, spriteController, ambientController] = await this.installControllers(
       engine,
@@ -153,7 +157,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
     return scene;
   }
 
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     this.ambientController?.unmount(engine);
@@ -167,7 +171,6 @@ export class RoccoPierSideLevel implements RoccoLevel {
     this.cloudController = undefined;
     this.spriteController = undefined;
     this.ambientController = undefined;
-    engine.video.render(0);
   }
 
   update(deltaMs: number): void {

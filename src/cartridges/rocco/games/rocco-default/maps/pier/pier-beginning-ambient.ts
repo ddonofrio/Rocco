@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
@@ -10,10 +10,7 @@ import {
   type RoccoBaitShopDoorController,
   type RoccoBaitShopDoorState,
 } from './pier-bait-shop-door';
-import {
-  installDefaultStan,
-  type RoccoStanPersistentState,
-} from './pier-stan';
+import { installDefaultStan, type RoccoStanPersistentState } from './pier-stan';
 
 export interface RoccoPierBeginningAmbientPersistentState {
   stan: RoccoStanPersistentState;
@@ -28,10 +25,7 @@ class RoccoPierBeginningAmbientController implements RoccoPierSideAmbientControl
   private readonly stan: RoccoPierSideAmbientController;
   private readonly door: RoccoBaitShopDoorController;
 
-  constructor(
-    stan: RoccoPierSideAmbientController,
-    door: RoccoBaitShopDoorController,
-  ) {
+  constructor(stan: RoccoPierSideAmbientController, door: RoccoBaitShopDoorController) {
     this.stan = stan;
     this.door = door;
   }
@@ -53,24 +47,28 @@ class RoccoPierBeginningAmbientController implements RoccoPierSideAmbientControl
     return this.stan.handleSceneClick?.(activation);
   }
 
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     this.stan.unmount(engine);
     this.door.unmount(engine);
   }
 }
 
 export async function installPierBeginningAmbient(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   localization: RoccoLocalization,
   persistentState: RoccoPierBeginningAmbientPersistentState,
   preloader?: RoccoAssetPreloader,
   entryConnectorId?: string,
 ): Promise<RoccoPierSideAmbientController> {
   persistentState.door.revealed = true;
-  const door = await installDefaultBaitShopDoor(engine, {
-    localization,
-    initialState: persistentState.door,
-  }, preloader);
+  const door = await installDefaultBaitShopDoor(
+    engine,
+    {
+      localization,
+      initialState: persistentState.door,
+    },
+    preloader,
+  );
   const stan = await installDefaultStan(
     engine,
     localization,

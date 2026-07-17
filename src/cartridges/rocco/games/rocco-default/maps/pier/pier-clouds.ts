@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoSpriteDefinition } from '../../../../../../console/video/sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { pierCloudAssetUrl } from './pier-assets';
@@ -71,11 +71,11 @@ function createDefaultCloudSpriteDefinition(): RoccoSpriteDefinition {
 }
 
 class RoccoFloatingCloudController implements RoccoDefaultCloudController {
-  private readonly engine: RoccoEngine;
+  private readonly engine: CartridgeSdkV1Runtime;
   private elapsedMs = 0;
   private x = DEFAULT_CLOUD_START_X;
 
-  constructor(engine: RoccoEngine) {
+  constructor(engine: CartridgeSdkV1Runtime) {
     this.engine = engine;
   }
 
@@ -85,7 +85,6 @@ class RoccoFloatingCloudController implements RoccoDefaultCloudController {
     const scale = this.resolveScale();
     this.engine.video.sprites.setScale(DEFAULT_CLOUD_SPRITE_INSTANCE_ID, scale, scale);
     this.engine.video.sprites.setPosition(DEFAULT_CLOUD_SPRITE_INSTANCE_ID, this.x, y);
-    this.engine.video.render(0);
   }
 
   private resolveScale(): number {
@@ -116,11 +115,12 @@ class RoccoFloatingCloudController implements RoccoDefaultCloudController {
 }
 
 export async function installDefaultCloud(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   preloader?: RoccoAssetPreloader,
 ): Promise<RoccoDefaultCloudController> {
   const definition = createDefaultCloudSpriteDefinition();
-  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
+  await (preloader?.preloadSpriteDefinition(engine, definition) ??
+    engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_CLOUD_SPRITE_INSTANCE_ID);
 
@@ -140,14 +140,12 @@ export async function installDefaultCloud(
     interactive: false,
     collisionEnabled: false,
   });
-  engine.video.render(0);
 
   const controller = new RoccoFloatingCloudController(engine);
   controller.start();
   return controller;
 }
 
-export function uninstallDefaultCloud(engine: RoccoEngine): void {
+export function uninstallDefaultCloud(engine: CartridgeSdkV1Runtime): void {
   engine.video.sprites.removeSprite(DEFAULT_CLOUD_SPRITE_INSTANCE_ID);
-  engine.video.render(0);
 }

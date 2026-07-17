@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
@@ -131,7 +131,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   private keysController: RoccoDefaultKeysController | undefined;
   private pelikanController: RoccoDefaultPelikanController | undefined;
   private baitBucketController: RoccoDefaultBaitBucketController | undefined;
-  private engine: RoccoEngine | undefined;
+  private engine: CartridgeSdkV1Runtime | undefined;
   private feedingInteractionsInstalled = false;
   private feedingLookSelectionState: RoccoNonRepeatingLineSelectionState | undefined;
   private pendingPelikanTakeoffMs: number | undefined;
@@ -214,7 +214,6 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, selection.line, {
       ttlMs: DEFAULT_FEEDING_LOOK_MESSAGE_TTL_MS,
     });
-    this.engine.video.render(0);
 
     if (selection.line === this.localization.text.feeding.turnAwayLine) {
       this.engine.video.sprites.playAction(
@@ -225,7 +224,6 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
           restart: true,
         },
       );
-      this.engine.video.render(0);
     }
 
     return true;
@@ -248,7 +246,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     return leftoverDeltaMs;
   }
 
-  private resetMountState(engine: RoccoEngine, options: RoccoLevelMountOptions): void {
+  private resetMountState(engine: CartridgeSdkV1Runtime, options: RoccoLevelMountOptions): void {
     this.engine = engine;
     this.options = options;
     this.spriteController = undefined;
@@ -263,7 +261,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   }
 
   private async loadMiddleScene(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     const scene = await loadOrCreatePierScene(engine, {
@@ -281,7 +279,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   }
 
   private async preloadMiddleActionMenuAssets(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     preloader?: RoccoAssetPreloader,
   ): Promise<void> {
     try {
@@ -297,7 +295,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   }
 
   private installMiddleBaitBucket(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoDefaultBaitBucketController> {
     return installDefaultBaitBucket(
@@ -314,7 +312,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   }
 
   private installMiddleKeys(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoDefaultKeysController> {
     return installDefaultKeys(
@@ -333,7 +331,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   }
 
   private installMiddlePelikan(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoDefaultPelikanController> {
     return installDefaultPelikan(
@@ -353,7 +351,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   }
 
   private installMiddleSprite(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions,
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoDefaultSpriteController> {
@@ -374,7 +372,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   }
 
   private async installMiddleControllers(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions,
     preloader?: RoccoAssetPreloader,
   ) {
@@ -388,7 +386,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   }
 
   async mount(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
@@ -411,7 +409,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     return scene;
   }
 
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     this.keysController?.cancel();
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
@@ -430,7 +428,6 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     this.feedingInteractionsInstalled = false;
     this.pendingPelikanTakeoffMs = undefined;
     this.engine = undefined;
-    engine.video.render(0);
   }
 
   update(deltaMs: number): void {
@@ -475,7 +472,6 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
         },
       );
       this.pendingPelikanTakeoffMs = DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS;
-      this.engine.video.render(0);
       return;
     }
 

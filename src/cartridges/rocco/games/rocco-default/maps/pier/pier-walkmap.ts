@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import { loadRoccoSpriteWalkMapFromImage } from '../../../../../../console/video/sprites';
 import { pierWalkMapAssetUrl } from './pier-assets';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
@@ -15,7 +15,7 @@ export interface RoccoPierWalkMapOptions {
 }
 
 export async function installDefaultWalkMap(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   options: RoccoPierWalkMapOptions = {},
   preloader?: RoccoAssetPreloader,
 ): Promise<void> {
@@ -33,6 +33,6 @@ export async function installDefaultWalkMap(
   engine.video.sprites.registerWalkMap(walkMap);
 }
 
-export function uninstallDefaultWalkMap(engine: RoccoEngine): void {
+export function uninstallDefaultWalkMap(engine: CartridgeSdkV1Runtime): void {
   engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
 }

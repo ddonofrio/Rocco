@@ -1,6 +1,4 @@
-/* eslint-disable max-lines */
-
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import {
   createRoccoSpriteAutoCroppedFrames,
   type RoccoSpriteDefinition,
@@ -274,7 +272,7 @@ type PelikanControllerState = 'idle' | 'turning-to-bait' | 'flying-to-bait' | 'f
 type PelikanFeedingPhase = 'eating' | 'waiting';
 
 class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
-  private readonly engine: RoccoEngine;
+  private readonly engine: CartridgeSdkV1Runtime;
   private readonly options: RoccoDefaultPelikanOptions;
   private readonly random: () => number;
   private readonly feedingCycleDurationMs: number;
@@ -288,7 +286,7 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
   private flightStartY = DEFAULT_PELIKAN_PERCH_Y;
 
   constructor(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     feedingCycleDurationMs: number,
     options: RoccoDefaultPelikanOptions = {},
     random: () => number = Math.random,
@@ -335,7 +333,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
       DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
       DEFAULT_PELIKAN_Z_INDEX,
     );
-    this.engine.video.render(0);
     this.options.onTakeoff?.();
     this.engine.audio.playSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID, {
       restart: true,
@@ -348,7 +345,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
         restart: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private updateFlyingToBait(deltaMs: number): void {
@@ -362,7 +358,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
       Math.sin(progress * Math.PI) * DEFAULT_PELIKAN_FLIGHT_ARC_HEIGHT;
 
     this.engine.video.sprites.setPosition(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, x, y);
-    this.engine.video.render(0);
     if (this.elapsedMs < DEFAULT_PELIKAN_FLIGHT_DURATION_MS) {
       return;
     }
@@ -384,7 +379,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
       DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
       DEFAULT_PELIKAN_FEEDING_Z_INDEX,
     );
-    this.engine.video.render(0);
     this.startFeedingCycle();
   }
 
@@ -408,7 +402,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
       DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
       DEFAULT_PELIKAN_FEEDING_Z_INDEX,
     );
-    this.engine.video.render(0);
     this.startFeedingCycle();
   }
 
@@ -437,7 +430,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
         playbackRate: 1,
       },
     );
-    this.engine.video.render(0);
   }
 
   private startFeedingWait(): void {
@@ -451,7 +443,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
         restart: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private resolveNextFeedingWaitMs(): number {
@@ -484,7 +475,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
         restart: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   start(): void {
@@ -531,7 +521,6 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
     this.elapsedMs = 0;
     this.engine.video.actionMenus.unregisterMenu(DEFAULT_ACTION_MENU_ID);
     this.engine.video.sprites.setFlip(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, true, false);
-    this.engine.video.render(0);
     this.playCurrentPose();
     return true;
   }
@@ -541,7 +530,7 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
   }
 }
 
-function registerPelikanFlightSound(engine: RoccoEngine): void {
+function registerPelikanFlightSound(engine: CartridgeSdkV1Runtime): void {
   engine.audio.unregisterSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
   engine.audio.registerSound({
     id: DEFAULT_PELIKAN_FLIGHT_SOUND_ID,
@@ -552,7 +541,7 @@ function registerPelikanFlightSound(engine: RoccoEngine): void {
 }
 
 async function preloadPelikanAssets(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   definition: RoccoSpriteDefinition,
   preloader?: RoccoAssetPreloader,
 ): Promise<void> {
@@ -561,10 +550,11 @@ async function preloadPelikanAssets(
   } catch {
     engine.log('Audio', 'Pelikan flight sound could not be preloaded.');
   }
-  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
+  await (preloader?.preloadSpriteDefinition(engine, definition) ??
+    engine.video.preloadSpriteDefinition(definition));
 }
 
-function createPelikanSprite(engine: RoccoEngine): void {
+function createPelikanSprite(engine: CartridgeSdkV1Runtime): void {
   engine.video.sprites.createSpriteFromDefinition(DEFAULT_PELIKAN_SPRITE_DEFINITION_ID, {
     id: DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
     transform: {
@@ -586,7 +576,7 @@ function createPelikanSprite(engine: RoccoEngine): void {
 }
 
 export async function installDefaultPelikan(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   options: RoccoDefaultPelikanOptions = {},
   preloader?: RoccoAssetPreloader,
 ): Promise<RoccoDefaultPelikanController> {
@@ -599,7 +589,6 @@ export async function installDefaultPelikan(
   engine.video.sprites.removeSprite(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID);
   engine.audio.stopSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
   createPelikanSprite(engine);
-  engine.video.render(0);
 
   const feedingCycleDurationMs =
     definition.animations[DEFAULT_PELIKAN_FEEDING_ANIMATION_ID]?.frames.reduce(
@@ -611,10 +600,9 @@ export async function installDefaultPelikan(
   return controller;
 }
 
-export function uninstallDefaultPelikan(engine: RoccoEngine): void {
+export function uninstallDefaultPelikan(engine: CartridgeSdkV1Runtime): void {
   engine.video.actionMenus.unregisterMenu(DEFAULT_ACTION_MENU_ID);
   engine.video.sprites.removeSprite(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID);
   engine.audio.stopSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
   engine.audio.unregisterSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
-  engine.video.render(0);
 }

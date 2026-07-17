@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuDefinition } from '../../../../../../console/video/action-menu';
 import type { RoccoSpriteDefinition } from '../../../../../../console/video/sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
@@ -40,7 +40,7 @@ export interface RoccoBaitShopDoorController {
   update(deltaMs: number): void;
   reveal(): void;
   isRevealed(): boolean;
-  unmount(engine: RoccoEngine): void;
+  unmount(engine: CartridgeSdkV1Runtime): void;
 }
 
 export interface RoccoBaitShopDoorInstallOptions {
@@ -165,12 +165,12 @@ function createBaitShopDoorActionMenuDefinition(
 }
 
 class RoccoBaitShopDoorControllerImpl implements RoccoBaitShopDoorController {
-  private readonly engine: RoccoEngine;
+  private readonly engine: CartridgeSdkV1Runtime;
   private readonly localization: RoccoLocalization;
   private revealed: boolean;
 
   constructor(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     localization: RoccoLocalization,
     initialState: RoccoBaitShopDoorState,
   ) {
@@ -192,23 +192,21 @@ class RoccoBaitShopDoorControllerImpl implements RoccoBaitShopDoorController {
       enabled: true,
       text: this.localization.text.descriptions.baitShopDoor,
     });
-    this.engine.video.render(0);
   }
 
   isRevealed(): boolean {
     return this.revealed;
   }
 
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     engine.audio.stopSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
     engine.audio.unregisterSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_DOOR_ACTION_MENU_ID);
     engine.video.sprites.removeSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
-    engine.video.render(0);
   }
 }
 
-function registerBaitShopDoorSound(engine: RoccoEngine): void {
+function registerBaitShopDoorSound(engine: CartridgeSdkV1Runtime): void {
   engine.audio.registerSound({
     id: BAIT_SHOP_DOOR_OPENING_SOUND_ID,
     uri: pierDoorOpeningSoundUrl,
@@ -217,7 +215,7 @@ function registerBaitShopDoorSound(engine: RoccoEngine): void {
   });
 }
 
-async function preloadBaitShopDoorSound(engine: RoccoEngine): Promise<void> {
+async function preloadBaitShopDoorSound(engine: CartridgeSdkV1Runtime): Promise<void> {
   try {
     await engine.audio.preloadSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
   } catch {
@@ -226,7 +224,7 @@ async function preloadBaitShopDoorSound(engine: RoccoEngine): Promise<void> {
 }
 
 function createBaitShopDoorSprite(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   localization: RoccoLocalization,
   initialState: RoccoBaitShopDoorState,
 ): void {
@@ -252,7 +250,7 @@ function createBaitShopDoorSprite(
 }
 
 export async function installDefaultBaitShopDoor(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   options: RoccoBaitShopDoorInstallOptions = {},
   preloader?: RoccoAssetPreloader,
 ): Promise<RoccoBaitShopDoorController> {
@@ -262,7 +260,8 @@ export async function installDefaultBaitShopDoor(
 
   registerBaitShopDoorSound(engine);
   await preloadBaitShopDoorSound(engine);
-  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
+  await (preloader?.preloadSpriteDefinition(engine, definition) ??
+    engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
   engine.video.actionMenus.unregisterMenu(BAIT_SHOP_DOOR_ACTION_MENU_ID);
@@ -276,7 +275,6 @@ export async function installDefaultBaitShopDoor(
       restart: true,
     },
   );
-  engine.video.render(0);
 
   return new RoccoBaitShopDoorControllerImpl(engine, localization, initialState);
 }

@@ -1,12 +1,9 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuDefinition } from '../../../../../../console/video/action-menu';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
 import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import {
-  DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-} from '../../constants';
+import { DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_INSTANCE_ID } from '../../constants';
 
 export const DEFAULT_ACTION_MENU_ID = 'rocco-default-action-menu';
 
@@ -65,16 +62,15 @@ export function createDefaultActionMenuDefinition(
 }
 
 export function installDefaultActionMenu(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   localization: RoccoLocalization = createRoccoLocalization(),
 ): void {
   engine.video.actionMenus.unregisterMenu(DEFAULT_ACTION_MENU_ID);
   engine.video.actionMenus.registerMenu(createDefaultActionMenuDefinition(localization));
-  engine.video.render(0);
 }
 
 export function showDefaultPelikanTalkReaction(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   localization: RoccoLocalization = createRoccoLocalization(),
 ): void {
   roccoCartridgeMessageRuntime.say(
@@ -90,11 +86,10 @@ export function showDefaultPelikanTalkReaction(
       isAvoidImmediateRepeat: true,
     },
   );
-  engine.video.render(0);
 }
 
 export function showDefaultPelikanSimpleReaction(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   actionId: string,
   localization: RoccoLocalization = createRoccoLocalization(),
 ): PelikanSimpleReactionSelection | undefined {
@@ -146,6 +141,5 @@ export function showDefaultPelikanSimpleReaction(
       isAvoidImmediateRepeat: true,
     },
   );
-  engine.video.render(0);
   return selection;
 }

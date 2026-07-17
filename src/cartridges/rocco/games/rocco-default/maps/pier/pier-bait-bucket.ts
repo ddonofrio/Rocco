@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { InputPolicyLease } from '../../../../../../console/input';
 import type {
   RoccoActionMenuActivation,
@@ -6,10 +6,7 @@ import type {
 } from '../../../../../../console/video/action-menu';
 import type { RoccoSpriteDefinition } from '../../../../../../console/video/sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
-import {
-  roccoDefaultActionMenuAssetUrls,
-  roccoDefaultBaitBucketAssetUrls,
-} from '../../sprites';
+import { roccoDefaultActionMenuAssetUrls, roccoDefaultBaitBucketAssetUrls } from '../../sprites';
 import { pierBaitBucketKickSoundUrl } from './pier-assets';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
@@ -234,7 +231,7 @@ export interface RoccoDefaultBaitBucketControllerOptions {
 }
 
 class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
-  private readonly engine: RoccoEngine;
+  private readonly engine: CartridgeSdkV1Runtime;
   private readonly options: RoccoDefaultBaitBucketControllerOptions;
   private readonly localization: RoccoLocalization;
   private state: BaitBucketControllerState = 'normal';
@@ -242,7 +239,10 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
   private droppedPoseApplied = false;
   private kickInputLease: InputPolicyLease | undefined;
 
-  constructor(engine: RoccoEngine, options: RoccoDefaultBaitBucketControllerOptions = {}) {
+  constructor(
+    engine: CartridgeSdkV1Runtime,
+    options: RoccoDefaultBaitBucketControllerOptions = {},
+  ) {
     this.engine = engine;
     this.options = options;
     this.localization = options.localization ?? createRoccoLocalization();
@@ -262,28 +262,39 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
         stopDistance: 1,
       },
     );
-    this.engine.video.render(0);
     this.state = 'approaching-kick';
   }
 
   private handleSimpleAction(actionId: string): boolean {
     if (this.state === 'normal' && actionId === 'look') {
-      this.showRoccoThought(this.localization.text.baitBucket.normalLookLines, 'bait-bucket-normal-look');
+      this.showRoccoThought(
+        this.localization.text.baitBucket.normalLookLines,
+        'bait-bucket-normal-look',
+      );
       return true;
     }
 
     if (this.state === 'normal' && actionId === 'grab') {
-      this.showRoccoThought(this.localization.text.baitBucket.normalGrabLines, 'bait-bucket-normal-grab');
+      this.showRoccoThought(
+        this.localization.text.baitBucket.normalGrabLines,
+        'bait-bucket-normal-grab',
+      );
       return true;
     }
 
     if (this.state === 'dropped' && actionId === 'look') {
-      this.showRoccoThought(this.localization.text.baitBucket.droppedLookLines, 'bait-bucket-dropped-look');
+      this.showRoccoThought(
+        this.localization.text.baitBucket.droppedLookLines,
+        'bait-bucket-dropped-look',
+      );
       return true;
     }
 
     if (this.state === 'dropped' && actionId === 'grab') {
-      this.showRoccoThought(this.localization.text.baitBucket.droppedGrabLines, 'bait-bucket-dropped-grab');
+      this.showRoccoThought(
+        this.localization.text.baitBucket.droppedGrabLines,
+        'bait-bucket-dropped-grab',
+      );
       return true;
     }
 
@@ -304,7 +315,6 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private updateApproach(): void {
@@ -317,7 +327,6 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
       restart: true,
       playbackRate: 0,
     });
-    this.engine.video.render(0);
     this.state = 'kicking';
     this.kickElapsedMs = 0;
     this.droppedPoseApplied = false;
@@ -336,7 +345,6 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
       DEFAULT_BAIT_BUCKET_X,
       DEFAULT_BAIT_BUCKET_Y - lift,
     );
-    this.engine.video.render(0);
 
     if (progress >= 0.5 && !this.droppedPoseApplied) {
       this.engine.video.sprites.playAnimation(
@@ -346,7 +354,6 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
           restart: false,
         },
       );
-      this.engine.video.render(0);
       this.droppedPoseApplied = true;
     }
 
@@ -365,7 +372,6 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
         restart: true,
       },
     );
-    this.engine.video.render(0);
     this.kickInputLease?.dispose();
     this.kickInputLease = undefined;
     this.state = 'dropped';
@@ -394,15 +400,11 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
         restart: false,
       },
     );
-    this.engine.video.render(0);
   }
 
   private installNormalMenu(): void {
     this.disableActionMenus();
-    this.engine.video.actionMenus.registerMenu(
-      createNormalBaitBucketActionMenu(this.localization),
-    );
-    this.engine.video.render(0);
+    this.engine.video.actionMenus.registerMenu(createNormalBaitBucketActionMenu(this.localization));
   }
 
   private installDroppedMenu(): void {
@@ -410,7 +412,6 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
     this.engine.video.actionMenus.registerMenu(
       createDroppedBaitBucketActionMenu(this.localization),
     );
-    this.engine.video.render(0);
   }
 
   start(): void {
@@ -463,18 +464,18 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
   disableActionMenus(): void {
     this.engine.video.actionMenus.unregisterMenu(NORMAL_MENU_ID);
     this.engine.video.actionMenus.unregisterMenu(DROPPED_MENU_ID);
-    this.engine.video.render(0);
   }
 }
 
 export async function installDefaultBaitBucket(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   options: RoccoDefaultBaitBucketControllerOptions = {},
   preloader?: RoccoAssetPreloader,
 ): Promise<RoccoDefaultBaitBucketController> {
   const localization = options.localization ?? createRoccoLocalization();
   const definition = createDefaultBaitBucketSpriteDefinition(localization);
-  await (preloader?.preloadSpriteDefinition(engine, definition) ?? engine.video.preloadSpriteDefinition(definition));
+  await (preloader?.preloadSpriteDefinition(engine, definition) ??
+    engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
   engine.video.sprites.removeSprite(DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID);
 
@@ -507,7 +508,6 @@ export async function installDefaultBaitBucket(
     interactive: true,
     collisionEnabled: true,
   });
-  engine.video.render(0);
 
   const controller = new RoccoBaitBucketController(engine, {
     ...options,
@@ -517,11 +517,10 @@ export async function installDefaultBaitBucket(
   return controller;
 }
 
-export function uninstallDefaultBaitBucket(engine: RoccoEngine): void {
+export function uninstallDefaultBaitBucket(engine: CartridgeSdkV1Runtime): void {
   engine.video.actionMenus.unregisterMenu(NORMAL_MENU_ID);
   engine.video.actionMenus.unregisterMenu(DROPPED_MENU_ID);
   engine.video.sprites.removeSprite(DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID);
   engine.audio.stopSound(KICK_SOUND_ID);
   engine.audio.unregisterSound(KICK_SOUND_ID);
-  engine.video.render(0);
 }

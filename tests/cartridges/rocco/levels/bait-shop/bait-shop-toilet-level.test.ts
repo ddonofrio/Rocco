@@ -708,6 +708,194 @@ describe('RoccoBaitShopToiletLevel', () => {
     );
   });
 
+  it('reopens the post-wish police response menu after an outside click instead of blocking the portal', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = createState();
+    const engine = createEngineMock(state);
+    const onConnectorTransitionRequested = vi.fn(() => true);
+    const consumeRelic = vi.fn();
+    const level = new RoccoBaitShopToiletLevel(localization, {
+      hasMagazine: () => true,
+      hasCoralRelic: () => true,
+    });
+
+    await level.mount(engine, {
+      onConnectorTransitionRequested,
+    });
+
+    finishSitSequence(level, state);
+    advanceCoralRelicReadingToStanding(level, state, localization);
+    expect(level.isEscapeUrgencyActive()).toBe(true);
+
+    level.openCoralRelicWishMenu({ x: 414, y: 367 }, consumeRelic);
+
+    level.handleGridMenu({
+      kind: 'grid-menu',
+      definitionId: WISH_MENU_ID,
+      interaction: 'activate',
+      itemId: WISH_ROOT_CHOICE_ID,
+      slotIndex: 1,
+      items: [],
+    });
+
+    state.isSpriteMovingValue = false;
+    level.update(16);
+    expect(consumeRelic).toHaveBeenCalledOnce();
+
+    level.update(1000);
+    level.update(1000);
+
+    level.handleSceneClick({ kind: 'scene-click', sceneX: 12, sceneY: 12 });
+    expect(state.activeGridMenuDefinitionId).toBe(POST_WISH_RESPONSE_MENU_ID);
+
+    const menuOpensBeforeDismiss = state.openedGridMenuDefinitions.length;
+
+    state.activeGridMenuDefinitionId = undefined;
+    level.handleGridMenu({
+      kind: 'grid-menu',
+      definitionId: POST_WISH_RESPONSE_MENU_ID,
+      interaction: 'close',
+      items: [],
+    });
+
+    expect(state.activeGridMenuDefinitionId).toBe(POST_WISH_RESPONSE_MENU_ID);
+    expect(state.openedGridMenuDefinitions).toHaveLength(menuOpensBeforeDismiss + 1);
+    expect(getRegisteredSceneTarget(state, PORTAL_INSTANCE_ID)).toBeUndefined();
+    expect(state.playedSoundIds).not.toContain(PORTAL_LOOP_SOUND_ID);
+    expect(onConnectorTransitionRequested).not.toHaveBeenCalled();
+
+    level.handleGridMenu({
+      kind: 'grid-menu',
+      definitionId: POST_WISH_RESPONSE_MENU_ID,
+      interaction: 'activate',
+      itemId: POST_WISH_REPLY_MOMENT_PLEASE_CHOICE_ID,
+      slotIndex: 0,
+      items: [],
+    });
+    expect(state.activeGridMenuDefinitionId).toBeUndefined();
+
+    setPlayerVisualOrigin(state, 400, 300);
+
+    level.handleSceneClick({
+      kind: 'scene-click',
+      sceneX: 20,
+      sceneY: 20,
+    });
+    expect(getRegisteredSceneTarget(state, PORTAL_INSTANCE_ID)).toBeUndefined();
+
+    level.handleSceneClick({
+      kind: 'scene-click',
+      sceneX: 24,
+      sceneY: 24,
+    });
+    expect(getRegisteredSceneTarget(state, PORTAL_INSTANCE_ID)).toBeUndefined();
+    expect(state.playedSoundIds).not.toContain(PORTAL_LOOP_SOUND_ID);
+    expect(onConnectorTransitionRequested).not.toHaveBeenCalled();
+
+    setPlayerVisualOrigin(state, 40, 40);
+    level.update(16);
+
+    const portalTarget = getRegisteredSceneTarget<{
+      visibleDescription?: { text?: string };
+    }>(state, PORTAL_INSTANCE_ID);
+    expect(portalTarget).toMatchObject({
+      visibleDescription: {
+        text: 'Portal al Nether',
+      },
+    });
+    expect(state.playedSoundIds).toContain(PORTAL_LOOP_SOUND_ID);
+
+    // Posicionamiento inicial en zona del portal
+    setPlayerVisualOrigin(state, 381, 302);
+
+    // Clic 1 dentro del portal (coordenadas seguras dentro de la zona)
+    level.handleSceneClick({
+      kind: 'scene-click',
+      sceneX: 381,
+      sceneY: 302,
+    });
+    expect(getRegisteredSceneTarget(state, PORTAL_INSTANCE_ID)).toBeDefined();
+
+    // Clic 2 cerca del portal
+    level.handleSceneClick({
+      kind: 'scene-click',
+      sceneX: 382,
+      sceneY: 302,
+    });
+    expect(state.playedSoundIds).toContain(PORTAL_LOOP_SOUND_ID);
+
+    // Clic externo que debería CERRAR el portal
+    setPlayerVisualOrigin(state, 400, 300);
+    level.update(16);
+    level.handleSceneClick({
+      kind: 'scene-click',
+      sceneX: 20,
+      sceneY: 20,
+    });
+    expect(getRegisteredSceneTarget(state, PORTAL_INSTANCE_ID)).toBeUndefined();
+
+    setPlayerVisualOrigin(state, 40, 40);
+    level.update(16);
+
+    // Verificar transición final
+    expect(onConnectorTransitionRequested).toHaveBeenCalledWith('portal');
+  });
+
+  it('does not reopen the post-wish police response menu for a stale close after a response is chosen', async () => {
+    const localization = createRoccoLocalization('es');
+    const state = createState();
+    const engine = createEngineMock(state);
+    const consumeRelic = vi.fn();
+    const level = new RoccoBaitShopToiletLevel(localization, {
+      hasMagazine: () => true,
+      hasCoralRelic: () => true,
+    });
+
+    await level.mount(engine);
+
+    finishSitSequence(level, state);
+    advanceCoralRelicReadingToStanding(level, state, localization);
+
+    level.openCoralRelicWishMenu({ x: 414, y: 367 }, consumeRelic);
+
+    level.handleGridMenu({
+      kind: 'grid-menu',
+      definitionId: WISH_MENU_ID,
+      interaction: 'activate',
+      itemId: WISH_ROOT_CHOICE_ID,
+      slotIndex: 1,
+      items: [],
+    });
+
+    state.isSpriteMovingValue = false;
+    level.update(16);
+    level.update(1000);
+    level.update(1000);
+
+    level.handleSceneClick({ kind: 'scene-click', sceneX: 12, sceneY: 12 });
+    expect(state.activeGridMenuDefinitionId).toBe(POST_WISH_RESPONSE_MENU_ID);
+
+    level.handleGridMenu({
+      kind: 'grid-menu',
+      definitionId: POST_WISH_RESPONSE_MENU_ID,
+      interaction: 'activate',
+      itemId: POST_WISH_REPLY_MOMENT_PLEASE_CHOICE_ID,
+      slotIndex: 0,
+      items: [],
+    });
+    expect(state.activeGridMenuDefinitionId).toBeUndefined();
+
+    state.activeGridMenuDefinitionId = undefined;
+    level.handleGridMenu({
+      kind: 'grid-menu',
+      definitionId: POST_WISH_RESPONSE_MENU_ID,
+      interaction: 'close',
+      items: [],
+    });
+
+    expect(state.activeGridMenuDefinitionId).toBeUndefined();
+  });
+
   it('plays the toilet room door closing sound at half of the previous volume when entering from the shop', async () => {
     const state = createState();
     const engine = createEngineMock(state);

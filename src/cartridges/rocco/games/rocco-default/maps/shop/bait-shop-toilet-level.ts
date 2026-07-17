@@ -852,38 +852,41 @@ class RoccoBaitShopToiletController
   }
 
   handlePortalSceneClick(activation: RoccoSceneClickAction): boolean {
-    if (
-      !this.engine ||
-      !this.portalActive ||
-      activation.targetInstanceId !== BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID
-    ) {
+    if (!this.engine || !this.portalActive) {
       return false;
     }
 
-    if (this.isPlayerOverPortalZone()) {
-      this.updatePortalTransition();
-      return true;
+    if (activation.targetInstanceId === BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID) {
+      if (this.isPlayerOverPortalZone()) {
+        this.updatePortalTransition();
+        return true;
+      }
+
+      const portalBasePoint = this.resolvePortalBasePoint();
+      const isStarted = this.engine.video.sprites.goTo(
+        DEFAULT_SPRITE_INSTANCE_ID,
+        portalBasePoint.x,
+        portalBasePoint.y,
+        {
+          action: DEFAULT_SPRITE_RUN_ACTION_ID,
+          idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+          stopDistance: 1,
+          idleSettleDelayMs: 0,
+          idleSettleFacing: 'diagonal-from-facing',
+        },
+      );
+
+      if (isStarted) {
+        // The render loop owns presentation updates.
+      }
+
+      return isStarted;
     }
 
-    const portalBasePoint = this.resolvePortalBasePoint();
-    const isStarted = this.engine.video.sprites.goTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      portalBasePoint.x,
-      portalBasePoint.y,
-      {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-        stopDistance: 1,
-        idleSettleDelayMs: 0,
-        idleSettleFacing: 'diagonal-from-facing',
-      },
-    );
+    // Cerrar portal cuando el jugador hace clic fuera del área
+    this.unregisterPortalTarget();
 
-    if (isStarted) {
-      // The render loop owns presentation updates.
-    }
-
-    return isStarted;
+    return false;
   }
 
   private hasMagazine(): boolean {
@@ -2060,7 +2063,11 @@ class RoccoBaitShopToiletController
   }
 
   private openPostWishPoliceResponseMenu(): void {
-    if (!this.engine || !this.wishSequence) {
+    if (
+      !this.engine ||
+      !this.wishSequence ||
+      this.wishSequence.phase !== 'awaiting-police-response'
+    ) {
       return;
     }
 
@@ -2815,7 +2822,7 @@ class RoccoBaitShopToiletController
     }
 
     if (activation.interaction === 'close') {
-      this.policeDialogue.reopenChoices();
+      this.openPostWishPoliceResponseMenu();
       return;
     }
 

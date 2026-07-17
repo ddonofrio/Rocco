@@ -87,6 +87,7 @@ describe('RoccoLevelTransitionService', () => {
       setActiveLevel: (level) => {
         activeLevel = level;
       },
+      cancelActiveActions: vi.fn(),
       createMountOptions: () => ({}),
     });
 
@@ -112,6 +113,54 @@ describe('RoccoLevelTransitionService', () => {
     expect(activeLevel).toBe(freshTarget.level);
   });
 
+  it('cancels active actions before unmounting and publishing the target level', async () => {
+    const { engine } = createMockEngine();
+    const currentLevel = createMockLevel('current-level');
+    const targetLevel = createMockLevel('target-level');
+    const order: string[] = [];
+    const cancelActiveActions = vi.fn((reason: string) => {
+      order.push(`cancel:${reason}`);
+    });
+    currentLevel.unmount.mockImplementation(() => {
+      order.push('unmount-current');
+    });
+    targetLevel.mount.mockResolvedValue({ id: 'scene-target-level', planes: [] });
+    targetLevel.mount.mockImplementationOnce(() => {
+      order.push('mount-target');
+    });
+    let activeLevel: RoccoLevel | null = currentLevel.level;
+
+    const service = new RoccoLevelTransitionService({
+      getEngine: () => engine as never,
+      getActiveLevel: () => activeLevel,
+      setActiveLevel: (level) => {
+        activeLevel = level;
+        order.push('publish-target');
+      },
+      cancelActiveActions,
+      createMountOptions: () => ({}),
+    });
+
+    const isResult = await service.run({
+      id: 'target-level',
+      prepare: () => ({
+        targetLevel: targetLevel.level,
+        mountOptions: {},
+        commit: vi.fn(),
+        rollback: vi.fn(),
+      }),
+    });
+
+    expect(isResult).toBe(true);
+    expect(cancelActiveActions).toHaveBeenCalledWith('level-transition:target-level');
+    expect(order).toEqual([
+      'cancel:level-transition:target-level',
+      'unmount-current',
+      'mount-target',
+      'publish-target',
+    ]);
+  });
+
   it('keeps the current level untouched when prepare fails before commit', async () => {
     const { engine } = createMockEngine();
     const currentLevel = createMockLevel('current-level');
@@ -123,6 +172,7 @@ describe('RoccoLevelTransitionService', () => {
       setActiveLevel: (level) => {
         activeLevel = level;
       },
+      cancelActiveActions: vi.fn(),
       createMountOptions: () => ({}),
     });
 
@@ -152,6 +202,7 @@ describe('RoccoLevelTransitionService', () => {
       setActiveLevel: (level) => {
         activeLevel = level;
       },
+      cancelActiveActions: vi.fn(),
       createMountOptions: () => ({}),
     });
 
@@ -191,6 +242,7 @@ describe('RoccoLevelTransitionService', () => {
       setActiveLevel: (level) => {
         activeLevel = level;
       },
+      cancelActiveActions: vi.fn(),
       createMountOptions: () => ({}),
     });
 

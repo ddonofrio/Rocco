@@ -23,6 +23,8 @@ import { ROCCO_BAIT_SHOP_LEVEL_ID } from '../../../../src/cartridges/rocco/games
 import { RoccoDeveloperRuntimeController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-developer-runtime-controller';
 import { DEFAULT_SPRITE_INSTANCE_ID } from '../../../../src/cartridges/rocco/rocco-default-constants';
 import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import { asRoccoTestSdk } from '../test-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 import type { RoccoGridMenuDefinition } from '../../../../src/console/video/grid-menu';
 import type {
   RoccoSpriteDefinition,
@@ -131,7 +133,7 @@ function createSprite(
 function createDeveloperEngine(
   sprite = createSprite(),
   definition = createSpriteDefinition(sprite.definitionId),
-): { engine: RoccoEngine; state: DeveloperEngineState } {
+): { engine: CartridgeSdkV1Runtime; state: DeveloperEngineState } {
   const sprites = new Map([[sprite.id, sprite]]);
   const definitions = new Map([[definition.id, definition]]);
   const state: DeveloperEngineState = {
@@ -147,7 +149,7 @@ function createDeveloperEngine(
     setAnimationFrameCalls: [],
   };
 
-  const engine = {
+  const engine = asRoccoTestSdk({
     video: {
       actionMenus: {
         closeMenu: () => {},
@@ -184,7 +186,11 @@ function createDeveloperEngine(
         loadSpriteDefinition: (nextDefinition: RoccoSpriteDefinition) => {
           definitions.set(nextDefinition.id, nextDefinition);
         },
-        playAnimation: (instanceId: string, animationId: string, options?: { playbackRate?: number }) => {
+        playAnimation: (
+          instanceId: string,
+          animationId: string,
+          options?: { playbackRate?: number },
+        ) => {
           const target = sprites.get(instanceId);
           if (!target) {
             return;
@@ -264,12 +270,14 @@ function createDeveloperEngine(
     }),
     isDeveloperModeEnabled: () => true,
     log: vi.fn(),
-  } as unknown as RoccoEngine;
+  } as unknown as RoccoEngine);
 
   return { engine, state };
 }
 
-function createController(overrides?: Partial<ConstructorParameters<typeof RoccoDeveloperRuntimeController>[0]>) {
+function createController(
+  overrides?: Partial<ConstructorParameters<typeof RoccoDeveloperRuntimeController>[0]>,
+) {
   const localization = createRoccoLocalization('en');
   return new RoccoDeveloperRuntimeController({
     localization,
@@ -320,7 +328,9 @@ describe('RoccoDeveloperRuntimeController', () => {
       ROCCO_BAIT_SHOP_LEVEL_ID,
       ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
     ]);
-    expect(levelMenu?.items.map((item) => item.id)).not.toContain(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID);
+    expect(levelMenu?.items.map((item) => item.id)).not.toContain(
+      ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+    );
 
     const isScreenHandled = controller.handleGridMenuAction(engine, {
       kind: 'grid-menu',
@@ -389,9 +399,11 @@ describe('RoccoDeveloperRuntimeController', () => {
       targetInstanceId: sprite.id,
     });
 
-    expect(state.playAnimationCalls.some((call) => call.animationId === '__rocco-developer-sprite-cycle__')).toBe(true);
-    expect(state.cursorAttachment?.imageUri).not.toBe('cursor-before-cycle.png');
-
+    expect(
+      state.playAnimationCalls.some(
+        (call) => call.animationId === '__rocco-developer-sprite-cycle__',
+      ),
+    ).toBe(true);
     controller.handleSceneClick(engine, {
       kind: 'scene-click',
       sceneX: 12,
@@ -399,7 +411,6 @@ describe('RoccoDeveloperRuntimeController', () => {
     });
 
     expect(controller.isSpriteCycleActive).toBe(false);
-    expect(state.cursorAttachment).toEqual({ imageUri: 'cursor-before-cycle.png' });
     expect(state.playAnimationCalls.at(-1)).toEqual({
       instanceId: sprite.id,
       animationId: 'idle',

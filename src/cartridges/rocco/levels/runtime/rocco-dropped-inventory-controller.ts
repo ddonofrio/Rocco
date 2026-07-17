@@ -1,17 +1,11 @@
-
-/* eslint-disable max-lines */
-
 import type {
   CartridgeActionDisposition,
   RoccoSceneClickAction,
 } from '../../../../console/cartridges';
-import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuActivation } from '../../../../console/video/action-menu';
 import type { RoccoPoint } from '../../../../console/video/sprites';
-import {
-  ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
-  type RoccoInventoryItem,
-} from '../../inventory';
+import { ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID, type RoccoInventoryItem } from '../../inventory';
 import type { RoccoLocalization } from '../../localization';
 import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
 import {
@@ -68,7 +62,8 @@ export class RoccoDroppedInventoryController {
   private readonly activeDroppedInventoryRuntimeIds = new Set<string>();
   private pendingDroppedInventoryPickup: RoccoPendingDroppedInventoryPickup | undefined = undefined;
   private coralRelicRefuseIndex = 0;
-  private pickupInputLease: ReturnType<RoccoEngine['acquireInputLease']> | undefined = undefined;
+  private pickupInputLease: ReturnType<CartridgeSdkV1Runtime['acquireInputLease']> | undefined =
+    undefined;
 
   constructor(options: RoccoDroppedInventoryControllerOptions) {
     this.options = options;
@@ -84,7 +79,7 @@ export class RoccoDroppedInventoryController {
     };
   }
 
-  private acquirePickupInputLease(engine: RoccoEngine): void {
+  private acquirePickupInputLease(engine: CartridgeSdkV1Runtime): void {
     this.pickupInputLease ??= engine.acquireInputLease(
       DROPPED_INVENTORY_PICKUP_INPUT_OWNER_ID,
       'blocked',
@@ -102,7 +97,7 @@ export class RoccoDroppedInventoryController {
   }
 
   private startDroppedInventoryPickup(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activeLevel: RoccoLevel,
     droppedItem: RoccoDroppedInventoryItemState,
   ): void {
@@ -115,12 +110,7 @@ export class RoccoDroppedInventoryController {
         droppedItem.groundPoint.y - currentGroundPoint.y,
       ) <= DROPPED_INVENTORY_ITEM_STOP_DISTANCE
     ) {
-      this.finishDroppedInventoryPickup(
-        engine,
-        activeLevel,
-        levelId,
-        droppedItem.item.id,
-      );
+      this.finishDroppedInventoryPickup(engine, activeLevel, levelId, droppedItem.item.id);
       return;
     }
 
@@ -148,11 +138,10 @@ export class RoccoDroppedInventoryController {
       levelId,
       itemId: droppedItem.item.id,
     };
-    engine.video.render(0);
   }
 
   private finishDroppedInventoryPickup(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activeLevel: RoccoLevel,
     levelId: string,
     itemId: string,
@@ -168,7 +157,6 @@ export class RoccoDroppedInventoryController {
     if (!this.options.tryAddItemToInventory(droppedItem.item)) {
       this.pendingDroppedInventoryPickup = undefined;
       this.releasePickupInputLease();
-      engine.video.render(0);
       return;
     }
 
@@ -185,7 +173,6 @@ export class RoccoDroppedInventoryController {
         ttlMs: 2400,
       },
     );
-    engine.video.render(0);
   }
 
   private removeDroppedInventoryItem(levelId: string, itemId: string): void {
@@ -201,7 +188,7 @@ export class RoccoDroppedInventoryController {
   }
 
   private installDroppedInventoryPresentation(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     levelId: string,
     droppedItem: RoccoDroppedInventoryItemState,
     playerBaseScale: number,
@@ -217,7 +204,12 @@ export class RoccoDroppedInventoryController {
     const groundSprite = droppedItem.item.groundSprite;
     const scale = Math.max(0.01, groundSprite.scaleRelativeToRoccoBase * playerBaseScale);
 
-    this.registerDroppedInventorySpriteDefinition(engine, definitionId, droppedItem.item, groundSprite);
+    this.registerDroppedInventorySpriteDefinition(
+      engine,
+      definitionId,
+      droppedItem.item,
+      groundSprite,
+    );
     engine.video.sprites.removeSprite(spriteInstanceId);
     engine.video.sprites.createSpriteFromDefinition(definitionId, {
       id: spriteInstanceId,
@@ -241,12 +233,19 @@ export class RoccoDroppedInventoryController {
         pickable: groundSprite.pickable,
       },
     });
-    this.registerDroppedInventoryTarget(engine, targetInstanceId, definitionId, droppedItem, groundSprite, scale);
+    this.registerDroppedInventoryTarget(
+      engine,
+      targetInstanceId,
+      definitionId,
+      droppedItem,
+      groundSprite,
+      scale,
+    );
     this.activeDroppedInventoryRuntimeIds.add(runtimeId);
   }
 
   private registerDroppedInventorySpriteDefinition(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     definitionId: string,
     item: RoccoInventoryItem,
     groundSprite: NonNullable<RoccoInventoryItem['groundSprite']>,
@@ -254,13 +253,22 @@ export class RoccoDroppedInventoryController {
     engine.video.sprites.loadSpriteDefinition({
       id: definitionId,
       name: `Dropped ${item.label}`,
-      images: [{ id: `${definitionId}:image`, uri: groundSprite.imageUri, width: groundSprite.width, height: groundSprite.height }],
-      frames: [{
-        id: `${definitionId}:frame`,
-        imageId: `${definitionId}:image`,
-        durationMs: 1000,
-        pivot: { x: groundSprite.width / 2, y: groundSprite.height },
-      }],
+      images: [
+        {
+          id: `${definitionId}:image`,
+          uri: groundSprite.imageUri,
+          width: groundSprite.width,
+          height: groundSprite.height,
+        },
+      ],
+      frames: [
+        {
+          id: `${definitionId}:frame`,
+          imageId: `${definitionId}:image`,
+          durationMs: 1000,
+          pivot: { x: groundSprite.width / 2, y: groundSprite.height },
+        },
+      ],
       animations: {
         idle: {
           id: 'idle',
@@ -281,7 +289,7 @@ export class RoccoDroppedInventoryController {
   }
 
   private registerDroppedInventoryTarget(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     targetInstanceId: string,
     definitionId: string,
     droppedItem: RoccoDroppedInventoryItemState,
@@ -333,7 +341,7 @@ export class RoccoDroppedInventoryController {
     );
   }
 
-  private showCoralRelicRefusal(engine: RoccoEngine, targetInstanceId: string): void {
+  private showCoralRelicRefusal(engine: CartridgeSdkV1Runtime, targetInstanceId: string): void {
     const refusalLines = this.localization.text.baitShop.coralRelicRefuseLines;
     if (refusalLines.length === 0) {
       return;
@@ -344,18 +352,14 @@ export class RoccoDroppedInventoryController {
     engine.video.messages.think(targetInstanceId, line, {
       ttlMs: 3200,
     });
-    engine.video.render(0);
   }
 
   private syncDroppedCoralRelicActionMenu(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activeLevel: RoccoLevel,
   ): void {
     engine.video.actionMenus.unregisterMenu(DROPPED_CORAL_RELIC_ACTION_MENU_ID);
-    if (
-      !isRoccoToiletLevelCapability(activeLevel) ||
-      !activeLevel.isEscapeUrgencyActive()
-    ) {
+    if (!isRoccoToiletLevelCapability(activeLevel) || !activeLevel.isEscapeUrgencyActive()) {
       return;
     }
 
@@ -415,13 +419,14 @@ export class RoccoDroppedInventoryController {
   createSnapshot(): RoccoDroppedInventoryControllerSnapshot {
     return {
       droppedInventoryItemsByLevel: [...this.droppedInventoryItemsByLevel].map(
-        ([levelId, items]) => [
-          levelId,
-          items.map((item) => ({
-            item: structuredClone(item.item),
-            groundPoint: { ...item.groundPoint },
-          })),
-        ] as const,
+        ([levelId, items]) =>
+          [
+            levelId,
+            items.map((item) => ({
+              item: structuredClone(item.item),
+              groundPoint: { ...item.groundPoint },
+            })),
+          ] as const,
       ),
       pendingDroppedInventoryPickup: this.pendingDroppedInventoryPickup
         ? { ...this.pendingDroppedInventoryPickup }
@@ -501,7 +506,7 @@ export class RoccoDroppedInventoryController {
   }
 
   canHandleSceneClick(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activeLevel: RoccoLevel,
     activation: RoccoSceneClickAction,
   ): boolean {
@@ -521,7 +526,7 @@ export class RoccoDroppedInventoryController {
   }
 
   handleSceneClick(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activeLevel: RoccoLevel,
     activation: RoccoSceneClickAction,
   ): CartridgeActionDisposition | undefined {
@@ -550,7 +555,7 @@ export class RoccoDroppedInventoryController {
   }
 
   canHandleActionMenu(
-    _engine: RoccoEngine,
+    _engine: CartridgeSdkV1Runtime,
     activeLevel: RoccoLevel,
     activation: RoccoActionMenuActivation,
   ): boolean {
@@ -570,7 +575,7 @@ export class RoccoDroppedInventoryController {
   }
 
   handleActionMenu(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activeLevel: RoccoLevel,
     activation: RoccoActionMenuActivation,
   ): boolean {
@@ -598,7 +603,6 @@ export class RoccoDroppedInventoryController {
           ttlMs: 3200,
         },
       );
-      engine.video.render(0);
       return true;
     }
 
@@ -619,7 +623,7 @@ export class RoccoDroppedInventoryController {
     return false;
   }
 
-  updatePendingPickup(engine: RoccoEngine, activeLevel: RoccoLevel | null): void {
+  updatePendingPickup(engine: CartridgeSdkV1Runtime, activeLevel: RoccoLevel | null): void {
     if (!activeLevel || !this.pendingDroppedInventoryPickup) {
       return;
     }
@@ -642,7 +646,7 @@ export class RoccoDroppedInventoryController {
     );
   }
 
-  syncActiveLevelPresentation(engine: RoccoEngine, activeLevel: RoccoLevel): void {
+  syncActiveLevelPresentation(engine: CartridgeSdkV1Runtime, activeLevel: RoccoLevel): void {
     this.clearActiveLevelPresentation(engine);
     const droppedItems = this.droppedInventoryItemsByLevel.get(activeLevel.id) ?? [];
     for (const droppedItem of droppedItems) {
@@ -656,7 +660,7 @@ export class RoccoDroppedInventoryController {
     this.syncDroppedCoralRelicActionMenu(engine, activeLevel);
   }
 
-  clearActiveLevelPresentation(engine?: RoccoEngine): void {
+  clearActiveLevelPresentation(engine?: CartridgeSdkV1Runtime): void {
     if (!engine) {
       this.activeDroppedInventoryRuntimeIds.clear();
       return;

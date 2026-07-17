@@ -1,13 +1,9 @@
-
-/* eslint-disable max-lines */
-
 import type {
   CartridgeActionDisposition,
   RoccoSceneClickAction,
 } from '../../../../console/cartridges';
-import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuActivation } from '../../../../console/video/action-menu';
-import type { RoccoCursorAttachment } from '../../../../console/video/cursor';
 import type { RoccoGridMenuActivation } from '../../../../console/video/grid-menu';
 import type {
   RoccoPoint,
@@ -26,7 +22,6 @@ import {
   ROCCO_PIER_MIDDLE_LEVEL_ID,
   ROCCO_PIER_START_LEVEL_ID,
 } from '../../rocco-default-constants';
-import { roccoDefaultDeveloperSpriteCycleCursorAssetUrl } from '../../rocco-default-assets';
 import {
   createRoccoDeveloperEventLevelMenuDefinition,
   createRoccoDeveloperEventMenuDefinition,
@@ -102,7 +97,6 @@ const DEVELOPER_SPRITE_CYCLE_FRAME_DURATION_MS = 1000;
 const DEVELOPER_SPRITE_CYCLE_TOP_TITLE_ID = 'rocco-developer-sprite-cycle-top-title';
 const DEVELOPER_SPRITE_CYCLE_SPRITE_TITLE_ID = 'rocco-developer-sprite-cycle-sprite-title';
 const DEVELOPER_ALLOW_TOILET_REUSE_EVENT_ID = 'allow-toilet-reuse';
-const DEVELOPER_SPRITE_CYCLE_CURSOR_SIZE = 34;
 
 export class RoccoDeveloperRuntimeController {
   private readonly localization: RoccoLocalization;
@@ -119,7 +113,6 @@ export class RoccoDeveloperRuntimeController {
     string,
     RoccoDeveloperSpriteCycleOriginalState
   >();
-  private developerSpriteCyclePreviousCursorAttachment: RoccoCursorAttachment | undefined;
 
   constructor(options: RoccoDeveloperRuntimeControllerOptions) {
     this.options = options;
@@ -127,7 +120,7 @@ export class RoccoDeveloperRuntimeController {
     this.inventory = options.inventory;
   }
 
-  private openDeveloperRootMenu(engine: RoccoEngine): void {
+  private openDeveloperRootMenu(engine: CartridgeSdkV1Runtime): void {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
@@ -136,11 +129,10 @@ export class RoccoDeveloperRuntimeController {
     engine.video.actionMenus.closeMenu();
     engine.video.gridMenus.openMenu(createRoccoDeveloperRootMenuDefinition(this.localization));
     this.options.refreshStatus();
-    engine.video.render(0);
   }
 
   private handleDeveloperRootSelection(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     itemId: string | undefined,
   ): void {
     if (!itemId) {
@@ -167,20 +159,22 @@ export class RoccoDeveloperRuntimeController {
     }
   }
 
-  private openDeveloperLevelMenu(engine: RoccoEngine): void {
+  private openDeveloperLevelMenu(engine: CartridgeSdkV1Runtime): void {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
 
     this.clearTransientState(engine);
     engine.video.gridMenus.openMenu(
-      createRoccoDeveloperLevelMenuDefinition(this.localization, this.createDeveloperLevelOptions()),
+      createRoccoDeveloperLevelMenuDefinition(
+        this.localization,
+        this.createDeveloperLevelOptions(),
+      ),
     );
     this.options.refreshStatus();
-    engine.video.render(0);
   }
 
-  private openDeveloperScreenMenu(engine: RoccoEngine, levelOptionId: string): void {
+  private openDeveloperScreenMenu(engine: CartridgeSdkV1Runtime, levelOptionId: string): void {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
@@ -200,10 +194,9 @@ export class RoccoDeveloperRuntimeController {
       createRoccoDeveloperScreenMenuDefinition(this.localization, levelOption.screens),
     );
     this.options.refreshStatus();
-    engine.video.render(0);
   }
 
-  private openDeveloperInventoryMenu(engine: RoccoEngine): void {
+  private openDeveloperInventoryMenu(engine: CartridgeSdkV1Runtime): void {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
@@ -213,10 +206,9 @@ export class RoccoDeveloperRuntimeController {
       createRoccoDeveloperInventoryMenuDefinition(this.localization, this.inventory),
     );
     this.options.refreshStatus();
-    engine.video.render(0);
   }
 
-  private openDeveloperEventLevelMenu(engine: RoccoEngine): void {
+  private openDeveloperEventLevelMenu(engine: CartridgeSdkV1Runtime): void {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
@@ -230,10 +222,9 @@ export class RoccoDeveloperRuntimeController {
       ),
     );
     this.options.refreshStatus();
-    engine.video.render(0);
   }
 
-  private openDeveloperEventScreenMenu(engine: RoccoEngine, levelOptionId: string): void {
+  private openDeveloperEventScreenMenu(engine: CartridgeSdkV1Runtime, levelOptionId: string): void {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
@@ -249,10 +240,9 @@ export class RoccoDeveloperRuntimeController {
       createRoccoDeveloperEventScreenMenuDefinition(this.localization, levelOption.screens),
     );
     this.options.refreshStatus();
-    engine.video.render(0);
   }
 
-  private openDeveloperEventMenu(engine: RoccoEngine, screenId: string): void {
+  private openDeveloperEventMenu(engine: CartridgeSdkV1Runtime, screenId: string): void {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
@@ -268,10 +258,12 @@ export class RoccoDeveloperRuntimeController {
       createRoccoDeveloperEventMenuDefinition(this.localization, screenOption.events),
     );
     this.options.refreshStatus();
-    engine.video.render(0);
   }
 
-  private async prepareDeveloperJump(engine: RoccoEngine, screenId: string): Promise<void> {
+  private async prepareDeveloperJump(
+    engine: CartridgeSdkV1Runtime,
+    screenId: string,
+  ): Promise<void> {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
@@ -290,16 +282,14 @@ export class RoccoDeveloperRuntimeController {
 
     if (screenOption.requiresPlacementClick === false) {
       this.options.refreshStatus();
-      engine.video.render(0);
       return;
     }
 
     this.developerJumpPending = true;
     this.options.refreshStatus();
-    engine.video.render(0);
   }
 
-  private toggleDeveloperInventoryItem(engine: RoccoEngine, itemId: string): void {
+  private toggleDeveloperInventoryItem(engine: CartridgeSdkV1Runtime, itemId: string): void {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
@@ -329,7 +319,7 @@ export class RoccoDeveloperRuntimeController {
     this.openDeveloperInventoryMenu(engine);
   }
 
-  private toggleDeveloperEvent(engine: RoccoEngine, eventId: string): void {
+  private toggleDeveloperEvent(engine: CartridgeSdkV1Runtime, eventId: string): void {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
@@ -374,8 +364,16 @@ export class RoccoDeveloperRuntimeController {
       id: ROCCO_BAIT_SHOP_LEVEL_ID,
       title,
       screens: [
-        { id: ROCCO_BAIT_SHOP_LEVEL_ID, title: `${title} 1`, targetLevelId: ROCCO_BAIT_SHOP_LEVEL_ID },
-        { id: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID, title: `${title} 2`, targetLevelId: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID },
+        {
+          id: ROCCO_BAIT_SHOP_LEVEL_ID,
+          title: `${title} 1`,
+          targetLevelId: ROCCO_BAIT_SHOP_LEVEL_ID,
+        },
+        {
+          id: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID,
+          title: `${title} 2`,
+          targetLevelId: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID,
+        },
         {
           id: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
           title: resolveLevelTitle(ROCCO_BAIT_SHOP_TOILET_LEVEL_ID),
@@ -426,7 +424,9 @@ export class RoccoDeveloperRuntimeController {
   }
 
   private findDeveloperLevelOption(levelOptionId: string): RoccoDeveloperLevelOption | undefined {
-    return this.createDeveloperLevelOptions().find((levelOption) => levelOption.id === levelOptionId);
+    return this.createDeveloperLevelOptions().find(
+      (levelOption) => levelOption.id === levelOptionId,
+    );
   }
 
   private findDeveloperScreenOption(
@@ -464,7 +464,7 @@ export class RoccoDeveloperRuntimeController {
   }
 
   private handleDeveloperJumpSceneClick(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activation: RoccoSceneClickAction,
   ): boolean {
     if (!this.isDeveloperModeEnabled(engine) || !this.developerJumpPending) {
@@ -479,7 +479,6 @@ export class RoccoDeveloperRuntimeController {
 
     if (!player) {
       this.options.refreshStatus();
-      engine.video.render(0);
       return true;
     }
 
@@ -495,39 +494,26 @@ export class RoccoDeveloperRuntimeController {
       },
     );
     this.options.refreshStatus();
-    engine.video.render(0);
     return true;
   }
 
-  private activateDeveloperSpriteCycleMode(engine: RoccoEngine): void {
+  private activateDeveloperSpriteCycleMode(engine: CartridgeSdkV1Runtime): void {
     if (!this.isDeveloperModeEnabled(engine)) {
       return;
     }
-
-    const previousCursorAttachment = this.developerSpriteCycleActive
-      ? this.developerSpriteCyclePreviousCursorAttachment
-      : engine.video.viewport.getHost()?.getCursorAttachment();
 
     this.developerJumpPending = false;
     this.deactivateSpriteCycleMode(engine);
     this.developerSpriteCycleIndexes.clear();
     this.developerSpriteCycleActive = true;
-    this.developerSpriteCyclePreviousCursorAttachment = previousCursorAttachment;
     engine.video.actionMenus.closeMenu();
     engine.video.gridMenus.closeMenu();
     engine.video.messages.clearMessages();
-    engine.video.viewport.getHost()?.setCursorAttachment({
-      imageUri: roccoDefaultDeveloperSpriteCycleCursorAssetUrl,
-      label: this.localization.text.developer.cycleSprite,
-      size: DEVELOPER_SPRITE_CYCLE_CURSOR_SIZE,
-      opacity: 0.96,
-    });
     this.options.refreshStatus();
-    engine.video.render(0);
   }
 
   private handleDeveloperSpriteCycleSceneClick(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activation: RoccoSceneClickAction,
   ): boolean {
     if (!this.isDeveloperModeEnabled(engine) || !this.developerSpriteCycleActive) {
@@ -537,7 +523,6 @@ export class RoccoDeveloperRuntimeController {
     if (!activation.targetInstanceId) {
       this.deactivateSpriteCycleMode(engine);
       this.options.refreshStatus();
-      engine.video.render(0);
       return true;
     }
 
@@ -545,7 +530,6 @@ export class RoccoDeveloperRuntimeController {
     if (!sprite) {
       this.deactivateSpriteCycleMode(engine);
       this.options.refreshStatus();
-      engine.video.render(0);
       return true;
     }
 
@@ -554,7 +538,7 @@ export class RoccoDeveloperRuntimeController {
   }
 
   private showNextDeveloperSpriteCyclePreview(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     sprite: RoccoSpriteInstance,
   ): void {
     const definition = this.ensureDeveloperSpriteCycleDefinition(engine, sprite.definitionId);
@@ -584,16 +568,14 @@ export class RoccoDeveloperRuntimeController {
 
     const preview = this.resolveDeveloperSpriteCyclePreview(definition, nextIndex);
     if (!preview) {
-      engine.video.render(0);
       return;
     }
 
     this.updateDeveloperSpriteCycleTitles(engine, sprite.id, preview, nextIndex);
-    engine.video.render(0);
   }
 
   private ensureDeveloperSpriteCycleDefinition(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     definitionId: string,
   ): RoccoSpriteDefinition | undefined {
     const definition = engine.video.sprites.getSpriteDefinition(definitionId);
@@ -674,7 +656,7 @@ export class RoccoDeveloperRuntimeController {
   }
 
   private updateDeveloperSpriteCycleTitles(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     instanceId: string,
     preview: RoccoDeveloperSpriteCyclePreview,
     imageIndex: number,
@@ -747,7 +729,7 @@ export class RoccoDeveloperRuntimeController {
   }
 
   private restoreDeveloperSpriteCycleState(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     instanceId: string,
     originalState: RoccoDeveloperSpriteCycleOriginalState,
   ): void {
@@ -781,7 +763,7 @@ export class RoccoDeveloperRuntimeController {
     }
   }
 
-  private isDeveloperModeEnabled(engine: RoccoEngine | null | undefined): boolean {
+  private isDeveloperModeEnabled(engine: CartridgeSdkV1Runtime | null | undefined): boolean {
     return isRoccoDeveloperModeEnabled(engine);
   }
 
@@ -797,30 +779,35 @@ export class RoccoDeveloperRuntimeController {
     ].includes(definitionId);
   }
 
-  canHandleGridMenuAction(engine: RoccoEngine, activation: RoccoGridMenuActivation): boolean {
-    return this.isDeveloperModeEnabled(engine) && this.isDeveloperGridMenuId(activation.definitionId);
+  canHandleGridMenuAction(
+    engine: CartridgeSdkV1Runtime,
+    activation: RoccoGridMenuActivation,
+  ): boolean {
+    return (
+      this.isDeveloperModeEnabled(engine) && this.isDeveloperGridMenuId(activation.definitionId)
+    );
   }
 
-  canHandleSceneClick(
-    engine: RoccoEngine,
-    _activation?: RoccoSceneClickAction,
-  ): boolean {
+  canHandleSceneClick(engine: CartridgeSdkV1Runtime, _activation?: RoccoSceneClickAction): boolean {
     return (
       this.isDeveloperModeEnabled(engine) &&
       (this.developerSpriteCycleActive || this.developerJumpPending)
     );
   }
 
-  canHandlePlayerAction(engine: RoccoEngine, activation: RoccoActionMenuActivation): boolean {
+  canHandlePlayerAction(
+    engine: CartridgeSdkV1Runtime,
+    activation: RoccoActionMenuActivation,
+  ): boolean {
     return this.isDeveloperModeEnabled(engine) && isRoccoPlayerDeveloperAction(activation);
   }
 
-  clearTransientState(engine?: RoccoEngine | null): void {
+  clearTransientState(engine?: CartridgeSdkV1Runtime | null): void {
     this.developerJumpPending = false;
     this.deactivateSpriteCycleMode(engine);
   }
 
-  resetRuntimeState(engine?: RoccoEngine | null): void {
+  resetRuntimeState(engine?: CartridgeSdkV1Runtime | null): void {
     this.clearTransientState(engine);
     this.developerEvents.allowToiletReuseDuringUrgency = false;
     this.developerEventScreenSelectionId = undefined;
@@ -828,16 +815,14 @@ export class RoccoDeveloperRuntimeController {
 
   restoreSnapshot(
     snapshot: RoccoDeveloperRuntimeSnapshot,
-    engine?: RoccoEngine | null,
+    engine?: CartridgeSdkV1Runtime | null,
   ): void {
     const isEventChanged =
-      this.developerEvents.allowToiletReuseDuringUrgency !==
-      snapshot.allowToiletReuseDuringUrgency;
+      this.developerEvents.allowToiletReuseDuringUrgency !== snapshot.allowToiletReuseDuringUrgency;
     this.deactivateSpriteCycleMode(engine);
     this.developerJumpPending = snapshot.developerJumpPending;
     this.developerEventScreenSelectionId = snapshot.developerEventScreenSelectionId;
-    this.developerEvents.allowToiletReuseDuringUrgency =
-      snapshot.allowToiletReuseDuringUrgency;
+    this.developerEvents.allowToiletReuseDuringUrgency = snapshot.allowToiletReuseDuringUrgency;
     if (isEventChanged) {
       this.options.onToiletReuseEventChanged?.();
     }
@@ -875,7 +860,10 @@ export class RoccoDeveloperRuntimeController {
     return this.developerSpriteCycleActive;
   }
 
-  handlePlayerAction(engine: RoccoEngine, activation: RoccoActionMenuActivation): boolean {
+  handlePlayerAction(
+    engine: CartridgeSdkV1Runtime,
+    activation: RoccoActionMenuActivation,
+  ): boolean {
     if (!this.canHandlePlayerAction(engine, activation)) {
       return false;
     }
@@ -884,7 +872,10 @@ export class RoccoDeveloperRuntimeController {
     return true;
   }
 
-  handleGridMenuAction(engine: RoccoEngine, activation: RoccoGridMenuActivation): boolean {
+  handleGridMenuAction(
+    engine: CartridgeSdkV1Runtime,
+    activation: RoccoGridMenuActivation,
+  ): boolean {
     if (!this.canHandleGridMenuAction(engine, activation)) {
       return false;
     }
@@ -941,7 +932,7 @@ export class RoccoDeveloperRuntimeController {
   }
 
   handleSceneClick(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activation: RoccoSceneClickAction,
   ): CartridgeActionDisposition | undefined {
     if (this.handleDeveloperSpriteCycleSceneClick(engine, activation)) {
@@ -955,14 +946,11 @@ export class RoccoDeveloperRuntimeController {
     return undefined;
   }
 
-  deactivateSpriteCycleMode(engine?: RoccoEngine | null): void {
+  deactivateSpriteCycleMode(engine?: CartridgeSdkV1Runtime | null): void {
     if (engine) {
       for (const [instanceId, originalState] of this.developerSpriteCycleOriginalStates) {
         this.restoreDeveloperSpriteCycleState(engine, instanceId, originalState);
       }
-      engine.video.viewport
-        .getHost()
-        ?.setCursorAttachment(this.developerSpriteCyclePreviousCursorAttachment);
       engine.video.titles.removeTitle(DEVELOPER_SPRITE_CYCLE_TOP_TITLE_ID);
       engine.video.titles.removeTitle(DEVELOPER_SPRITE_CYCLE_SPRITE_TITLE_ID);
     }
@@ -970,6 +958,5 @@ export class RoccoDeveloperRuntimeController {
     this.developerSpriteCycleActive = false;
     this.developerSpriteCycleIndexes.clear();
     this.developerSpriteCycleOriginalStates.clear();
-    this.developerSpriteCyclePreviousCursorAttachment = undefined;
   }
 }

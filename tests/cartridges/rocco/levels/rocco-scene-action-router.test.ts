@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createRoccoLocalization } from '../../../../src/cartridges/rocco/localization';
 import {
@@ -8,7 +8,7 @@ import {
 import { RoccoSceneActionRouter } from '../../../../src/cartridges/rocco/levels/runtime/rocco-scene-action-router';
 import type { RoccoLevel } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
 import { DEFAULT_ROCCO_PLAYER_APPEARANCE } from '../../../../src/cartridges/rocco/rocco-player-appearance';
-import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 
 function createLevel(overrides: Partial<RoccoLevel> = {}): RoccoLevel {
   return {
@@ -47,7 +47,7 @@ describe('RoccoSceneActionRouter', () => {
           getCarriedItem: () => carriedItem,
         },
       },
-    } as unknown as RoccoEngine;
+    } as unknown as CartridgeSdkV1Runtime;
     const transitions = {
       updatePendingExitIntent: vi.fn(() => {
         callOrder.push('exit-intent');
@@ -106,7 +106,7 @@ describe('RoccoSceneActionRouter', () => {
       droppedInventory: droppedInventory as never,
       scriptedSequences: scriptedSequences as never,
       developerRuntime: developerRuntime as never,
-      getEngine: () => engine,
+      getSdk: () => engine,
       getActiveLevel: () => activeLevel,
       getRoccoAppearance: () => DEFAULT_ROCCO_PLAYER_APPEARANCE,
       setRoccoAppearance: vi.fn(),
@@ -178,7 +178,7 @@ describe('RoccoSceneActionRouter', () => {
       droppedInventory: droppedInventory as never,
       scriptedSequences: scriptedSequences as never,
       developerRuntime: developerRuntime as never,
-      getEngine: () => undefined as unknown as RoccoEngine | null,
+      getSdk: () => undefined as unknown as CartridgeSdkV1Runtime | null,
       getActiveLevel: () => activeLevel,
       getRoccoAppearance: () => DEFAULT_ROCCO_PLAYER_APPEARANCE,
       setRoccoAppearance: vi.fn(),
@@ -244,7 +244,7 @@ describe('RoccoSceneActionRouter', () => {
         handlePlayerAction: vi.fn(() => false),
         clearTransientState: vi.fn(),
       } as never,
-      getEngine: () => undefined as unknown as RoccoEngine | null,
+      getSdk: () => undefined as unknown as CartridgeSdkV1Runtime | null,
       getActiveLevel: () => activeLevel,
       getRoccoAppearance: () => DEFAULT_ROCCO_PLAYER_APPEARANCE,
       setRoccoAppearance: vi.fn(),
@@ -308,14 +308,14 @@ describe('RoccoSceneActionRouter', () => {
         handlePlayerAction: vi.fn(() => false),
         clearTransientState: vi.fn(),
       } as never,
-      getEngine: () =>
+      getSdk: () =>
         ({
           video: {
             gridMenus: {
               getCarriedItem: () => {},
             },
           },
-        }) as unknown as RoccoEngine,
+        }) as unknown as CartridgeSdkV1Runtime,
       getActiveLevel: () => undefined as unknown as RoccoLevel | null,
       getRoccoAppearance: () => DEFAULT_ROCCO_PLAYER_APPEARANCE,
       setRoccoAppearance: vi.fn(),

@@ -15,6 +15,7 @@ The current concrete implementation and assets live in
 - `nether-level-support.ts` - Shared scene loading, walk-map projection, and ground-point helpers for Nether screens.
 - `nether-arrival-effects.ts` - Shared portal and smoke sprite definitions reused by the Nether arrival sequence.
 - `nether-assets.ts` - Local asset URIs for the Nether backgrounds and walk maps.
+- The first Nether screen exposes a small level coordinator; its stateful arrival, interaction, defeat, and presentation implementation is owned by a private screen controller.
 - `assets/` - Legacy asset path kept only for migration context; the current asset ownership now lives under the game-owned Nether map folder.
 
 ## Runtime Notes

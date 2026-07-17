@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createRoccoLocalization } from '../../../../src/cartridges/rocco/localization';
 import {
@@ -7,10 +7,10 @@ import {
   ROCCO_INVENTORY_DROP_BUTTON_ID,
   ROCCO_INVENTORY_MENU_ID,
 } from '../../../../src/cartridges/rocco/inventory';
-import {
-  RoccoInventoryRuntimeController,
-} from '../../../../src/cartridges/rocco/levels/runtime/rocco-inventory-runtime-controller';
+import { RoccoInventoryRuntimeController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-inventory-runtime-controller';
 import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import { asRoccoTestSdk } from '../test-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 
 interface InventoryEngineState {
   carriedItem:
@@ -39,7 +39,7 @@ interface StoredDroppedInventoryItem {
 }
 
 function createInventoryEngine(initialCarriedItem?: InventoryEngineState['carriedItem']): {
-  engine: RoccoEngine;
+  engine: CartridgeSdkV1Runtime;
   state: InventoryEngineState;
 } {
   const state: InventoryEngineState = {
@@ -49,7 +49,7 @@ function createInventoryEngine(initialCarriedItem?: InventoryEngineState['carrie
     renderCalls: 0,
   };
 
-  const engine = {
+  const engine = asRoccoTestSdk({
     video: {
       gridMenus: {
         getCarriedItem: () => state.carriedItem,
@@ -67,7 +67,7 @@ function createInventoryEngine(initialCarriedItem?: InventoryEngineState['carrie
         state.renderCalls += 1;
       },
     },
-  } as unknown as RoccoEngine;
+  } as unknown as RoccoEngine);
 
   return { engine, state };
 }
@@ -122,7 +122,7 @@ describe('RoccoInventoryRuntimeController', () => {
     });
 
     expect(state.clearedCarriedCount).toBe(1);
-    expect(state.renderCalls).toBe(1);
+    expect(state.renderCalls).toBe(0);
   });
 
   it('drops the carried inventory item into the active level and refreshes the world state', () => {
@@ -137,9 +137,8 @@ describe('RoccoInventoryRuntimeController', () => {
     }
 
     const { engine, state } = createInventoryEngine();
-    const storeDroppedInventoryItem = vi.fn<
-      (levelId: string, droppedItem: StoredDroppedInventoryItem) => boolean
-    >();
+    const storeDroppedInventoryItem =
+      vi.fn<(levelId: string, droppedItem: StoredDroppedInventoryItem) => boolean>();
     const syncWorldPresentation = vi.fn();
     const refreshStatus = vi.fn();
     const controller = new RoccoInventoryRuntimeController({

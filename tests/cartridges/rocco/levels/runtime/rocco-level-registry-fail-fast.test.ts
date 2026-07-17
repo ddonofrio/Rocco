@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import { RpceGameCompiler, type RpceGameGraph } from '../../../../../src/cartridges/rocco/rpce/core';
+import {
+  RpceGameCompiler,
+  type RpceGameGraph,
+} from '../../../../../src/cartridges/rocco/rpce/core';
 import { RoccoLevelRegistry } from '../../../../../src/cartridges/rocco/levels/runtime/rocco-level-registry';
 import type { RoccoLevel } from '../../../../../src/cartridges/rocco/levels/rocco-level-types';
-import type { RpceLevelDefinition, RpceMapDefinition } from '../../../../../src/cartridges/rocco/rpce/core';
+import type {
+  RpceLevelDefinition,
+  RpceMapDefinition,
+} from '../../../../../src/cartridges/rocco/rpce/core';
 
 function makeLevel(id: string): unknown {
   return {
     id,
     title: id,
+    connectorIds: [],
     connectors: [],
     mount: () => Promise.resolve({ id: `${id}-scene`, planes: [] }),
     unmount: () => {},
@@ -22,7 +29,11 @@ function makeMap(id: string, levelIds: string[]): RpceMapDefinition<RoccoLevel> 
     id,
     title: id,
     initialLevelId: levelIds[0] ?? id,
-    levels: levelIds.map((levelId) => ({ id: levelId, createLevel: () => makeLevel(levelId) })) as RpceLevelDefinition<RoccoLevel>[],
+    levels: levelIds.map((levelId) => ({
+      id: levelId,
+      connectorIds: [],
+      createLevel: () => makeLevel(levelId),
+    })) as RpceLevelDefinition<RoccoLevel>[],
     connections: [],
   };
 }

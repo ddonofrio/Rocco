@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createRoccoLocalization } from '../../../../src/cartridges/rocco/localization';
 import {
@@ -10,6 +10,8 @@ import type { RoccoToiletLevelCapability } from '../../../../src/cartridges/rocc
 import { RoccoDroppedInventoryController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-dropped-inventory-controller';
 import type { RoccoLevel } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
 import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import { asRoccoTestSdk } from '../test-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 import { DEFAULT_SPRITE_INSTANCE_ID } from '../../../../src/cartridges/rocco/rocco-default-constants';
 
 interface DroppedEngineState {
@@ -55,7 +57,10 @@ function createToiletLevel(levelId = 'bait-shop-toilet'): ToiletLevelTestDouble 
   };
 }
 
-function createDroppedInventoryEngine(): { engine: RoccoEngine; state: DroppedEngineState } {
+function createDroppedInventoryEngine(): {
+  engine: CartridgeSdkV1Runtime;
+  state: DroppedEngineState;
+} {
   const state: DroppedEngineState = {
     thoughtMessages: [],
     removedSpriteIds: [],
@@ -66,7 +71,7 @@ function createDroppedInventoryEngine(): { engine: RoccoEngine; state: DroppedEn
     carriedItem: undefined,
   };
 
-  const engine = {
+  const engine = asRoccoTestSdk({
     video: {
       gridMenus: {
         getCarriedItem: () => state.carriedItem,
@@ -79,7 +84,9 @@ function createDroppedInventoryEngine(): { engine: RoccoEngine; state: DroppedEn
           state.registeredActionMenuIds.push(definition.id);
         },
         unregisterMenu: (menuId: string) => {
-          state.registeredActionMenuIds = state.registeredActionMenuIds.filter((id) => id !== menuId);
+          state.registeredActionMenuIds = state.registeredActionMenuIds.filter(
+            (id) => id !== menuId,
+          );
         },
         closeMenu: () => {},
       },
@@ -130,7 +137,7 @@ function createDroppedInventoryEngine(): { engine: RoccoEngine; state: DroppedEn
       fail() {},
       dispose() {},
     }),
-  } as unknown as RoccoEngine;
+  } as unknown as RoccoEngine);
 
   return { engine, state };
 }

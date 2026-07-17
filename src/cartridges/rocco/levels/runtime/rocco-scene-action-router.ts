@@ -4,7 +4,7 @@ import type {
   RoccoCartridgeAction,
   RoccoSceneClickAction,
 } from '../../../../console/cartridges';
-import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoGridMenuCarriedItem } from '../../../../console/video/grid-menu';
 import {
   createRoccoInteractionRegistry,
@@ -40,7 +40,7 @@ export interface RoccoSceneActionRouterOptions {
   scriptedSequences: RoccoScriptedSequenceController;
   developerRuntime: RoccoDeveloperRuntimeController;
   registry?: InteractionRegistry;
-  getEngine: () => RoccoEngine | null;
+  getSdk: () => CartridgeSdkV1Runtime | null;
   getActiveLevel: () => RoccoLevel | null;
   getRoccoAppearance: () => RoccoPlayerAppearance;
   setRoccoAppearance: (appearance: RoccoPlayerAppearance) => void;
@@ -72,7 +72,7 @@ export class RoccoSceneActionRouter {
     return {
       action: activation,
       cartridgeContext: context,
-      engine: this.options.getEngine(),
+      sdk: this.options.getSdk(),
       activeLevel: this.options.getActiveLevel(),
       inventory: this.options.inventory,
       localization: this.localization,
@@ -112,14 +112,17 @@ export class RoccoSceneActionRouter {
     activation: RoccoCartridgeAction,
     context?: CartridgeActionContext,
   ): CartridgeActionDisposition | void {
-    if (this.options.scriptedSequences.hasBlockingSequence() && !isAdvanceSequenceAction(activation)) {
+    if (
+      this.options.scriptedSequences.hasBlockingSequence() &&
+      !isAdvanceSequenceAction(activation)
+    ) {
       return {
         consumed: true,
         defaultPlayerMovement: 'suppress',
       };
     }
 
-    const engine = this.options.getEngine();
+    const engine = this.options.getSdk();
     if (this.options.scriptedSequences.hasPendingBaitShopDoorUse()) {
       this.options.scriptedSequences.cancelPendingBaitShopDoorUse(engine);
     }

@@ -1,12 +1,18 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { RpceGameCompiler, type RpceCompiledGame } from '../../../../src/cartridges/rocco/rpce/core';
+import {
+  RpceGameCompiler,
+  type RpceCompiledGame,
+} from '../../../../src/cartridges/rocco/rpce/core';
 import {
   createRoccoDefaultGameDefinition,
   createRoccoLocalization,
 } from '../../../../src/cartridges/rocco/games/rocco-default';
 import { RoccoLevelTransitionController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-level-transition-controller';
-import type { RoccoLevel, RoccoLevelConnector } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
+import type {
+  RoccoLevel,
+  RoccoLevelConnector,
+} from '../../../../src/cartridges/rocco/levels/rocco-level-types';
 import type { RoccoPoint } from '../../../../src/console/video/sprites';
 
 function createLevel(levelId: string, connectors: readonly RoccoLevelConnector[]): RoccoLevel {
@@ -15,9 +21,7 @@ function createLevel(levelId: string, connectors: readonly RoccoLevelConnector[]
     title: levelId,
     connectors,
     mount() {
-      return Promise.reject(
-        new Error('mount() is not used in transition-controller unit tests.'),
-      );
+      return Promise.reject(new Error('mount() is not used in transition-controller unit tests.'));
     },
     unmount() {},
     update() {},
@@ -26,7 +30,9 @@ function createLevel(levelId: string, connectors: readonly RoccoLevelConnector[]
 }
 
 function createCompiledGame(): RpceCompiledGame {
-  return new RpceGameCompiler().compile(createRoccoDefaultGameDefinition(createRoccoLocalization('en')));
+  return new RpceGameCompiler().compile(
+    createRoccoDefaultGameDefinition(createRoccoLocalization('en')),
+  );
 }
 
 describe('RoccoLevelTransitionController', () => {

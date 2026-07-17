@@ -1,8 +1,16 @@
-﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RoccoSoundDefinition, RoccoSoundPlayOptions } from '../../../../../src/console/audio/types';
+import type {
+  RoccoSoundDefinition,
+  RoccoSoundPlayOptions,
+} from '../../../../../src/console/audio/types';
 import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
-import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../../../src/console/video/planes';
+import { asRoccoTestSdk } from '../../test-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../src/console/cartridges/sdk-v1';
+import type {
+  RoccoPlaneScene,
+  RoccoPlaneSceneRecord,
+} from '../../../../../src/console/video/planes';
 import type {
   RoccoSpriteDefinition,
   RoccoSpriteInstance,
@@ -20,7 +28,10 @@ import {
   DEFAULT_SPRITE_SCALE,
   DEFAULT_WALK_MAP_ID,
 } from '../../../../../src/cartridges/rocco/rocco-default-constants';
-import { BAIT_SHOP_SCENE_ID, RoccoBaitShopLevel } from '../../../../../src/cartridges/rocco/levels/bait-shop/bait-shop-level';
+import {
+  BAIT_SHOP_SCENE_ID,
+  RoccoBaitShopLevel,
+} from '../../../../../src/cartridges/rocco/levels/bait-shop/bait-shop-level';
 
 const BAIT_SHOP_BENCH_TARGET_INSTANCE_ID = 'rocco-bait-shop-bench-target';
 const BAIT_SHOP_POSTCARD_RACK_TARGET_INSTANCE_ID = 'rocco-bait-shop-postcard-rack-target';
@@ -111,8 +122,8 @@ function getRegisteredSceneTarget<T>(state: TestState, instanceId: string): T | 
   return state.sceneTargetsById.get(instanceId) as T | undefined;
 }
 
-function createEngineMock(state: TestState): RoccoEngine {
-  return {
+function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
+  return asRoccoTestSdk({
     video: {
       preloadAssetUrls: () => {
         return Promise.resolve();
@@ -164,7 +175,10 @@ function createEngineMock(state: TestState): RoccoEngine {
           state.removedSpriteIds.push(instanceId);
         },
         getSprite: (instanceId: string) => findCreatedSprite(state, instanceId),
-        createSpriteFromDefinition: (definitionId: string, options?: Partial<RoccoSpriteInstance>) => {
+        createSpriteFromDefinition: (
+          definitionId: string,
+          options?: Partial<RoccoSpriteInstance>,
+        ) => {
           const sprite: RoccoSpriteInstance = {
             id: options?.id ?? definitionId,
             definitionId,
@@ -231,7 +245,9 @@ function createEngineMock(state: TestState): RoccoEngine {
         isMoving: () => state.isSpriteMovingValue,
         playAction: (instanceId: string, actionId: string, options?: { direction?: string }) => {
           if (options?.direction) {
-            state.playedSpriteActionDirections.push(`${instanceId}:${actionId}:${options.direction}`);
+            state.playedSpriteActionDirections.push(
+              `${instanceId}:${actionId}:${options.direction}`,
+            );
           }
         },
       } as unknown as RoccoEngine['video']['sprites'],
@@ -296,7 +312,7 @@ function createEngineMock(state: TestState): RoccoEngine {
       stopSound: () => {},
       unregisterSound: () => {},
     } as unknown as RoccoEngine['audio'],
-  } as unknown as RoccoEngine;
+  } as unknown as RoccoEngine);
 }
 
 describe('RoccoBaitShopLevel', () => {
@@ -516,7 +532,9 @@ describe('RoccoBaitShopLevel', () => {
 
     expect(onMysteriousKeyCollected).toHaveBeenCalledTimes(1);
     expect(state.createdSprites).toHaveLength(createdSpriteCount);
-    expect(getRegisteredSceneTarget(state, BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID)).toBeUndefined();
+    expect(
+      getRegisteredSceneTarget(state, BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID),
+    ).toBeUndefined();
     expect(state.unregisteredSceneTargetIds).toContain(BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID);
     expect(state.spriteMessages).toContain(
       `${DEFAULT_SPRITE_INSTANCE_ID}:think:${localization.text.baitShop.hiddenKeysCollectedLine}`,
@@ -663,7 +681,9 @@ describe('RoccoBaitShopLevel', () => {
 
     expect(onOpenStorageInventoryRequested).toHaveBeenCalledOnce();
     expect(callbacks.closeInventory).toBeTypeOf('function');
-    expect(getRegisteredSceneTarget(state, BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID)).toBeTruthy();
+    expect(
+      getRegisteredSceneTarget(state, BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID),
+    ).toBeTruthy();
 
     const closeInventoryCallback = callbacks.closeInventory;
     if (!closeInventoryCallback) {
@@ -672,7 +692,11 @@ describe('RoccoBaitShopLevel', () => {
 
     closeInventoryCallback();
 
-    expect(getRegisteredSceneTarget(state, BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID)).toBeUndefined();
-    expect(state.unregisteredSceneTargetIds).toContain(BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID);
+    expect(
+      getRegisteredSceneTarget(state, BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID),
+    ).toBeUndefined();
+    expect(state.unregisteredSceneTargetIds).toContain(
+      BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID,
+    );
   });
 });

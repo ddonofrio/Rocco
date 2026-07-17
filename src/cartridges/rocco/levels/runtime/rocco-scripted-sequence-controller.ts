@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoPoint } from '../../../../console/video/sprites';
 import {
   DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
@@ -78,7 +78,7 @@ export class RoccoScriptedSequenceController {
   private baitShopDoorEntry: BaitShopDoorEntrySequence | undefined = undefined;
   private stanMoneyExchange: StanMoneyExchangeSequence | undefined = undefined;
   private pendingBaitShopDoorUse: RoccoPendingBaitShopDoorUse | undefined = undefined;
-  private blockingInputLease: ReturnType<RoccoEngine['acquireInputLease']> | undefined =
+  private blockingInputLease: ReturnType<CartridgeSdkV1Runtime['acquireInputLease']> | undefined =
     undefined;
 
   constructor(options: RoccoScriptedSequenceControllerOptions) {
@@ -87,7 +87,7 @@ export class RoccoScriptedSequenceController {
   }
 
   private finishBaitShopDoorHorizontalApproach(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     groundPoint = this.options.resolvePlayerGroundPoint(),
   ): void {
     this.pendingBaitShopDoorUse = undefined;
@@ -99,7 +99,7 @@ export class RoccoScriptedSequenceController {
   }
 
   private beginBaitShopDoorEntry(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     groundPoint = this.options.resolvePlayerGroundPoint(),
   ): void {
     this.acquireBlockingInputLease(engine);
@@ -149,12 +149,10 @@ export class RoccoScriptedSequenceController {
         elapsedMs: 0,
       };
       void this.completeBaitShopDoorEntryTransition();
-      return;
     }
-    engine.video.render(0);
   }
 
-  private updateStanPoliceDefeat(engine: RoccoEngine, deltaMs: number): void {
+  private updateStanPoliceDefeat(engine: CartridgeSdkV1Runtime, deltaMs: number): void {
     if (!this.stanPoliceDefeat || !Number.isFinite(deltaMs) || deltaMs <= 0) {
       return;
     }
@@ -200,7 +198,7 @@ export class RoccoScriptedSequenceController {
     this.finishStanPoliceDefeat(engine);
   }
 
-  private updateBaitShopDoorEntry(engine: RoccoEngine, deltaMs: number): void {
+  private updateBaitShopDoorEntry(engine: CartridgeSdkV1Runtime, deltaMs: number): void {
     if (!this.baitShopDoorEntry || !Number.isFinite(deltaMs) || deltaMs <= 0) {
       return;
     }
@@ -227,7 +225,7 @@ export class RoccoScriptedSequenceController {
     }
   }
 
-  private updateStanMoneyExchange(engine: RoccoEngine, deltaMs: number): void {
+  private updateStanMoneyExchange(engine: CartridgeSdkV1Runtime, deltaMs: number): void {
     if (!this.stanMoneyExchange || !Number.isFinite(deltaMs) || deltaMs <= 0) {
       return;
     }
@@ -254,7 +252,7 @@ export class RoccoScriptedSequenceController {
     this.finishStanMoneyExchange(engine);
   }
 
-  private beginStanMoneyReply(engine: RoccoEngine): void {
+  private beginStanMoneyReply(engine: CartridgeSdkV1Runtime): void {
     this.stanMoneyExchange = {
       phase: 'rocco-replying',
       elapsedMs: 0,
@@ -266,16 +264,14 @@ export class RoccoScriptedSequenceController {
         ttlMs: ROCCO_MONEY_REPLY_TTL_MS,
       },
     );
-    engine.video.render(0);
   }
 
-  private finishStanMoneyExchange(engine: RoccoEngine): void {
+  private finishStanMoneyExchange(_engine: CartridgeSdkV1Runtime): void {
     this.stanMoneyExchange = undefined;
     this.releaseBlockingInputLease();
-    engine.video.render(0);
   }
 
-  private beginStanPoliceDefeatFade(engine: RoccoEngine): void {
+  private beginStanPoliceDefeatFade(engine: CartridgeSdkV1Runtime): void {
     this.stanPoliceDefeat = {
       phase: 'fading',
       elapsedMs: 0,
@@ -287,7 +283,7 @@ export class RoccoScriptedSequenceController {
     this.addStanPoliceDefeatFadePrimitive(engine, 0);
   }
 
-  private showStanPoliceDefeatTitle(engine: RoccoEngine): void {
+  private showStanPoliceDefeatTitle(engine: CartridgeSdkV1Runtime): void {
     this.stanPoliceDefeat = {
       phase: 'title',
       elapsedMs: 0,
@@ -314,17 +310,16 @@ export class RoccoScriptedSequenceController {
       },
       visible: true,
     });
-    engine.video.render(0);
   }
 
-  private finishStanPoliceDefeat(engine: RoccoEngine): void {
+  private finishStanPoliceDefeat(engine: CartridgeSdkV1Runtime): void {
     this.stanPoliceDefeat = undefined;
     this.clearStanPoliceDefeatPresentation(engine);
     this.releaseBlockingInputLease();
     this.options.onRestartRequested?.();
   }
 
-  private acquireBlockingInputLease(engine: RoccoEngine): void {
+  private acquireBlockingInputLease(engine: CartridgeSdkV1Runtime): void {
     this.blockingInputLease ??= engine.acquireInputLease('scripted-sequence', 'blocked');
   }
 
@@ -333,7 +328,7 @@ export class RoccoScriptedSequenceController {
     this.blockingInputLease = undefined;
   }
 
-  private addStanPoliceDefeatFadePrimitive(engine: RoccoEngine, alpha: number): void {
+  private addStanPoliceDefeatFadePrimitive(engine: CartridgeSdkV1Runtime, alpha: number): void {
     engine.video.primitives.addPrimitive({
       id: STAN_POLICE_DEFEAT_FADE_PRIMITIVE_ID,
       kind: 'rect',
@@ -348,10 +343,9 @@ export class RoccoScriptedSequenceController {
       height: DEFAULT_DESIGN_HEIGHT,
       fill: true,
     });
-    engine.video.render(0);
   }
 
-  private clearStanPoliceDefeatPresentation(engine?: RoccoEngine | null): void {
+  private clearStanPoliceDefeatPresentation(engine?: CartridgeSdkV1Runtime | null): void {
     if (!engine) {
       return;
     }
@@ -359,7 +353,6 @@ export class RoccoScriptedSequenceController {
     engine.audio.stopSound(ROCCO_STAN_POLICE_DEFEAT_SOUND_ID);
     engine.video.titles.removeTitle(STAN_POLICE_DEFEAT_TITLE_ID);
     engine.video.primitives.removePrimitive(STAN_POLICE_DEFEAT_FADE_PRIMITIVE_ID);
-    engine.video.render(0);
   }
 
   hasBlockingSequence(): boolean {
@@ -396,7 +389,7 @@ export class RoccoScriptedSequenceController {
       : undefined;
   }
 
-  resetRuntimeState(engine?: RoccoEngine | null): void {
+  resetRuntimeState(engine?: CartridgeSdkV1Runtime | null): void {
     if (engine && this.pendingBaitShopDoorUse) {
       engine.video.sprites.cancelMovement(DEFAULT_SPRITE_INSTANCE_ID);
     }
@@ -409,7 +402,7 @@ export class RoccoScriptedSequenceController {
     this.clearStanPoliceDefeatPresentation(engine);
   }
 
-  startStanPoliceDefeat(engine: RoccoEngine): void {
+  startStanPoliceDefeat(engine: CartridgeSdkV1Runtime): void {
     this.stanPoliceDefeat = {
       phase: 'speaking',
       elapsedMs: 0,
@@ -435,10 +428,9 @@ export class RoccoScriptedSequenceController {
         },
       },
     );
-    engine.video.render(0);
   }
 
-  startStanMoneyExchange(engine: RoccoEngine): void {
+  startStanMoneyExchange(engine: CartridgeSdkV1Runtime): void {
     this.stanMoneyExchange = {
       phase: 'stan-speaking',
       elapsedMs: 0,
@@ -470,10 +462,9 @@ export class RoccoScriptedSequenceController {
         isAvoidImmediateRepeat: true,
       },
     );
-    engine.video.render(0);
   }
 
-  startBaitShopDoorUse(engine: RoccoEngine, activeLevelId: string): void {
+  startBaitShopDoorUse(engine: CartridgeSdkV1Runtime, activeLevelId: string): void {
     engine.video.gridMenus.clearCarriedItem();
     engine.video.gridMenus.closeMenu();
     engine.video.actionMenus.closeMenu();
@@ -503,22 +494,20 @@ export class RoccoScriptedSequenceController {
       },
     );
     if (!isStarted) {
-      engine.video.render(0);
       return;
     }
 
     this.pendingBaitShopDoorUse = {
       levelId: activeLevelId,
     };
-    engine.video.render(0);
   }
 
-  cancelPendingBaitShopDoorUse(engine?: RoccoEngine | null): void {
+  cancelPendingBaitShopDoorUse(engine?: CartridgeSdkV1Runtime | null): void {
     engine?.video.sprites.cancelMovement(DEFAULT_SPRITE_INSTANCE_ID);
     this.pendingBaitShopDoorUse = undefined;
   }
 
-  updateBlockingSequence(engine: RoccoEngine, deltaMs: number): void {
+  updateBlockingSequence(engine: CartridgeSdkV1Runtime, deltaMs: number): void {
     if (this.stanPoliceDefeat) {
       this.updateStanPoliceDefeat(engine, deltaMs);
       return;
@@ -534,7 +523,7 @@ export class RoccoScriptedSequenceController {
     }
   }
 
-  updatePendingBaitShopDoorUse(engine: RoccoEngine, activeLevelId: string | null): void {
+  updatePendingBaitShopDoorUse(engine: CartridgeSdkV1Runtime, activeLevelId: string | null): void {
     if (!this.pendingBaitShopDoorUse) {
       return;
     }

@@ -1,17 +1,28 @@
-﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RoccoSoundDefinition, RoccoSoundPlayOptions } from '../../../../../src/console/audio/types';
+import type {
+  RoccoSoundDefinition,
+  RoccoSoundPlayOptions,
+} from '../../../../../src/console/audio/types';
 import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
+import { asRoccoTestSdk } from '../../test-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../src/console/cartridges/sdk-v1';
 import type { RoccoActionMenuDefinition } from '../../../../../src/console/video/action-menu';
 import type { RoccoGridMenuDefinition } from '../../../../../src/console/video/grid-menu';
-import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../../../src/console/video/planes';
+import type {
+  RoccoPlaneScene,
+  RoccoPlaneSceneRecord,
+} from '../../../../../src/console/video/planes';
 import type {
   RoccoSpriteDefinition,
   RoccoSpriteInstance,
   RoccoSpriteNavigationBinding,
   RoccoSpriteWalkMap,
 } from '../../../../../src/console/video/sprites';
-import { createRoccoLocalization, type RoccoLocalization } from '../../../../../src/cartridges/rocco/localization';
+import {
+  createRoccoLocalization,
+  type RoccoLocalization,
+} from '../../../../../src/cartridges/rocco/localization';
 import {
   DEFAULT_SPRITE_IDLE_ACTION_ID,
   DEFAULT_SPRITE_INSTANCE_ID,
@@ -20,7 +31,10 @@ import {
 } from '../../../../../src/cartridges/rocco/rocco-default-constants';
 import { createRoccoCoralRelicInventoryItem } from '../../../../../src/cartridges/rocco/inventory';
 import { ROCCO_PLAYER_ACTION_MENU_ID } from '../../../../../src/cartridges/rocco/rocco-player-action-menu';
-import { BAIT_SHOP_TOILET_SCENE_ID, RoccoBaitShopToiletLevel } from '../../../../../src/cartridges/rocco/levels/bait-shop/bait-shop-toilet-level';
+import {
+  BAIT_SHOP_TOILET_SCENE_ID,
+  RoccoBaitShopToiletLevel,
+} from '../../../../../src/cartridges/rocco/levels/bait-shop/bait-shop-toilet-level';
 
 const TOILET_INSTANCE_ID = 'rocco-bait-shop-toilet-main';
 const TOILET_ACTION_MENU_ID = 'rocco-bait-shop-toilet-action-menu';
@@ -153,8 +167,8 @@ function getRegisteredSceneTarget<T>(state: TestState, instanceId: string): T | 
   return state.sceneTargetsById.get(instanceId) as T | undefined;
 }
 
-function createEngineMock(state: TestState): RoccoEngine {
-  return {
+function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
+  return asRoccoTestSdk({
     video: {
       preloadAssetUrls: () => {
         return Promise.resolve();
@@ -177,7 +191,9 @@ function createEngineMock(state: TestState): RoccoEngine {
           }
         },
         unregisterMenu: (menuId: string) => {
-          state.registeredActionMenuIds = state.registeredActionMenuIds.filter((id) => id !== menuId);
+          state.registeredActionMenuIds = state.registeredActionMenuIds.filter(
+            (id) => id !== menuId,
+          );
         },
         closeMenu: () => {},
       },
@@ -257,7 +273,10 @@ function createEngineMock(state: TestState): RoccoEngine {
           state.createdSprites.push(created);
           return created;
         },
-        createSpriteFromDefinition: (definitionId: string, options?: Partial<RoccoSpriteInstance>) => {
+        createSpriteFromDefinition: (
+          definitionId: string,
+          options?: Partial<RoccoSpriteInstance>,
+        ) => {
           const sprite: RoccoSpriteInstance = {
             id: options?.id ?? definitionId,
             definitionId,
@@ -324,7 +343,7 @@ function createEngineMock(state: TestState): RoccoEngine {
         stopMovement: () => {
           state.isSpriteMovingValue = false;
         },
-    goTo: () => {
+        goTo: () => {
           state.isSpriteMovingValue = true;
           return true;
         },
@@ -411,7 +430,7 @@ function createEngineMock(state: TestState): RoccoEngine {
       state.playerSpriteId = instanceId;
     },
     log: () => {},
-  } as unknown as RoccoEngine;
+  } as unknown as RoccoEngine);
 }
 
 function countCoralRelicReadingLines(localization: RoccoLocalization): number {
@@ -494,26 +513,22 @@ describe('RoccoBaitShopToiletLevel', () => {
 
     const originalCreateElement = document.createElement.bind(document);
     vi.stubGlobal('Image', TestImage);
-    vi
-      .spyOn(HTMLCanvasElement.prototype, 'getContext')
-      .mockImplementation(
-        ((contextId: string) => {
-          if (contextId !== '2d') {
-            return;
-          }
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(((contextId: string) => {
+      if (contextId !== '2d') {
+        return;
+      }
 
-          return {
-            imageSmoothingEnabled: false,
-            clearRect: () => {},
-            drawImage: () => {},
-            getImageData: () => ({
-              width: 960,
-              height: 540,
-              data: new Uint8ClampedArray(960 * 540 * 4),
-            }),
-          } as unknown as CanvasRenderingContext2D;
-        }) as typeof HTMLCanvasElement.prototype.getContext,
-      );
+      return {
+        imageSmoothingEnabled: false,
+        clearRect: () => {},
+        drawImage: () => {},
+        getImageData: () => ({
+          width: 960,
+          height: 540,
+          data: new Uint8ClampedArray(960 * 540 * 4),
+        }),
+      } as unknown as CanvasRenderingContext2D;
+    }) as typeof HTMLCanvasElement.prototype.getContext);
     vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
       if (tagName.toLowerCase() !== 'canvas') {
         return originalCreateElement(tagName);
@@ -775,7 +790,11 @@ describe('RoccoBaitShopToiletLevel', () => {
     expect(state.playedSpriteActions).toContain(
       `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_PICK_UP_ACTION_ID}:down`,
     );
-    expect(state.createdSprites.some((sprite) => sprite.id === 'rocco-bait-shop-toilet-throw-relic-instance')).toBe(true);
+    expect(
+      state.createdSprites.some(
+        (sprite) => sprite.id === 'rocco-bait-shop-toilet-throw-relic-instance',
+      ),
+    ).toBe(true);
 
     level.update(250);
 

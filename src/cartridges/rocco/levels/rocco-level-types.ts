@@ -1,5 +1,5 @@
-﻿import type { RoccoSceneClickAction } from '../../../console/cartridges';
-import type { RoccoEngine } from '../../../console/engine-sdk';
+import type { RoccoSceneClickAction } from '../../../console/cartridges';
+import type { CartridgeSdkV1Runtime } from '../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuActivation } from '../../../console/video/action-menu';
 import type { RoccoGridMenuActivation } from '../../../console/video/grid-menu';
 import type { RoccoPlaneScene } from '../../../console/video/planes';
@@ -50,11 +50,11 @@ export interface RoccoLevel {
   readonly connectors: readonly RoccoLevelConnector[];
 
   mount(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options?: RoccoLevelMountOptions,
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene>;
-  unmount(engine: RoccoEngine): void;
+  unmount(engine: CartridgeSdkV1Runtime): void;
   update(deltaMs: number): void;
   handleAction(activation: RoccoActionMenuActivation): void;
   handleGridMenu?(activation: RoccoGridMenuActivation): void;

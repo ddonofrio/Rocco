@@ -1,5 +1,9 @@
-﻿import type { RoccoPoint } from '../../../../console/video/sprites';
-import type { RpceCompiledGame, RpceLevelConnectionEndpoint, RpceResolvedLevelTransition } from '../../rpce/core';
+import type { RoccoPoint } from '../../../../console/video/sprites';
+import type {
+  RpceCompiledGame,
+  RpceLevelConnectionEndpoint,
+  RpceResolvedLevelTransition,
+} from '../../rpce/core';
 import { RpceTransitionController } from '../../rpce/core';
 import type { RoccoLevelConnector } from '../rocco-level-types';
 

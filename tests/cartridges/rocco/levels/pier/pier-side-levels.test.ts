@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
+import { asRoccoTestSdk } from '../../test-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../src/console/cartridges/sdk-v1';
 import type { RoccoSoundDefinition } from '../../../../../src/console/audio/types';
-import type { RoccoSpriteInstance, RoccoSpriteWalkMap } from '../../../../../src/console/video/sprites';
+import type {
+  RoccoSpriteInstance,
+  RoccoSpriteWalkMap,
+} from '../../../../../src/console/video/sprites';
 import { createRoccoLocalization } from '../../../../../src/cartridges/rocco/localization';
 import {
   PIER_PLAYER_LEFT_ENTRY_X,
@@ -11,12 +16,8 @@ import {
   DEFAULT_SPRITE_SCALE,
   DEFAULT_SPRITE_Y_VALUES,
 } from '../../../../../src/cartridges/rocco/rocco-default-constants';
-import {
-  RoccoPierEndLevel,
-} from '../../../../../src/cartridges/rocco/levels/pier/pier-end-level';
-import {
-  RoccoPierStartLevel,
-} from '../../../../../src/cartridges/rocco/levels/pier/pier-start-level';
+import { RoccoPierEndLevel } from '../../../../../src/cartridges/rocco/levels/pier/pier-end-level';
+import { RoccoPierStartLevel } from '../../../../../src/cartridges/rocco/levels/pier/pier-start-level';
 
 vi.mock('../../../../../src/console/video/sprites', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../../src/console/video/sprites')>();
@@ -66,8 +67,8 @@ function findCreatedSprite(state: TestState, instanceId: string): RoccoSpriteIns
   return state.createdSprites.findLast((sprite) => sprite.id === instanceId);
 }
 
-function createEngineMock(state: TestState): RoccoEngine {
-  return {
+function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
+  return asRoccoTestSdk({
     video: {
       preloadAssetUrls: () => Promise.resolve(),
       preloadPlaneScene: () => Promise.resolve(),
@@ -90,7 +91,10 @@ function createEngineMock(state: TestState): RoccoEngine {
         loadSpriteDefinition: () => {},
         removeSprite: () => {},
         getSprite: (instanceId: string) => findCreatedSprite(state, instanceId),
-        createSpriteFromDefinition: (definitionId: string, options?: Partial<RoccoSpriteInstance>) => {
+        createSpriteFromDefinition: (
+          definitionId: string,
+          options?: Partial<RoccoSpriteInstance>,
+        ) => {
           const sprite: RoccoSpriteInstance = {
             id: options?.id ?? definitionId,
             definitionId,
@@ -100,12 +104,24 @@ function createEngineMock(state: TestState): RoccoEngine {
               scaleX: options?.transform?.scaleX ?? DEFAULT_SPRITE_SCALE,
               scaleY: options?.transform?.scaleY ?? DEFAULT_SPRITE_SCALE,
             },
-            animation: { animationId: 'idle', frameIndex: 0, elapsedMs: 0, playing: true, playbackRate: 1 },
+            animation: {
+              animationId: 'idle',
+              frameIndex: 0,
+              elapsedMs: 0,
+              playing: true,
+              playbackRate: 1,
+            },
             visible: true,
             enabled: true,
             interactive: true,
             collisionEnabled: true,
-            motion: { velocityX: 0, velocityY: 0, accelerationX: 0, accelerationY: 0, distanceAccumulator: 0 },
+            motion: {
+              velocityX: 0,
+              velocityY: 0,
+              accelerationX: 0,
+              accelerationY: 0,
+              distanceAccumulator: 0,
+            },
             renderLayer: options?.renderLayer ?? 'world.actors',
             zIndex: options?.zIndex ?? 0,
             opacity: options?.opacity ?? 1,
@@ -151,7 +167,7 @@ function createEngineMock(state: TestState): RoccoEngine {
       stopSound: () => {},
       unregisterSound: () => {},
     } as unknown as RoccoEngine['audio'],
-  } as unknown as RoccoEngine;
+  } as unknown as RoccoEngine);
 }
 
 describe('RoccoPierStartLevel', () => {

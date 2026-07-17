@@ -1,9 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RoccoSoundDefinition, RoccoSoundPlayOptions } from '../../../../../src/console/audio/types';
+import type {
+  RoccoSoundDefinition,
+  RoccoSoundPlayOptions,
+} from '../../../../../src/console/audio/types';
 import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
+import { asRoccoTestSdk } from '../../test-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../src/console/cartridges/sdk-v1';
 import type { RoccoActionMenuDefinition } from '../../../../../src/console/video/action-menu';
-import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from '../../../../../src/console/video/planes';
+import type {
+  RoccoPlaneScene,
+  RoccoPlaneSceneRecord,
+} from '../../../../../src/console/video/planes';
 import type {
   RoccoSpriteInstance,
   RoccoSpriteNavigationBinding,
@@ -65,8 +73,8 @@ function findCreatedSprite(state: TestState, instanceId: string): RoccoSpriteIns
   return state.createdSprites.findLast((sprite) => sprite.id === instanceId);
 }
 
-function createEngineMock(state: TestState): RoccoEngine {
-  return {
+function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
+  return asRoccoTestSdk({
     video: {
       preloadAssetUrls: () => Promise.resolve(),
       preloadPlaneScene: () => Promise.resolve(),
@@ -98,7 +106,10 @@ function createEngineMock(state: TestState): RoccoEngine {
         loadSpriteDefinition: () => {},
         removeSprite: () => {},
         getSprite: (instanceId: string) => findCreatedSprite(state, instanceId),
-        createSpriteFromDefinition: (definitionId: string, options?: Partial<RoccoSpriteInstance>) => {
+        createSpriteFromDefinition: (
+          definitionId: string,
+          options?: Partial<RoccoSpriteInstance>,
+        ) => {
           const sprite: RoccoSpriteInstance = {
             id: options?.id ?? definitionId,
             definitionId,
@@ -227,7 +238,7 @@ function createEngineMock(state: TestState): RoccoEngine {
     }),
     setPlayerSprite: () => {},
     log: () => {},
-  } as unknown as RoccoEngine;
+  } as unknown as RoccoEngine);
 }
 
 describe('RoccoBaitShopSecondLevel', () => {

@@ -124,7 +124,9 @@ A level can call it without arguments to request the cartridge-level restart beh
 
 The current Nether first screen uses this path so a local defeat can remount the same screen at its entry checkpoint without rebuilding the whole cartridge state.
 
-The manager now runs checkpoint restarts through a prepared transition commit. That keeps inventory runtime state, dropped items, scripted-sequence flags, and Nether map recreation behind one rollback boundary so a failed restart can remount the previous level instead of leaving partially reset cartridge state behind.
+The manager now delegates checkpoint restarts to `RoccoCheckpointCoordinator`, which keeps inventory runtime state, dropped items, scripted-sequence flags, and Nether map recreation behind one rollback boundary so a failed restart can remount the previous level instead of leaving partially reset cartridge state behind.
+
+The level manager is a coordinator over dedicated composition, world-state, transition-plan, status, inventory, interaction, checkpoint, and lifecycle helpers. Nether and bait-shop level entry points likewise forward the shared level contract to private screen controllers so their long-running sequences do not become additional lifecycle owners.
 
 ## Level IDs, Scene IDs, And Naming
 
@@ -463,7 +465,7 @@ Use a stable scene id for a stable saved room.
 
 The current scene loaders follow this pattern:
 
-1. Try `engine.persistence.loadPlaneSceneRecord(sceneId)`.
+1. Try `engine.storage.loadPlaneSceneRecord(sceneId)`.
 2. Create and save a default scene if none exists.
 3. Normalize built-in planes if a saved scene exists.
 4. Keep extra custom planes that are not part of the built-in defaults.
@@ -479,7 +481,7 @@ This pattern supports:
 Use Vite-friendly URL resolution for room assets:
 
 ```ts
-new URL('./assets/your-image.png', import.meta.url).href
+new URL('./assets/your-image.png', import.meta.url).href;
 ```
 
 This is the standard asset-loading pattern across the cartridge.

@@ -1,7 +1,7 @@
 /// <reference lib="esnext.iterator" />
 
 import type { RoccoSceneClickAction } from '../../../../console/cartridges';
-import type { RoccoEngine } from '../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type {
   RoccoGridMenuActivation,
   RoccoGridMenuCarriedItem,
@@ -86,7 +86,7 @@ export class RoccoInventoryRuntimeController {
   }
 
   private handleInventoryTransferGridAction(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activation: RoccoGridMenuActivation,
   ): void {
     if (!this.activeInventoryTransferSession) {
@@ -145,7 +145,7 @@ export class RoccoInventoryRuntimeController {
   }
 
   private dropCarriedInventoryItem(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     carriedItem: RoccoGridMenuItem | undefined,
   ): void {
     if (!carriedItem) {
@@ -178,28 +178,24 @@ export class RoccoInventoryRuntimeController {
   }
 
   private finishInventoryTransferClose(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     shouldNotifyLevel: boolean,
   ): void {
-    const closeHandler = shouldNotifyLevel
-      ? this.activeInventoryTransferCloseHandler
-      : undefined;
+    const closeHandler = shouldNotifyLevel ? this.activeInventoryTransferCloseHandler : undefined;
     this.activeInventoryTransferSession = undefined;
     this.activeInventoryTransferCloseHandler = undefined;
     closeHandler?.();
     this.refreshStatus(engine);
   }
 
-  private refreshStatus(engine: RoccoEngine): void {
+  private refreshStatus(_engine: CartridgeSdkV1Runtime): void {
     this.options.refreshStatus?.();
-    engine.video.render(0);
   }
 
-  private showInventoryFullLines(engine: RoccoEngine | null | undefined): void {
+  private showInventoryFullLines(engine: CartridgeSdkV1Runtime | null | undefined): void {
     if (!engine) {
       return;
     }
-
     roccoCartridgeMessageRuntime.think(
       engine,
       DEFAULT_SPRITE_INSTANCE_ID,
@@ -213,7 +209,6 @@ export class RoccoInventoryRuntimeController {
         isAvoidImmediateRepeat: true,
       },
     );
-    engine.video.render(0);
   }
 
   getPlayerInventory(): RoccoInventory {
@@ -280,7 +275,7 @@ export class RoccoInventoryRuntimeController {
   }
 
   canCollectItem(
-    engine: RoccoEngine | null | undefined,
+    engine: CartridgeSdkV1Runtime | null | undefined,
     itemId: string,
     shouldShowFullMessage = true,
   ): boolean {
@@ -299,7 +294,7 @@ export class RoccoInventoryRuntimeController {
   }
 
   tryAddItem(
-    engine: RoccoEngine | null | undefined,
+    engine: CartridgeSdkV1Runtime | null | undefined,
     item: RoccoInventoryItem,
     shouldShowFullMessage = true,
   ): boolean {
@@ -311,7 +306,7 @@ export class RoccoInventoryRuntimeController {
     return true;
   }
 
-  togglePlayerInventory(engine: RoccoEngine): void {
+  togglePlayerInventory(engine: CartridgeSdkV1Runtime): void {
     if (this.activeInventoryTransferSession) {
       this.closeActiveTransferSession(engine, undefined, true);
       return;
@@ -321,7 +316,7 @@ export class RoccoInventoryRuntimeController {
     this.refreshStatus(engine);
   }
 
-  openPlayerInventory(engine: RoccoEngine): void {
+  openPlayerInventory(engine: CartridgeSdkV1Runtime): void {
     this.activeInventoryTransferSession = undefined;
     this.activeInventoryTransferCloseHandler = undefined;
     engine.video.gridMenus.openMenu(this.inventory.createGridMenuDefinition(this.localization));
@@ -329,7 +324,7 @@ export class RoccoInventoryRuntimeController {
   }
 
   openStorageInventory(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     storageId: string,
     onInventoryClosed?: () => void,
   ): void {
@@ -354,14 +349,12 @@ export class RoccoInventoryRuntimeController {
       panelStrokeAlpha: 0,
     });
     this.activeInventoryTransferCloseHandler = onInventoryClosed ?? undefined;
-    engine.video.gridMenus.openMenu(
-      this.activeInventoryTransferSession.createGridMenuDefinition(),
-    );
+    engine.video.gridMenus.openMenu(this.activeInventoryTransferSession.createGridMenuDefinition());
     this.refreshStatus(engine);
   }
 
   closeActiveTransferSession(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     storageId?: string,
     shouldNotifyLevel = false,
   ): void {
@@ -388,7 +381,10 @@ export class RoccoInventoryRuntimeController {
     return activation.definitionId === ROCCO_INVENTORY_MENU_ID;
   }
 
-  handleGridMenuAction(engine: RoccoEngine, activation: RoccoGridMenuActivation): boolean {
+  handleGridMenuAction(
+    engine: CartridgeSdkV1Runtime,
+    activation: RoccoGridMenuActivation,
+  ): boolean {
     if (this.activeInventoryTransferSession?.matchesDefinition(activation.definitionId)) {
       this.handleInventoryTransferGridAction(engine, activation);
       return true;
@@ -434,7 +430,7 @@ export class RoccoInventoryRuntimeController {
   }
 
   handleCarriedItemSceneClick(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     activation: RoccoSceneClickAction,
     carriedItem = engine.video.gridMenus.getCarriedItem(),
   ): RoccoInventoryRuntimeActionResult | void {
@@ -444,7 +440,6 @@ export class RoccoInventoryRuntimeController {
 
     if (!activation.targetInstanceId) {
       engine.video.gridMenus.clearCarriedItem();
-      engine.video.render(0);
       return;
     }
 
@@ -471,6 +466,5 @@ export class RoccoInventoryRuntimeController {
       },
     );
     engine.video.gridMenus.clearCarriedItem();
-    engine.video.render(0);
   }
 }

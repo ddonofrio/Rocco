@@ -1,13 +1,6 @@
-
-/* eslint-disable max-lines */
-
 import { Container, Graphics } from 'pixi.js';
 
-import {
-  getEffectiveMusicVolume,
-  getEffectiveSfxVolume,
-  type RoccoSoundProfile,
-} from '../audio';
+import { getEffectiveMusicVolume, getEffectiveSfxVolume, type RoccoSoundProfile } from '../audio';
 import type { RoccoDisplayProfile } from '../video/display';
 import {
   ROCCO_CARTRIDGE_MENU_COLORS as C,
@@ -94,7 +87,12 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     this.ui.drawDetailField(x, y, label, value, { valueOffset: 120 });
   }
 
-  private drawRowFrame(parent: Container, width: number, height: number, isSelected: boolean): void {
+  private drawRowFrame(
+    parent: Container,
+    width: number,
+    height: number,
+    isSelected: boolean,
+  ): void {
     const fillColor = isSelected ? C.itemBgSelected : C.itemBg;
     const borderColor = isSelected ? C.itemBorderSelected : C.itemBorder;
     parent.addChild(
@@ -107,9 +105,11 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
   }
 
   private countEnabledFilters(displayProfile: RoccoDisplayProfile): number {
-    return Number(displayProfile.roundedCorners)
-      + Number(displayProfile.crtMask)
-      + Number(displayProfile.edgeVignette);
+    return (
+      Number(displayProfile.roundedCorners) +
+      Number(displayProfile.crtMask) +
+      Number(displayProfile.edgeVignette)
+    );
   }
 
   private formatPercent(value: number): string {
@@ -276,9 +276,15 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     onVideoIncrease: (id: 'brightness' | 'contrast') => void,
   ): number {
     const isSelected = videoSelectionId === id;
-    const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
-      onVideoRowPointerDown(id);
-    });
+    const row = this.ui.createInteractiveContainer(
+      OPTION_ROW_X,
+      y,
+      OPTION_ROW_W,
+      OPTION_ROW_H,
+      () => {
+        onVideoRowPointerDown(id);
+      },
+    );
 
     this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
 
@@ -373,9 +379,15 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     onSoundIncrease: (id: SoundRowId) => void,
   ): number {
     const isSelected = soundSelectionId === id;
-    const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
-      onSoundRowPointerDown(id);
-    });
+    const row = this.ui.createInteractiveContainer(
+      OPTION_ROW_X,
+      y,
+      OPTION_ROW_W,
+      OPTION_ROW_H,
+      () => {
+        onSoundRowPointerDown(id);
+      },
+    );
 
     this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
 
@@ -416,9 +428,15 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     onFilterRowPointerDown: (id: FilterRowId) => void,
   ): number {
     const isSelected = filterSelectionId === id;
-    const row = this.ui.createInteractiveContainer(OPTION_ROW_X, y, OPTION_ROW_W, OPTION_ROW_H, () => {
-      onFilterRowPointerDown(id);
-    });
+    const row = this.ui.createInteractiveContainer(
+      OPTION_ROW_X,
+      y,
+      OPTION_ROW_W,
+      OPTION_ROW_H,
+      () => {
+        onFilterRowPointerDown(id);
+      },
+    );
 
     this.drawRowFrame(row, OPTION_ROW_W, OPTION_ROW_H, isSelected);
 
@@ -445,8 +463,8 @@ export class RoccoCartridgeMenuSystemSettingsRenderer {
     soundProfile,
     onSettingsRowPointerDown,
   }: RoccoSettingsHomeRenderOptions): void {
-    const selectedOption = settingsOptions.find((option) => option.id === settingsSelectionId)
-      ?? settingsOptions[0];
+    const selectedOption =
+      settingsOptions.find((option) => option.id === settingsSelectionId) ?? settingsOptions[0];
     if (!selectedOption) {
       return;
     }

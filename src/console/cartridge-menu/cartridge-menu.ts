@@ -1,6 +1,3 @@
-
-/* eslint-disable max-lines */
-
 import { Application, Container, Graphics } from 'pixi.js';
 
 import {
@@ -102,12 +99,8 @@ export interface CartridgeMenuOptions extends RoccoCartridgeMenuSessionOptions {
 export class RoccoCartridgeMenu {
   private readonly stage: Container;
   private readonly session = new RoccoCartridgeMenuSession();
-  private onDisplayProfileChange:
-    | ((profile: Partial<RoccoDisplayProfile>) => void)
-    | undefined;
-  private onSoundProfileChange:
-    | ((profile: Partial<RoccoSoundProfile>) => void)
-    | undefined;
+  private onDisplayProfileChange: ((profile: Partial<RoccoDisplayProfile>) => void) | undefined;
+  private onSoundProfileChange: ((profile: Partial<RoccoSoundProfile>) => void) | undefined;
 
   private root: Container | undefined;
   private ui: RoccoCartridgeMenuPixiUiPrimitives | undefined;
@@ -178,15 +171,29 @@ export class RoccoCartridgeMenu {
 
   private renderCartridgePage(): void {
     this.drawBackground(true);
-    this.drawHeader('SELECT CARTRIDGE', `${this.session.manifests.length} CARTRIDGE${this.session.manifests.length === 1 ? '' : 'S'} AVAILABLE`);
+    this.drawHeader(
+      'SELECT CARTRIDGE',
+      `${this.session.manifests.length} CARTRIDGE${this.session.manifests.length === 1 ? '' : 'S'} AVAILABLE`,
+    );
     this.drawCartridgeList();
     this.drawCartridgeDetail();
     this.drawScrollBar();
-    this.drawFooter([['UP DOWN', 'NAVIGATE'], ['ENTER', 'LOAD'], ['S', 'SETTINGS']]);
-    this.drawSoftButton(DESIGN_W - LIST_X - SOFT_BUTTON_W, FOOTER_Y + 11, SOFT_BUTTON_W, SOFT_BUTTON_H, 'SETTINGS', () => {
-      this.session.openSettings();
-      this.render();
-    });
+    this.drawFooter([
+      ['UP DOWN', 'NAVIGATE'],
+      ['ENTER', 'LOAD'],
+      ['S', 'SETTINGS'],
+    ]);
+    this.drawSoftButton(
+      DESIGN_W - LIST_X - SOFT_BUTTON_W,
+      FOOTER_Y + 11,
+      SOFT_BUTTON_W,
+      SOFT_BUTTON_H,
+      'SETTINGS',
+      () => {
+        this.session.openSettings();
+        this.render();
+      },
+    );
   }
 
   private renderSettingsPage(): void {
@@ -199,7 +206,11 @@ export class RoccoCartridgeMenu {
       soundProfile: this.session.soundProfile,
       onSettingsRowPointerDown: (optionId) => this.onSettingsRowPointerDown(optionId),
     });
-    this.drawFooter([['UP DOWN', 'SELECT'], ['ENTER', 'OPEN'], ['ESC', 'BACK']]);
+    this.drawFooter([
+      ['UP DOWN', 'SELECT'],
+      ['ENTER', 'OPEN'],
+      ['ESC', 'BACK'],
+    ]);
   }
 
   private renderVideoPage(): void {
@@ -252,14 +263,21 @@ export class RoccoCartridgeMenu {
   }
 
   private drawSettingsBackFooter(onBack: () => void): void {
-    this.drawFooter([['UP DOWN', 'SELECT'], ['LEFT RIGHT', 'ADJUST'], ['ESC', 'BACK']], {
-      key: 'ESC',
-      label: 'BACK',
-      onPress: () => {
-        onBack();
-        this.render();
+    this.drawFooter(
+      [
+        ['UP DOWN', 'SELECT'],
+        ['LEFT RIGHT', 'ADJUST'],
+        ['ESC', 'BACK'],
+      ],
+      {
+        key: 'ESC',
+        label: 'BACK',
+        onPress: () => {
+          onBack();
+          this.render();
+        },
       },
-    });
+    );
   }
 
   private drawBackground(isWithDivider: boolean): void {
@@ -286,7 +304,9 @@ export class RoccoCartridgeMenu {
     const root = this.root!;
 
     root.addChild(
-      new Graphics().rect(0, 0, DESIGN_W, HEADER_H).fill(Object.assign({}, { color: 0x0a_0f_09, alpha: 1 })),
+      new Graphics()
+        .rect(0, 0, DESIGN_W, HEADER_H)
+        .fill(Object.assign({}, { color: 0x0a_0f_09, alpha: 1 })),
     );
     root.addChild(
       new Graphics()
@@ -366,7 +386,10 @@ export class RoccoCartridgeMenu {
         .rect(0, 0, width, ITEM_H)
         .fill(isSelected ? C.itemBgSelected : C.itemBg)
         .rect(0, 0, width, ITEM_H)
-        .stroke({ color: isSelected ? C.itemBorderSelected : C.itemBorder, width: isSelected ? 1.5 : 1 }),
+        .stroke({
+          color: isSelected ? C.itemBorderSelected : C.itemBorder,
+          width: isSelected ? 1.5 : 1,
+        }),
     );
 
     if (isSelected) {
@@ -456,7 +479,9 @@ export class RoccoCartridgeMenu {
     }
 
     container.addChild(
-      new Graphics().rect(lx, cy, DETAIL_W, 1).fill(Object.assign({}, { color: C.bgLine, alpha: 1 })),
+      new Graphics()
+        .rect(lx, cy, DETAIL_W, 1)
+        .fill(Object.assign({}, { color: C.bgLine, alpha: 1 })),
     );
     cy += 14;
 
@@ -485,10 +510,18 @@ export class RoccoCartridgeMenu {
       if (!value) {
         continue;
       }
-      const labelText = this.makeText(label, { fontSize: 10, fill: C.detailLabel, letterSpacing: 2 });
+      const labelText = this.makeText(label, {
+        fontSize: 10,
+        fill: C.detailLabel,
+        letterSpacing: 2,
+      });
       labelText.position.set(x, y);
       container.addChild(labelText);
-      const valueText = this.makeText(value, { fontSize: 12, fill: C.detailValue, letterSpacing: 1 });
+      const valueText = this.makeText(value, {
+        fontSize: 12,
+        fill: C.detailValue,
+        letterSpacing: 1,
+      });
       valueText.position.set(x + 100, y);
       container.addChild(valueText);
       y += 22;
@@ -604,7 +637,9 @@ export class RoccoCartridgeMenu {
       });
 
       option.addChild(
-        new Graphics().rect(0, 0, 54, 22).fill(Object.assign({}, { color: 0x00_00_00, alpha: 0.01 })),
+        new Graphics()
+          .rect(0, 0, 54, 22)
+          .fill(Object.assign({}, { color: 0x00_00_00, alpha: 0.01 })),
       );
       option.addChild(
         new Graphics().circle(7, 9, 6).stroke({
@@ -988,8 +1023,8 @@ export class RoccoCartridgeMenu {
 
   private adjustSelectedVideoValue(delta: number): void {
     if (
-      this.session.videoSelectionId === 'brightness'
-      || this.session.videoSelectionId === 'contrast'
+      this.session.videoSelectionId === 'brightness' ||
+      this.session.videoSelectionId === 'contrast'
     ) {
       this.adjustVideoValue(this.session.videoSelectionId, delta);
     }
@@ -1000,17 +1035,18 @@ export class RoccoCartridgeMenu {
   }
 
   private adjustVideoValue(id: 'brightness' | 'contrast', delta: number): void {
-    const nextValue = id === 'brightness'
-      ? this.clamp(
-          this.session.displayProfile.brightness + delta,
-          ROCCO_DISPLAY_BRIGHTNESS_MIN,
-          ROCCO_DISPLAY_BRIGHTNESS_MAX,
-        )
-      : this.clamp(
-          this.session.displayProfile.contrast + delta,
-          ROCCO_DISPLAY_CONTRAST_MIN,
-          ROCCO_DISPLAY_CONTRAST_MAX,
-        );
+    const nextValue =
+      id === 'brightness'
+        ? this.clamp(
+            this.session.displayProfile.brightness + delta,
+            ROCCO_DISPLAY_BRIGHTNESS_MIN,
+            ROCCO_DISPLAY_BRIGHTNESS_MAX,
+          )
+        : this.clamp(
+            this.session.displayProfile.contrast + delta,
+            ROCCO_DISPLAY_CONTRAST_MIN,
+            ROCCO_DISPLAY_CONTRAST_MAX,
+          );
     this.updateDisplayProfile({ [id]: nextValue });
   }
 

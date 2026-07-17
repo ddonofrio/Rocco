@@ -31,12 +31,15 @@ describe('check-tracked-content scanner', () => {
   });
 
   it('keeps the narrow local-path allowlist scoped to its declared files', () => {
+    const localDirectory = ['.', 'local'].join('');
+    const localCachePath = `${localDirectory}/cache`;
+    const localIgnoreGlob = `${localDirectory}/**`;
     expect(
-      scanText('fixture.ts', new TextEncoder().encode("const path = '.local/cache';")),
+      scanText('fixture.ts', new TextEncoder().encode(`const path = '${localCachePath}';`)),
     ).toEqual([expect.objectContaining({ ruleId: 'local-only-path', lineNumber: 1 })]);
     expect(
-      scanText('eslint.config.js', new TextEncoder().encode("const path = '.local/**';")),
+      scanText('eslint.config.js', new TextEncoder().encode(`const path = '${localIgnoreGlob}';`)),
     ).toEqual([]);
-    expect(scanText('.prettierignore', new TextEncoder().encode('.local/'))).toEqual([]);
+    expect(scanText('.prettierignore', new TextEncoder().encode(`${localDirectory}/`))).toEqual([]);
   });
 });

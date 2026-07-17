@@ -9,9 +9,8 @@ const scriptFilePath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptFilePath), '..');
 const localWorkspaceDirectory = '.local';
 const localWorkspaceGlob = localWorkspaceDirectory + '/**';
-const gitExecutable = process.platform === 'win32'
-  ? String.raw`C:\Program Files\Git\bin\git.exe`
-  : '/usr/bin/git';
+const gitExecutable =
+  process.platform === 'win32' ? String.raw`C:\Program Files\Git\bin\git.exe` : '/usr/bin/git';
 const localPathPattern = /(^|[^A-Za-z0-9_-])(?:\.\/)?\.local[\\/]/;
 const utf8FatalDecoder = new TextDecoder('utf-8', { fatal: true });
 const suspiciousMojibakeLeadPattern = /[\u{C2}\u{C3}\u{E2}\u{80}-\u{9F}\u{FFFD}]/u;
@@ -21,11 +20,18 @@ const maxReportedMojibakeLines = 5;
 // Keep allowlist entries narrow and line-specific so the check stays meaningful.
 const allowlist = [
   {
+    filePath: '.prettierignore',
+    ruleId: 'local-only-path',
+    matches: (line) => line.trim() === `${localWorkspaceDirectory}/`,
+  },
+  {
     filePath: '.gitignore',
     ruleId: 'local-only-path',
     matches: (line) => {
       const trimmedLine = line.trim();
-      return trimmedLine === localWorkspaceDirectory || trimmedLine === `${localWorkspaceDirectory}/`;
+      return (
+        trimmedLine === localWorkspaceDirectory || trimmedLine === `${localWorkspaceDirectory}/`
+      );
     },
   },
   {
@@ -55,11 +61,9 @@ const allowlist = [
   },
 ];
 
-const workspacePathCandidates = [...new Set([
-    repoRoot,
-    repoRoot.replaceAll('\\', '/'),
-    repoRoot.replaceAll('\\', '\\\\'),
-  ])];
+const workspacePathCandidates = [
+  ...new Set([repoRoot, repoRoot.replaceAll('\\', '/'), repoRoot.replaceAll('\\', '\\\\')]),
+];
 const windows1252CodePointToByte = new Map([
   [0x20_ac, 0x80],
   [0x00_81, 0x81],
@@ -120,9 +124,13 @@ function readTrackedTextFiles() {
     return [];
   }
 
-  const attributeOutput = execFileSync(gitExecutable, ['-C', repoRoot, 'check-attr', '-z', '--stdin', 'text'], {
-    input: `${trackedFiles.join('\0')}\0`,
-  });
+  const attributeOutput = execFileSync(
+    gitExecutable,
+    ['-C', repoRoot, 'check-attr', '-z', '--stdin', 'text'],
+    {
+      input: `${trackedFiles.join('\0')}\0`,
+    },
+  );
   const attributeTokens = attributeOutput.toString('utf8').split('\0');
   const textFiles = [];
 
@@ -149,7 +157,9 @@ function isAllowlisted(filePath, ruleId, line) {
 
 function findWorkspacePathMatch(line) {
   const normalizedLine = line.toLowerCase();
-  return workspacePathCandidates.find((candidate) => normalizedLine.includes(candidate.toLowerCase()));
+  return workspacePathCandidates.find((candidate) =>
+    normalizedLine.includes(candidate.toLowerCase()),
+  );
 }
 
 function createFailure(filePath, lineNumber, ruleId, message) {
@@ -178,7 +188,9 @@ function normalizeFailure(
   }
 
   const detail =
-    error instanceof Error && error.message ? error.message : 'unknown failure while scanning tracked content';
+    error instanceof Error && error.message
+      ? error.message
+      : 'unknown failure while scanning tracked content';
   return createFailure(filePath, 1, fallbackRuleId, `${fallbackMessage} (${detail})`);
 }
 
@@ -282,7 +294,9 @@ function tryRepairMojibake(text) {
       score: countSuspiciousCodePoints(candidate.repairedText),
     }))
     .filter((candidate) => candidate.score < originalScore)
-    .toSorted((left, right) => left.score - right.score || left.encoding.localeCompare(right.encoding));
+    .toSorted(
+      (left, right) => left.score - right.score || left.encoding.localeCompare(right.encoding),
+    );
 
   return candidates[0];
 }
@@ -323,7 +337,11 @@ function collectMojibakeRepairFailures(filePath, fileContent, repair) {
   const repairedLines = repair.repairedText.split(/\r?\n/);
   const failures = [];
 
-  for (let index = 0; index < originalLines.length && failures.length < maxReportedMojibakeLines; index += 1) {
+  for (
+    let index = 0;
+    index < originalLines.length && failures.length < maxReportedMojibakeLines;
+    index += 1
+  ) {
     const originalLine = originalLines[index] ?? '';
     const repairedLine = repairedLines[index] ?? '';
     if (originalLine === repairedLine) {
@@ -353,9 +371,10 @@ function collectMojibakeRepairFailures(filePath, fileContent, repair) {
   return failures;
 }
 
-function scanFile(filePath) {
-  const absolutePath = path.join(repoRoot, filePath);
-  const fileBuffer = readFileSync(absolutePath);
+export function scanText(filePath, fileBuffer) {
+  if (fileBuffer[0] === 0xef && fileBuffer[1] === 0xbb && fileBuffer[2] === 0xbf) {
+    throw createFailure(filePath, 1, 'utf8-bom', 'contains an unexpected UTF-8 BOM');
+  }
   const fileContent = decodeUtf8Text(filePath, fileBuffer);
   const lines = fileContent.split(/\r?\n/);
   const failures = [];
@@ -393,6 +412,10 @@ function scanFile(filePath) {
   return failures;
 }
 
+function scanFile(filePath) {
+  return scanText(filePath, readFileSync(path.join(repoRoot, filePath)));
+}
+
 function main() {
   let trackedFiles;
   try {
@@ -405,7 +428,9 @@ function main() {
       'failed to enumerate tracked text files',
     );
     writeStderr('Tracked-content hygiene check failed:');
-    writeStderr(`- [${failure.ruleId}] ${failure.filePath}:${failure.lineNumber} ${failure.message}`);
+    writeStderr(
+      `- [${failure.ruleId}] ${failure.filePath}:${failure.lineNumber} ${failure.message}`,
+    );
     process.exitCode = 1;
     return;
   }
@@ -426,9 +451,13 @@ function main() {
 
   writeStderr('Tracked-content hygiene check failed:');
   for (const failure of failures) {
-    writeStderr(`- [${failure.ruleId}] ${failure.filePath}:${failure.lineNumber} ${failure.message}`);
+    writeStderr(
+      `- [${failure.ruleId}] ${failure.filePath}:${failure.lineNumber} ${failure.message}`,
+    );
   }
   process.exitCode = 1;
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === scriptFilePath) {
+  main();
+}

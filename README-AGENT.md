@@ -104,11 +104,15 @@ A cartridge implements `RoccoCartridge`:
 ```typescript
 export interface RoccoCartridge {
   manifest: RoccoCartridgeManifest;
-  setup?(context: RoccoCartridgeSetupContext): Promise<RoccoCartridgeSetupResult | void> | RoccoCartridgeSetupResult | void;
+  setup?(
+    context: RoccoCartridgeSetupContext,
+  ): Promise<RoccoCartridgeSetupResult | void> | RoccoCartridgeSetupResult | void;
   mount(context: RoccoCartridgeContext): Promise<void> | void;
   start?(): Promise<void> | void;
   update?(deltaMs: number): void;
-  handleAction?(activation: RoccoCartridgeAction): Promise<void> | RoccoCartridgeActionResult | void;
+  handleAction?(
+    activation: RoccoCartridgeAction,
+  ): Promise<void> | RoccoCartridgeActionResult | void;
   stop?(): Promise<void> | void;
   dispose?(): Promise<void> | void;
 }
@@ -196,7 +200,7 @@ The full `RoccoEngine` kernel lives in `src/console/engine-sdk.ts`. Inside
 `CartridgeSdkV1` (defined in `src/console/cartridges/sdk-v1`). It is built by
 `createCartridgeSdkV1({ engine, scope, manifest })`, which wraps `RoccoEngine`
 and exposes only the stable subset. Internal-only methods (`video.update`,
-`video.render`, `video.viewport`, `video.zoom`, render-layer ordering,
+`video.render`, `video.viewport`, the kernel `video.zoom` module, render-layer ordering,
 `effects.tick`, `jukebox.unlock`) are absent from the SDK object, so a cartridge
 cannot reach them even at runtime.
 
@@ -270,12 +274,14 @@ Always re-enable input after a sequence completes or fails.
 
 - `loadPlaneScene(scene)` replaces the active graphic scene and keeps runtime scene bookkeeping in sync.
 - `serializePlaneScene(sceneId)` snapshots the current scene state.
-- `engine.persistence.savePlaneScene(scene)` persists a scene.
-- `engine.persistence.loadPlaneSceneRecord(sceneId)` loads a persisted scene.
+- `CartridgeSdkV1.storage.savePlaneScene(scene)` persists a scene for SDK v1.
+- `CartridgeSdkV1.storage.loadPlaneSceneRecord(sceneId)` loads a persisted scene for SDK v1.
+- Legacy cartridges use the explicit `LegacyCartridgeContext.engine.persistence` equivalents.
 
 ## Audio, Jukebox, and Effects SDKs
 
-Cartridges reach these capabilities through subsystem handles on `engine`.
+SDK v1 cartridges reach these capabilities through subsystem handles on
+`CartridgeSdkV1`; legacy cartridges use the explicit `RoccoEngine` context.
 
 - `engine.audio.registerSound(definition)` registers a sound asset.
 - `engine.audio.unregisterSound(id)` removes a sound definition and stops its active instances.
@@ -300,7 +306,9 @@ The built-in `auto-scroll` effect targets graphic planes.
 
 ## Video SDK
 
-The cartridge-facing video SDK lives under `engine.video`. `RoccoRuntimeVideoSystem` exposes subsystem modules plus asset-preload helpers used by cartridges.
+The cartridge-facing video SDK lives under `CartridgeSdkV1.video`.
+`RoccoRuntimeVideoSystem` exposes subsystem modules plus asset-preload helpers
+used by cartridges.
 
 ### Video Preloading
 
@@ -354,7 +362,8 @@ The cartridge-facing video SDK lives under `engine.video`. `RoccoRuntimeVideoSys
 
 - `engine.video.display.getProfile()` returns the current display-profile state.
 - `engine.video.display.setProfile(profile)` applies the display profile such as CRT overlay settings.
-- `engine.video.render(0)` forces an immediate sync after scripted UI or choreography changes.
+- The console render loop synchronizes scripted UI and choreography changes; SDK
+  v1 cartridges do not call the kernel render method.
 
 The cursor attachment is a console capability owned by input and viewport systems. Cartridge code does not call `viewportHost` directly.
 

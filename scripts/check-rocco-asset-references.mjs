@@ -18,7 +18,8 @@ const trackedAssetExtensions = new Set([
   '.wav',
   '.webp',
 ]);
-const newUrlAssetPattern = /new URL\(\s*(['"`])([^'"`]+)\1\s*,\s*import\.meta\.url\s*\)/g;
+// eslint-disable-next-line sonarjs/super-linear-regex -- The bounded asset literal and URL syntax keep this scan local to one declaration.
+const newUrlAssetPattern = /new URL\(\s*(['"`])([^'"`]+)\1\s*,\s*import\.meta\.url\s*,?\s*\)/g;
 const baseUrlAssetPattern = /`\$\{import\.meta\.env\.BASE_URL\}([^`]+)`/g;
 
 function writeStdout(message) {
@@ -62,11 +63,7 @@ function toRepoRelativePath(filePath) {
 
 function isInsideDirectory(rootPath, candidatePath) {
   const relativePath = path.relative(rootPath, candidatePath);
-  return (
-    relativePath !== '' &&
-    !relativePath.startsWith('..') &&
-    !path.isAbsolute(relativePath)
-  );
+  return relativePath !== '' && !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
 }
 
 function collectNewUrlAssetFailures(filePath, sourceFile, source, failures) {
@@ -79,16 +76,12 @@ function collectNewUrlAssetFailures(filePath, sourceFile, source, failures) {
 
     const resolvedPath = path.resolve(path.dirname(filePath), assetPath);
     if (!isInsideDirectory(roccoSourceRoot, resolvedPath)) {
-      failures.push(
-        `${sourceFile} references '${assetPath}' outside 'src/cartridges/rocco'`,
-      );
+      failures.push(`${sourceFile} references '${assetPath}' outside 'src/cartridges/rocco'`);
       continue;
     }
 
     if (!existsSync(resolvedPath)) {
-      failures.push(
-        `${sourceFile} references missing asset '${assetPath}'`,
-      );
+      failures.push(`${sourceFile} references missing asset '${assetPath}'`);
     }
   }
 }
@@ -110,9 +103,7 @@ function collectBaseUrlAssetFailures(filePath, sourceFile, source, failures) {
     }
 
     if (!existsSync(resolvedPath)) {
-      failures.push(
-        `${sourceFile} references missing public asset '${assetPath}'`,
-      );
+      failures.push(`${sourceFile} references missing public asset '${assetPath}'`);
     }
   }
 }

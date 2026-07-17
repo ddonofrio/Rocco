@@ -1,15 +1,18 @@
-/* eslint-disable max-lines, unicorn/consistent-class-member-order */
+/* eslint-disable unicorn/consistent-class-member-order */
 
 import type {
   CartridgeActionDisposition,
   RoccoSceneClickAction,
 } from '../../../../../../console/cartridges';
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../../../../../console/video/action-menu';
-import type { RoccoGridMenuCarriedItem, RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
+import type {
+  RoccoGridMenuCarriedItem,
+  RoccoGridMenuActivation,
+} from '../../../../../../console/video/grid-menu';
 import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../../../../../console/video/planes';
 import {
   createRoccoSpriteAutoCroppedFrames,
@@ -33,10 +36,7 @@ import {
   type RoccoInventoryItem,
 } from '../../inventory';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import {
-  roccoDefaultActionMenuAssetUrls,
-  roccoDefaultYouLoseSoundUrl,
-} from '../../sprites';
+import { roccoDefaultActionMenuAssetUrls, roccoDefaultYouLoseSoundUrl } from '../../sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import {
   createRoccoPlayerActionMenuDefinition,
@@ -72,9 +72,7 @@ import {
   type RoccoLevelConnector,
   type RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
-import {
-  type RoccoToiletLevelCapability,
-} from '../../../../levels/runtime/rocco-level-capabilities';
+import { type RoccoToiletLevelCapability } from '../../../../levels/runtime/rocco-level-capabilities';
 import { baitShopToiletAssetUrls } from './bait-shop-assets';
 import {
   installBaitShopWalkMap,
@@ -99,12 +97,7 @@ export interface RoccoBaitShopToiletLevelOptions {
   isStanIdentified?: () => boolean;
 }
 
-type BaitShopToiletReadingPhase =
-  | 'lines'
-  | 'stan-alert'
-  | 'fading'
-  | 'title'
-  | 'restarting';
+type BaitShopToiletReadingPhase = 'lines' | 'stan-alert' | 'fading' | 'title' | 'restarting';
 
 interface BaitShopToiletReadingSequence {
   phase: BaitShopToiletReadingPhase;
@@ -121,10 +114,7 @@ type BaitShopToiletWishSequencePhase =
   | 'police-response'
   | 'direct-defeat';
 
-type BaitShopToiletWishOutcome =
-  | 'toilet-disappears'
-  | 'rocco-disappears'
-  | 'direct-defeat';
+type BaitShopToiletWishOutcome = 'toilet-disappears' | 'rocco-disappears' | 'direct-defeat';
 
 interface BaitShopToiletWishSequence {
   phase: BaitShopToiletWishSequencePhase;
@@ -137,11 +127,7 @@ interface BaitShopToiletWishSequence {
   policeReplyShown: boolean;
 }
 
-type BaitShopToiletThrowPhase =
-  | 'walking-to-center'
-  | 'walking-to-back'
-  | 'pickup-hold'
-  | 'falling';
+type BaitShopToiletThrowPhase = 'walking-to-center' | 'walking-to-back' | 'pickup-hold' | 'falling';
 
 interface BaitShopToiletThrowSequence {
   phase: BaitShopToiletThrowPhase;
@@ -237,20 +223,15 @@ const BAIT_SHOP_TOILET_READING_MESSAGE_ID = 'rocco-bait-shop-toilet-reading-mess
 const BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID = 'rocco-bait-shop-toilet-stan-alert-message';
 const BAIT_SHOP_TOILET_POST_WISH_PLAYER_REPLY_MESSAGE_ID =
   'rocco-bait-shop-toilet-post-wish-player-reply-message';
-const BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID =
-  'rocco-bait-shop-toilet-stan-alert-anchor';
+const BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID = 'rocco-bait-shop-toilet-stan-alert-anchor';
 const BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID =
   'rocco-bait-shop-toilet-reading-anchor';
 const BAIT_SHOP_TOILET_READING_LINE_DURATION_MS = 12_800;
 const BAIT_SHOP_TOILET_READING_MESSAGE_SCALE = 0.8;
 const BAIT_SHOP_TOILET_READING_MESSAGE_MAX_WIDTH = Math.round(
-  Math.min(
-    DEFAULT_DESIGN_WIDTH - 44,
-    330 * BAIT_SHOP_TOILET_READING_MESSAGE_SCALE * 4,
-  ),
+  Math.min(DEFAULT_DESIGN_WIDTH - 44, 330 * BAIT_SHOP_TOILET_READING_MESSAGE_SCALE * 4),
 );
-const BAIT_SHOP_TOILET_READING_MESSAGE_FONT_SIZE =
-  18 * BAIT_SHOP_TOILET_READING_MESSAGE_SCALE * 2;
+const BAIT_SHOP_TOILET_READING_MESSAGE_FONT_SIZE = 18 * BAIT_SHOP_TOILET_READING_MESSAGE_SCALE * 2;
 const BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_X = DEFAULT_DESIGN_WIDTH / 2;
 const BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_Y = DEFAULT_DESIGN_HEIGHT / 2 + 60;
 const BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SCALE = 0.08;
@@ -265,8 +246,7 @@ const BAIT_SHOP_TOILET_STAN_ALERT_END_X = DEFAULT_DESIGN_WIDTH + 58;
 const BAIT_SHOP_TOILET_STAN_ALERT_BASE_Y = 124;
 const BAIT_SHOP_TOILET_READING_DEFEAT_FADE_PRIMITIVE_ID =
   'rocco-bait-shop-toilet-reading-defeat-fade';
-const BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_ID =
-  'rocco-bait-shop-toilet-reading-defeat-title';
+const BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_ID = 'rocco-bait-shop-toilet-reading-defeat-title';
 const BAIT_SHOP_TOILET_READING_DEFEAT_FADE_DURATION_MS = 1300;
 const BAIT_SHOP_TOILET_READING_DEFEAT_TITLE_DURATION_MS = 3600;
 const IS_BAIT_SHOP_TOILET_ALLOW_STAND_WALK_CANCEL = false;
@@ -278,8 +258,7 @@ const BAIT_SHOP_TOILET_WISH_STAN_DISAPPEAR_CHOICE_ID = 'wish-stan-disappear';
 const BAIT_SHOP_TOILET_WISH_ESCAPE_CHOICE_ID = 'wish-escape';
 const BAIT_SHOP_TOILET_POST_WISH_RESPONSE_MENU_ID =
   'rocco-bait-shop-toilet-post-wish-response-menu';
-const BAIT_SHOP_TOILET_POST_WISH_REPLY_MOMENT_PLEASE_CHOICE_ID =
-  'post-wish-reply-moment-please';
+const BAIT_SHOP_TOILET_POST_WISH_REPLY_MOMENT_PLEASE_CHOICE_ID = 'post-wish-reply-moment-please';
 const BAIT_SHOP_TOILET_POST_WISH_REPLY_NO_HIT_CHOICE_ID = 'post-wish-reply-no-hit';
 const BAIT_SHOP_TOILET_POST_WISH_REPLY_WHAT_IF_NOT_CHOICE_ID = 'post-wish-reply-what-if-not';
 const BAIT_SHOP_TOILET_POST_WISH_REPLY_COME_IN_CHOICE_ID = 'post-wish-reply-come-in';
@@ -323,8 +302,7 @@ const BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST = {
   nearScale: 1,
 } as const;
 
-const BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_DEFINITION_ID =
-  'rocco-bait-shop-toilet-throw-relic';
+const BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_DEFINITION_ID = 'rocco-bait-shop-toilet-throw-relic';
 const BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID =
   'rocco-bait-shop-toilet-throw-relic-instance';
 const BAIT_SHOP_TOILET_THROW_RELIC_IMAGE_ID = 'rocco-bait-shop-toilet-throw-relic-image';
@@ -412,10 +390,7 @@ const BAIT_SHOP_TOILET_SCENE_DEFINITION: RoccoBaitShopSceneDefinition = {
   },
   backgroundUri: baitShopToiletAssetUrls.background,
   backgroundName: 'Bait Shop Toilet Background',
-  extraPlanes: [
-    BAIT_SHOP_TOILET_READING_BACKDROP_PLANE,
-    BAIT_SHOP_TOILET_READING_IMAGE_PLANE,
-  ],
+  extraPlanes: [BAIT_SHOP_TOILET_READING_BACKDROP_PLANE, BAIT_SHOP_TOILET_READING_IMAGE_PLANE],
 };
 
 function makeBaitShopToiletActionMenuBase(): Omit<RoccoActionMenuDefinition, 'id' | 'items'> {
@@ -451,7 +426,7 @@ function suppressDefaultPlayerMovement(): CartridgeActionDisposition {
 }
 
 async function preloadBaitShopToiletSound(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   preloader: RoccoAssetPreloader | undefined,
   soundId: string,
   failureMessage: string,
@@ -557,8 +532,7 @@ async function createBaitShopToiletSpriteDefinition(): Promise<{
   });
 
   const frameIds = crop.frameIds.length > 0 ? crop.frameIds : ['bait-shop-toilet-pose-1'];
-  const initialFrame =
-    crop.frames.find((frame) => frame.id === frameIds[0]) ??
+  const initialFrame = crop.frames.find((frame) => frame.id === frameIds[0]) ??
     crop.frames[0] ?? {
       id: 'fallback',
       imageId: BAIT_SHOP_TOILET_SHEET_IMAGE_ID,
@@ -608,7 +582,8 @@ async function createBaitShopToiletSmokeSpriteDefinition(): Promise<{
     hitbox: 'none',
   });
 
-  const frameIds = crop.frameIds.length > 0 ? crop.frameIds : [`${BAIT_SHOP_TOILET_SMOKE_FRAME_ID_PREFIX}-1`];
+  const frameIds =
+    crop.frameIds.length > 0 ? crop.frameIds : [`${BAIT_SHOP_TOILET_SMOKE_FRAME_ID_PREFIX}-1`];
   const initialFrame = crop.frames.find((frame) => frame.id === frameIds[0]) ?? crop.frames[0];
   const initialFrameHeight = initialFrame?.rect?.height ?? 1;
 
@@ -721,14 +696,14 @@ function createSeatedRoccoActionMenuDefinition(
   };
 }
 
-export class RoccoBaitShopToiletLevel
+class RoccoBaitShopToiletController
   implements RoccoLevel, RoccoToiletLevelCapability, BaitShopToiletSeatControllerHost
 {
   private readonly localization: RoccoLocalization;
   private readonly options: RoccoBaitShopToiletLevelOptions;
   private readonly seatController: BaitShopToiletSeatController;
-  private engine: RoccoEngine | undefined;
-  private inputLease: ReturnType<RoccoEngine['acquireInputLease']> | undefined;
+  private engine: CartridgeSdkV1Runtime | undefined;
+  private inputLease: ReturnType<CartridgeSdkV1Runtime['acquireInputLease']> | undefined;
   private spriteController: RoccoDefaultSpriteController | undefined;
   private readingDialogue: RoccoDialogueSession | undefined;
   private policeDialogue: RoccoDialogueSession | undefined;
@@ -770,7 +745,10 @@ export class RoccoBaitShopToiletLevel
     this.localization = localization;
     this.options = options;
     this.title = localization.text.levels.baitShopToiletTitle;
-    this.seatController = new BaitShopToiletSeatController(this, this.createSeatControllerOptions());
+    this.seatController = new BaitShopToiletSeatController(
+      this,
+      this.createSeatControllerOptions(),
+    );
   }
 
   private createSeatControllerOptions(): BaitShopToiletSeatControllerOptions {
@@ -799,26 +777,30 @@ export class RoccoBaitShopToiletLevel
   }
 
   playIdleAction(direction: RoccoFacingDirection): void {
-    this.engine?.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-      direction,
-      restart: true,
-    });
+    this.engine?.video.sprites.playAction(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      {
+        direction,
+        restart: true,
+      },
+    );
   }
 
   startWalkTo(point: RoccoPoint, options: { constrainToWalkMap?: boolean } = {}): boolean {
-    return this.engine?.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, point.x, point.y, {
-      action: DEFAULT_SPRITE_RUN_ACTION_ID,
-      idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-      constrainToWalkMap: options.constrainToWalkMap,
-      stopDistance: 1,
-      idleSettleDelayMs: 0,
-      idleSettleFacing: 'diagonal-from-facing',
-    }) ?? false;
+    return (
+      this.engine?.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, point.x, point.y, {
+        action: DEFAULT_SPRITE_RUN_ACTION_ID,
+        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        constrainToWalkMap: options.constrainToWalkMap,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      }) ?? false
+    );
   }
 
-  render(): void {
-    this.engine?.video.render(0);
-  }
+  render(): void {}
 
   finishSitPresentation(): void {
     if (!this.engine) {
@@ -827,7 +809,6 @@ export class RoccoBaitShopToiletLevel
     this.setToiletVisibleDescription(this.localization.text.descriptions.seatedRocco);
     this.installSeatedRoccoActionMenu();
     this.setInputEnabled(true);
-    this.engine.video.render(0);
   }
 
   finishStandPresentation(destination: RoccoPoint | undefined): void {
@@ -848,7 +829,6 @@ export class RoccoBaitShopToiletLevel
       this.pendingPostStandStanAlert = false;
       this.startPassiveStanPoliceAlert();
     }
-    this.engine.video.render(0);
   }
 
   get roccoSeated(): boolean {
@@ -867,10 +847,7 @@ export class RoccoBaitShopToiletLevel
     }
 
     if (!this.inputLease && this.engine) {
-      this.inputLease = this.engine.acquireInputLease(
-        'rocco-bait-shop-toilet-level',
-        'blocked',
-      );
+      this.inputLease = this.engine.acquireInputLease('rocco-bait-shop-toilet-level', 'blocked');
     }
   }
 
@@ -903,7 +880,7 @@ export class RoccoBaitShopToiletLevel
     );
 
     if (isStarted) {
-      this.engine.video.render(0);
+      // The render loop owns presentation updates.
     }
 
     return isStarted;
@@ -952,17 +929,18 @@ export class RoccoBaitShopToiletLevel
 
   private createCraftableCoralRelicStepLine(step: RoccoInventoryFusionStep): string {
     const [firstItemId, secondItemId] = step.ingredientIds;
-    return this.formatTemplateLine(this.localization.text.baitShop.toiletMagazineReadingCraftStepLine, {
-      first: resolveRoccoInventoryItemLabel(firstItemId, this.localization) ?? firstItemId,
-      second: resolveRoccoInventoryItemLabel(secondItemId, this.localization) ?? secondItemId,
-      result: resolveRoccoInventoryItemLabel(step.resultItemId, this.localization) ?? step.resultItemId,
-    });
+    return this.formatTemplateLine(
+      this.localization.text.baitShop.toiletMagazineReadingCraftStepLine,
+      {
+        first: resolveRoccoInventoryItemLabel(firstItemId, this.localization) ?? firstItemId,
+        second: resolveRoccoInventoryItemLabel(secondItemId, this.localization) ?? secondItemId,
+        result:
+          resolveRoccoInventoryItemLabel(step.resultItemId, this.localization) ?? step.resultItemId,
+      },
+    );
   }
 
-  private formatTemplateLine(
-    template: string,
-    replacements: Record<string, string>,
-  ): string {
+  private formatTemplateLine(template: string, replacements: Record<string, string>): string {
     let formatted = template;
     for (const [key, value] of Object.entries(replacements)) {
       formatted = formatted.replaceAll(`{${key}}`, () => value);
@@ -997,7 +975,6 @@ export class RoccoBaitShopToiletLevel
       volume: BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_VOLUME,
     });
     this.addReadingDefeatFadePrimitive(0);
-    this.engine.video.render(0);
   }
 
   private updateThrowSequence(deltaMs: number): void {
@@ -1049,7 +1026,6 @@ export class RoccoBaitShopToiletLevel
     }
     sequence.phase = 'walking-to-back';
     sequence.elapsedMs = 0;
-    this.engine.video.render(0);
   }
 
   private updateThrowWalkingToBack(): void {
@@ -1067,13 +1043,16 @@ export class RoccoBaitShopToiletLevel
     if (sequence.elapsedMs < BAIT_SHOP_TOILET_THROW_FACE_FRONT_WAIT_MS) {
       return;
     }
-    this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-      direction: 'down',
-      restart: true,
-    });
+    this.engine.video.sprites.playAction(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      {
+        direction: 'down',
+        restart: true,
+      },
+    );
     sequence.phase = 'falling';
     sequence.elapsedMs = 0;
-    this.engine.video.render(0);
   }
 
   private updateThrowFalling(sequence: BaitShopToiletThrowSequence, deltaMs: number): void {
@@ -1081,12 +1060,14 @@ export class RoccoBaitShopToiletLevel
       return;
     }
     sequence.elapsedMs += deltaMs;
-    const progress = Math.min(1, sequence.elapsedMs / BAIT_SHOP_TOILET_THROW_RELIC_FALL_DURATION_MS);
+    const progress = Math.min(
+      1,
+      sequence.elapsedMs / BAIT_SHOP_TOILET_THROW_RELIC_FALL_DURATION_MS,
+    );
     const eased = 1 - (1 - progress) * (1 - progress);
     const x = sequence.startPoint.x + (sequence.endPoint.x - sequence.startPoint.x) * eased;
     const y = sequence.startPoint.y + (sequence.endPoint.y - sequence.startPoint.y) * eased;
     this.engine.video.sprites.setPosition(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID, x, y);
-    this.engine.video.render(0);
     if (progress >= 1) {
       this.finishThrowSequence();
     }
@@ -1141,14 +1122,10 @@ export class RoccoBaitShopToiletLevel
       },
     );
     this.engine.video.sprites.stopAnimation(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID);
-    this.engine.video.sprites.setAnimationFrame(
-      BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID,
-      0,
-    );
+    this.engine.video.sprites.setAnimationFrame(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID, 0);
 
     this.throwSequence.phase = 'pickup-hold';
     this.throwSequence.elapsedMs = 0;
-    this.engine.video.render(0);
   }
 
   private resolveThrowRelicPlacement(
@@ -1188,11 +1165,9 @@ export class RoccoBaitShopToiletLevel
       const groundPoint =
         sequence.groundPoint.x !== 0 || sequence.groundPoint.y !== 0
           ? sequence.groundPoint
-          : this.resolvePlayerGroundPoint() ?? sequence.groundPoint;
+          : (this.resolvePlayerGroundPoint() ?? sequence.groundPoint);
       sequence.onComplete({ ...groundPoint });
     }
-
-    this.engine.video.render(0);
   }
 
   private createThrowRelicSpriteDefinition(): RoccoSpriteDefinition {
@@ -1294,7 +1269,6 @@ export class RoccoBaitShopToiletLevel
       elapsedMs: 0,
     };
     this.showCurrentMagazineReadingLine();
-    this.engine.video.render(0);
   }
 
   private advanceReadingSequence(): void {
@@ -1439,7 +1413,9 @@ export class RoccoBaitShopToiletLevel
       return;
     }
 
-    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.removeSprite(
+      BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID,
+    );
     this.engine.video.sprites.createSpriteFromDefinition(BAIT_SHOP_TOILET_SPRITE_DEFINITION_ID, {
       id: BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID,
       transform: {
@@ -1463,7 +1439,9 @@ export class RoccoBaitShopToiletLevel
       return;
     }
 
-    this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.removeSprite(
+      BAIT_SHOP_TOILET_READING_MESSAGE_ANCHOR_SPRITE_INSTANCE_ID,
+    );
   }
 
   private beginEscapeStandSequence(): void {
@@ -1485,7 +1463,6 @@ export class RoccoBaitShopToiletLevel
       this.startPassiveStanPoliceAlert();
       this.syncToiletUrgencyPresentation();
     }
-    this.engine.video.render(0);
   }
 
   private beginReadingDefeatFade(): void {
@@ -1511,7 +1488,6 @@ export class RoccoBaitShopToiletLevel
       volume: BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_VOLUME,
     });
     this.addReadingDefeatFadePrimitive(0);
-    this.engine.video.render(0);
   }
 
   private beginStanPoliceAlert(): void {
@@ -1575,7 +1551,6 @@ export class RoccoBaitShopToiletLevel
       },
       visible: true,
     });
-    this.engine.video.render(0);
   }
 
   private finishReadingDefeat(): void {
@@ -1614,7 +1589,6 @@ export class RoccoBaitShopToiletLevel
       height: DEFAULT_DESIGN_HEIGHT,
       fill: true,
     });
-    this.engine.video.render(0);
   }
 
   private clearReadingPresentation(): void {
@@ -1636,7 +1610,6 @@ export class RoccoBaitShopToiletLevel
     this.removeReadingMessageAnchorSprite();
     this.removeStanPoliceAlertAnchorSprite();
     this.setReadingOverlayVisible(false);
-    this.engine.video.render(0);
   }
 
   private setReadingOverlayVisible(isVisible: boolean): void {
@@ -1666,13 +1639,11 @@ export class RoccoBaitShopToiletLevel
       (this.escapeUrgencyActive && !this.isToiletReuseDuringUrgencyEnabled())
     ) {
       this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
-      this.engine.video.render(0);
       return;
     }
 
     this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
     this.engine.video.actionMenus.registerMenu(this.createToiletActionMenuDefinition());
-    this.engine.video.render(0);
   }
 
   private installSeatedRoccoActionMenu(): void {
@@ -1688,7 +1659,6 @@ export class RoccoBaitShopToiletLevel
         isRoccoDeveloperModeEnabled(this.engine),
       ),
     );
-    this.engine.video.render(0);
   }
 
   private restoreDefaultActionMenus(): void {
@@ -1703,7 +1673,6 @@ export class RoccoBaitShopToiletLevel
         isRoccoDeveloperModeEnabled(this.engine),
       ),
     );
-    this.engine.video.render(0);
   }
 
   private createToiletActionMenuDefinition(): RoccoActionMenuDefinition {
@@ -1769,11 +1738,14 @@ export class RoccoBaitShopToiletLevel
     sprite.interactive = true;
     sprite.collisionEnabled = true;
     this.recreatePlayerSprite(sprite);
-    this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-      direction: 'down',
-      restart: true,
-    });
-    this.engine.video.render(0);
+    this.engine.video.sprites.playAction(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      {
+        direction: 'down',
+        restart: true,
+      },
+    );
   }
 
   private getPlayerSpriteClone(): RoccoSpriteInstance | undefined {
@@ -1796,7 +1768,6 @@ export class RoccoBaitShopToiletLevel
 
     const clampedIndex = Math.max(0, Math.min(this.toiletFrameCount - 1, frameIndex));
     this.engine.video.sprites.setAnimationFrame(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID, clampedIndex);
-    this.engine.video.render(0);
   }
 
   private showRoccoThoughtLines(lines: string[], historyKey: string): void {
@@ -1817,7 +1788,6 @@ export class RoccoBaitShopToiletLevel
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private showRoccoThoughtLine(line: string): void {
@@ -1828,7 +1798,6 @@ export class RoccoBaitShopToiletLevel
     this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, line, {
       ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
     });
-    this.engine.video.render(0);
   }
 
   private showToiletThoughtLines(lines: string[], historyKey: string): void {
@@ -1849,7 +1818,6 @@ export class RoccoBaitShopToiletLevel
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private ensureStanPoliceAlertAnchorSprite(): void {
@@ -1917,7 +1885,6 @@ export class RoccoBaitShopToiletLevel
     this.passiveStanPoliceAlertElapsedMs = 0;
     this.ensureStanPoliceAlertAnchorSprite();
     this.showPoliceVoiceMessage(line, ttlMs, speaker);
-    this.engine.video.render(0);
   }
 
   private beginAdvanceablePoliceVoice(
@@ -1946,7 +1913,6 @@ export class RoccoBaitShopToiletLevel
       },
       onComplete,
     });
-    this.engine.video.render(0);
   }
 
   private showPoliceVoiceMessage(
@@ -1958,18 +1924,14 @@ export class RoccoBaitShopToiletLevel
       return;
     }
 
-    this.engine.video.messages.say(
-      BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID,
-      line,
-      {
-        id: BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID,
-        ttlMs,
-        side: 'left',
-        maxWidth: BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_MAX_WIDTH,
-        zIndex: 5000,
-        style: this.createPoliceVoiceMessageStyle(speaker),
-      },
-    );
+    this.engine.video.messages.say(BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID, line, {
+      id: BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID,
+      ttlMs,
+      side: 'left',
+      maxWidth: BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_MAX_WIDTH,
+      zIndex: 5000,
+      style: this.createPoliceVoiceMessageStyle(speaker),
+    });
   }
 
   private createPoliceVoiceMessageStyle(speaker: 'caller' | 'police'): {
@@ -2004,19 +1966,14 @@ export class RoccoBaitShopToiletLevel
       position.x,
       position.y,
     );
-    this.engine.video.render(0);
   }
 
   private resolveStanPoliceAlertAnchorPosition(elapsedMs: number): RoccoPoint {
-    const progress = Math.max(
-      0,
-      Math.min(1, elapsedMs / BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS),
-    );
+    const progress = Math.max(0, Math.min(1, elapsedMs / BAIT_SHOP_TOILET_STAN_ALERT_DURATION_MS));
     const easedProgress = 1 - (1 - progress) * (1 - progress);
     const baseX =
       BAIT_SHOP_TOILET_STAN_ALERT_START_X +
-      (BAIT_SHOP_TOILET_STAN_ALERT_END_X - BAIT_SHOP_TOILET_STAN_ALERT_START_X) *
-        easedProgress;
+      (BAIT_SHOP_TOILET_STAN_ALERT_END_X - BAIT_SHOP_TOILET_STAN_ALERT_START_X) * easedProgress;
     const jitterX = Math.sin(elapsedMs / 190) * 14 + Math.sin(elapsedMs / 86) * 6;
     const jitterY = Math.sin(elapsedMs / 176) * 11 + Math.sin(elapsedMs / 62) * 4;
 
@@ -2043,9 +2000,7 @@ export class RoccoBaitShopToiletLevel
     }
 
     this.engine.video.messages.removeMessage(BAIT_SHOP_TOILET_STAN_ALERT_MESSAGE_ID);
-    this.engine.video.messages.removeMessage(
-      BAIT_SHOP_TOILET_POST_WISH_PLAYER_REPLY_MESSAGE_ID,
-    );
+    this.engine.video.messages.removeMessage(BAIT_SHOP_TOILET_POST_WISH_PLAYER_REPLY_MESSAGE_ID);
     this.engine.video.messages.removeMessage(
       `${BAIT_SHOP_TOILET_STAN_ALERT_SPRITE_INSTANCE_ID}:active-message`,
     );
@@ -2116,7 +2071,6 @@ export class RoccoBaitShopToiletLevel
       }).gridMenu,
     );
     this.setInputEnabled(true);
-    this.engine.video.render(0);
   }
 
   private startPostWishPoliceResponse(itemId: string | undefined): void {
@@ -2158,7 +2112,11 @@ export class RoccoBaitShopToiletLevel
           BAIT_SHOP_TOILET_POST_WISH_POLICE_REPLY_TTL_MS,
           'police',
           () => {
-            if (!this.engine || !this.wishSequence || this.wishSequence.phase !== 'police-response') {
+            if (
+              !this.engine ||
+              !this.wishSequence ||
+              this.wishSequence.phase !== 'police-response'
+            ) {
               return;
             }
 
@@ -2166,7 +2124,6 @@ export class RoccoBaitShopToiletLevel
             this.requestPortalActivation();
             this.setInputEnabled(true);
             this.wishSequence = undefined;
-            this.engine.video.render(0);
           },
         );
         this.wishSequence = {
@@ -2175,7 +2132,6 @@ export class RoccoBaitShopToiletLevel
         };
       },
     });
-    this.engine.video.render(0);
   }
 
   private advanceToPostWishPoliceResponseMenu(): void {
@@ -2238,7 +2194,6 @@ export class RoccoBaitShopToiletLevel
       effectApplied: false,
       policeReplyShown: false,
     };
-    this.engine.video.render(0);
   }
 
   private startWishSequence(outcome: BaitShopToiletWishOutcome): void {
@@ -2278,7 +2233,6 @@ export class RoccoBaitShopToiletLevel
       effectApplied: false,
       policeReplyShown: false,
     };
-    this.engine.video.render(0);
   }
 
   private updateWishSequence(deltaMs: number): void {
@@ -2436,11 +2390,11 @@ export class RoccoBaitShopToiletLevel
     this.finishWishSmokeSequence(sequence, nextElapsedMs);
   }
 
-  private applyWishSmokeEffect(
-    sequence: BaitShopToiletWishSequence,
-    nextFrameIndex: number,
-  ): void {
-    if (nextFrameIndex < BAIT_SHOP_TOILET_SMOKE_REMOVE_TOILET_FRAME_INDEX || sequence.effectApplied) {
+  private applyWishSmokeEffect(sequence: BaitShopToiletWishSequence, nextFrameIndex: number): void {
+    if (
+      nextFrameIndex < BAIT_SHOP_TOILET_SMOKE_REMOVE_TOILET_FRAME_INDEX ||
+      sequence.effectApplied
+    ) {
       return;
     }
     if (sequence.outcome === 'rocco-disappears') {
@@ -2460,10 +2414,14 @@ export class RoccoBaitShopToiletLevel
     }
     const player = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
     if (player) {
-      this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-        direction: player.facing ?? player.action?.direction ?? 'down',
-        restart: true,
-      });
+      this.engine.video.sprites.playAction(
+        DEFAULT_SPRITE_INSTANCE_ID,
+        DEFAULT_SPRITE_IDLE_ACTION_ID,
+        {
+          direction: player.facing ?? player.action?.direction ?? 'down',
+          restart: true,
+        },
+      );
     }
     this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
     if (sequence.outcome === 'rocco-disappears') {
@@ -2481,7 +2439,6 @@ export class RoccoBaitShopToiletLevel
       elapsedMs: elapsedSinceToiletDisappeared,
       policeReplyShown: false,
     };
-    this.engine.video.render(0);
   }
 
   private spawnSmokeSpriteAt(position: RoccoPoint): void {
@@ -2490,25 +2447,27 @@ export class RoccoBaitShopToiletLevel
     }
 
     this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
-    this.engine.video.sprites.createSpriteFromDefinition(BAIT_SHOP_TOILET_SMOKE_SPRITE_DEFINITION_ID, {
-      id: BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID,
-      transform: {
-        x: position.x,
-        y: position.y,
-        scaleX: this.smokeScale,
-        scaleY: this.smokeScale,
-        rotation: 0,
+    this.engine.video.sprites.createSpriteFromDefinition(
+      BAIT_SHOP_TOILET_SMOKE_SPRITE_DEFINITION_ID,
+      {
+        id: BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID,
+        transform: {
+          x: position.x,
+          y: position.y,
+          scaleX: this.smokeScale,
+          scaleY: this.smokeScale,
+          rotation: 0,
+        },
+        renderLayer: 'world.front',
+        zIndex: 22,
+        depthMode: 'fixed',
+        interactive: false,
+        collisionEnabled: false,
+        ignoreMessages: true,
       },
-      renderLayer: 'world.front',
-      zIndex: 22,
-      depthMode: 'fixed',
-      interactive: false,
-      collisionEnabled: false,
-      ignoreMessages: true,
-    });
+    );
     this.engine.video.sprites.stopAnimation(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
     this.engine.video.sprites.setAnimationFrame(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID, 0);
-    this.engine.video.render(0);
   }
 
   private resolveToiletSmokeGroundPoint(): RoccoPoint {
@@ -2627,26 +2586,29 @@ export class RoccoBaitShopToiletLevel
 
     const position = this.resolvePortalBasePoint();
     this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID);
-    this.engine.video.sprites.createSpriteFromDefinition(BAIT_SHOP_TOILET_PORTAL_SPRITE_DEFINITION_ID, {
-      id: BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID,
-      transform: {
-        x: position.x,
-        y: position.y,
-        scaleX: this.portalScale,
-        scaleY: this.portalScale,
-        rotation: 0,
+    this.engine.video.sprites.createSpriteFromDefinition(
+      BAIT_SHOP_TOILET_PORTAL_SPRITE_DEFINITION_ID,
+      {
+        id: BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID,
+        transform: {
+          x: position.x,
+          y: position.y,
+          scaleX: this.portalScale,
+          scaleY: this.portalScale,
+          rotation: 0,
+        },
+        renderLayer: 'world.front',
+        zIndex: 21,
+        depthMode: 'fixed',
+        interactive: true,
+        collisionEnabled: false,
+        visibleDescription: {
+          enabled: true,
+          text: this.resolvePortalDescription(),
+        },
+        ignoreMessages: true,
       },
-      renderLayer: 'world.front',
-      zIndex: 21,
-      depthMode: 'fixed',
-      interactive: true,
-      collisionEnabled: false,
-      visibleDescription: {
-        enabled: true,
-        text: this.resolvePortalDescription(),
-      },
-      ignoreMessages: true,
-    });
+    );
     this.engine.video.sprites.playAnimation(
       BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID,
       isPlayOpening
@@ -2656,7 +2618,6 @@ export class RoccoBaitShopToiletLevel
         restart: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private registerPortalTarget(): void {
@@ -2690,7 +2651,9 @@ export class RoccoBaitShopToiletLevel
 
   private resolvePortalBasePoint(): RoccoPoint {
     return {
-      x: (this.toiletTargetRect?.x ?? BAIT_SHOP_TOILET_TARGET_X) + (this.toiletTargetRect?.width ?? 96) / 2,
+      x:
+        (this.toiletTargetRect?.x ?? BAIT_SHOP_TOILET_TARGET_X) +
+        (this.toiletTargetRect?.width ?? 96) / 2,
       y:
         (this.toiletTargetRect?.y ?? BAIT_SHOP_TOILET_TARGET_Y) +
         BAIT_SHOP_TOILET_TARGET_HEIGHT +
@@ -2722,7 +2685,6 @@ export class RoccoBaitShopToiletLevel
     this.unregisterUrgentToiletTarget();
     this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
     this.engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
-    this.engine.video.render(0);
   }
 
   private hideRoccoForWishDefeat(): void {
@@ -2731,7 +2693,6 @@ export class RoccoBaitShopToiletLevel
     }
 
     this.engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
-    this.engine.video.render(0);
   }
 
   private syncToiletUrgencyPresentation(): void {
@@ -2750,7 +2711,6 @@ export class RoccoBaitShopToiletLevel
       this.engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
       this.setToiletInteractive(false);
       this.registerUrgentToiletTarget();
-      this.engine.video.render(0);
       return;
     }
 
@@ -2849,9 +2809,7 @@ export class RoccoBaitShopToiletLevel
     this.pendingCoralRelicWish = undefined;
   }
 
-  private handlePostWishResponseMenuActivation(
-    activation: RoccoGridMenuActivation,
-  ): void {
+  private handlePostWishResponseMenuActivation(activation: RoccoGridMenuActivation): void {
     if (!this.policeDialogue) {
       return;
     }
@@ -2876,7 +2834,6 @@ export class RoccoBaitShopToiletLevel
     }
 
     this.syncToiletUrgencyPresentation();
-    this.engine.video.render(0);
   }
 
   shouldLoseOnExit(connectorId: string): boolean {
@@ -2891,10 +2848,7 @@ export class RoccoBaitShopToiletLevel
     this.beginDefeatSequence();
   }
 
-  openCoralRelicWishMenu(
-    groundPoint: RoccoPoint,
-    consumeRelic: () => void,
-  ): void {
+  openCoralRelicWishMenu(groundPoint: RoccoPoint, consumeRelic: () => void): void {
     if (!this.engine || !this.isEscapeUrgencyActive() || this.wishSequence) {
       return;
     }
@@ -2910,12 +2864,12 @@ export class RoccoBaitShopToiletLevel
         choices: this.createWishChoices(),
       }).gridMenu,
     );
-    this.engine.video.render(0);
   }
 
   startThrowCoralRelicSequence(
     relicItem: RoccoInventoryItem,
     onComplete: (groundPoint: RoccoPoint) => void,
+    isUrgencyOverride = this.isEscapeUrgencyActive(),
   ): void {
     const fallbackGroundPoint: RoccoPoint = {
       x: BAIT_SHOP_TOILET_THROW_CENTER_GROUND_X,
@@ -2930,7 +2884,7 @@ export class RoccoBaitShopToiletLevel
       return;
     }
 
-    if (this.throwSequence || !this.isEscapeUrgencyActive()) {
+    if (this.throwSequence || !isUrgencyOverride) {
       safeComplete(this.resolvePlayerGroundPoint() ?? fallbackGroundPoint);
       return;
     }
@@ -2960,7 +2914,6 @@ export class RoccoBaitShopToiletLevel
       groundPoint: { x: 0, y: 0 },
       onComplete,
     };
-    this.engine.video.render(0);
   }
 
   private startThrowMovement(startY: number): boolean {
@@ -2987,7 +2940,10 @@ export class RoccoBaitShopToiletLevel
     );
   }
 
-  private initializeToiletMountState(engine: RoccoEngine, options: RoccoLevelMountOptions): void {
+  private initializeToiletMountState(
+    engine: CartridgeSdkV1Runtime,
+    options: RoccoLevelMountOptions,
+  ): void {
     this.setInputEnabled(true);
     this.engine = engine;
     this.spriteController = undefined;
@@ -3028,7 +2984,7 @@ export class RoccoBaitShopToiletLevel
     this.portalTransitionRequested = false;
   }
 
-  private registerToiletMountSounds(engine: RoccoEngine): void {
+  private registerToiletMountSounds(engine: CartridgeSdkV1Runtime): void {
     engine.audio.registerSound({
       id: BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID,
       uri: roccoDefaultYouLoseSoundUrl,
@@ -3062,27 +3018,56 @@ export class RoccoBaitShopToiletLevel
   }
 
   private async preloadToiletMountSounds(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     preloader: RoccoAssetPreloader | undefined,
   ): Promise<void> {
-    await preloadBaitShopToiletSound(engine, preloader, BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID, 'Bait shop toilet reading defeat sound could not be preloaded.');
-    await preloadBaitShopToiletSound(engine, preloader, BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID, 'Bait shop toilet medallion step sound could not be preloaded.');
-    await preloadBaitShopToiletSound(engine, preloader, BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID, 'Bait shop toilet portal loop sound could not be preloaded.');
-    await preloadBaitShopToiletSound(engine, preloader, BAIT_SHOP_TOILET_SPELL_SOUND_ID, 'Bait shop toilet spell sound could not be preloaded.');
-    await preloadBaitShopToiletSound(engine, preloader, DOOR_CLOSING_SOUND_ID, 'Bait shop toilet door closing sound could not be preloaded.');
+    await preloadBaitShopToiletSound(
+      engine,
+      preloader,
+      BAIT_SHOP_TOILET_READING_DEFEAT_SOUND_ID,
+      'Bait shop toilet reading defeat sound could not be preloaded.',
+    );
+    await preloadBaitShopToiletSound(
+      engine,
+      preloader,
+      BAIT_SHOP_TOILET_MEDALLION_STEP_SOUND_ID,
+      'Bait shop toilet medallion step sound could not be preloaded.',
+    );
+    await preloadBaitShopToiletSound(
+      engine,
+      preloader,
+      BAIT_SHOP_TOILET_PORTAL_LOOP_SOUND_ID,
+      'Bait shop toilet portal loop sound could not be preloaded.',
+    );
+    await preloadBaitShopToiletSound(
+      engine,
+      preloader,
+      BAIT_SHOP_TOILET_SPELL_SOUND_ID,
+      'Bait shop toilet spell sound could not be preloaded.',
+    );
+    await preloadBaitShopToiletSound(
+      engine,
+      preloader,
+      DOOR_CLOSING_SOUND_ID,
+      'Bait shop toilet door closing sound could not be preloaded.',
+    );
   }
 
   private async prepareToiletMountAssets(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions,
     preloader: RoccoAssetPreloader | undefined,
   ): Promise<BaitShopToiletMountAssets> {
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
     const initialPosition = entryConnector
-      ? { x: options.entryPosition?.x ?? entryConnector.entryPoint.x, y: entryConnector.entryPoint.y }
+      ? {
+          x: options.entryPosition?.x ?? entryConnector.entryPoint.x,
+          y: entryConnector.entryPoint.y,
+        }
       : { ...BAIT_SHOP_TOILET_ENTRY_POSITION };
     const initialFacing = entryConnector?.entryFacing ?? 'up';
-    this.shouldPlayDoorClosingSound = options.entryConnectorId === BAIT_SHOP_TOILET_RETURN_CONNECTOR_ID;
+    this.shouldPlayDoorClosingSound =
+      options.entryConnectorId === BAIT_SHOP_TOILET_RETURN_CONNECTOR_ID;
     const scene = await loadOrCreateBaitShopScene(engine, BAIT_SHOP_TOILET_SCENE_DEFINITION);
     const [toiletSprite, smokeSprite, portalSprite] = await Promise.all([
       createBaitShopToiletSpriteDefinition(),
@@ -3092,16 +3077,28 @@ export class RoccoBaitShopToiletLevel
     const throwRelicSprite = this.createThrowRelicSpriteDefinition();
     await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     await Promise.all([
-      preloader?.preloadSpriteDefinition(engine, toiletSprite.definition) ?? engine.video.preloadSpriteDefinition(toiletSprite.definition),
-      preloader?.preloadSpriteDefinition(engine, smokeSprite.definition) ?? engine.video.preloadSpriteDefinition(smokeSprite.definition),
-      preloader?.preloadSpriteDefinition(engine, portalSprite.definition) ?? engine.video.preloadSpriteDefinition(portalSprite.definition),
-      preloader?.preloadSpriteDefinition(engine, throwRelicSprite) ?? engine.video.preloadSpriteDefinition(throwRelicSprite),
+      preloader?.preloadSpriteDefinition(engine, toiletSprite.definition) ??
+        engine.video.preloadSpriteDefinition(toiletSprite.definition),
+      preloader?.preloadSpriteDefinition(engine, smokeSprite.definition) ??
+        engine.video.preloadSpriteDefinition(smokeSprite.definition),
+      preloader?.preloadSpriteDefinition(engine, portalSprite.definition) ??
+        engine.video.preloadSpriteDefinition(portalSprite.definition),
+      preloader?.preloadSpriteDefinition(engine, throwRelicSprite) ??
+        engine.video.preloadSpriteDefinition(throwRelicSprite),
     ]);
-    return { scene, initialPosition, initialFacing, toiletSprite, smokeSprite, portalSprite, throwRelicSprite };
+    return {
+      scene,
+      initialPosition,
+      initialFacing,
+      toiletSprite,
+      smokeSprite,
+      portalSprite,
+      throwRelicSprite,
+    };
   }
 
   private loadToiletSpriteDefinitions(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     assets: BaitShopToiletMountAssets,
   ): void {
     engine.video.sprites.loadSpriteDefinition(assets.toiletSprite.definition);
@@ -3122,8 +3119,14 @@ export class RoccoBaitShopToiletLevel
       width: toiletRenderedWidth,
       height: BAIT_SHOP_TOILET_TARGET_HEIGHT,
     };
-    this.smokeScale = Math.max(0.01, BAIT_SHOP_TOILET_SMOKE_TARGET_HEIGHT / Math.max(1, assets.smokeSprite.initialFrameHeight));
-    this.portalScale = Math.max(0.01, BAIT_SHOP_TOILET_PORTAL_TARGET_HEIGHT / Math.max(1, assets.portalSprite.initialFrameHeight));
+    this.smokeScale = Math.max(
+      0.01,
+      BAIT_SHOP_TOILET_SMOKE_TARGET_HEIGHT / Math.max(1, assets.smokeSprite.initialFrameHeight),
+    );
+    this.portalScale = Math.max(
+      0.01,
+      BAIT_SHOP_TOILET_PORTAL_TARGET_HEIGHT / Math.max(1, assets.portalSprite.initialFrameHeight),
+    );
     const portalRenderedWidth = assets.portalSprite.initialFrameWidth * this.portalScale;
     const portalBasePoint = this.resolvePortalBasePoint();
     this.portalTargetRect = {
@@ -3136,7 +3139,12 @@ export class RoccoBaitShopToiletLevel
     return toiletScale;
   }
 
-  private createToiletSprite(engine: RoccoEngine, assets: BaitShopToiletMountAssets, toiletScale: number, toiletRenderedWidth: number): void {
+  private createToiletSprite(
+    engine: CartridgeSdkV1Runtime,
+    assets: BaitShopToiletMountAssets,
+    toiletScale: number,
+    toiletRenderedWidth: number,
+  ): void {
     engine.video.sprites.createSpriteFromDefinition(BAIT_SHOP_TOILET_SPRITE_DEFINITION_ID, {
       id: BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID,
       transform: {
@@ -3160,7 +3168,7 @@ export class RoccoBaitShopToiletLevel
   }
 
   private async installToiletMountPresentation(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     assets: BaitShopToiletMountAssets,
     options: RoccoLevelMountOptions,
     preloader: RoccoAssetPreloader | undefined,
@@ -3170,23 +3178,32 @@ export class RoccoBaitShopToiletLevel
     await installBaitShopWalkMap(engine, baitShopToiletAssetUrls.walkMap, preloader);
     this.loadToiletSpriteDefinitions(engine, assets);
     const toiletScale = this.updateToiletSpriteGeometry(assets);
-    this.createToiletSprite(engine, assets, toiletScale, assets.toiletSprite.initialFrameWidth * toiletScale);
+    this.createToiletSprite(
+      engine,
+      assets,
+      toiletScale,
+      assets.toiletSprite.initialFrameWidth * toiletScale,
+    );
     this.restoreDefaultActionMenus();
     this.installToiletActionMenu();
-    this.spriteController = await installDefaultSprite(engine, {
-      appearance: options.roccoAppearance,
-      initialFacing: assets.initialFacing,
-      initialPosition: { ...assets.initialPosition },
-      scale: BAIT_SHOP_TOILET_ROCCO_SCALE,
-      tint: BAIT_SHOP_ROCCO_TINT,
-      localization: this.localization,
-      playIntro: false,
-      perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
-    }, preloader);
+    this.spriteController = await installDefaultSprite(
+      engine,
+      {
+        appearance: options.roccoAppearance,
+        initialFacing: assets.initialFacing,
+        initialPosition: { ...assets.initialPosition },
+        scale: BAIT_SHOP_TOILET_ROCCO_SCALE,
+        tint: BAIT_SHOP_ROCCO_TINT,
+        localization: this.localization,
+        playIntro: false,
+        perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
+      },
+      preloader,
+    );
   }
 
   async mount(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
@@ -3213,7 +3230,7 @@ export class RoccoBaitShopToiletLevel
     return assets.scene;
   }
 
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     this.readingDialogue?.cancel();
@@ -3224,10 +3241,7 @@ export class RoccoBaitShopToiletLevel
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(ROCCO_PLAYER_ACTION_MENU_ID);
     engine.video.actionMenus.registerMenu(
-      createRoccoPlayerActionMenuDefinition(
-        this.localization,
-        isRoccoDeveloperModeEnabled(engine),
-      ),
+      createRoccoPlayerActionMenuDefinition(this.localization, isRoccoDeveloperModeEnabled(engine)),
     );
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
@@ -3267,7 +3281,6 @@ export class RoccoBaitShopToiletLevel
     this.wishSequence = undefined;
     this.throwSequence = undefined;
     this.portalTransitionRequested = false;
-    engine.video.render(0);
   }
 
   update(deltaMs: number): void {
@@ -3398,7 +3411,12 @@ export class RoccoBaitShopToiletLevel
     activation: RoccoSceneClickAction,
     carriedItem: RoccoGridMenuCarriedItem,
   ): boolean {
-    if (this.seatController.isActive() || this.readingSequence || this.wishSequence || this.throwSequence) {
+    if (
+      this.seatController.isActive() ||
+      this.readingSequence ||
+      this.wishSequence ||
+      this.throwSequence
+    ) {
       return false;
     }
 
@@ -3421,9 +3439,91 @@ export class RoccoBaitShopToiletLevel
 
     if (this.engine) {
       this.engine.video.gridMenus.clearCarriedItem();
-      this.engine.video.render(0);
     }
 
     return true;
+  }
+}
+
+export class RoccoBaitShopToiletLevel implements RoccoLevel, RoccoToiletLevelCapability {
+  private readonly controller: RoccoBaitShopToiletController;
+
+  readonly id: string;
+  readonly title: string;
+  readonly connectors = BAIT_SHOP_TOILET_CONNECTORS;
+
+  constructor(
+    localization: RoccoLocalization = createRoccoLocalization(),
+    options: RoccoBaitShopToiletLevelOptions = {},
+  ) {
+    this.controller = new RoccoBaitShopToiletController(localization, options);
+    this.id = this.controller.id;
+    this.title = this.controller.title;
+  }
+
+  mount(
+    engine: CartridgeSdkV1Runtime,
+    options?: RoccoLevelMountOptions,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
+    return this.controller.mount(engine, options, preloader);
+  }
+
+  unmount(engine: CartridgeSdkV1Runtime): void {
+    this.controller.unmount(engine);
+  }
+
+  update(deltaMs: number): void {
+    this.controller.update(deltaMs);
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    this.controller.handleAction(activation);
+  }
+
+  handleGridMenu(activation: RoccoGridMenuActivation): void {
+    this.controller.handleGridMenu(activation);
+  }
+
+  handleSceneClick(activation: RoccoSceneClickAction): CartridgeActionDisposition | void {
+    return this.controller.handleSceneClick(activation);
+  }
+
+  handleInventorySceneClick(
+    activation: RoccoSceneClickAction,
+    carriedItem: RoccoGridMenuCarriedItem,
+  ): boolean {
+    return this.controller.handleInventorySceneClick(activation, carriedItem);
+  }
+
+  isEscapeUrgencyActive(): boolean {
+    return this.controller.isEscapeUrgencyActive();
+  }
+
+  startThrowCoralRelicSequence(
+    relicItem: RoccoInventoryItem,
+    onComplete: (groundPoint: RoccoPoint) => void,
+  ): void {
+    this.controller.startThrowCoralRelicSequence(
+      relicItem,
+      onComplete,
+      this.isEscapeUrgencyActive(),
+    );
+  }
+
+  openCoralRelicWishMenu(groundPoint: RoccoPoint, consumeRelic: () => void): void {
+    this.controller.openCoralRelicWishMenu(groundPoint, consumeRelic);
+  }
+
+  refreshDeveloperEventPresentation(): void {
+    this.controller.refreshDeveloperEventPresentation();
+  }
+
+  shouldLoseOnExit(connectorId: string): boolean {
+    return this.controller.shouldLoseOnExit(connectorId);
+  }
+
+  beginExitDefeat(): void {
+    this.controller.beginExitDefeat();
   }
 }

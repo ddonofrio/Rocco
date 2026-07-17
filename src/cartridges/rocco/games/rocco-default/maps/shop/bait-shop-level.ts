@@ -1,6 +1,4 @@
-/* eslint-disable max-lines */
-
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
 import type { InputPolicyLease } from '../../../../../../console/input';
 import type {
@@ -20,7 +18,6 @@ import { BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID } from '../../inventory';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
-import { roccoDefaultCartridgeManifest } from '../../../../rocco-default-manifest';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import {
   DEFAULT_DESIGN_HEIGHT,
@@ -80,10 +77,7 @@ export interface RoccoBaitShopLevelOptions {
   hasMysteriousKey?: () => boolean;
   onMysteriousKeyCollected?: () => boolean;
   onOpenInventoryRequested?: () => void;
-  onOpenStorageInventoryRequested?: (
-    storageId: string,
-    onInventoryClosed: () => void,
-  ) => void;
+  onOpenStorageInventoryRequested?: (storageId: string, onInventoryClosed: () => void) => void;
   onCloseStorageInventoryRequested?: (storageId: string) => void;
   onExitShopRequested?: () => void;
 }
@@ -444,9 +438,7 @@ function createDefaultBaitShopPlanes(
   return planes;
 }
 
-function createDefaultBaitShopScene(
-  definition: RoccoBaitShopSceneDefinition,
-): RoccoPlaneScene {
+function createDefaultBaitShopScene(definition: RoccoBaitShopSceneDefinition): RoccoPlaneScene {
   return {
     id: definition.sceneId,
     planes: createDefaultBaitShopPlanes(definition),
@@ -502,16 +494,13 @@ function normalizeBaitShopScene(
 }
 
 export async function loadOrCreateBaitShopScene(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   definition: RoccoBaitShopSceneDefinition,
 ): Promise<RoccoPlaneScene> {
-  const restoredRecord = await engine.persistence.loadPlaneSceneRecord(
-    roccoDefaultCartridgeManifest.id,
-    definition.sceneId,
-  );
+  const restoredRecord = await engine.storage.loadPlaneSceneRecord(definition.sceneId);
   if (!restoredRecord) {
     const created = createDefaultBaitShopScene(definition);
-    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, created);
+    await engine.storage.savePlaneScene(created);
     engine.log('System', `Bait shop scene '${definition.sceneId}' initialized.`);
     return created;
   }
@@ -519,7 +508,7 @@ export async function loadOrCreateBaitShopScene(
   engine.log('System', `Bait shop scene '${definition.sceneId}' restored from IndexedDB.`);
   const normalized = normalizeBaitShopScene(restoredRecord.scene, definition);
   if (normalized.changed) {
-    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, normalized.scene);
+    await engine.storage.savePlaneScene(normalized.scene);
     engine.log('System', `Bait shop scene '${definition.sceneId}' refreshed.`);
   }
 
@@ -527,7 +516,7 @@ export async function loadOrCreateBaitShopScene(
 }
 
 export async function installBaitShopWalkMap(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   walkMapImageUrl: string,
   preloader?: RoccoAssetPreloader,
 ): Promise<void> {
@@ -556,12 +545,12 @@ export async function installBaitShopWalkMap(
   );
 }
 
-export function uninstallBaitShopWalkMap(engine: RoccoEngine): void {
+export function uninstallBaitShopWalkMap(engine: CartridgeSdkV1Runtime): void {
   engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
 }
 
 function installBaitShopSceneTargets(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   localization: RoccoLocalization,
 ): void {
   for (const target of BAIT_SHOP_SCENE_TARGETS) {
@@ -580,7 +569,7 @@ function installBaitShopSceneTargets(
   }
 }
 
-function uninstallBaitShopSceneTargets(engine: RoccoEngine): void {
+function uninstallBaitShopSceneTargets(engine: CartridgeSdkV1Runtime): void {
   for (const target of BAIT_SHOP_SCENE_TARGETS) {
     engine.video.sceneTargets?.unregisterTarget(target.instanceId);
   }
@@ -634,7 +623,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
   private readonly options: RoccoBaitShopLevelOptions;
   private readonly benchJumpController: BaitShopBenchJumpController;
   private benchJumpInputLease: InputPolicyLease | undefined;
-  private engine: RoccoEngine | undefined;
+  private engine: CartridgeSdkV1Runtime | undefined;
   private spriteController: RoccoDefaultSpriteController | undefined;
   private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined;
   private souvenirCloseupVisible = false;
@@ -658,8 +647,9 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     return this.benchJumpController.isOnBench();
   }
 
-  resolveJumpOrigins(direction: 'up' | 'down'):
-    { startOrigin: RoccoPoint; endOrigin: RoccoPoint } | undefined {
+  resolveJumpOrigins(
+    direction: 'up' | 'down',
+  ): { startOrigin: RoccoPoint; endOrigin: RoccoPoint } | undefined {
     const sprite = this.engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
     if (!sprite) {
       return undefined;
@@ -667,8 +657,10 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
 
     const scaleX = sprite.transform.scaleX || BAIT_SHOP_ROCCO_SCALE;
     const scaleY = sprite.transform.scaleY || BAIT_SHOP_ROCCO_SCALE;
-    const startPoint = direction === 'up' ? BAIT_SHOP_BENCH_KICK_START_POINT : BAIT_SHOP_BENCH_TOP_POINT;
-    const endPoint = direction === 'up' ? BAIT_SHOP_BENCH_TOP_POINT : BAIT_SHOP_BENCH_KICK_START_POINT;
+    const startPoint =
+      direction === 'up' ? BAIT_SHOP_BENCH_KICK_START_POINT : BAIT_SHOP_BENCH_TOP_POINT;
+    const endPoint =
+      direction === 'up' ? BAIT_SHOP_BENCH_TOP_POINT : BAIT_SHOP_BENCH_KICK_START_POINT;
     return {
       startOrigin: toOriginFromGroundPoint(startPoint, scaleX, scaleY),
       endOrigin: toOriginFromGroundPoint(endPoint, scaleX, scaleY),
@@ -699,32 +691,42 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
   }
 
   playRunAction(direction: RoccoFacingDirection): void {
-    this.engine?.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_RUN_ACTION_ID, {
-      direction,
-      restart: true,
-      playbackRate: 0,
-    });
+    this.engine?.video.sprites.playAction(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      DEFAULT_SPRITE_RUN_ACTION_ID,
+      {
+        direction,
+        restart: true,
+        playbackRate: 0,
+      },
+    );
   }
 
   playIdleAction(direction: RoccoFacingDirection): void {
-    this.engine?.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-      direction,
-      restart: true,
-    });
+    this.engine?.video.sprites.playAction(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      {
+        direction,
+        restart: true,
+      },
+    );
   }
 
-  render(): void {
-    this.engine?.video.render(0);
-  }
+  render(): void {}
 
   onBenchOccupancyChanged(): void {
     this.syncHiddenKeysTarget();
   }
 
   onJumpUpFinished(): void {
-    this.engine?.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, this.localization.text.baitShop.benchJumpUpLine, {
-      ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-    });
+    this.engine?.video.messages.think(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      this.localization.text.baitShop.benchJumpUpLine,
+      {
+        ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+      },
+    );
   }
 
   onJumpDownFinished(options: BaitShopBenchJumpDownOptions): void {
@@ -736,20 +738,22 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
       return;
     }
     if (options.walkTo) {
-      this.engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, options.walkTo.x, options.walkTo.y, {
-        idleSettleDelayMs: BAIT_SHOP_BENCH_DISMOUNT_IDLE_SETTLE_DELAY_MS,
-        idleSettleFacing: 'diagonal-from-facing',
-      });
+      this.engine.video.sprites.goTo(
+        DEFAULT_SPRITE_INSTANCE_ID,
+        options.walkTo.x,
+        options.walkTo.y,
+        {
+          idleSettleDelayMs: BAIT_SHOP_BENCH_DISMOUNT_IDLE_SETTLE_DELAY_MS,
+          idleSettleFacing: 'diagonal-from-facing',
+        },
+      );
     }
   }
 
   private handleBenchAction(activation: RoccoActionMenuActivation): void {
     if (activation.actionId === 'look') {
       this.faceBaitShopTargetFromCurrentPosition(BAIT_SHOP_BENCH_FOCUS_X);
-      this.showBaitShopLines(
-        this.resolveBenchLookLines(),
-        BAIT_SHOP_BENCH_LOOK_HISTORY_KEY,
-      );
+      this.showBaitShopLines(this.resolveBenchLookLines(), BAIT_SHOP_BENCH_LOOK_HISTORY_KEY);
       return;
     }
 
@@ -775,10 +779,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
       moveTo: { ...BAIT_SHOP_BENCH_INTERACTION_POINT },
       facing: 'up-right',
       onReached: () => {
-        this.showBaitShopLines(
-          this.resolveBenchGrabLines(),
-          BAIT_SHOP_BENCH_GRAB_HISTORY_KEY,
-        );
+        this.showBaitShopLines(this.resolveBenchGrabLines(), BAIT_SHOP_BENCH_GRAB_HISTORY_KEY);
       },
     });
   }
@@ -915,7 +916,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     ];
   }
 
-  private installActionMenus(engine: RoccoEngine): void {
+  private installActionMenus(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_BENCH_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_POSTCARD_RACK_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_SOUVENIR_TABLE_ACTION_MENU_ID);
@@ -926,16 +927,14 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     engine.video.actionMenus.registerMenu(this.createSouvenirTableActionMenuDefinition());
     engine.video.actionMenus.registerMenu(this.createCashRegisterActionMenuDefinition());
     engine.video.actionMenus.registerMenu(this.createExitDoorActionMenuDefinition());
-    engine.video.render(0);
   }
 
-  private uninstallActionMenus(engine: RoccoEngine): void {
+  private uninstallActionMenus(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_BENCH_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_POSTCARD_RACK_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_SOUVENIR_TABLE_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_CASH_REGISTER_ACTION_MENU_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_EXIT_DOOR_ACTION_MENU_ID);
-    engine.video.render(0);
   }
 
   private createBenchActionMenuDefinition(): RoccoActionMenuDefinition {
@@ -1112,7 +1111,6 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private showSingleBaitShopLine(line: string): void {
@@ -1123,7 +1121,6 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, line, {
       ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
     });
-    this.engine.video.render(0);
   }
 
   private openSouvenirCloseup(): void {
@@ -1134,12 +1131,9 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     this.souvenirCloseupVisible = true;
     this.syncSouvenirCloseupPresentation();
     if (this.options.onOpenStorageInventoryRequested) {
-      this.options.onOpenStorageInventoryRequested(
-        BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID,
-        () => {
-          this.hideSouvenirCloseup();
-        },
-      );
+      this.options.onOpenStorageInventoryRequested(BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID, () => {
+        this.hideSouvenirCloseup();
+      });
       return;
     }
 
@@ -1174,9 +1168,13 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
       BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE_ID,
     );
     if (overlayPlane) {
-      this.engine.video.planes.updatePlane(BAIT_SHOP_SCENE_ID, BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE_ID, {
-        visible: this.souvenirCloseupVisible,
-      });
+      this.engine.video.planes.updatePlane(
+        BAIT_SHOP_SCENE_ID,
+        BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE_ID,
+        {
+          visible: this.souvenirCloseupVisible,
+        },
+      );
     }
 
     this.engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID);
@@ -1189,8 +1187,6 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
         suppressDefaultPlayerMove: true,
       });
     }
-
-    this.engine.video.render(0);
   }
 
   private faceBaitShopTargetFromCurrentPosition(focusX: number): void {
@@ -1208,11 +1204,14 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     const groundY =
       sprite.transform.y + DEFAULT_SPRITE_GROUND_ANCHOR_Y * (sprite.transform.scaleY || 1);
     const facing = resolveBaitShopFacing(focusX, groundX, groundY);
-    this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-      direction: facing,
-      restart: true,
-    });
-    this.engine.video.render(0);
+    this.engine.video.sprites.playAction(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      {
+        direction: facing,
+        restart: true,
+      },
+    );
   }
 
   private faceCashRegisterFromCurrentPosition(): void {
@@ -1283,7 +1282,12 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
   }
 
   private collectHiddenKeys(): void {
-    if (!this.engine || !this.roccoOnBench || this.hiddenKeysCollected || !this.hiddenKeysRevealed) {
+    if (
+      !this.engine ||
+      !this.roccoOnBench ||
+      this.hiddenKeysCollected ||
+      !this.hiddenKeysRevealed
+    ) {
       return;
     }
 
@@ -1324,7 +1328,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
   }
 
   async mount(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
@@ -1355,16 +1359,20 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     this.syncSouvenirCloseupPresentation();
     this.syncHiddenKeysTarget();
     this.installActionMenus(engine);
-    this.spriteController = await installDefaultSprite(engine, {
-      appearance: options.roccoAppearance,
-      initialFacing,
-      initialPosition: { ...initialPosition },
-      scale: BAIT_SHOP_ROCCO_SCALE,
-      tint: BAIT_SHOP_ROCCO_TINT,
-      localization: this.localization,
-      playIntro: false,
-      perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
-    }, preloader);
+    this.spriteController = await installDefaultSprite(
+      engine,
+      {
+        appearance: options.roccoAppearance,
+        initialFacing,
+        initialPosition: { ...initialPosition },
+        scale: BAIT_SHOP_ROCCO_SCALE,
+        tint: BAIT_SHOP_ROCCO_TINT,
+        localization: this.localization,
+        playIntro: false,
+        perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
+      },
+      preloader,
+    );
     if (!options.entryConnectorId) {
       await this.playBaitShopDoorClosingSound(engine);
     }
@@ -1373,7 +1381,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     return scene;
   }
 
-  private async playBaitShopDoorClosingSound(engine: RoccoEngine): Promise<void> {
+  private async playBaitShopDoorClosingSound(engine: CartridgeSdkV1Runtime): Promise<void> {
     engine.audio.registerSound({
       id: DOOR_CLOSING_SOUND_ID,
       uri: baitShopDoorClosingSoundUrl,
@@ -1391,7 +1399,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     });
   }
 
-  private installBaitShopScriptedInteractions(engine: RoccoEngine): void {
+  private installBaitShopScriptedInteractions(engine: CartridgeSdkV1Runtime): void {
     this.scriptedInteractionController = new RoccoScriptedSceneInteractionController(engine, [
       this.createShellCityInteraction(engine),
       this.createWindowInteraction(engine),
@@ -1399,35 +1407,51 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     ]);
   }
 
-  private createShellCityInteraction(engine: RoccoEngine): RoccoScriptedSceneInteractionDefinition {
+  private createShellCityInteraction(
+    engine: CartridgeSdkV1Runtime,
+  ): RoccoScriptedSceneInteractionDefinition {
     return {
       targetInstanceId: BAIT_SHOP_SHELL_CITY_TARGET_INSTANCE_ID,
       moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
       facing: 'up',
       onReached: () => {
-        roccoCartridgeMessageRuntime.think(engine, DEFAULT_SPRITE_INSTANCE_ID, this.resolveShellCityLookLines(), {
-          ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-        }, { count: 1, historyKey: BAIT_SHOP_SHELL_CITY_HISTORY_KEY });
-        engine.video.render(0);
+        roccoCartridgeMessageRuntime.think(
+          engine,
+          DEFAULT_SPRITE_INSTANCE_ID,
+          this.resolveShellCityLookLines(),
+          {
+            ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+          },
+          { count: 1, historyKey: BAIT_SHOP_SHELL_CITY_HISTORY_KEY },
+        );
       },
     };
   }
 
-  private createWindowInteraction(engine: RoccoEngine): RoccoScriptedSceneInteractionDefinition {
+  private createWindowInteraction(
+    engine: CartridgeSdkV1Runtime,
+  ): RoccoScriptedSceneInteractionDefinition {
     return {
       targetInstanceId: BAIT_SHOP_WINDOW_TARGET_INSTANCE_ID,
       moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
       facing: 'up-left',
       onReached: () => {
-        roccoCartridgeMessageRuntime.think(engine, DEFAULT_SPRITE_INSTANCE_ID, this.resolveWindowLookLines(), {
-          ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
-        }, { count: 1, historyKey: BAIT_SHOP_WINDOW_HISTORY_KEY });
-        engine.video.render(0);
+        roccoCartridgeMessageRuntime.think(
+          engine,
+          DEFAULT_SPRITE_INSTANCE_ID,
+          this.resolveWindowLookLines(),
+          {
+            ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
+          },
+          { count: 1, historyKey: BAIT_SHOP_WINDOW_HISTORY_KEY },
+        );
       },
     };
   }
 
-  private createLeftBarrelInteraction(engine: RoccoEngine): RoccoScriptedSceneInteractionDefinition {
+  private createLeftBarrelInteraction(
+    engine: CartridgeSdkV1Runtime,
+  ): RoccoScriptedSceneInteractionDefinition {
     return {
       targetInstanceId: BAIT_SHOP_LEFT_BARREL_TARGET_INSTANCE_ID,
       moveTo: { ...BAIT_SHOP_LEFT_WALL_INTERACTION_POINT },
@@ -1440,12 +1464,11 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
           { ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS },
           { count: 1, historyKey: BAIT_SHOP_LEFT_BARREL_HISTORY_KEY },
         );
-        engine.video.render(0);
       },
     };
   }
 
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     this.scriptedInteractionController?.cancel();
@@ -1463,7 +1486,6 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     this.benchJumpInputLease = releaseInputLease(this.benchJumpInputLease);
     this.benchJumpController.reset();
     this.souvenirCloseupVisible = false;
-    engine.video.render(0);
   }
 
   update(deltaMs: number): void {

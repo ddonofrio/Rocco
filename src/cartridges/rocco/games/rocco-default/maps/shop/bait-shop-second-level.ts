@@ -1,14 +1,15 @@
-/* eslint-disable max-lines */
-
 import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../../../../../console/video/action-menu';
 import type { RoccoGridMenuCarriedItem } from '../../../../../../console/video/grid-menu';
 import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../../../../../console/video/planes';
-import type { RoccoFacingDirection, RoccoSpriteDefinition } from '../../../../../../console/video/sprites';
+import type {
+  RoccoFacingDirection,
+  RoccoSpriteDefinition,
+} from '../../../../../../console/video/sprites';
 import {
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID,
@@ -265,10 +266,12 @@ function createBaitShopMagazineSpriteDefinition(
 export class RoccoBaitShopSecondLevel implements RoccoLevel {
   private readonly localization: RoccoLocalization;
   private readonly options: RoccoBaitShopSecondLevelOptions;
-  private engine: RoccoEngine | undefined = undefined;
+  private engine: CartridgeSdkV1Runtime | undefined = undefined;
   private spriteController: RoccoDefaultSpriteController | undefined = undefined;
-  private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined = undefined;
-  private onConnectorTransitionRequested: ((connectorId: string) => boolean) | undefined = undefined;
+  private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined =
+    undefined;
+  private onConnectorTransitionRequested: ((connectorId: string) => boolean) | undefined =
+    undefined;
   private toiletDoorOpen = false;
   private toiletDoorKnown = false;
   private magazineKnown = false;
@@ -386,7 +389,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
         const isTransitioned =
           this.onConnectorTransitionRequested?.(BAIT_SHOP_TOILET_CONNECTOR_ID) ?? false;
         if (!isTransitioned) {
-          this.engine?.video.render(0);
+          return;
         }
       },
     });
@@ -398,9 +401,13 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     }
 
     this.engine.video.actionMenus.closeMenu();
-    this.engine.video.planes.updatePlane(BAIT_SHOP_SECOND_SCENE_ID, BAIT_SHOP_TOILET_DOOR_OPEN_PLANE_ID, {
-      visible: this.toiletDoorOpen,
-    });
+    this.engine.video.planes.updatePlane(
+      BAIT_SHOP_SECOND_SCENE_ID,
+      BAIT_SHOP_TOILET_DOOR_OPEN_PLANE_ID,
+      {
+        visible: this.toiletDoorOpen,
+      },
+    );
     this.engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID);
     this.engine.video.sceneTargets?.registerTarget({
       instanceId: BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID,
@@ -425,7 +432,6 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     if (!this.toiletDoorOpen) {
       this.engine.video.actionMenus.registerMenu(this.createToiletDoorActionMenuDefinition());
     }
-    this.engine.video.render(0);
   }
 
   private syncMagazinePresentation(): void {
@@ -438,7 +444,6 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
 
     if (this.magazineCollected) {
       this.engine.video.actionMenus.closeMenu();
-      this.engine.video.render(0);
       return;
     }
 
@@ -465,16 +470,14 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       },
     });
     this.engine.video.actionMenus.registerMenu(this.createMagazineActionMenuDefinition());
-    this.engine.video.render(0);
   }
 
-  private uninstallToiletDoorInteractions(engine: RoccoEngine): void {
+  private uninstallToiletDoorInteractions(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_TOILET_DOOR_ACTION_MENU_ID);
     engine.video.sceneTargets?.unregisterTarget(BAIT_SHOP_TOILET_DOOR_TARGET_INSTANCE_ID);
-    engine.video.render(0);
   }
 
-  private async registerToiletDoorSound(engine: RoccoEngine): Promise<void> {
+  private async registerToiletDoorSound(engine: CartridgeSdkV1Runtime): Promise<void> {
     engine.audio.registerSound({
       id: BAIT_SHOP_DOOR_OPENING_SOUND_ID,
       uri: pierDoorOpeningSoundUrl,
@@ -488,15 +491,14 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     }
   }
 
-  private unregisterToiletDoorSound(engine: RoccoEngine): void {
+  private unregisterToiletDoorSound(engine: CartridgeSdkV1Runtime): void {
     engine.audio.stopSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
     engine.audio.unregisterSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
   }
 
-  private uninstallMagazineInteractions(engine: RoccoEngine): void {
+  private uninstallMagazineInteractions(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_MAGAZINE_ACTION_MENU_ID);
     engine.video.sprites.removeSprite(BAIT_SHOP_MAGAZINE_SPRITE_INSTANCE_ID);
-    engine.video.render(0);
   }
 
   private createToiletDoorActionMenuDefinition(): RoccoActionMenuDefinition {
@@ -593,7 +595,6 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, line, {
       ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
     });
-    this.engine.video.render(0);
   }
 
   private showThoughtLines(lines: readonly string[], historyKey: string): void {
@@ -614,7 +615,6 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private hasToiletDoorKey(): boolean {
@@ -638,15 +638,18 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     if (Math.abs(deltaX) > 18) {
       facing = deltaX < 0 ? 'up-left' : 'up-right';
     }
-    this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-      direction: facing,
-      restart: true,
-    });
-    this.engine.video.render(0);
+    this.engine.video.sprites.playAction(
+      DEFAULT_SPRITE_INSTANCE_ID,
+      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      {
+        direction: facing,
+        restart: true,
+      },
+    );
   }
 
   async mount(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
@@ -685,20 +688,25 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       engine.log('Audio', 'Bait shop second level door closing sound could not be preloaded.');
     }
     await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
-    await (preloader?.preloadSpriteDefinition(engine, magazineDefinition) ?? engine.video.preloadSpriteDefinition(magazineDefinition));
+    await (preloader?.preloadSpriteDefinition(engine, magazineDefinition) ??
+      engine.video.preloadSpriteDefinition(magazineDefinition));
     engine.loadPlaneScene(scene);
     await installBaitShopWalkMap(engine, baitShopSecondScreenAssetUrls.walkMap, preloader);
     engine.video.sprites.loadSpriteDefinition(magazineDefinition);
-    this.spriteController = await installDefaultSprite(engine, {
-      appearance: options.roccoAppearance,
-      initialFacing,
-      initialPosition: { ...initialPosition },
-      scale: BAIT_SHOP_ROCCO_SCALE,
-      tint: BAIT_SHOP_ROCCO_TINT,
-      localization: this.localization,
-      playIntro: false,
-      perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
-    }, preloader);
+    this.spriteController = await installDefaultSprite(
+      engine,
+      {
+        appearance: options.roccoAppearance,
+        initialFacing,
+        initialPosition: { ...initialPosition },
+        scale: BAIT_SHOP_ROCCO_SCALE,
+        tint: BAIT_SHOP_ROCCO_TINT,
+        localization: this.localization,
+        playIntro: false,
+        perspectiveAutoAdjust: BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST,
+      },
+      preloader,
+    );
     if (options.entryConnectorId === BAIT_SHOP_TOILET_CONNECTOR_ID) {
       this.shouldPlayDoorClosingSound = true;
     }
@@ -708,8 +716,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     return scene;
   }
 
-
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     this.scriptedInteractionController?.cancel();
@@ -725,7 +732,6 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     this.spriteController = undefined;
     this.scriptedInteractionController = undefined;
     this.onConnectorTransitionRequested = undefined;
-    engine.video.render(0);
   }
 
   update(deltaMs: number): void {

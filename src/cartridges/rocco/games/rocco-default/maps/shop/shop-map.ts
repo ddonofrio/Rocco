@@ -90,9 +90,9 @@ export function createRoccoDefaultShopMapStructure(): RpceMapDefinition {
     title: 'Shop',
     initialLevelId: ROCCO_BAIT_SHOP_LEVEL_ID,
     levels: [
-      { id: ROCCO_BAIT_SHOP_LEVEL_ID },
-      { id: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID },
-      { id: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID },
+      { id: ROCCO_BAIT_SHOP_LEVEL_ID, connectorIds: ['south'] },
+      { id: ROCCO_BAIT_SHOP_SECOND_LEVEL_ID, connectorIds: ['south', 'toilet-door'] },
+      { id: ROCCO_BAIT_SHOP_TOILET_LEVEL_ID, connectorIds: ['south', 'portal'] },
     ],
     connections: ROCCO_DEFAULT_SHOP_CONNECTIONS,
   };

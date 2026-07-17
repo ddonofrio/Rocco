@@ -25,7 +25,13 @@ type InputHandlerVideoSystem = Pick<RoccoRuntimeVideoSystem, 'render' | 'resolve
   >;
   readonly gridMenus: Pick<
     RoccoRuntimeVideoSystem['gridMenus'],
-    'activateAt' | 'clearCarriedItem' | 'getCarriedItem' | 'getHoveredItem' | 'getRenderableMenu' | 'isOpen' | 'setHoverAt'
+    | 'activateAt'
+    | 'clearCarriedItem'
+    | 'getCarriedItem'
+    | 'getHoveredItem'
+    | 'getRenderableMenu'
+    | 'isOpen'
+    | 'setHoverAt'
   >;
   readonly messages: Pick<RoccoRuntimeVideoSystem['messages'], 'listMessages' | 'removeMessage'>;
   readonly sceneTargets: Pick<RoccoRuntimeVideoSystem['sceneTargets'], 'getTarget'>;
@@ -78,7 +84,10 @@ export class RoccoInputHandler {
     }
 
     if (this.hasProtectedForegroundMessages()) {
-      this.logFn('Cursor', `IGNORE dialogue dismiss at (${x}, ${y}) while dialogue is still protected.`);
+      this.logFn(
+        'Cursor',
+        `IGNORE dialogue dismiss at (${x}, ${y}) while dialogue is still protected.`,
+      );
       return;
     }
 
@@ -142,13 +151,11 @@ export class RoccoInputHandler {
       return;
     }
 
-    if (this.videoSystem.gridMenus.isOpen()) {
+    if (this.videoSystem.gridMenus.isOpen() && !this.videoSystem.gridMenus.getCarriedItem()) {
       const activation = this.videoSystem.gridMenus.activateAt(-1, -1);
       if (activation) {
         this.actionDispatcher.dispatch(activation, { owner: 'grid-menu-leave' });
       }
-      this.videoSystem.gridMenus.clearCarriedItem();
-      this.inputPresentation.syncCarriedCursorAttachment();
       this.videoSystem.render(0);
     }
     if (this.videoSystem.actionMenus.isOpen()) {
@@ -164,11 +171,13 @@ export class RoccoInputHandler {
     this.jukeboxSystem = options.jukeboxSystem;
     this.viewportHost = options.viewportHost;
     this.getActivePlayerSpriteId = options.getActivePlayerSpriteId;
-    this.actionDispatcher = options.actionDispatcher ?? new ActionDispatcher({
-      getActiveCartridge: options.getActiveCartridge,
-      getActiveLevelId: () => {},
-      log: options.log,
-    });
+    this.actionDispatcher =
+      options.actionDispatcher ??
+      new ActionDispatcher({
+        getActiveCartridge: options.getActiveCartridge,
+        getActiveLevelId: () => {},
+        log: options.log,
+      });
     this.logFn = options.log;
     this.getInputMode = options.getInputMode ?? (() => 'interactive');
     this.defaultPlayerMovePolicy = new RoccoRuntimeDefaultPlayerMovePolicyCoordinator({
@@ -309,12 +318,11 @@ export class RoccoInputHandler {
     const { visibleTarget, target } = targets;
     const playerSpriteId = this.getActivePlayerSpriteId();
     const actionTarget = visibleTarget ?? target;
-    const actionTargetId = actionTarget?.instanceId;
     const sceneClickAction: RoccoSceneClickAction = {
       kind: 'scene-click',
       sceneX: event.sceneX,
       sceneY: event.sceneY,
-      targetInstanceId: actionTargetId,
+      targetInstanceId: actionTarget?.instanceId,
       targetDefinitionId: actionTarget?.definitionId,
     };
 
@@ -322,20 +330,23 @@ export class RoccoInputHandler {
       owner: 'scene-click',
     });
     const isSceneClickConsumed = cartridgeActionResult.consumed;
-    const isSuppressDefaultPlayerMove = this.defaultPlayerMovePolicy.shouldSuppressDefaultPlayerMove({
-      target: actionTarget,
-      cartridgeDisposition: cartridgeActionResult,
-    });
+    const isSuppressDefaultPlayerMove =
+      this.defaultPlayerMovePolicy.shouldSuppressDefaultPlayerMove({
+        target: actionTarget,
+        cartridgeDisposition: cartridgeActionResult,
+      });
 
-    if (this.tryOpenActionMenuForVisibleTarget({
-      event,
-      roundedX,
-      roundedY,
-      visibleTarget,
-      playerSpriteId,
-      isSceneClickConsumed,
-      isSuppressDefaultPlayerMove,
-    })) {
+    if (
+      this.tryOpenActionMenuForVisibleTarget({
+        event,
+        roundedX,
+        roundedY,
+        visibleTarget,
+        playerSpriteId,
+        isSceneClickConsumed,
+        isSuppressDefaultPlayerMove,
+      })
+    ) {
       return;
     }
 
@@ -355,7 +366,10 @@ export class RoccoInputHandler {
     }
 
     if (target) {
-      this.logFn('Cursor', `CLICK ${target.kind} '${target.instanceId}' at (${roundedX}, ${roundedY}).`);
+      this.logFn(
+        'Cursor',
+        `CLICK ${target.kind} '${target.instanceId}' at (${roundedX}, ${roundedY}).`,
+      );
       return;
     }
 

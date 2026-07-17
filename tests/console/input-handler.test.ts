@@ -48,7 +48,9 @@ function makeMoveEvent(sceneX: number, sceneY: number): RoccoCursorMoveEvent {
   };
 }
 
-function createVideoSystemMock(overrides: Partial<InputHandlerVideoSystem> = {}): InputHandlerVideoSystem {
+function createVideoSystemMock(
+  overrides: Partial<InputHandlerVideoSystem> = {},
+): InputHandlerVideoSystem {
   return {
     render() {
       // noop
@@ -642,30 +644,13 @@ describe('RoccoInputHandler', () => {
     }
   });
 
-  it('dispatches a grid-menu close activation on cursor leave before clearing the carried item', () => {
+  it('closes an open grid menu without a carried item on cursor leave', () => {
     let leaveHandler: RoccoCursorLeaveHandler | undefined;
     let clearCarriedItemCalls = 0;
     let renderCalls = 0;
     const handledActions: unknown[] = [];
     const activationCalls: Array<[number, number]> = [];
     const cursorAttachments: unknown[] = [];
-    let carriedItem:
-      | {
-          definitionId: string;
-          item: {
-            id: string;
-            label: string;
-            imageUri: string;
-          };
-        }
-      | undefined = {
-      definitionId: 'rocco-storage-transfer-menu:test',
-      item: {
-        id: 'souvenir-sea-dollar',
-        label: 'Sea Dollar',
-        imageUri: '/test/sea-dollar.png',
-      },
-    };
 
     const cartridge: RoccoCartridge = {
       manifest: {
@@ -698,10 +683,9 @@ describe('RoccoInputHandler', () => {
           },
           clearCarriedItem() {
             clearCarriedItemCalls += 1;
-            carriedItem = undefined;
           },
           getCarriedItem() {
-            return carriedItem;
+            return;
           },
           getHoveredItem() {
             return;
@@ -750,9 +734,108 @@ describe('RoccoInputHandler', () => {
         items: [],
       },
     ]);
-    expect(clearCarriedItemCalls).toBe(1);
-    expect(cursorAttachments).toEqual([undefined]);
+    expect(clearCarriedItemCalls).toBe(0);
+    expect(cursorAttachments).toEqual([]);
     expect(renderCalls).toBe(1);
+  });
+
+  it('preserves a carried grid item on cursor leave without clearing it', () => {
+    let leaveHandler: RoccoCursorLeaveHandler | undefined;
+    let clearCarriedItemCalls = 0;
+    let renderCalls = 0;
+    const activationCalls: Array<[number, number]> = [];
+    const cursorAttachments: unknown[] = [];
+    const carriedItem = {
+      definitionId: 'rocco-storage-transfer-menu:test',
+      item: {
+        id: 'souvenir-sea-dollar',
+        label: 'Sea Dollar',
+        imageUri: '/test/sea-dollar.png',
+      },
+    };
+    let observedCarriedItem: unknown;
+
+    const cartridge: RoccoCartridge = {
+      manifest: {
+        id: 'test-cartridge',
+        title: 'Test Cartridge',
+        version: '1.0.0',
+      },
+      mount() {
+        // noop
+      },
+      handleAction() {
+        // noop
+      },
+    };
+
+    const handler = new RoccoInputHandler({
+      videoSystem: createVideoSystemMock({
+        render() {
+          renderCalls += 1;
+        },
+        gridMenus: {
+          activateAt(x: number, y: number) {
+            activationCalls.push([x, y]);
+          },
+          clearCarriedItem() {
+            clearCarriedItemCalls += 1;
+          },
+          getCarriedItem() {
+            return carriedItem;
+          },
+          getHoveredItem() {
+            return;
+          },
+          getRenderableMenu() {
+            return;
+          },
+          isOpen() {
+            return true;
+          },
+          setHoverAt() {
+            return false;
+          },
+        },
+      }),
+      audioSystem: asAudioSystem({}),
+      jukeboxSystem: asJukeboxSystem({}),
+      viewportHost: asViewportHost({
+        setCursorActionHandler() {
+          // noop
+        },
+        setCursorMoveHandler() {
+          // noop
+        },
+        setCursorLeaveHandler(handler: RoccoCursorLeaveHandler | undefined) {
+          leaveHandler = handler;
+        },
+        setCursorAttachment(attachment: unknown) {
+          cursorAttachments.push(attachment);
+          observedCarriedItem = attachment;
+        },
+      }),
+      getActiveCartridge: () => cartridge,
+      getActivePlayerSpriteId: () => {},
+      log: () => {},
+    });
+
+    handler.mount();
+    leaveHandler?.();
+
+    expect(activationCalls).toEqual([]);
+    expect(clearCarriedItemCalls).toBe(0);
+    expect(cursorAttachments).toEqual([]);
+    expect(renderCalls).toBe(0);
+    expect(observedCarriedItem).toBeUndefined();
+    expect(carriedItem).toEqual({
+      definitionId: 'rocco-storage-transfer-menu:test',
+      item: {
+        id: 'souvenir-sea-dollar',
+        label: 'Sea Dollar',
+        imageUri: '/test/sea-dollar.png',
+      },
+    });
   });
 
   it('does not dismiss menus or clear carried items on cursor leave while input is blocked or advance-only', () => {

@@ -29,7 +29,7 @@ type RoccoDialogueMessageKind = 'say' | 'think';
 
 interface RoccoDialogueLinearSequence {
   speaker: 'player' | 'npc';
-  lines: readonly RoccoDialogueLine[];
+  lines: string[];
   lineIndex: number;
   messageKind: RoccoDialogueMessageKind;
   ttlMs: number;
@@ -245,17 +245,9 @@ export class RoccoDialogueSession {
 
     this.setPhase(sequence.speaker === 'player' ? 'waiting-player' : 'waiting-npc');
     if (sequence.messageKind === 'think') {
-      this.engine.video.messages.think(
-        spriteInstanceId,
-        this.resolveMessageText(line),
-        messageOptions,
-      );
+      this.engine.video.messages.think(spriteInstanceId, line, messageOptions);
     } else {
-      this.engine.video.messages.say(
-        spriteInstanceId,
-        this.resolveMessageText(line),
-        messageOptions,
-      );
+      this.engine.video.messages.say(spriteInstanceId, line, messageOptions);
     }
     this.schedule(
       this.resolveLineDuration(line, sequence.ttlMs),
@@ -287,6 +279,14 @@ export class RoccoDialogueSession {
   }
 
   private resolveMessageText(line: RoccoDialogueLine): string[] {
+    if (typeof line === 'string') {
+      return [line];
+    }
+
+    return [...line];
+  }
+
+  private normalizeDialogueLine(line: RoccoDialogueLine): string[] {
     if (typeof line === 'string') {
       return [line];
     }
@@ -383,14 +383,15 @@ export class RoccoDialogueSession {
 
   beginLinearSequence(start: RoccoDialogueLinearSequenceStart): void {
     this.cancel();
-    if (start.lines.length === 0) {
+    const normalizedLines = start.lines.flatMap((line) => this.normalizeDialogueLine(line));
+    if (normalizedLines.length === 0) {
       start.onComplete?.();
       return;
     }
 
     this.linearSequence = {
       speaker: start.speaker,
-      lines: [...start.lines],
+      lines: normalizedLines,
       lineIndex: 0,
       messageKind: start.messageKind ?? 'say',
       ttlMs: Math.max(

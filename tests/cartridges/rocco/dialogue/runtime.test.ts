@@ -316,4 +316,122 @@ describe('RoccoDialogueSession', () => {
     expect(session.isActive()).toBe(false);
     expect(state.inputEnabled).toBe(true);
   });
+
+  it.each([
+    { speaker: 'player' as const, mode: 'say' as const },
+    { speaker: 'npc' as const, mode: 'say' as const },
+  ])(
+    'advances a three-page $speaker $mode line one page per advance and completes once',
+    ({ speaker, mode }) => {
+      const state = makeState();
+      const engine = createEngineMock(state);
+      const session = new RoccoDialogueSession({
+        id: 'paged-dialogue',
+        engine,
+        playerSpriteInstanceId: 'rocco',
+        npcSpriteInstanceId: 'stan',
+      });
+
+      let completeCalls = 0;
+      session.beginLinearSequence({
+        speaker,
+        lines: [['line 1', 'line 2', 'line 3']],
+        onComplete: () => {
+          completeCalls += 1;
+        },
+      });
+
+      const spriteInstanceId = speaker === 'player' ? 'rocco' : 'stan';
+      expect(state.messages.at(-1)).toBe(`${spriteInstanceId}:${mode}:line 1`);
+      expect(completeCalls).toBe(0);
+
+      expect(session.advance()).toBe(true);
+      expect(state.messages.at(-1)).toBe(`${spriteInstanceId}:${mode}:line 2`);
+      expect(completeCalls).toBe(0);
+
+      expect(session.advance()).toBe(true);
+      expect(state.messages.at(-1)).toBe(`${spriteInstanceId}:${mode}:line 3`);
+      expect(completeCalls).toBe(0);
+
+      expect(session.advance()).toBe(true);
+      expect(completeCalls).toBe(1);
+
+      expect(session.advance()).toBe(false);
+      expect(completeCalls).toBe(1);
+    },
+  );
+
+  it.each([
+    { speaker: 'player' as const, mode: 'think' as const },
+    { speaker: 'npc' as const, mode: 'say' as const },
+  ])(
+    'advances a three-page $speaker $mode multi-line line one page per advance',
+    ({ speaker, mode }) => {
+      const state = makeState();
+      const engine = createEngineMock(state);
+      const session = new RoccoDialogueSession({
+        id: 'paged-dialogue',
+        engine,
+        playerSpriteInstanceId: 'rocco',
+        npcSpriteInstanceId: 'stan',
+      });
+
+      let completeCalls = 0;
+      session.beginLinearSequence({
+        speaker,
+        lines: [['line 1', 'line 2', 'line 3']],
+        messageKind: mode === 'think' ? 'think' : 'say',
+        onComplete: () => {
+          completeCalls += 1;
+        },
+      });
+
+      const spriteInstanceId = speaker === 'player' ? 'rocco' : 'stan';
+      expect(state.messages.at(-1)).toBe(`${spriteInstanceId}:${mode}:line 1`);
+      expect(completeCalls).toBe(0);
+
+      expect(session.advance()).toBe(true);
+      expect(state.messages.at(-1)).toBe(`${spriteInstanceId}:${mode}:line 2`);
+      expect(completeCalls).toBe(0);
+
+      expect(session.advance()).toBe(true);
+      expect(state.messages.at(-1)).toBe(`${spriteInstanceId}:${mode}:line 3`);
+      expect(completeCalls).toBe(0);
+
+      expect(session.advance()).toBe(true);
+      expect(completeCalls).toBe(1);
+    },
+  );
+
+  it('does not advance to the next turn until the final page is consumed', () => {
+    const state = makeState();
+    const engine = createEngineMock(state);
+    const session = new RoccoDialogueSession({
+      id: 'paged-dialogue',
+      engine,
+      playerSpriteInstanceId: 'rocco',
+      npcSpriteInstanceId: 'stan',
+    });
+
+    let completeCalls = 0;
+    session.beginLinearSequence({
+      speaker: 'npc',
+      lines: [['first page', 'second page']],
+      onComplete: () => {
+        completeCalls += 1;
+        session.beginLinearSequence({
+          speaker: 'player',
+          lines: [['followup']],
+        });
+      },
+    });
+
+    expect(session.advance()).toBe(true);
+    expect(state.messages.at(-1)).toBe('stan:say:second page');
+    expect(completeCalls).toBe(0);
+
+    expect(session.advance()).toBe(true);
+    expect(state.messages.at(-1)).toBe('rocco:say:followup');
+    expect(completeCalls).toBe(1);
+  });
 });

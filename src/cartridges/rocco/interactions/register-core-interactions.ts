@@ -6,7 +6,10 @@ import {
   normalizeDisposition,
 } from './interaction-types';
 import { DEFAULT_SPRITE_INSTANCE_ID } from '../rocco-default-constants';
-import { isRoccoPlayerInventoryAction, ROCCO_PLAYER_TALK_ACTION_ID } from '../rocco-player-action-menu';
+import {
+  isRoccoPlayerInventoryAction,
+  ROCCO_PLAYER_TALK_ACTION_ID,
+} from '../rocco-player-action-menu';
 import { roccoCartridgeMessageRuntime } from '../rpce/dialogue';
 
 const DEVELOPER_PRIORITY = 600;
@@ -20,15 +23,17 @@ function createDeveloperPlayerActionRule(): InteractionRule {
     priority: DEVELOPER_PRIORITY,
     kind: 'action-menu',
     matches: (context) =>
-      context.engine && isActionMenuAction(context.action)
-        ? context.developerRuntime.canHandlePlayerAction(context.engine, context.action)
+      context.sdk && isActionMenuAction(context.action)
+        ? context.developerRuntime.canHandlePlayerAction(context.sdk, context.action)
         : false,
     execute: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       if (!engine || !isActionMenuAction(context.action)) {
         return normalizeDisposition(undefined);
       }
-      return normalizeDisposition(context.developerRuntime.handlePlayerAction(engine, context.action));
+      return normalizeDisposition(
+        context.developerRuntime.handlePlayerAction(engine, context.action),
+      );
     },
   };
 }
@@ -41,15 +46,17 @@ function createDeveloperSceneClickRule(): InteractionRule {
     kind: 'scene-click',
     stage: 'before-exit-intent',
     matches: (context) =>
-      context.engine && isSceneClickAction(context.action)
-        ? context.developerRuntime.canHandleSceneClick(context.engine, context.action)
+      context.sdk && isSceneClickAction(context.action)
+        ? context.developerRuntime.canHandleSceneClick(context.sdk, context.action)
         : false,
     execute: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       if (!engine || !isSceneClickAction(context.action)) {
         return normalizeDisposition(undefined);
       }
-      return normalizeDisposition(context.developerRuntime.handleSceneClick(engine, context.action));
+      return normalizeDisposition(
+        context.developerRuntime.handleSceneClick(engine, context.action),
+      );
     },
   };
 }
@@ -61,12 +68,12 @@ function createDeveloperGridMenuRule(): InteractionRule {
     priority: DEVELOPER_PRIORITY,
     kind: 'grid-menu',
     matches: (context) =>
-      context.engine && isGridMenuAction(context.action)
-        ? context.developerRuntime.canHandleGridMenuAction(context.engine, context.action)
+      context.sdk && isGridMenuAction(context.action)
+        ? context.developerRuntime.canHandleGridMenuAction(context.sdk, context.action)
         : false,
     execute: (context) => {
-      if (context.engine && isGridMenuAction(context.action)) {
-        context.developerRuntime.handleGridMenuAction(context.engine, context.action);
+      if (context.sdk && isGridMenuAction(context.action)) {
+        context.developerRuntime.handleGridMenuAction(context.sdk, context.action);
       }
       return normalizeDisposition(undefined);
     },
@@ -79,9 +86,10 @@ function createInventoryToggleRule(): InteractionRule {
     ownerId: 'core.inventory-toggle',
     priority: INVENTORY_TOGGLE_PRIORITY,
     kind: 'action-menu',
-    matches: (context) => isActionMenuAction(context.action) && isRoccoPlayerInventoryAction(context.action),
+    matches: (context) =>
+      isActionMenuAction(context.action) && isRoccoPlayerInventoryAction(context.action),
     execute: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       if (!engine) {
         return normalizeDisposition(undefined);
       }
@@ -109,7 +117,7 @@ function createSelfTalkRule(): InteractionRule {
       );
     },
     execute: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       if (!engine) {
         return normalizeDisposition(undefined);
       }
@@ -120,7 +128,6 @@ function createSelfTalkRule(): InteractionRule {
         { ttlMs: 5200 },
         { count: 1, historyKey: 'rocco-self-talk', isAvoidImmediateRepeat: true },
       );
-      engine.video.render(0);
       return normalizeDisposition(undefined);
     },
   };

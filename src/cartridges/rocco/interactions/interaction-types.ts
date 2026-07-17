@@ -6,7 +6,7 @@ import type {
   RoccoCarryUseAction,
   RoccoSceneClickAction,
 } from '../../../console/cartridges';
-import type { RoccoEngine } from '../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuActivation } from '../../../console/video/action-menu';
 import type {
   RoccoGridMenuActivation,
@@ -41,7 +41,7 @@ export type InteractionStage = 'default' | 'before-exit-intent';
 export interface InteractionContext {
   readonly action: RoccoCartridgeAction;
   readonly cartridgeContext: CartridgeActionContext | undefined;
-  readonly engine: RoccoEngine | null;
+  readonly sdk: CartridgeSdkV1Runtime | null;
   readonly activeLevel: RoccoLevel | null;
   readonly inventory: RoccoInventory;
   readonly localization: RoccoLocalization;
@@ -98,10 +98,7 @@ export class DuplicateInteractionRuleError extends Error {
   readonly ruleId: string;
   readonly ownerIds: readonly string[];
 
-  constructor(
-    ruleId: string,
-    ownerIds: readonly string[],
-  ) {
+  constructor(ruleId: string, ownerIds: readonly string[]) {
     super(`Duplicate interaction rule '${ruleId}' registered by: ${ownerIds.join(', ')}.`);
     this.ruleId = ruleId;
     this.ownerIds = ownerIds;
@@ -134,7 +131,13 @@ export function isActionMenuAction(
 }
 
 export function normalizeDisposition(
-  result: boolean | void | null | undefined | CartridgeActionDisposition | { suppressDefaultPlayerMove?: boolean },
+  result:
+    | boolean
+    | void
+    | null
+    | undefined
+    | CartridgeActionDisposition
+    | { suppressDefaultPlayerMove?: boolean },
 ): InteractionDisposition | undefined {
   if (result === undefined || result === null) {
     return undefined;

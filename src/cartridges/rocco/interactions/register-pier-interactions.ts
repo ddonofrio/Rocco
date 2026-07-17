@@ -3,11 +3,7 @@ import type {
   InteractionRule,
   SpecialInventorySceneClickRule,
 } from './interaction-types';
-import {
-  isActionMenuAction,
-  isSceneClickAction,
-  normalizeDisposition,
-} from './interaction-types';
+import { isActionMenuAction, isSceneClickAction, normalizeDisposition } from './interaction-types';
 import {
   DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
   DEFAULT_SPRITE_INSTANCE_ID,
@@ -35,7 +31,7 @@ function isPierStart(context: InteractionContext): boolean {
 }
 
 function showRoccoThoughtVariant(
-  engine: InteractionContext['engine'],
+  engine: InteractionContext['sdk'],
   lines: readonly string[],
   historyKey: string,
 ): void {
@@ -56,7 +52,6 @@ function showRoccoThoughtVariant(
       isAvoidImmediateRepeat: true,
     },
   );
-  engine.video.render(0);
 }
 
 function resolvePierDoorKickLines(context: InteractionContext): readonly string[] {
@@ -69,7 +64,9 @@ function resolvePierDoorKickLines(context: InteractionContext): readonly string[
     : context.localization.text.pierDoor.kickSleepingUnknownStanLines;
 }
 
-function resolvePierDoorKickHistoryVariant(context: InteractionContext): 'awake' | 'known' | 'unknown' {
+function resolvePierDoorKickHistoryVariant(
+  context: InteractionContext,
+): 'awake' | 'known' | 'unknown' {
   if (context.isStanAwake()) {
     return 'awake';
   }
@@ -107,7 +104,7 @@ export function createPierActionMenuRules(): readonly InteractionRule[] {
         );
       },
       execute: (context) => {
-        const engine = context.engine;
+        const engine = context.sdk;
         if (!engine || !isPierStart(context) || !isActionMenuAction(context.action)) {
           return normalizeDisposition(undefined);
         }
@@ -161,7 +158,7 @@ function createBaitShopDoorUseRule(): SpecialInventorySceneClickRule {
       carriedItem.item.id === ROCCO_INVENTORY_KEYS_ITEM_ID &&
       context.action.targetInstanceId === DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
     execute: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       const activeLevel = context.activeLevel;
       if (!engine || !activeLevel || !isPierStart(context)) {
         return { handled: false };
@@ -183,7 +180,7 @@ function createStanPoliceDefeatRule(): SpecialInventorySceneClickRule {
       carriedItem.item.id === ROCCO_INVENTORY_KEYS_ITEM_ID &&
       context.action.targetInstanceId === DEFAULT_STAN_SPRITE_INSTANCE_ID,
     execute: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       if (!engine) {
         return { handled: false };
       }
@@ -213,7 +210,7 @@ function createStanMoneyRule(): SpecialInventorySceneClickRule {
       carriedItem.item.id === ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID &&
       context.action.targetInstanceId === DEFAULT_STAN_SPRITE_INSTANCE_ID,
     execute: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       if (!engine) {
         return { handled: false };
       }
@@ -243,7 +240,7 @@ function createLabCoatEquipRule(): SpecialInventorySceneClickRule {
       carriedItem.item.id === ROCCO_INVENTORY_BATA_ITEM_ID &&
       context.action.targetInstanceId === DEFAULT_SPRITE_INSTANCE_ID,
     execute: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       if (!engine) {
         return { handled: false };
       }
@@ -266,11 +263,17 @@ function createLabCoatEquipRule(): SpecialInventorySceneClickRule {
           return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
         }
 
-        applyDefaultSpriteAppearance(engine, ROCCO_LAB_COAT_PLAYER_APPEARANCE, context.localization);
+        applyDefaultSpriteAppearance(
+          engine,
+          ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+          context.localization,
+        );
         context.setRoccoAppearance(ROCCO_LAB_COAT_PLAYER_APPEARANCE);
         context.inventory.removeItem(ROCCO_INVENTORY_BATA_ITEM_ID);
         if (engine.video.gridMenus.isOpen(ROCCO_INVENTORY_MENU_ID)) {
-          engine.video.gridMenus.openMenu(context.inventory.createGridMenuDefinition(context.localization));
+          engine.video.gridMenus.openMenu(
+            context.inventory.createGridMenuDefinition(context.localization),
+          );
         }
         roccoCartridgeMessageRuntime.think(
           engine,
@@ -289,7 +292,6 @@ function createLabCoatEquipRule(): SpecialInventorySceneClickRule {
           engine.video.gridMenus.clearCarriedItem();
         }
         inputLease.dispose();
-        engine.video.render(0);
       }
     },
   };

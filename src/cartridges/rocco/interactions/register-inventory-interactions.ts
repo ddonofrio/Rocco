@@ -17,7 +17,7 @@ function createCarriedSceneClickRule(): InteractionRule {
     priority: CARRIED_ITEM_SCENE_CLICK_PRIORITY,
     kind: 'scene-click',
     matches: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       if (!engine || !isSceneClickAction(context.action)) {
         return false;
       }
@@ -26,7 +26,7 @@ function createCarriedSceneClickRule(): InteractionRule {
       );
     },
     execute: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       if (!engine || !isSceneClickAction(context.action)) {
         return normalizeDisposition(undefined);
       }
@@ -54,7 +54,7 @@ function createCarryUseRule(): InteractionRule {
       isCarryUseAction(context.action) &&
       context.inventoryRuntime.shouldHandleSceneCarriedItem(context.action.carriedItem),
     execute: (context) => {
-      const engine = context.engine;
+      const engine = context.sdk;
       if (!engine || !isCarryUseAction(context.action)) {
         return normalizeDisposition(undefined);
       }
@@ -76,12 +76,12 @@ function createInventoryGridMenuRule(): InteractionRule {
     priority: INVENTORY_GRID_MENU_PRIORITY,
     kind: 'grid-menu',
     matches: (context) =>
-      context.engine && isGridMenuAction(context.action)
+      context.sdk && isGridMenuAction(context.action)
         ? context.inventoryRuntime.canHandleGridMenuAction(context.action)
         : false,
     execute: (context) => {
-      if (context.engine && isGridMenuAction(context.action)) {
-        context.inventoryRuntime.handleGridMenuAction(context.engine, context.action);
+      if (context.sdk && isGridMenuAction(context.action)) {
+        context.inventoryRuntime.handleGridMenuAction(context.sdk, context.action);
       }
       return normalizeDisposition(undefined);
     },

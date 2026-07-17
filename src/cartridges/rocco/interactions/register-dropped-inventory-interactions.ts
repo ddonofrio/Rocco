@@ -1,9 +1,5 @@
 import type { InteractionRule } from './interaction-types';
-import {
-  isActionMenuAction,
-  isSceneClickAction,
-  normalizeDisposition,
-} from './interaction-types';
+import { isActionMenuAction, isSceneClickAction, normalizeDisposition } from './interaction-types';
 
 const DROPPED_SCENE_CLICK_PRIORITY = 500;
 const DROPPED_CORAL_RELIC_ACTION_MENU_PRIORITY = 200;
@@ -23,7 +19,7 @@ export function createDroppedInventoryInteractionRules(): readonly InteractionRu
       kind: 'scene-click',
       stage: 'before-exit-intent',
       matches: (context) => {
-        const engine = context.engine;
+        const engine = context.sdk;
         const activeLevel = context.activeLevel;
         if (!engine || !activeLevel || !isSceneClickAction(context.action)) {
           return false;
@@ -31,12 +27,14 @@ export function createDroppedInventoryInteractionRules(): readonly InteractionRu
         return context.droppedInventory.canHandleSceneClick(engine, activeLevel, context.action);
       },
       execute: (context) => {
-        const engine = context.engine;
+        const engine = context.sdk;
         const activeLevel = context.activeLevel;
         if (!engine || !activeLevel || !isSceneClickAction(context.action)) {
           return normalizeDisposition(undefined);
         }
-        return normalizeDisposition(context.droppedInventory.handleSceneClick(engine, activeLevel, context.action));
+        return normalizeDisposition(
+          context.droppedInventory.handleSceneClick(engine, activeLevel, context.action),
+        );
       },
     },
     {
@@ -45,7 +43,7 @@ export function createDroppedInventoryInteractionRules(): readonly InteractionRu
       priority: DROPPED_CORAL_RELIC_ACTION_MENU_PRIORITY,
       kind: 'action-menu',
       matches: (context) => {
-        const engine = context.engine;
+        const engine = context.sdk;
         const activeLevel = context.activeLevel;
         if (!engine || !activeLevel || !isActionMenuAction(context.action)) {
           return false;
@@ -53,7 +51,7 @@ export function createDroppedInventoryInteractionRules(): readonly InteractionRu
         return context.droppedInventory.canHandleActionMenu(engine, activeLevel, context.action);
       },
       execute: (context) => {
-        const engine = context.engine;
+        const engine = context.sdk;
         const activeLevel = context.activeLevel;
         if (!engine || !activeLevel || !isActionMenuAction(context.action)) {
           return normalizeDisposition(undefined);

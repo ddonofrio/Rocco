@@ -39,6 +39,16 @@ export function asRoccoTestSdk(engine: RoccoEngine | CartridgeSdkV1Runtime): Car
       if (property === 'storage') {
         return storage;
       }
+      if (property === 'video') {
+        const video = Reflect.get(target, property, receiver) as
+          | (CartridgeSdkV1Runtime['video'] & { zoom?: CartridgeSdkV1Runtime['video']['camera'] })
+          | undefined;
+        if (video && 'zoom' in video && video.zoom) {
+          const { zoom, ...sdkVideo } = video;
+          return { ...sdkVideo, camera: zoom };
+        }
+        return video;
+      }
       if (property === 'scope') {
         return scope;
       }

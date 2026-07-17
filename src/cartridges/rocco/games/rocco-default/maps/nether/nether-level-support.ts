@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../../../../../console/video/planes';
 import {
   createRoccoSpriteWalkMapFromImageData,
@@ -15,7 +15,6 @@ import {
   DEFAULT_WALK_MAP_ALPHA_THRESHOLD,
   DEFAULT_WALK_MAP_ID,
 } from '../../constants';
-import { roccoDefaultCartridgeManifest } from '../../../../rocco-default-manifest';
 
 export interface RoccoNetherSceneDefinition {
   sceneId: string;
@@ -126,23 +125,20 @@ function normalizeNetherScene(
 }
 
 export async function loadOrCreateNetherScene(
-  engine: RoccoEngine,
+  engine: CartridgeSdkV1Runtime,
   definition: RoccoNetherSceneDefinition,
 ): Promise<RoccoPlaneScene> {
   const defaultScene = buildNetherScene(definition);
-  const restoredRecord = await engine.persistence.loadPlaneSceneRecord(
-    roccoDefaultCartridgeManifest.id,
-    definition.sceneId,
-  );
+  const restoredRecord = await engine.storage.loadPlaneSceneRecord(definition.sceneId);
   if (!restoredRecord) {
-    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, defaultScene);
+    await engine.storage.savePlaneScene(defaultScene);
     engine.log('System', `Nether scene '${definition.sceneId}' initialized.`);
     return defaultScene;
   }
 
   const normalized = normalizeNetherScene(definition, restoredRecord.scene);
   if (normalized.changed) {
-    await engine.persistence.savePlaneScene(roccoDefaultCartridgeManifest.id, normalized.scene);
+    await engine.storage.savePlaneScene(normalized.scene);
     engine.log('System', `Nether scene '${definition.sceneId}' refreshed.`);
   }
 

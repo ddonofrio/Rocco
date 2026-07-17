@@ -1,19 +1,13 @@
-/* eslint-disable max-lines */
-
 import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
 } from '../../../../../../console/video/action-menu';
 import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
 import type { RoccoLocalization } from '../../localization';
-import {
-  roccoCartridgeMessageRuntime,
-} from '../../../../rpce/dialogue';
-import {
-  roccoDefaultActionMenuAssetUrls,
-} from '../../sprites';
+import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
+import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import {
   DEFAULT_DESIGN_HEIGHT,
@@ -33,7 +27,10 @@ import {
   type RoccoLevelConnector,
   type RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
-import { netherAmbientSteamMachineAssetUrl, netherEndOfHallwayDoorAssetUrls } from './nether-assets';
+import {
+  netherAmbientSteamMachineAssetUrl,
+  netherEndOfHallwayDoorAssetUrls,
+} from './nether-assets';
 import {
   createNetherWalkMapProfile,
   loadOrCreateNetherScene,
@@ -43,8 +40,7 @@ import {
 } from './nether-level-support';
 
 export const ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID = 'nether-end-of-hallway-door';
-export const ROCCO_NETHER_END_OF_HALLWAY_DOOR_SCENE_ID =
-  'rocco-nether-end-of-hallway-door-scene';
+export const ROCCO_NETHER_END_OF_HALLWAY_DOOR_SCENE_ID = 'rocco-nether-end-of-hallway-door-scene';
 
 const NETHER_END_OF_HALLWAY_RETURN_CONNECTOR_ID = 'south';
 const NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID = 'rocco-nether-steam-machine-ambient-sound';
@@ -62,8 +58,7 @@ const NETHER_LIGHTS_NOISE_SMOOTHING_MS = 120;
 const NETHER_LIGHTS_PULSE_UPDATE_EPSILON = 0.001;
 const NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID =
   'rocco-nether-end-of-hallway-door-timbre-target';
-const NETHER_END_OF_HALLWAY_TIMBRE_DEFINITION_ID =
-  'rocco-nether-end-of-hallway-door-timbre';
+const NETHER_END_OF_HALLWAY_TIMBRE_DEFINITION_ID = 'rocco-nether-end-of-hallway-door-timbre';
 const NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ID =
   'rocco-nether-end-of-hallway-door-timbre-action-menu';
 const NETHER_END_OF_HALLWAY_TIMBRE_SHAPE = {
@@ -95,7 +90,8 @@ const NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ITEM_SIZE = 92;
 const NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ORBIT_RADIUS = 88;
 const NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ORBIT_SPEED = 0.08;
 const NETHER_END_OF_HALLWAY_DOOR_HANDLE_MESSAGE_TTL_MS = 5200;
-const NETHER_END_OF_HALLWAY_DOOR_HANDLE_LOOK_HISTORY_KEY = 'nether-end-of-hallway-door-door-handle-look';
+const NETHER_END_OF_HALLWAY_DOOR_HANDLE_LOOK_HISTORY_KEY =
+  'nether-end-of-hallway-door-door-handle-look';
 const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID =
   'rocco-nether-end-of-hallway-door-ascending-pipes-target';
 const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_DEFINITION_ID =
@@ -108,7 +104,8 @@ const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_SHAPE = {
   height: 540,
 };
 const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_MESSAGE_TTL_MS = 5200;
-const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_HISTORY_KEY = 'nether-end-of-hallway-door-ascending-pipes';
+const NETHER_END_OF_HALLWAY_ASCENDING_PIPES_HISTORY_KEY =
+  'nether-end-of-hallway-door-ascending-pipes';
 const NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID =
   'rocco-nether-end-of-hallway-door-wheel-valve-target';
 const NETHER_END_OF_HALLWAY_WHEEL_VALVE_DEFINITION_ID =
@@ -126,8 +123,10 @@ const NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ITEM_SIZE = 92;
 const NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ORBIT_RADIUS = 88;
 const NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ORBIT_SPEED = 0.08;
 const NETHER_END_OF_HALLWAY_WHEEL_VALVE_MESSAGE_TTL_MS = 5200;
-const NETHER_END_OF_HALLWAY_WHEEL_VALVE_LOOK_HISTORY_KEY = 'nether-end-of-hallway-door-wheel-valve-look';
-const NETHER_END_OF_HALLWAY_WHEEL_VALVE_GRAB_HISTORY_KEY = 'nether-end-of-hallway-door-wheel-valve-grab';
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_LOOK_HISTORY_KEY =
+  'nether-end-of-hallway-door-wheel-valve-look';
+const NETHER_END_OF_HALLWAY_WHEEL_VALVE_GRAB_HISTORY_KEY =
+  'nether-end-of-hallway-door-wheel-valve-grab';
 const NETHER_END_OF_HALLWAY_ENTRY_GROUND_POINT = {
   x: Math.round(DEFAULT_DESIGN_WIDTH * 0.5),
   y: DEFAULT_DESIGN_HEIGHT - 22,
@@ -205,7 +204,7 @@ function randomBetween(min: number, max: number): number {
 
 export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
   private readonly localization: RoccoLocalization;
-  private engine: RoccoEngine | undefined = undefined;
+  private engine: CartridgeSdkV1Runtime | undefined = undefined;
   private spriteController: RoccoDefaultSpriteController | undefined = undefined;
   private lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
   private lightsNoiseOpacity = NETHER_LIGHTS_MIN_OPACITY;
@@ -222,7 +221,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     this.title = 'Nether';
   }
 
-  private installTimbre(engine: RoccoEngine): void {
+  private installTimbre(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID);
     engine.video.sceneTargets?.registerTarget({
@@ -270,10 +269,9 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
-  private installDoorHandle(engine: RoccoEngine): void {
+  private installDoorHandle(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ID);
     engine.video.sceneTargets?.unregisterTarget(
       NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID,
@@ -327,10 +325,9 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
-  private installAscendingPipes(engine: RoccoEngine): void {
+  private installAscendingPipes(engine: CartridgeSdkV1Runtime): void {
     engine.video.sceneTargets?.unregisterTarget(
       NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID,
     );
@@ -365,12 +362,13 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
-  private installWheelValve(engine: RoccoEngine): void {
+  private installWheelValve(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID);
+    engine.video.sceneTargets?.unregisterTarget(
+      NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID,
+    );
     engine.video.sceneTargets?.registerTarget({
       instanceId: NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID,
       definitionId: NETHER_END_OF_HALLWAY_WHEEL_VALVE_DEFINITION_ID,
@@ -424,7 +422,6 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private updateLightsOverlay(deltaMs: number): void {
@@ -472,11 +469,14 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     );
   }
 
-  private resetMountState(engine: RoccoEngine): void {
+  private resetMountState(engine: CartridgeSdkV1Runtime): void {
     this.engine = engine;
     this.spriteController = undefined;
     this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
-    this.lightsNoiseOpacity = randomBetween(NETHER_LIGHTS_MIN_OPACITY, NETHER_LIGHTS_NOISE_MAX_OPACITY);
+    this.lightsNoiseOpacity = randomBetween(
+      NETHER_LIGHTS_MIN_OPACITY,
+      NETHER_LIGHTS_NOISE_MAX_OPACITY,
+    );
     this.lightsNoiseTargetOpacity = this.lightsNoiseOpacity;
     this.lightsNoiseTargetRemainingMs = randomBetween(
       NETHER_LIGHTS_NOISE_STEP_MIN_MS,
@@ -485,7 +485,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     this.sceneReady = false;
   }
 
-  private registerAmbientSound(engine: RoccoEngine): void {
+  private registerAmbientSound(engine: CartridgeSdkV1Runtime): void {
     engine.audio.registerSound({
       id: NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID,
       uri: netherAmbientSteamMachineAssetUrl,
@@ -495,7 +495,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
   }
 
   private async preloadAmbientSound(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     preloader?: RoccoAssetPreloader,
   ): Promise<void> {
     try {
@@ -506,14 +506,16 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
   }
 
   private async prepareNetherEndScene(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     preloader?: RoccoAssetPreloader,
   ): Promise<{
     scene: RoccoPlaneScene;
     walkMapProfile: Awaited<ReturnType<typeof createNetherWalkMapProfile>>;
   }> {
     const scene = await loadOrCreateNetherScene(engine, NETHER_END_OF_HALLWAY_SCENE_DEFINITION);
-    const walkMapProfile = await createNetherWalkMapProfile(netherEndOfHallwayDoorAssetUrls.walkPath);
+    const walkMapProfile = await createNetherWalkMapProfile(
+      netherEndOfHallwayDoorAssetUrls.walkPath,
+    );
     await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     this.registerAmbientSound(engine);
     await this.preloadAmbientSound(engine, preloader);
@@ -536,7 +538,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
   }
 
   async mount(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
@@ -551,27 +553,30 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       : { ...NETHER_END_OF_HALLWAY_ENTRY_POSITION };
     const initialFacing = entryConnector?.entryFacing ?? 'up';
     const { scene, walkMapProfile } = await this.prepareNetherEndScene(engine, preloader);
-    this.spriteController = await installDefaultSprite(engine, {
-      appearance: options.roccoAppearance,
-      initialFacing,
-      initialPosition: projectOriginToWalkMap(
-        walkMapProfile.walkMap,
-        initialPosition,
-        NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE,
-      ),
-      scale: NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE,
-      tint: NETHER_END_OF_HALLWAY_DOOR_ROCCO_TINT,
-      localization: this.localization,
-      playIntro: false,
-      perspectiveAutoAdjust: {
-        farY: walkMapProfile.farY,
-        nearY: walkMapProfile.nearY,
-        farScale: NETHER_END_OF_HALLWAY_DOOR_FAR_SCALE,
-        nearScale: 1,
-        scaleCurve: 'linear',
+    this.spriteController = await installDefaultSprite(
+      engine,
+      {
+        appearance: options.roccoAppearance,
+        initialFacing,
+        initialPosition: projectOriginToWalkMap(
+          walkMapProfile.walkMap,
+          initialPosition,
+          NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE,
+        ),
+        scale: NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE,
+        tint: NETHER_END_OF_HALLWAY_DOOR_ROCCO_TINT,
+        localization: this.localization,
+        playIntro: false,
+        perspectiveAutoAdjust: {
+          farY: walkMapProfile.farY,
+          nearY: walkMapProfile.nearY,
+          farScale: NETHER_END_OF_HALLWAY_DOOR_FAR_SCALE,
+          nearScale: 1,
+          scaleCurve: 'linear',
+        },
       },
-    }, preloader);
-    engine.video.render(0);
+      preloader,
+    );
     this.sceneReady = true;
 
     this.installTimbre(engine);
@@ -582,16 +587,22 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     return scene;
   }
 
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_TIMBRE_ACTION_MENU_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID);
     engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_DOOR_HANDLE_ACTION_MENU_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID);
+    engine.video.sceneTargets?.unregisterTarget(
+      NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID,
+    );
+    engine.video.sceneTargets?.unregisterTarget(
+      NETHER_END_OF_HALLWAY_ASCENDING_PIPES_TARGET_INSTANCE_ID,
+    );
     engine.video.actionMenus.unregisterMenu(NETHER_END_OF_HALLWAY_WHEEL_VALVE_ACTION_MENU_ID);
-    engine.video.sceneTargets?.unregisterTarget(NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID);
+    engine.video.sceneTargets?.unregisterTarget(
+      NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID,
+    );
     engine.audio.stopSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
     engine.audio.unregisterSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
     uninstallDefaultSprite(engine);
@@ -603,7 +614,6 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     this.lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;
     this.lightsNoiseTargetRemainingMs = 0;
     this.sceneReady = false;
-    engine.video.render(0);
   }
 
   update(deltaMs: number): void {

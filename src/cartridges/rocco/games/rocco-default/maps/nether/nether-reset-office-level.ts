@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import {
@@ -96,7 +96,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
   }
 
   async mount(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
@@ -118,34 +118,36 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
-    this.spriteController = await installDefaultSprite(engine, {
-      appearance: options.roccoAppearance,
-      initialFacing,
-      initialPosition: { ...initialPosition },
-      scale: NETHER_RESET_OFFICE_ROCCO_SCALE,
-      tint: NETHER_RESET_OFFICE_ROCCO_TINT,
-      localization: this.localization,
-      playIntro: false,
-      perspectiveAutoAdjust: {
-        farY: walkMapProfile.farY,
-        nearY: walkMapProfile.nearY,
-        farScale: NETHER_RESET_OFFICE_FAR_SCALE,
-        nearScale: 1,
-        scaleCurve: 'linear',
+    this.spriteController = await installDefaultSprite(
+      engine,
+      {
+        appearance: options.roccoAppearance,
+        initialFacing,
+        initialPosition: { ...initialPosition },
+        scale: NETHER_RESET_OFFICE_ROCCO_SCALE,
+        tint: NETHER_RESET_OFFICE_ROCCO_TINT,
+        localization: this.localization,
+        playIntro: false,
+        perspectiveAutoAdjust: {
+          farY: walkMapProfile.farY,
+          nearY: walkMapProfile.nearY,
+          farScale: NETHER_RESET_OFFICE_FAR_SCALE,
+          nearScale: 1,
+          scaleCurve: 'linear',
+        },
       },
-    }, preloader);
-    engine.video.render(0);
+      preloader,
+    );
 
     return scene;
   }
 
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     uninstallDefaultSprite(engine);
     engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
     this.spriteController = undefined;
-    engine.video.render(0);
   }
 
   update(deltaMs: number): void {

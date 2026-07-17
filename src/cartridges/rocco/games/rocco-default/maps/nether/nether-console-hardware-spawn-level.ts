@@ -1,7 +1,5 @@
-/* eslint-disable max-lines */
-
 import type { RoccoSceneClickAction } from '../../../../../../console/cartridges';
-import type { RoccoEngine } from '../../../../../../console/engine-sdk';
+import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type {
   RoccoActionMenuActivation,
   RoccoActionMenuDefinition,
@@ -21,10 +19,7 @@ import {
   resolveRoccoDialogueChoice,
   type RoccoDialogueLine,
 } from '../../../../rpce/dialogue';
-import {
-  roccoDefaultActionMenuAssetUrls,
-  roccoDefaultYouLoseSoundUrl,
-} from '../../sprites';
+import { roccoDefaultActionMenuAssetUrls, roccoDefaultYouLoseSoundUrl } from '../../sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import {
   DEFAULT_DESIGN_HEIGHT,
@@ -55,10 +50,11 @@ import {
   type RoccoLevelRestartRequest,
 } from '../../../../levels/rocco-level-types';
 import { type RoccoAppearanceCapability } from '../../../../levels/runtime/rocco-level-capabilities';
+import { createRoccoBataInventoryItem } from '../../inventory';
 import {
-  createRoccoBataInventoryItem,
-} from '../../inventory';
-import { netherAmbientSteamMachineAssetUrl, netherConsoleHardwareSpawnAssetUrls } from './nether-assets';
+  netherAmbientSteamMachineAssetUrl,
+  netherConsoleHardwareSpawnAssetUrls,
+} from './nether-assets';
 import {
   createNetherArrivalPortalSpriteDefinition,
   createNetherArrivalSmokeSpriteDefinition,
@@ -244,10 +240,8 @@ const NETHER_NOISY_MACHINE_ACTION_MENU_ORBIT_SPEED = 0.08;
 const NETHER_NOISY_MACHINE_MESSAGE_TTL_MS = 5200;
 const NETHER_NOISY_MACHINE_GRAB_HISTORY_KEY = 'nether-noisy-machine-grab';
 const NETHER_NOISY_MACHINE_LOOK_HISTORY_KEY = 'nether-noisy-machine-look';
-const NETHER_SHELF_TARGET_INSTANCE_ID =
-  'rocco-nether-console-hardware-spawn-shelf-target';
-const NETHER_SHELF_ACTION_MENU_ID =
-  'rocco-nether-console-hardware-spawn-shelf-action-menu';
+const NETHER_SHELF_TARGET_INSTANCE_ID = 'rocco-nether-console-hardware-spawn-shelf-target';
+const NETHER_SHELF_ACTION_MENU_ID = 'rocco-nether-console-hardware-spawn-shelf-action-menu';
 const NETHER_SHELF_SHAPE = {
   kind: 'rect' as const,
   x: 643,
@@ -301,8 +295,7 @@ const NETHER_SECURITY_CAMERA_SCALE_X =
   NETHER_SECURITY_CAMERA_TARGET_WIDTH / NETHER_SECURITY_CAMERA_SOURCE_WIDTH;
 const NETHER_SECURITY_CAMERA_SCALE_Y =
   NETHER_SECURITY_CAMERA_TARGET_HEIGHT / NETHER_SECURITY_CAMERA_SOURCE_HEIGHT;
-const NETHER_PIPE_SMOKE_SPRITE_DEFINITION_ID =
-  'rocco-nether-console-hardware-spawn-pipe-smoke';
+const NETHER_PIPE_SMOKE_SPRITE_DEFINITION_ID = 'rocco-nether-console-hardware-spawn-pipe-smoke';
 const NETHER_PIPE_SMOKE_SPRITE_INSTANCE_ID =
   'rocco-nether-console-hardware-spawn-pipe-smoke-instance';
 const NETHER_PIPE_SMOKE_SECOND_SPRITE_INSTANCE_ID =
@@ -351,7 +344,7 @@ const NETHER_SECURITY_CAMERA_TEXT_BY_LOCALE: Record<string, NetherSecurityCamera
     ],
     grabLines: [
       "I can't reach it. It's too high.",
-      "Not even on tiptoe.",
+      'Not even on tiptoe.',
       'I would need to be half a meter taller.',
       "I would have to jump, and I'm not jumping.",
     ],
@@ -415,9 +408,7 @@ const NETHER_NOISY_MACHINE_TEXT_BY_LOCALE: Record<string, NetherNoisyMachineText
   },
 };
 
-function resolveNetherNoisyMachineText(
-  localization: RoccoLocalization,
-): NetherNoisyMachineText {
+function resolveNetherNoisyMachineText(localization: RoccoLocalization): NetherNoisyMachineText {
   return (
     NETHER_NOISY_MACHINE_TEXT_BY_LOCALE[localization.locale] ??
     NETHER_NOISY_MACHINE_TEXT_BY_LOCALE.en
@@ -440,11 +431,7 @@ const NETHER_SHELF_TEXT_BY_LOCALE: Record<string, NetherShelfText> = {
     grabBeforeLookLine: 'It is an empty shelf.',
     grabAfterLookLine: 'I take this lab coat.',
     grabAfterTakeLine: 'It is empty.',
-    emptyLookLines: [
-      'It is empty.',
-      'A built-in shelf.',
-      'There used to be a lab coat here.',
-    ],
+    emptyLookLines: ['It is empty.', 'A built-in shelf.', 'There used to be a lab coat here.'],
   },
   es: {
     description: 'Un armario con una bata.',
@@ -460,13 +447,8 @@ const NETHER_SHELF_TEXT_BY_LOCALE: Record<string, NetherShelfText> = {
   },
 };
 
-function resolveNetherShelfText(
-  localization: RoccoLocalization,
-): NetherShelfText {
-  return (
-    NETHER_SHELF_TEXT_BY_LOCALE[localization.locale] ??
-    NETHER_SHELF_TEXT_BY_LOCALE.en
-  );
+function resolveNetherShelfText(localization: RoccoLocalization): NetherShelfText {
+  return NETHER_SHELF_TEXT_BY_LOCALE[localization.locale] ?? NETHER_SHELF_TEXT_BY_LOCALE.en;
 }
 
 function resolveNetherSecurityCameraText(
@@ -738,14 +720,15 @@ function createNetherPipeSmokeSpriteDefinition(
     smokeDefinition.animations[NETHER_ARRIVAL_SMOKE_ANIMATION_ID]?.frames.map((frame) => ({
       frameId: frame.frameId,
       durationMs: frame.durationMs,
-    })) ??
-    [];
+    })) ?? [];
   const fallbackFrame = smokeDefinition.frames[0];
   let resolvedFrames: { frameId: string; durationMs: number }[];
   if (animationFrames.length > 0) {
     resolvedFrames = [...animationFrames];
   } else if (fallbackFrame) {
-    resolvedFrames = [{ frameId: fallbackFrame.id, durationMs: NETHER_ARRIVAL_SMOKE_FRAME_DURATION_MS }];
+    resolvedFrames = [
+      { frameId: fallbackFrame.id, durationMs: NETHER_ARRIVAL_SMOKE_FRAME_DURATION_MS },
+    ];
   } else {
     resolvedFrames = [];
   }
@@ -792,11 +775,7 @@ function randomBetween(min: number, max: number): number {
 
 type NetherArrivalSequencePhase = 'opening-portal' | 'smoke' | 'spawning-rocco';
 type NetherSecurityDefeatPhase = 'warning' | 'fading' | 'title' | 'restarting';
-type NetherIntercomStage =
-  | 'first-contact'
-  | 'after-emergency'
-  | 'after-reveal'
-  | 'final-warning';
+type NetherIntercomStage = 'first-contact' | 'after-emergency' | 'after-reveal' | 'final-warning';
 type NetherIntercomPhase =
   | 'idle'
   | 'awaiting-choice'
@@ -828,7 +807,12 @@ type NetherIntercomText = RoccoLocalization['text']['nether']['intercom'];
 
 function createFirstIntercomChoices(text: NetherIntercomText): readonly NetherIntercomChoice[] {
   return [
-    { id: 'hello-anyone-there', playerLine: text.firstChoices.helloAnyoneThere, npcLine: text.firstReplyLine, nextStage: 'after-emergency' },
+    {
+      id: 'hello-anyone-there',
+      playerLine: text.firstChoices.helloAnyoneThere,
+      npcLine: text.firstReplyLine,
+      nextStage: 'after-emergency',
+    },
     { id: 'hello-im-rocco', playerLine: text.firstChoices.helloImRocco, triggersDefeat: true },
     { id: 'turn-off-camera', playerLine: text.firstChoices.turnOffCamera, triggersDefeat: true },
     { id: 'where-am-i', playerLine: text.firstChoices.whereAmI, triggersDefeat: true },
@@ -837,9 +821,25 @@ function createFirstIntercomChoices(text: NetherIntercomText): readonly NetherIn
 
 function createEmergencyIntercomChoices(text: NetherIntercomText): readonly NetherIntercomChoice[] {
   return [
-    { id: 'what-happened', playerLine: text.secondChoices.whatHappened, npcLine: text.secondReplyLines, thoughtLine: text.secondReplyThoughtLines, nextStage: 'after-reveal' },
-    { id: 'i-do-not-know-how-i-got-here', playerLine: text.secondChoices.iDoNotKnowHowIGotHere, triggersDefeat: true },
-    { id: 'what-emergency', playerLine: text.secondChoices.whatEmergency, npcLine: text.secondReplyLines, thoughtLine: text.secondReplyThoughtLines, nextStage: 'after-reveal' },
+    {
+      id: 'what-happened',
+      playerLine: text.secondChoices.whatHappened,
+      npcLine: text.secondReplyLines,
+      thoughtLine: text.secondReplyThoughtLines,
+      nextStage: 'after-reveal',
+    },
+    {
+      id: 'i-do-not-know-how-i-got-here',
+      playerLine: text.secondChoices.iDoNotKnowHowIGotHere,
+      triggersDefeat: true,
+    },
+    {
+      id: 'what-emergency',
+      playerLine: text.secondChoices.whatEmergency,
+      npcLine: text.secondReplyLines,
+      thoughtLine: text.secondReplyThoughtLines,
+      nextStage: 'after-reveal',
+    },
     { id: 'help-me-get-out', playerLine: text.secondChoices.helpMeGetOut, triggersDefeat: true },
   ];
 }
@@ -849,12 +849,23 @@ function createRevealIntercomChoices(
   hasShelfBeenTaken: boolean,
 ): readonly NetherIntercomChoice[] {
   return [
-    { id: 'what-if-not-found', playerLine: text.thirdChoices.whatIfNotFound, npcLine: text.thirdReplyLines, nextStage: 'final-warning' },
-    { id: 'how-to-reset-console', playerLine: text.thirdChoices.howToResetConsole, triggersDefeat: true },
+    {
+      id: 'what-if-not-found',
+      playerLine: text.thirdChoices.whatIfNotFound,
+      npcLine: text.thirdReplyLines,
+      nextStage: 'final-warning',
+    },
+    {
+      id: 'how-to-reset-console',
+      playerLine: text.thirdChoices.howToResetConsole,
+      triggersDefeat: true,
+    },
     { id: 'where-is-an-exit', playerLine: text.thirdChoices.whereIsAnExit, triggersDefeat: true },
     {
       id: hasShelfBeenTaken ? 'lab-coat-question' : 'nice-voice',
-      playerLine: hasShelfBeenTaken ? text.thirdChoices.labCoatQuestion : text.thirdChoices.niceVoice,
+      playerLine: hasShelfBeenTaken
+        ? text.thirdChoices.labCoatQuestion
+        : text.thirdChoices.niceVoice,
       triggersDefeat: true,
     },
   ];
@@ -921,14 +932,16 @@ const NETHER_SCENE_DEFINITION: RoccoNetherSceneDefinition = {
 type NetherConsoleHardwareSceneClickResult = { suppressDefaultPlayerMove: true } | undefined;
 const NETHER_BLOCKING_INPUT_OWNER_ID = 'nether-console-hardware-sequence';
 
-export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAppearanceCapability {
+class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppearanceCapability {
   private readonly localization: RoccoLocalization;
-  private engine: RoccoEngine | undefined = undefined;
+  private engine: CartridgeSdkV1Runtime | undefined = undefined;
   private options: RoccoLevelMountOptions = {};
   private spriteController: RoccoDefaultSpriteController | undefined = undefined;
-  private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined = undefined;
+  private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined =
+    undefined;
   private intercomDialogue: RoccoDialogueSession | undefined = undefined;
-  private onRestartRequested: ((request?: RoccoLevelRestartRequest) => void) | undefined = undefined;
+  private onRestartRequested: ((request?: RoccoLevelRestartRequest) => void) | undefined =
+    undefined;
   private arrivalSequence: NetherArrivalSequence | undefined = undefined;
   private securityDefeatSequence: NetherSecurityDefeatSequence | undefined = undefined;
   private intercomStage: NetherIntercomStage = 'first-contact';
@@ -951,7 +964,8 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
   private sceneReady = false;
   private shelfLookedAt = false;
   private hasShelfBeenTaken = false;
-  private blockingInputLease: ReturnType<RoccoEngine['acquireInputLease']> | undefined = undefined;
+  private blockingInputLease: ReturnType<CartridgeSdkV1Runtime['acquireInputLease']> | undefined =
+    undefined;
   private zoomIntroPhase: 'hold' | 'zoom-out' | undefined = undefined;
   private zoomIntroElapsedMs = 0;
 
@@ -964,11 +978,8 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.title = 'Nether';
   }
 
-  private acquireBlockingInputLease(engine: RoccoEngine): void {
-    this.blockingInputLease ??= engine.acquireInputLease(
-      NETHER_BLOCKING_INPUT_OWNER_ID,
-      'blocked',
-    );
+  private acquireBlockingInputLease(engine: CartridgeSdkV1Runtime): void {
+    this.blockingInputLease ??= engine.acquireInputLease(NETHER_BLOCKING_INPUT_OWNER_ID, 'blocked');
   }
 
   private releaseBlockingInputLease(): void {
@@ -976,7 +987,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.blockingInputLease = undefined;
   }
 
-  private installSecurityCamera(engine: RoccoEngine): void {
+  private installSecurityCamera(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(NETHER_SECURITY_CAMERA_ACTION_MENU_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID);
     engine.video.sprites.removeSprite(NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID);
@@ -1020,7 +1031,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     );
   }
 
-  private installIntercomMessageAnchor(engine: RoccoEngine): void {
+  private installIntercomMessageAnchor(engine: CartridgeSdkV1Runtime): void {
     engine.video.sprites.removeSprite(NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID);
     engine.video.sprites.createSpriteFromDefinition(
       NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_DEFINITION_ID,
@@ -1043,7 +1054,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     );
   }
 
-  private installIntercomunicador(engine: RoccoEngine): void {
+  private installIntercomunicador(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(NETHER_INTERCOMUNICADOR_ACTION_MENU_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_INTERCOMUNICADOR_TARGET_INSTANCE_ID);
     engine.video.sceneTargets?.registerTarget({
@@ -1100,7 +1111,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private runIntercomInteraction(onReached: () => void): void {
@@ -1139,7 +1149,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.intercomCurrentChoices = choices;
     this.intercomPhase = 'awaiting-choice';
     this.engine.video.gridMenus.openMenu(this.createIntercomChoiceMenu(choices).gridMenu);
-    this.engine.video.render(0);
   }
 
   private createIntercomChoiceMenu(choices: readonly NetherIntercomChoice[]) {
@@ -1207,7 +1216,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         this.finishIntercomChoice(choice);
       },
     });
-    this.engine.video.render(0);
   }
 
   private showIntercomNpcLine(choice: NetherIntercomChoice): void {
@@ -1234,7 +1242,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         this.finishIntercomChoice(choice);
       },
     });
-    this.engine.video.render(0);
   }
 
   private showIntercomThought(choice: NetherIntercomChoice): void {
@@ -1252,7 +1259,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         this.finishIntercomChoice(choice);
       },
     });
-    this.engine.video.render(0);
   }
 
   private finishIntercomChoice(choice: NetherIntercomChoice): void {
@@ -1267,7 +1273,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     }
 
     this.resetIntercomConversationState();
-    this.engine.video.render(0);
   }
 
   private advanceIntercomConversation(): boolean {
@@ -1297,16 +1302,14 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
   }
 
   private resolveIntercomSpeakerInstanceId(): string {
-    if (
-      this.engine?.video.sprites.getSprite(NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID)
-    ) {
+    if (this.engine?.video.sprites.getSprite(NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID)) {
       return NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID;
     }
 
     return NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID;
   }
 
-  private installNoisyMachine(engine: RoccoEngine): void {
+  private installNoisyMachine(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(NETHER_NOISY_MACHINE_ACTION_MENU_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID);
     engine.video.sceneTargets?.registerTarget({
@@ -1327,10 +1330,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
 
   private handleNoisyMachineAction(activation: RoccoActionMenuActivation): void {
     if (activation.actionId === 'grab') {
-      this.showNoisyMachineThought(
-        ['No voy a tocar eso.'],
-        NETHER_NOISY_MACHINE_GRAB_HISTORY_KEY,
-      );
+      this.showNoisyMachineThought(['No voy a tocar eso.'], NETHER_NOISY_MACHINE_GRAB_HISTORY_KEY);
       return;
     }
 
@@ -1339,10 +1339,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     }
 
     const machineText = resolveNetherNoisyMachineText(this.localization);
-    this.showNoisyMachineThought(
-      machineText.lookLines,
-      NETHER_NOISY_MACHINE_LOOK_HISTORY_KEY,
-    );
+    this.showNoisyMachineThought(machineText.lookLines, NETHER_NOISY_MACHINE_LOOK_HISTORY_KEY);
   }
 
   private showNoisyMachineThought(lines: readonly string[], historyKey: string): void {
@@ -1363,10 +1360,9 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
-  private installShelf(engine: RoccoEngine): void {
+  private installShelf(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.unregisterMenu(NETHER_SHELF_ACTION_MENU_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_SHELF_TARGET_INSTANCE_ID);
     engine.video.sceneTargets?.registerTarget({
@@ -1380,9 +1376,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         text: this.localization.text.descriptions.shelf,
       },
     });
-    engine.video.actionMenus.registerMenu(
-      createNetherShelfActionMenuDefinition(this.localization),
-    );
+    engine.video.actionMenus.registerMenu(createNetherShelfActionMenuDefinition(this.localization));
   }
 
   private updateShelfTargetDescription(): void {
@@ -1406,7 +1400,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         text: description,
       },
     });
-    this.engine.video.render(0);
   }
 
   private handleShelfAction(activation: RoccoActionMenuActivation): void {
@@ -1415,10 +1408,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       this.updateShelfTargetDescription();
       if (this.hasShelfBeenTaken) {
         const shelfText = resolveNetherShelfText(this.localization);
-        this.showShelfThought(
-          shelfText.emptyLookLines,
-          NETHER_SHELF_LOOK_HISTORY_KEY,
-        );
+        this.showShelfThought(shelfText.emptyLookLines, NETHER_SHELF_LOOK_HISTORY_KEY);
         return;
       }
       this.showShelfThought(
@@ -1484,7 +1474,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
   private showSecurityCameraThought(lines: readonly string[], historyKey: string): void {
@@ -1505,10 +1494,9 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         isAvoidImmediateRepeat: true,
       },
     );
-    this.engine.video.render(0);
   }
 
-  private installPipeSmoke(engine: RoccoEngine): void {
+  private installPipeSmoke(engine: CartridgeSdkV1Runtime): void {
     engine.video.sprites.removeSprite(NETHER_PIPE_SMOKE_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(NETHER_PIPE_SMOKE_SECOND_SPRITE_INSTANCE_ID);
     engine.video.sprites.createSpriteFromDefinition(NETHER_PIPE_SMOKE_SPRITE_DEFINITION_ID, {
@@ -1623,7 +1611,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       options?.messageSide ?? 'left',
       options?.messageOffset ?? NETHER_SECURITY_ALERT_MESSAGE_OFFSET,
     );
-    this.engine.video.render(0);
   }
 
   private showSecurityAlertMessage(
@@ -1636,20 +1623,16 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       return;
     }
 
-    this.engine.video.messages.say(
-      spriteInstanceId,
-      text,
-      {
-        id: NETHER_SECURITY_ALERT_MESSAGE_ID,
-        background: true,
-        ttlMs: NETHER_SECURITY_ALERT_MESSAGE_TTL_MS,
-        side,
-        offset,
-        maxWidth: NETHER_SECURITY_ALERT_MESSAGE_MAX_WIDTH,
-        zIndex: 5000,
-        style: NETHER_SECURITY_SPEECH_STYLE,
-      },
-    );
+    this.engine.video.messages.say(spriteInstanceId, text, {
+      id: NETHER_SECURITY_ALERT_MESSAGE_ID,
+      background: true,
+      ttlMs: NETHER_SECURITY_ALERT_MESSAGE_TTL_MS,
+      side,
+      offset,
+      maxWidth: NETHER_SECURITY_ALERT_MESSAGE_MAX_WIDTH,
+      zIndex: 5000,
+      style: NETHER_SECURITY_SPEECH_STYLE,
+    });
   }
 
   private resolveSecurityAlertLine(): string {
@@ -1657,12 +1640,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
   }
 
   private updateSecurityDefeatSequence(deltaMs: number): void {
-    if (
-      !this.engine ||
-      !this.securityDefeatSequence ||
-      !Number.isFinite(deltaMs) ||
-      deltaMs <= 0
-    ) {
+    if (!this.engine || !this.securityDefeatSequence || !Number.isFinite(deltaMs) || deltaMs <= 0) {
       return;
     }
 
@@ -1693,9 +1671,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         ...this.securityDefeatSequence,
         elapsedMs,
       };
-      this.addSecurityDefeatFadePrimitive(
-        elapsedMs / NETHER_SECURITY_DEFEAT_FADE_DURATION_MS,
-      );
+      this.addSecurityDefeatFadePrimitive(elapsedMs / NETHER_SECURITY_DEFEAT_FADE_DURATION_MS);
 
       if (elapsedMs >= NETHER_SECURITY_DEFEAT_FADE_DURATION_MS) {
         this.showSecurityDefeatTitle();
@@ -1730,7 +1706,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       volume: NETHER_SECURITY_ALERT_SOUND_VOLUME,
     });
     this.addSecurityDefeatFadePrimitive(0);
-    this.engine.video.render(0);
   }
 
   private showSecurityDefeatTitle(): void {
@@ -1765,7 +1740,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       },
       visible: true,
     });
-    this.engine.video.render(0);
   }
 
   private finishSecurityDefeat(): void {
@@ -1806,7 +1780,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       height: DEFAULT_DESIGN_HEIGHT,
       fill: true,
     });
-    this.engine.video.render(0);
   }
 
   private clearSecurityDefeatPresentation(): void {
@@ -1820,7 +1793,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.engine.video.messages.removeMessage(NETHER_SECURITY_ALERT_MESSAGE_ID);
     this.engine.video.titles.removeTitle(NETHER_SECURITY_DEFEAT_TITLE_ID);
     this.engine.video.primitives.removePrimitive(NETHER_SECURITY_DEFEAT_FADE_PRIMITIVE_ID);
-    this.engine.video.render(0);
   }
 
   private updateAmbientSoundVolume(): void {
@@ -1834,7 +1806,9 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     const leftness = 1 - clampedX / DEFAULT_DESIGN_WIDTH;
     const nextVolume = NETHER_AMBIENT_SOUND_VOLUME + leftness * NETHER_AMBIENT_SOUND_LEFT_BONUS;
 
-    if (Math.abs(nextVolume - this.ambientSoundVolume) < NETHER_AMBIENT_SOUND_VOLUME_UPDATE_EPSILON) {
+    if (
+      Math.abs(nextVolume - this.ambientSoundVolume) < NETHER_AMBIENT_SOUND_VOLUME_UPDATE_EPSILON
+    ) {
       return;
     }
 
@@ -1916,7 +1890,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
   }
 
   private async installNetherSprite(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     initialFacing: RoccoFacingDirection,
     initialPosition: RoccoPoint,
   ): Promise<RoccoDefaultSpriteController> {
@@ -1949,58 +1923,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
         ],
       },
     });
-  }
-
-  private startArrivalZoomIntro(engine: RoccoEngine): void {
-    this.acquireBlockingInputLease(engine);
-    engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
-    engine.setPlayerSprite(undefined);
-    engine.video.zoom.setTransform({
-      factor: NETHER_ARRIVAL_ZOOM_FACTOR,
-      focusX: DEFAULT_DESIGN_WIDTH,
-      focusY: 0,
-      anchorX: DEFAULT_DESIGN_WIDTH,
-      anchorY: 0,
-    });
-    this.zoomIntroPhase = 'hold';
-    this.zoomIntroElapsedMs = 0;
-    engine.video.render(0);
-  }
-
-  private updateArrivalZoomIntro(deltaMs: number): void {
-    if (!this.engine || !Number.isFinite(deltaMs) || deltaMs <= 0) {
-      return;
-    }
-
-    if (this.zoomIntroPhase !== 'hold') {
-      return;
-    }
-
-    this.zoomIntroElapsedMs += deltaMs;
-    if (this.zoomIntroElapsedMs < NETHER_ARRIVAL_ZOOM_HOLD_MS) {
-      return;
-    }
-
-    this.zoomIntroPhase = 'zoom-out';
-    this.engine.video.zoom.animateTo(
-      {
-        factor: 1,
-        focusX: DEFAULT_DESIGN_WIDTH / 2,
-        focusY: DEFAULT_DESIGN_HEIGHT / 2,
-        anchorX: DEFAULT_DESIGN_WIDTH / 2,
-        anchorY: DEFAULT_DESIGN_HEIGHT / 2,
-      },
-      NETHER_ARRIVAL_ZOOM_OUT_MS,
-      {
-        easing: NETHER_ARRIVAL_ZOOM_EASE,
-        onComplete: () => {
-          this.zoomIntroPhase = undefined;
-          this.zoomIntroElapsedMs = 0;
-          this.engine?.video.zoom.clear();
-          this.startArrivalSequence();
-        },
-      },
-    );
   }
 
   private startArrivalSequence(): void {
@@ -2044,7 +1966,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       elapsedMs: 0,
       smokeFrameIndex: 0,
     };
-    this.engine.video.render(0);
   }
 
   private updateArrivalSequence(deltaMs: number): void {
@@ -2129,7 +2050,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     });
     this.engine.video.sprites.stopAnimation(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
     this.engine.video.sprites.setAnimationFrame(NETHER_ARRIVAL_SMOKE_INSTANCE_ID, 0);
-    this.engine.video.render(0);
   }
 
   private async finishArrivalSequence(): Promise<void> {
@@ -2167,7 +2087,6 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     } finally {
       this.releaseBlockingInputLease();
       this.arrivalSequence = undefined;
-      engine.video.render(0);
     }
   }
 
@@ -2187,9 +2106,60 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     return this.localization.text.nether.arrivalThoughtLine;
   }
 
-  // eslint-disable-next-line max-lines-per-function
+  startArrivalZoomIntro(engine: CartridgeSdkV1Runtime): void {
+    this.engine = engine;
+    this.acquireBlockingInputLease(engine);
+    engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    engine.setPlayerSprite(undefined);
+    engine.video.camera?.setTransform({
+      factor: NETHER_ARRIVAL_ZOOM_FACTOR,
+      focusX: DEFAULT_DESIGN_WIDTH,
+      focusY: 0,
+      anchorX: DEFAULT_DESIGN_WIDTH,
+      anchorY: 0,
+    });
+    this.zoomIntroPhase = 'hold';
+    this.zoomIntroElapsedMs = 0;
+  }
+
+  updateArrivalZoomIntro(deltaMs: number): void {
+    if (!this.engine || !Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return;
+    }
+
+    if (this.zoomIntroPhase !== 'hold') {
+      return;
+    }
+
+    this.zoomIntroElapsedMs += deltaMs;
+    if (this.zoomIntroElapsedMs < NETHER_ARRIVAL_ZOOM_HOLD_MS) {
+      return;
+    }
+
+    this.zoomIntroPhase = 'zoom-out';
+    this.engine.video.camera?.animateTo(
+      {
+        factor: 1,
+        focusX: DEFAULT_DESIGN_WIDTH / 2,
+        focusY: DEFAULT_DESIGN_HEIGHT / 2,
+        anchorX: DEFAULT_DESIGN_WIDTH / 2,
+        anchorY: DEFAULT_DESIGN_HEIGHT / 2,
+      },
+      NETHER_ARRIVAL_ZOOM_OUT_MS,
+      {
+        easing: NETHER_ARRIVAL_ZOOM_EASE,
+        onComplete: () => {
+          this.zoomIntroPhase = undefined;
+          this.zoomIntroElapsedMs = 0;
+          this.engine?.video.camera?.clear();
+          this.startArrivalSequence();
+        },
+      },
+    );
+  }
+
   async mount(
-    engine: RoccoEngine,
+    engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
@@ -2222,7 +2192,10 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.smokeFrameCount = 0;
     this.ambientSoundVolume = NETHER_AMBIENT_SOUND_VOLUME;
     this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
-    this.lightsNoiseOpacity = randomBetween(NETHER_LIGHTS_MIN_OPACITY, NETHER_LIGHTS_NOISE_MAX_OPACITY);
+    this.lightsNoiseOpacity = randomBetween(
+      NETHER_LIGHTS_MIN_OPACITY,
+      NETHER_LIGHTS_NOISE_MAX_OPACITY,
+    );
     this.lightsNoiseTargetOpacity = this.lightsNoiseOpacity;
     this.lightsNoiseTargetRemainingMs = randomBetween(
       NETHER_LIGHTS_NOISE_STEP_MIN_MS,
@@ -2252,7 +2225,9 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     }
     const initialFacing = entryConnector?.entryFacing ?? 'down';
     const scene = await loadOrCreateNetherScene(engine, NETHER_SCENE_DEFINITION);
-    const walkMapProfile = await createNetherWalkMapProfile(netherConsoleHardwareSpawnAssetUrls.walkPath);
+    const walkMapProfile = await createNetherWalkMapProfile(
+      netherConsoleHardwareSpawnAssetUrls.walkPath,
+    );
     this.perspectiveFarY = walkMapProfile.farY;
     const securityCameraDefinition = createNetherSecurityCameraSpriteDefinition(this.localization);
     const intercomMessageAnchorDefinition = createNetherIntercomMessageAnchorDefinition();
@@ -2275,14 +2250,19 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
 
     await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     await Promise.all([
-      (preloader?.preloadSpriteDefinition(engine, securityCameraDefinition) ?? engine.video.preloadSpriteDefinition(securityCameraDefinition)),
-      (preloader?.preloadSpriteDefinition(engine, intercomMessageAnchorDefinition) ?? engine.video.preloadSpriteDefinition(intercomMessageAnchorDefinition)),
-      (preloader?.preloadSpriteDefinition(engine, pipeSmokeDefinition) ?? engine.video.preloadSpriteDefinition(pipeSmokeDefinition)),
+      preloader?.preloadSpriteDefinition(engine, securityCameraDefinition) ??
+        engine.video.preloadSpriteDefinition(securityCameraDefinition),
+      preloader?.preloadSpriteDefinition(engine, intercomMessageAnchorDefinition) ??
+        engine.video.preloadSpriteDefinition(intercomMessageAnchorDefinition),
+      preloader?.preloadSpriteDefinition(engine, pipeSmokeDefinition) ??
+        engine.video.preloadSpriteDefinition(pipeSmokeDefinition),
       shouldPlayArrivalSequence
-        ? (preloader?.preloadSpriteDefinition(engine, smokeSprite.definition) ?? engine.video.preloadSpriteDefinition(smokeSprite.definition))
+        ? (preloader?.preloadSpriteDefinition(engine, smokeSprite.definition) ??
+          engine.video.preloadSpriteDefinition(smokeSprite.definition))
         : Promise.resolve(),
       portalSprite
-        ? (preloader?.preloadSpriteDefinition(engine, portalSprite.definition) ?? engine.video.preloadSpriteDefinition(portalSprite.definition))
+        ? (preloader?.preloadSpriteDefinition(engine, portalSprite.definition) ??
+          engine.video.preloadSpriteDefinition(portalSprite.definition))
         : Promise.resolve(),
     ]);
     engine.audio.registerSound({
@@ -2407,14 +2387,12 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
           : projectOriginToWalkMap(walkMapProfile.walkMap, initialPosition, NETHER_ROCCO_SCALE),
       );
     }
-    engine.video.render(0);
     this.sceneReady = true;
 
     return scene;
   }
 
-  // eslint-disable-next-line max-lines-per-function
-  unmount(engine: RoccoEngine): void {
+  unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     this.scriptedInteractionController?.cancel();
     this.resetIntercomConversationState();
@@ -2472,8 +2450,7 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
     this.sceneReady = false;
     this.zoomIntroPhase = undefined;
     this.zoomIntroElapsedMs = 0;
-    engine.video.zoom.clear();
-    engine.video.render(0);
+    engine.video.camera?.clear();
   }
 
   applyRoccoAppearance(appearance: RoccoPlayerAppearance): void {
@@ -2508,10 +2485,8 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
   handleAction(activation: RoccoActionMenuActivation): void {
     if (
       !this.engine ||
-      (
-        activation.targetInstanceId !== NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID &&
-        activation.targetInstanceId !== NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID
-      )
+      (activation.targetInstanceId !== NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID &&
+        activation.targetInstanceId !== NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID)
     ) {
       if (
         this.engine &&
@@ -2519,16 +2494,10 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
       ) {
         this.handleIntercomunicadorAction(activation);
       }
-      if (
-        this.engine &&
-        activation.targetInstanceId === NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID
-      ) {
+      if (this.engine && activation.targetInstanceId === NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID) {
         this.handleNoisyMachineAction(activation);
       }
-      if (
-        this.engine &&
-        activation.targetInstanceId === NETHER_SHELF_TARGET_INSTANCE_ID
-      ) {
+      if (this.engine && activation.targetInstanceId === NETHER_SHELF_TARGET_INSTANCE_ID) {
         this.handleShelfAction(activation);
       }
       return;
@@ -2603,13 +2572,62 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
 
     if (activation.targetInstanceId === NETHER_SHELF_TARGET_INSTANCE_ID && this.hasShelfBeenTaken) {
       const shelfText = resolveNetherShelfText(this.localization);
-      this.showShelfThought(
-        shelfText.emptyLookLines,
-        NETHER_SHELF_LOOK_HISTORY_KEY,
-      );
+      this.showShelfThought(shelfText.emptyLookLines, NETHER_SHELF_LOOK_HISTORY_KEY);
       return { suppressDefaultPlayerMove: true };
     }
 
     return undefined;
+  }
+}
+
+export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAppearanceCapability {
+  private readonly controller: RoccoNetherConsoleHardwareSpawnController;
+
+  readonly id = ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID;
+  readonly title = 'Nether';
+  readonly connectors = NETHER_CONNECTORS;
+
+  constructor(localization: RoccoLocalization) {
+    this.controller = new RoccoNetherConsoleHardwareSpawnController(localization);
+  }
+
+  mount(
+    engine: CartridgeSdkV1Runtime,
+    options?: RoccoLevelMountOptions,
+    preloader?: RoccoAssetPreloader,
+  ): Promise<RoccoPlaneScene> {
+    return this.controller.mount(engine, options, preloader);
+  }
+
+  unmount(engine: CartridgeSdkV1Runtime): void {
+    this.controller.unmount(engine);
+  }
+
+  update(deltaMs: number): void {
+    this.controller.update(deltaMs);
+  }
+
+  handleAction(activation: RoccoActionMenuActivation): void {
+    this.controller.handleAction(activation);
+  }
+
+  handleGridMenu(activation: RoccoGridMenuActivation): void {
+    this.controller.handleGridMenu(activation);
+  }
+
+  handleSceneClick(activation: RoccoSceneClickAction): NetherConsoleHardwareSceneClickResult {
+    return this.controller.handleSceneClick(activation);
+  }
+
+  applyRoccoAppearance(appearance: RoccoPlayerAppearance): void {
+    this.controller.applyRoccoAppearance(appearance);
+  }
+
+  startArrivalZoomIntro(engine: CartridgeSdkV1Runtime): void {
+    this.controller.startArrivalZoomIntro(engine);
+  }
+
+  updateArrivalZoomIntro(deltaMs: number): void {
+    this.controller.updateArrivalZoomIntro(deltaMs);
   }
 }

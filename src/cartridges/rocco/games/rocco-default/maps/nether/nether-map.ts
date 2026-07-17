@@ -59,10 +59,10 @@ export function createRoccoDefaultNetherMapStructure(): RpceMapDefinition {
     title: 'Nether',
     initialLevelId: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
     levels: [
-      { id: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID },
-      { id: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID },
-      { id: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID },
-      { id: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID },
+      { id: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID, connectorIds: ['entry', 'north'] },
+      { id: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID, connectorIds: ['south'] },
+      { id: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID, connectorIds: ['south'] },
+      { id: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID, connectorIds: ['south'] },
     ],
     connections: ROCCO_DEFAULT_NETHER_CONNECTIONS,
   };

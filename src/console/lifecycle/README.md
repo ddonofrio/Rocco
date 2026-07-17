@@ -44,21 +44,23 @@ RuntimeScope
               └─ SequenceScope
 ```
 
-`GameRuntime` builds the root `RuntimeScope` and the first child
-`CartridgeScope`. The root scope runs `cartridgeManager.dispose()` before it
-lets the cartridge child scope tear down cartridge-owned resources, so cartridge
-`stop()` and `dispose()` still run while cartridge resources remain available.
+`RuntimeResourceOwner` builds the root `RuntimeScope` and the first child
+`CartridgeScope` for `GameRuntime`. The root scope runs
+`cartridgeManager.dispose()` before it lets the cartridge child scope tear down
+cartridge-owned resources, so cartridge `stop()` and `dispose()` still run
+while cartridge resources remain available.
 After that, the remaining root-scope disposers run in reverse of the required
 stop order, so LIFO disposal matches the LIF-001 stop sequence:
 
 ```text
 1. stop ticker + remove resize listener
-2. deactivate / unmount cartridge  (CartridgeScope)
-3. unmount input
-4. destroy video
-5. destroy jukebox
-6. destroy audio
-7. destroy Pixi app + DOM
+2. cancel active actions
+3. deactivate / unmount cartridge
+4. dispose `CartridgeScope`
+5. unmount input
+6. destroy video
+7. dispose persistence, jukebox, and audio
+8. destroy Pixi app + DOM
 ```
 
 `GameScope`, `LevelScope`, and `SequenceScope` are added by later work
@@ -81,4 +83,6 @@ stop order, so LIFO disposal matches the LIF-001 stop sequence:
   `ResourceScope`, and `LifecycleStateMachine`.
 - `resource-scope.ts` — `ResourceScopeImpl`, `createResourceScope`, and the
   scope error types.
+- `../runtime-resource-owner.ts` — runtime scope construction, application
+  ownership, and cleanup ordering.
 - `index.ts` — public barrel.

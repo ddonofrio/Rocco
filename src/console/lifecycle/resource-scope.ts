@@ -1,8 +1,4 @@
-import type {
-  DisposableResource,
-  Disposer,
-  ResourceScope,
-} from './lifecycle';
+import type { DisposableResource, Disposer, ResourceScope } from './lifecycle';
 
 export class ResourceScopeError extends Error {
   constructor(message: string) {
@@ -38,7 +34,9 @@ export class ResourceScopeDisposalError extends ResourceScopeError {
         return `  [${detail.index}] ${cause}`;
       })
       .join('\n');
-    super(`ResourceScope '${scopeId}' finished with ${errors.length} disposal error(s):\n${summary}`);
+    super(
+      `ResourceScope '${scopeId}' finished with ${errors.length} disposal error(s):\n${summary}`,
+    );
     this.name = 'ResourceScopeDisposalError';
     this.errors = errors;
   }
@@ -80,7 +78,6 @@ export class ResourceScopeImpl implements ResourceScope {
     this.id = id;
     // `options.parent` is `ResourceScope | null | undefined` (optional prop);
     // the `?? null` maps the absent case to `null` to keep the `| null` contract.
-    // eslint-disable-next-line unicorn/no-null
     this.parent = options.parent ?? null;
     this.controller = new AbortController();
     this.signal = this.controller.signal;
@@ -97,7 +94,7 @@ export class ResourceScopeImpl implements ResourceScope {
     const failures: ResourceScopeDisposalErrorDetail[] = [];
     const entries = [...this.entries];
     // LIFO: dispose in reverse registration order.
-    for (let index = entries.length -1; index >=0; index -=1) {
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
       const entry = entries[index];
       if (!entry?.active) {
         continue;
@@ -108,11 +105,11 @@ export class ResourceScopeImpl implements ResourceScope {
         failures.push({ index, error });
       }
     }
-    this.entries.length =0;
+    this.entries.length = 0;
     this.ownedChildren.clear();
     this.detachFromParent();
 
-    if (failures.length >0) {
+    if (failures.length > 0) {
       throw new ResourceScopeDisposalError(this.id, failures);
     }
   }
@@ -199,9 +196,30 @@ export class ResourceScopeImpl implements ResourceScope {
   }
 }
 
-export function createResourceScope(
-  id: string,
-  options: ResourceScopeOptions = {},
-): ResourceScope {
+export function createResourceScope(id: string, options: ResourceScopeOptions = {}): ResourceScope {
   return new ResourceScopeImpl(id, options);
+}
+
+/**
+ * Registers an already-created resource atomically. If the scope rejects the
+ * registration, the resource is disposed before the error reaches the caller.
+ */
+export async function adoptResource<T extends DisposableResource>(
+  scope: ResourceScope,
+  resource: T,
+): Promise<T> {
+  try {
+    return scope.add(resource);
+  } catch (registrationError) {
+    try {
+      await resource.dispose();
+    } catch (disposeError) {
+      throw new AggregateError(
+        [registrationError, disposeError],
+        'Resource adoption failed and cleanup also failed.',
+        { cause: disposeError },
+      );
+    }
+    throw registrationError;
+  }
 }

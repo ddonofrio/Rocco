@@ -1,12 +1,34 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  adoptResource,
   createResourceScope,
   ResourceScopeClosedError,
   ResourceScopeDisposalError,
 } from '../../../src/console/lifecycle';
 
 describe('ResourceScope', () => {
+  it('disposes a resource when adoption fails', async () => {
+    const scope = createResourceScope('test');
+    const resource = { dispose: vi.fn() };
+    void scope.dispose();
+
+    await expect(adoptResource(scope, resource)).rejects.toBeInstanceOf(ResourceScopeClosedError);
+    expect(resource.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('aggregates registration and cleanup failures during adoption', async () => {
+    const scope = createResourceScope('test');
+    const resource = {
+      dispose: vi.fn(() => {
+        throw new Error('cleanup failed');
+      }),
+    };
+    void scope.dispose();
+
+    await expect(adoptResource(scope, resource)).rejects.toBeInstanceOf(AggregateError);
+  });
+
   it('disposes registered disposers in reverse (LIFO) order', async () => {
     const scope = createResourceScope('test');
     const order: string[] = [];

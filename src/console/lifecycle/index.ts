@@ -7,6 +7,7 @@ export {
   type ResourceScope,
 } from './lifecycle';
 export {
+  adoptResource,
   createResourceScope,
   ResourceScopeClosedError,
   ResourceScopeDisposalError,

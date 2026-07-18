@@ -263,39 +263,68 @@ describe('RoccoCartridgeManager', () => {
     ['missing runtime', undefined],
     ['incompatible SDK range', { sdk: '^2.0.0' }],
     ['malformed runtime shape', { sdk: 1 }],
-  ])('rejects %s before mount and does not publish the cartridge', async (_label, runtime) => {
-    const kernel = createTestKernel(false);
-    const mount = vi.fn();
-    const start = vi.fn();
+  ])(
+    'rejects %s before mount and leaves the manager ownership boundary intact',
+    async (_label, runtime) => {
+      const kernel = createTestKernel(false);
+      const mount = vi.fn();
+      const start = vi.fn();
+      const stop = vi.fn();
+      const dispose = vi.fn();
+      const cancelActiveActions = vi.fn();
+      const scope = createResourceScope('cartridge:game');
+      const scopeDisposed = vi.fn();
+      scope.defer(scopeDisposed);
 
-    testState.registrations = [
-      createTestConfig('game', () =>
-        createTestCartridge('game', {
-          manifest: {
-            id: 'game',
-            title: 'game',
-            version: '1.0.0',
-            runtime: runtime as never,
-          },
-          mount,
-          start,
+      testState.registrations = [
+        createTestConfig('game', () =>
+          createTestCartridge('game', {
+            manifest: {
+              id: 'game',
+              title: 'game',
+              version: '1.0.0',
+              runtime: runtime as never,
+            },
+            mount,
+            start,
+            stop,
+            dispose,
+          }),
+        ),
+      ];
+
+      const manager = new RoccoCartridgeManager();
+      await expect(
+        manager.loadAndMount({
+          app: {} as Application,
+          kernel: kernel as never,
+          configuredCartridgeId: 'game',
+          cartridgeScope: scope,
+          cancelActiveActions,
         }),
-      ),
-    ];
+      ).rejects.toBeInstanceOf(CartridgeSdkIncompatibleError);
 
-    const manager = new RoccoCartridgeManager();
-    await expect(
-      manager.loadAndMount({
-        app: {} as Application,
-        kernel: kernel as never,
-        configuredCartridgeId: 'game',
-      }),
-    ).rejects.toBeInstanceOf(CartridgeSdkIncompatibleError);
+      expect(mount).not.toHaveBeenCalled();
+      expect(start).not.toHaveBeenCalled();
+      expect(stop).not.toHaveBeenCalled();
+      expect(dispose).not.toHaveBeenCalled();
+      expect(cancelActiveActions).not.toHaveBeenCalled();
+      expect(manager.getActiveCartridge()).toBeUndefined();
+      expect(scope.isDisposed).toBe(false);
+      expect(scopeDisposed).not.toHaveBeenCalled();
 
-    expect(mount).not.toHaveBeenCalled();
-    expect(start).not.toHaveBeenCalled();
-    expect(manager.getActiveCartridge()).toBeUndefined();
-  });
+      await manager.dispose();
+
+      expect(mount).not.toHaveBeenCalled();
+      expect(start).not.toHaveBeenCalled();
+      expect(stop).not.toHaveBeenCalled();
+      expect(dispose).not.toHaveBeenCalled();
+      expect(cancelActiveActions).not.toHaveBeenCalled();
+      expect(manager.getActiveCartridge()).toBeUndefined();
+      expect(scope.isDisposed).toBe(false);
+      expect(scopeDisposed).not.toHaveBeenCalled();
+    },
+  );
 
   it('installs the action cancellation hook before mounting an SDK v1 cartridge', async () => {
     const kernel = createTestKernel(false);

@@ -25,7 +25,8 @@ export class RoccoBuildBadgeRenderer {
     this.badgeElement.style.left = '0';
     this.badgeElement.style.top = '0';
     this.badgeElement.style.padding = `${BADGE_PADDING_Y}px ${BADGE_PADDING_X}px`;
-    this.badgeElement.style.fontFamily = 'ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace';
+    this.badgeElement.style.fontFamily =
+      'ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace';
     this.badgeElement.style.fontSize = '10px';
     this.badgeElement.style.lineHeight = '1';
     this.badgeElement.style.letterSpacing = '0.02em';

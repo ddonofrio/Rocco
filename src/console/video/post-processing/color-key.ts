@@ -1,8 +1,6 @@
 import { parseRoccoWaterColor, type RoccoWaterColorRgb } from './water-color-effect';
 
-export type RoccoColorKeyReplacement =
-  | { kind: 'transparent' }
-  | { kind: 'color'; color: string };
+export type RoccoColorKeyReplacement = { kind: 'transparent' } | { kind: 'color'; color: string };
 
 export interface RoccoColorKeyReplaceImageOptions {
   sourceUri: string;

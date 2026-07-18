@@ -1,7 +1,4 @@
-export {
-  defaultRoccoCursorProfile,
-  RoccoCursorHost,
-} from './host';
+export { defaultRoccoCursorProfile, RoccoCursorHost } from './host';
 export type {
   RoccoCursorActionEvent,
   RoccoCursorAttachment,

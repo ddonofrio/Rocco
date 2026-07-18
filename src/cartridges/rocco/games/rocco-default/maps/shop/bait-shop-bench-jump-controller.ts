@@ -19,10 +19,12 @@ export interface BaitShopBenchJumpDownOptions {
 type BaitShopBenchJumpDirection = 'up' | 'down';
 
 export interface BaitShopBenchJumpControllerHost {
-  resolveJumpOrigins(direction: BaitShopBenchJumpDirection): {
-    startOrigin: RoccoPoint;
-    endOrigin: RoccoPoint;
-  } | undefined;
+  resolveJumpOrigins(direction: BaitShopBenchJumpDirection):
+    | {
+        startOrigin: RoccoPoint;
+        endOrigin: RoccoPoint;
+      }
+    | undefined;
   setInputEnabled(isEnabled: boolean): void;
   setWalkConstraint(isMovementConstrained: boolean): void;
   stopPlayerMovement(): void;

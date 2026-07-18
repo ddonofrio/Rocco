@@ -16,7 +16,11 @@ import {
   type RoccoProceduralGenerator,
 } from './planes';
 import { PixiRoccoPrimitiveRenderer, RoccoPrimitiveSystemSDK } from './primitives';
-import { defaultRoccoRenderLayers, sortRoccoRenderLayers, type RoccoRenderLayer } from './render-layers';
+import {
+  defaultRoccoRenderLayers,
+  sortRoccoRenderLayers,
+  type RoccoRenderLayer,
+} from './render-layers';
 import { RoccoVideoZoomController, type RoccoVideoZoomModule } from './zoom';
 import { preloadPlaneAlphaMasks } from './runtime-plane-alpha-mask-loading';
 import { resolveRuntimePlaneScene as resolveRuntimePlaneSceneFromSprites } from './runtime-plane-scene-resolution';
@@ -32,7 +36,12 @@ import {
   type RoccoSpriteDefinition,
 } from './sprites';
 import { PixiRoccoTitleRenderer, RoccoTitleSystemSDK } from './titles';
-import type { RoccoVideoDisplayModule, RoccoVideoPlaneModule, RoccoVideoSystem, RoccoVideoViewportModule } from './types';
+import type {
+  RoccoVideoDisplayModule,
+  RoccoVideoPlaneModule,
+  RoccoVideoSystem,
+  RoccoVideoViewportModule,
+} from './types';
 import type { RoccoViewportHost } from './viewport';
 
 function clone<T>(value: T): T {
@@ -74,7 +83,9 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
   private readonly titleSystem = new RoccoTitleSystemSDK();
   private readonly titleRenderer: PixiRoccoTitleRenderer;
   private readonly zoomController = new RoccoVideoZoomController();
-  private readonly onDisplayProfileChange: ((profile: Partial<RoccoDisplayProfile>) => void) | undefined;
+  private readonly onDisplayProfileChange:
+    | ((profile: Partial<RoccoDisplayProfile>) => void)
+    | undefined;
   private renderLayers: RoccoRenderLayer[];
   private displayProfile: RoccoDisplayProfile = { ...defaultDisplayProfile };
   private viewportHost: RoccoViewportHost | undefined;
@@ -210,10 +221,7 @@ export class RoccoRuntimeVideoSystem implements RoccoVideoSystem {
     }),
   ): void {
     this.messageRenderer.sync(
-      this.messageSystem.listRenderableMessages(
-        messageAnchorRenderables,
-        this.resolveDesignSize(),
-      ),
+      this.messageSystem.listRenderableMessages(messageAnchorRenderables, this.resolveDesignSize()),
       spriteRenderables,
     );
   }

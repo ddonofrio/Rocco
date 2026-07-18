@@ -53,9 +53,7 @@ class FakeAudioBufferSourceNode {
   }
 }
 
-async function createFetchResponse(
-  arrayBufferPromise: Promise<ArrayBuffer>,
-): Promise<Response> {
+async function createFetchResponse(arrayBufferPromise: Promise<ArrayBuffer>): Promise<Response> {
   const arrayBuffer = await arrayBufferPromise;
   return {
     ok: true,
@@ -172,9 +170,7 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
     const system = new RoccoJukeboxSystemImpl();
     system.registerPlaylist({
       id: 'short-playlist',
-      tracks: [
-        { id: 'track-a', uri: '/music/a.mp3', volume: 0.8 },
-      ],
+      tracks: [{ id: 'track-a', uri: '/music/a.mp3', volume: 0.8 }],
       mixMode: {
         type: 'auto-mix',
         fadeDurationMs: 1000,
@@ -200,9 +196,7 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
     const system = new RoccoJukeboxSystemImpl();
     system.registerPlaylist({
       id: 'late-playlist',
-      tracks: [
-        { id: 'track-a', uri: '/music/a.mp3', volume: 0.8 },
-      ],
+      tracks: [{ id: 'track-a', uri: '/music/a.mp3', volume: 0.8 }],
       mixMode: {
         type: 'auto-mix',
         fadeDurationMs: 1000,
@@ -216,9 +210,7 @@ describe('RoccoJukeboxSystemImpl characterization', () => {
 
     vi.stubGlobal(
       'fetch',
-      vi.fn<typeof fetch>().mockReturnValue(
-        createFetchResponse(fetchPromise),
-      ),
+      vi.fn<typeof fetch>().mockReturnValue(createFetchResponse(fetchPromise)),
     );
 
     const playPromise = system.playPlaylist('late-playlist');

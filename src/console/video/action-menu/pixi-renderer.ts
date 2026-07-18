@@ -90,7 +90,7 @@ export class PixiRoccoActionMenuRenderer {
     const state = renderable.state;
     const itemSize = definition.itemSize ?? 44;
     const isHovered = state.hoveredItemId === item.id;
-    const scale = isHovered ? definition.hoverScale ?? 1.14 : 1;
+    const scale = isHovered ? (definition.hoverScale ?? 1.14) : 1;
     const position = this.resolveItemPosition(renderable, index);
 
     node.root.position.set(position.x, position.y);
@@ -252,6 +252,8 @@ export class PixiRoccoActionMenuRenderer {
       return;
     }
 
-    await Promise.all(renderable.definition.items.map((item) => this.queueTextureLoad(item.imageUri)));
+    await Promise.all(
+      renderable.definition.items.map((item) => this.queueTextureLoad(item.imageUri)),
+    );
   }
 }

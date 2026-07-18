@@ -34,11 +34,9 @@ export class InteractionRegistry {
   private readonly actionRules = new Map<string, InteractionRule>();
   private readonly specialRules = new Map<string, SpecialInventorySceneClickRule>();
 
-  private rulesForKind(
-    kind: InteractionKind,
-    stage: InteractionStage,
-  ): readonly InteractionRule[] {
-    return this.actionRules.values()
+  private rulesForKind(kind: InteractionKind, stage: InteractionStage): readonly InteractionRule[] {
+    return this.actionRules
+      .values()
       .filter((rule) => rule.kind === kind && (rule.stage ?? 'default') === stage)
       .toArray()
       .toSorted(byDescendingPriorityThenId);
@@ -53,10 +51,7 @@ export class InteractionRegistry {
   }
 
   registerMany(rules: readonly InteractionRule[]): void {
-    validateInteractionRules(
-      [...this.actionRules.values(), ...rules],
-      this.getSpecialRules(),
-    );
+    validateInteractionRules([...this.actionRules.values(), ...rules], this.getSpecialRules());
 
     for (const rule of rules) {
       this.actionRules.set(rule.id, rule);

@@ -46,4 +46,3 @@ describe('RoccoPrimitiveSystemSDK', () => {
     expect(system.listPrimitives()).toHaveLength(0);
   });
 });
-

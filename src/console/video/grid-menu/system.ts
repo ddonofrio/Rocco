@@ -7,11 +7,7 @@ import type {
   RoccoGridMenuState,
   RoccoGridMenuSystem,
 } from './types';
-import {
-  DEFAULT_COLUMNS,
-  DEFAULT_ROWS,
-  normalizeDefinition,
-} from './definition';
+import { DEFAULT_COLUMNS, DEFAULT_ROWS, normalizeDefinition } from './definition';
 import {
   resolveGridMenuButtonBounds,
   resolveGridMenuPanelBounds,
@@ -27,7 +23,6 @@ interface CarriedGridMenuItem {
 function clone<T>(value: T): T {
   return structuredClone(value);
 }
-
 
 export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
   private activeDefinition: RoccoGridMenuDefinition | undefined;
@@ -154,7 +149,13 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
       return undefined;
     }
 
-    return this.swapReorderableItem(item, placedItem, previousCarriedItem, previousOriginSlotIndex, slotIndex);
+    return this.swapReorderableItem(
+      item,
+      placedItem,
+      previousCarriedItem,
+      previousOriginSlotIndex,
+      slotIndex,
+    );
   }
 
   private swapReorderableItem(
@@ -232,8 +233,14 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
 
   private resolveRestoreSlotIndex(preferredSlotIndex: number): number {
     const slotCount = this.resolveSlotCount();
-    const normalizedPreferred = Math.max(0, Math.min(slotCount - 1, Math.floor(preferredSlotIndex)));
-    if (!this.isBlockedSlotIndex(normalizedPreferred) && !this.findItemInSlot(normalizedPreferred)) {
+    const normalizedPreferred = Math.max(
+      0,
+      Math.min(slotCount - 1, Math.floor(preferredSlotIndex)),
+    );
+    if (
+      !this.isBlockedSlotIndex(normalizedPreferred) &&
+      !this.findItemInSlot(normalizedPreferred)
+    ) {
       return normalizedPreferred;
     }
 
@@ -284,7 +291,12 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
     }
 
     const bounds = resolveGridMenuPanelBounds(this.activeDefinition);
-    return x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
+    return (
+      x >= bounds.x &&
+      x <= bounds.x + bounds.width &&
+      y >= bounds.y &&
+      y <= bounds.y + bounds.height
+    );
   }
 
   private findItemInSlot(slotIndex: number): RoccoGridMenuItem | undefined {
@@ -306,14 +318,23 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
       return undefined;
     }
 
-    for (let buttonIndex = 0; buttonIndex < this.activeDefinition.buttons.length; buttonIndex += 1) {
+    for (
+      let buttonIndex = 0;
+      buttonIndex < this.activeDefinition.buttons.length;
+      buttonIndex += 1
+    ) {
       const button = this.activeDefinition.buttons[buttonIndex];
       if (!button || !this.isButtonEnabled(button)) {
         continue;
       }
 
       const bounds = resolveGridMenuButtonBounds(this.activeDefinition, buttonIndex);
-      if (x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height) {
+      if (
+        x >= bounds.x &&
+        x <= bounds.x + bounds.width &&
+        y >= bounds.y &&
+        y <= bounds.y + bounds.height
+      ) {
         return button;
       }
     }
@@ -360,7 +381,10 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
       return 0;
     }
 
-    return (this.activeDefinition.columns ?? DEFAULT_COLUMNS) * (this.activeDefinition.rows ?? DEFAULT_ROWS);
+    return (
+      (this.activeDefinition.columns ?? DEFAULT_COLUMNS) *
+      (this.activeDefinition.rows ?? DEFAULT_ROWS)
+    );
   }
 
   private isBlockedSlotIndex(slotIndex: number): boolean {
@@ -395,9 +419,7 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
       hoveredSlotIndex: undefined,
       hoveredButtonId: undefined,
       carriedItem:
-        this.carriedItem?.definitionId === definition.id
-          ? clone(this.carriedItem.item)
-          : undefined,
+        this.carriedItem?.definitionId === definition.id ? clone(this.carriedItem.item) : undefined,
     };
   }
 
@@ -535,5 +557,4 @@ export class RoccoGridMenuSystemSDK implements RoccoGridMenuSystem {
       }),
     };
   }
-
 }

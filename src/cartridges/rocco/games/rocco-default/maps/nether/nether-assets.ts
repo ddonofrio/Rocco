@@ -20,4 +20,7 @@ export const netherResetOfficeSecondAssetUrls = {
   walkPath: new URL('assets/reset-office-2-walkpath.png', import.meta.url).href,
 } as const;
 
-export const netherAmbientSteamMachineAssetUrl = new URL('assets/steam_machine.mp3', import.meta.url).href;
+export const netherAmbientSteamMachineAssetUrl = new URL(
+  'assets/steam_machine.mp3',
+  import.meta.url,
+).href;

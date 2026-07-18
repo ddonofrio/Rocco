@@ -1,4 +1,6 @@
-export type RoccoEffectPatch = Partial<Omit<RoccoEffect, 'id' | 'kind' | 'targetType' | 'targetId'>>;
+export type RoccoEffectPatch = Partial<
+  Omit<RoccoEffect, 'id' | 'kind' | 'targetType' | 'targetId'>
+>;
 
 export interface RoccoEffect<TParameters = unknown> {
   id: string;

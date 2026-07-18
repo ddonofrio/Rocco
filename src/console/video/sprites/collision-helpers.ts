@@ -115,8 +115,7 @@ function createWorldCircle(
     scaleX,
     scaleY,
   );
-  const radiusScale =
-    (Math.abs(scaleX * adjustedScaleX) + Math.abs(scaleY * adjustedScaleY)) / 2;
+  const radiusScale = (Math.abs(scaleX * adjustedScaleX) + Math.abs(scaleY * adjustedScaleY)) / 2;
   return {
     kind: 'circle',
     circle: {
@@ -149,7 +148,9 @@ function toWorldShape(
   return {
     kind: 'polygon',
     polygon: {
-      points: shape.points.map((point) => toWorldPoint(options, instance, definition, frame, point)),
+      points: shape.points.map((point) =>
+        toWorldPoint(options, instance, definition, frame, point),
+      ),
     },
   };
 }
@@ -282,20 +283,13 @@ function resolveWorldScale(instance: RoccoSpriteInstance): { scaleX: number; sca
   const presentationScale = resolvePresentationScale(instance.transform.presentation);
   return {
     scaleX:
-      (instance.transform.scaleX || 1) *
-      presentationScale.x *
-      (instance.transform.flipX ? -1 : 1),
+      (instance.transform.scaleX || 1) * presentationScale.x * (instance.transform.flipX ? -1 : 1),
     scaleY:
-      (instance.transform.scaleY || 1) *
-      presentationScale.y *
-      (instance.transform.flipY ? -1 : 1),
+      (instance.transform.scaleY || 1) * presentationScale.y * (instance.transform.flipY ? -1 : 1),
   };
 }
 
-function resolveFramePivot(
-  definition: RoccoSpriteDefinition,
-  frame: RoccoSpriteFrame,
-): RoccoPoint {
+function resolveFramePivot(definition: RoccoSpriteDefinition, frame: RoccoSpriteFrame): RoccoPoint {
   return frame.pivot ?? definition.pivot ?? { x: 0, y: 0 };
 }
 
@@ -354,7 +348,8 @@ function isPointInPolygon(point: RoccoPoint, points: readonly RoccoPoint[]): boo
     const yj = points[index_]?.y ?? 0;
 
     const isIntersects =
-      yi > point.y !== yj > point.y && point.x < ((xj - xi) * (point.y - yi)) / (yj - yi + EPSILON) + xi;
+      yi > point.y !== yj > point.y &&
+      point.x < ((xj - xi) * (point.y - yi)) / (yj - yi + EPSILON) + xi;
     if (isIntersects) {
       isInside = !isInside;
     }

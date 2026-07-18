@@ -13,7 +13,10 @@ vi.mock('pixi.js', async (importOriginal) => {
 });
 
 import type { RoccoRenderableSprite } from '../../../../src/console/video/sprites/system';
-import type { RoccoSpriteDefinition, RoccoSpriteInstance } from '../../../../src/console/video/sprites/types';
+import type {
+  RoccoSpriteDefinition,
+  RoccoSpriteInstance,
+} from '../../../../src/console/video/sprites/types';
 import { PixiRoccoSpriteRenderer } from '../../../../src/console/video/sprites/pixi-renderer';
 
 interface SpriteNodeInternals {

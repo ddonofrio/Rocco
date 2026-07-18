@@ -17,7 +17,9 @@ export interface QueuePlaneAlphaMaskLoadOptions extends PlaneAlphaMaskLoadState 
   source: RoccoImageSource;
 }
 
-export async function preloadPlaneAlphaMasks(options: PreloadPlaneAlphaMasksOptions): Promise<void> {
+export async function preloadPlaneAlphaMasks(
+  options: PreloadPlaneAlphaMasksOptions,
+): Promise<void> {
   const imageSources = new Map<string, RoccoImageSource>();
   for (const plane of options.scene.planes) {
     if (plane.source.kind === 'image') {
@@ -37,7 +39,9 @@ export async function preloadPlaneAlphaMasks(options: PreloadPlaneAlphaMasksOpti
   );
 }
 
-export async function queuePlaneAlphaMaskLoad(options: QueuePlaneAlphaMaskLoadOptions): Promise<void> {
+export async function queuePlaneAlphaMaskLoad(
+  options: QueuePlaneAlphaMaskLoadOptions,
+): Promise<void> {
   const key = options.source.uri;
   if (options.planeAlphaMasks.has(key)) {
     return;
@@ -115,6 +119,8 @@ export async function loadPlaneMaskImage(uri: string): Promise<HTMLImageElement>
 
   return new Promise((resolve, reject) => {
     image.addEventListener('load', () => resolve(image));
-    image.addEventListener('error', () => reject(new Error(`Could not load plane image '${uri}'.`)));
+    image.addEventListener('error', () =>
+      reject(new Error(`Could not load plane image '${uri}'.`)),
+    );
   });
 }

@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createRoccoLocalization } from '../../../src/cartridges/rocco/localization';
 import { DEFAULT_SPRITE_DEFINITION_ID } from '../../../src/cartridges/rocco/rocco-default-constants';
-import {
-  createDefaultSpriteDefinition,
-} from '../../../src/cartridges/rocco/rocco-default-sprite-definition';
+import { createDefaultSpriteDefinition } from '../../../src/cartridges/rocco/rocco-default-sprite-definition';
 
 describe('createDefaultSpriteDefinition appearance', () => {
   it('builds the default rocco player sprite by default', () => {

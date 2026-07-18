@@ -35,4 +35,3 @@ describe('makeGraphicPlaneAutoScrollEffect', () => {
     expect(effect.enabled).toBe(false);
   });
 });
-

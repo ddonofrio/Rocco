@@ -41,7 +41,10 @@ export function makeGraphicPlaneAutoScrollEffect(
   };
 }
 
-export const roccoAutoScrollRuntime: RoccoEffectRuntime<RoccoGraphicPlane, RoccoAutoScrollParameters> = {
+export const roccoAutoScrollRuntime: RoccoEffectRuntime<
+  RoccoGraphicPlane,
+  RoccoAutoScrollParameters
+> = {
   kind: 'auto-scroll',
   targetType: 'graphic-plane',
   apply(target, parameters, context) {
@@ -65,7 +68,7 @@ function resolveWrapSpan(target: RoccoGraphicPlane, axis: 'x' | 'y'): number {
 
   switch (target.source.kind) {
     case 'image': {
-      return axis === 'x' ? target.source.width ?? fallback : target.source.height ?? fallback;
+      return axis === 'x' ? (target.source.width ?? fallback) : (target.source.height ?? fallback);
     }
     case 'bitmap': {
       return axis === 'x' ? target.source.width : target.source.height;

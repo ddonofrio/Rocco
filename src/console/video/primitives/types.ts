@@ -63,4 +63,3 @@ export interface RoccoPrimitiveSystem {
   getPrimitive(id: string): RoccoPrimitive | undefined;
   listPrimitives(): RoccoPrimitive[];
 }
-

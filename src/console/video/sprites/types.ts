@@ -46,10 +46,7 @@ export interface RoccoPolygonShape {
   points: RoccoPoint[];
 }
 
-export type RoccoCollisionShape =
-  | RoccoRectShape
-  | RoccoCircleShape
-  | RoccoPolygonShape;
+export type RoccoCollisionShape = RoccoRectShape | RoccoCircleShape | RoccoPolygonShape;
 
 export interface RoccoCollisionProfile {
   layer: string;
@@ -105,10 +102,7 @@ export interface RoccoSpriteRenderDefaults {
 }
 
 export type RoccoSpriteAutoAdjustMode = 'match-visible-height';
-export type RoccoSpriteAutoAdjustSpeedScaleMode =
-  | 'uniform'
-  | 'vertical-only'
-  | 'horizontal-only';
+export type RoccoSpriteAutoAdjustSpeedScaleMode = 'uniform' | 'vertical-only' | 'horizontal-only';
 export type RoccoSpriteAutoAdjustScaleCurve = 'linear' | 'logarithmic' | 'exponential';
 
 export interface RoccoSpriteAutoAdjustPerspectiveRegion {
@@ -422,15 +416,28 @@ export interface RoccoSpriteSystem {
   setPlaybackRate(instanceId: string, playbackRate: number): void;
   bindAnimationToMotion(instanceId: string, binding: RoccoAnimationMotionBinding): void;
 
-  setPosition(instanceId: string, x: number, y: number, options?: RoccoSpritePlacementOptions): void;
+  setPosition(
+    instanceId: string,
+    x: number,
+    y: number,
+    options?: RoccoSpritePlacementOptions,
+  ): void;
   setScale(instanceId: string, scaleX: number, scaleY: number): void;
   setFlip(instanceId: string, isFlipX: boolean, isFlipY: boolean): void;
-  setPresentationTransform(instanceId: string, transform: Partial<RoccoSpritePresentationTransform>): void;
+  setPresentationTransform(
+    instanceId: string,
+    transform: Partial<RoccoSpritePresentationTransform>,
+  ): void;
   setVisibleDescription(
     instanceId: string,
     visibleDescription?: Partial<RoccoSpriteVisibleDescription>,
   ): void;
-  translate(instanceId: string, dx: number, dy: number, options?: RoccoSpritePlacementOptions): void;
+  translate(
+    instanceId: string,
+    dx: number,
+    dy: number,
+    options?: RoccoSpritePlacementOptions,
+  ): void;
   setVelocity(instanceId: string, velocityX: number, velocityY: number): void;
   setAcceleration(instanceId: string, accelerationX: number, accelerationY: number): void;
   stopMovement(instanceId: string): void;

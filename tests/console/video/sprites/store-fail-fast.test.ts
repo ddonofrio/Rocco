@@ -8,7 +8,14 @@ function makeDefinition(id: string) {
     name: id,
     images: [{ id: 'img-1', uri: 'data:image/png;base64,aaa' }],
     frames: [{ id: 'frame-1', imageId: 'img-1', durationMs: 100 }],
-    animations: { idle: { id: 'idle', frames: [{ frameId: 'frame-1', durationMs: 100 }], loop: true, playbackRate: 1 } },
+    animations: {
+      idle: {
+        id: 'idle',
+        frames: [{ frameId: 'frame-1', durationMs: 100 }],
+        loop: true,
+        playbackRate: 1,
+      },
+    },
     defaultAnimation: 'idle',
   };
 }

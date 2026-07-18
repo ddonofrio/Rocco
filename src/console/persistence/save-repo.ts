@@ -26,11 +26,7 @@ import {
   type SaveStoreKey,
 } from './types';
 
-function buildKey(
-  cartridgeId: string,
-  profileId: string,
-  slotId: string,
-): SaveStoreKey {
+function buildKey(cartridgeId: string, profileId: string, slotId: string): SaveStoreKey {
   return [cartridgeId, profileId, slotId];
 }
 
@@ -125,11 +121,15 @@ class SaveRepoRuntime<TState> {
     if (!isValid) {
       throw new SaveSchemaError({
         key: 'invalid-import-envelope',
-        storedSchemaVersion: typeof envelope.schemaVersion === 'number' ? envelope.schemaVersion : 0,
+        storedSchemaVersion:
+          typeof envelope.schemaVersion === 'number' ? envelope.schemaVersion : 0,
         supportedSchemaVersion: this.provider.schemaVersion,
       });
     }
-    if (envelope.cartridgeId !== this.cartridgeId || envelope.schemaVersion > this.provider.schemaVersion) {
+    if (
+      envelope.cartridgeId !== this.cartridgeId ||
+      envelope.schemaVersion > this.provider.schemaVersion
+    ) {
       throw new SaveSchemaError({
         key: formatSaveKey(this.keyOf(envelope.profileId, envelope.slotId)),
         storedSchemaVersion: envelope.schemaVersion,
@@ -170,7 +170,10 @@ class SaveRepoRuntime<TState> {
     saveOptions?: SaveOptions,
   ): Promise<SaveMetadata> {
     this.validateKeyParts(profileId, slotId);
-    if (saveOptions?.expectedRevision !== undefined && !isPositiveSafeInteger(saveOptions.expectedRevision)) {
+    if (
+      saveOptions?.expectedRevision !== undefined &&
+      !isPositiveSafeInteger(saveOptions.expectedRevision)
+    ) {
       throw new SaveRevisionConflictError({
         key: `${this.cartridgeId}:invalid-expected-revision`,
         expectedRevision: saveOptions.expectedRevision,

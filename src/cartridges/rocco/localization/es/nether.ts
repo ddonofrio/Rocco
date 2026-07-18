@@ -49,14 +49,10 @@ export const spanishNetherText: RoccoTextCatalog['nether'] = {
     securityAlertLine: '\u{A1}Seguridad!',
   },
   timbre: {
-    lookLines: [
-      'Es un timbre dorado.',
-    ],
+    lookLines: ['Es un timbre dorado.'],
   },
   doorHandle: {
-    lookLines: [
-      'Parece un mecanismo para abrir la puerta desde fuera.',
-    ],
+    lookLines: ['Parece un mecanismo para abrir la puerta desde fuera.'],
   },
   ascendingPipes: {
     lookLines: [
@@ -72,8 +68,6 @@ export const spanishNetherText: RoccoTextCatalog['nether'] = {
       'Un volante de v\u{E1}lvula, grande y pesado.',
       'Los radios est\u{E1}n algo oxidados pero firmes.',
     ],
-    grabLines: [
-      'Ni loco toco nada de aqu\u{ED}, esto est\u{E1} por explotar.',
-    ],
+    grabLines: ['Ni loco toco nada de aqu\u{ED}, esto est\u{E1} por explotar.'],
   },
 };

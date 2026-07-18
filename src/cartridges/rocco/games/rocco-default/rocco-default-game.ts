@@ -1,16 +1,14 @@
 import type { RoccoLocalization } from './localization';
-import { RoccoLevelManager, type RoccoLevelManagerMountResult, type RoccoLevelManagerOptions } from '../../levels/rocco-level-manager';
+import {
+  RoccoLevelManager,
+  type RoccoLevelManagerMountResult,
+  type RoccoLevelManagerOptions,
+} from '../../levels/rocco-level-manager';
 import type { RoccoLevel } from '../../levels/rocco-level-types';
 import type { RpceGameDefinition } from '../../rpce/core';
-import {
-  createRoccoDefaultNetherMapStructure,
-} from './maps/nether';
-import {
-  createRoccoDefaultPierMapStructure,
-} from './maps/pier';
-import {
-  createRoccoDefaultShopMapStructure,
-} from './maps/shop';
+import { createRoccoDefaultNetherMapStructure } from './maps/nether';
+import { createRoccoDefaultPierMapStructure } from './maps/pier';
+import { createRoccoDefaultShopMapStructure } from './maps/shop';
 import { ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS } from './game-structure';
 
 export const ROCCO_DEFAULT_GAME_ID = 'rocco-default-game';

@@ -40,8 +40,7 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
   ],
   toiletMagazineReadingCraftableRelicIntroLine:
     'Si me doy prisa, todav\u{ED}a puedo montar la Reliquia coralina.',
-  toiletMagazineReadingCraftStepLine:
-    'Tengo que unir {first} con {second} para hacer {result}.',
+  toiletMagazineReadingCraftStepLine: 'Tengo que unir {first} con {second} para hacer {result}.',
   toiletMagazineReadingCraftableRelicOutroLine:
     'Debo ponerme de pie ahora mismo, montarla, tirarla al suelo y romperla.',
   toiletMagazineKnownStanLine: '\u{A1}Y STAN DE AFUERA!',
@@ -102,16 +101,14 @@ export const spanishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'Un cartel de chapa, algo corro\u{ED}do por el clima del mar.',
   ],
   shellCityKnownStanLine: '\u{BF}Sabr\u{E1} Stan que es mejor poner los carteles fuera?',
-  shellCityUnknownStanLine:
-    '\u{BF}Sabr\u{E1} este hombre que es mejor poner los carteles fuera?',
+  shellCityUnknownStanLine: '\u{BF}Sabr\u{E1} este hombre que es mejor poner los carteles fuera?',
   benchLookLines: [
     'Es un taburete. En un lado dice "By El Rata" y en el otro: "Fueron Los Boys".',
     'Un taburete de madera. No s\u{E9} yo si me quiero sentar ah\u{ED}.',
     'Eso no parece estar en venta.',
   ],
   benchKnownStanWaitLine: 'Supongo que ah\u{ED} Stan pasa las horas esperando clientes.',
-  benchUnknownStanWaitLine:
-    'Supongo que ah\u{ED} el viejo pasa las horas esperando clientes.',
+  benchUnknownStanWaitLine: 'Supongo que ah\u{ED} el viejo pasa las horas esperando clientes.',
   benchJumpUpLine: 'Guau, no sab\u{ED}a que pod\u{ED}a hacer eso.',
   benchGrabLines: [
     'No me apetece sacar las manos de los bolsillos.',

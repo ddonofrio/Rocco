@@ -28,7 +28,13 @@ export function createRoccoSpriteWalkMapFromImageData(
   const columns: RoccoSpriteWalkMapColumn[] = [];
 
   for (let x = 0; x < options.width; x += 1) {
-    const spans = collectWalkableSpansForColumn(options.data, options.width, options.height, x, alphaThreshold);
+    const spans = collectWalkableSpansForColumn(
+      options.data,
+      options.width,
+      options.height,
+      x,
+      alphaThreshold,
+    );
     if (spans.length > 0) {
       columns.push({ x, spans });
     }

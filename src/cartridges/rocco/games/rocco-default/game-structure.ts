@@ -5,10 +5,7 @@ import {
   type RoccoDefaultNetherMapOptions,
   ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
 } from './maps/nether';
-import {
-  createRoccoDefaultPierMap,
-  type RoccoDefaultPierMapOptions,
-} from './maps/pier';
+import { createRoccoDefaultPierMap, type RoccoDefaultPierMapOptions } from './maps/pier';
 import {
   createRoccoDefaultShopMap,
   type RoccoDefaultShopMapOptions,
@@ -16,9 +13,7 @@ import {
 } from './maps/shop';
 
 export interface RoccoDefaultGameMapsOptions
-  extends RoccoDefaultPierMapOptions,
-    RoccoDefaultShopMapOptions,
-    RoccoDefaultNetherMapOptions {}
+  extends RoccoDefaultPierMapOptions, RoccoDefaultShopMapOptions, RoccoDefaultNetherMapOptions {}
 
 const ROCCO_BAIT_SHOP_TOILET_PORTAL_CONNECTOR_ID = 'portal';
 const ROCCO_NETHER_ENTRY_CONNECTOR_ID = 'entry';

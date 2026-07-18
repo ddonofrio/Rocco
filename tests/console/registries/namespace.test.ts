@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseQualifiedId, qualifyId, validateQualifiedId } from '../../../src/console/registries/namespace';
+import {
+  parseQualifiedId,
+  qualifyId,
+  validateQualifiedId,
+} from '../../../src/console/registries/namespace';
 
 describe('namespace', () => {
   it('qualifies an id', () => {
@@ -10,9 +14,7 @@ describe('namespace', () => {
   });
 
   it('throws on empty cartridgeId', () => {
-    expect(() => qualifyId('', 'sound', 'police-whistle')).toThrow(
-      "Invalid cartridgeId ''",
-    );
+    expect(() => qualifyId('', 'sound', 'police-whistle')).toThrow("Invalid cartridgeId ''");
   });
 
   it('throws on colon in parts', () => {
@@ -30,9 +32,7 @@ describe('namespace', () => {
   });
 
   it('throws on invalid qualified id', () => {
-    expect(() => parseQualifiedId('invalid')).toThrow(
-      "Invalid qualified id 'invalid'",
-    );
+    expect(() => parseQualifiedId('invalid')).toThrow("Invalid qualified id 'invalid'");
   });
 
   it('validates a qualified id', () => {

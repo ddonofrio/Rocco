@@ -4,14 +4,29 @@ export interface RoccoTitleStyle {
   fill?: string;
   fontFamily?: string;
   fontSize?: number;
-  fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900';
+  fontWeight?:
+    | 'normal'
+    | 'bold'
+    | 'bolder'
+    | 'lighter'
+    | '100'
+    | '200'
+    | '300'
+    | '400'
+    | '500'
+    | '600'
+    | '700'
+    | '800'
+    | '900';
   align?: 'left' | 'center' | 'right';
-  stroke?: string | {
-    color: string | number;
-    width: number;
-    alpha?: number;
-    alignment?: number;
-  };
+  stroke?:
+    | string
+    | {
+        color: string | number;
+        width: number;
+        alpha?: number;
+        alignment?: number;
+      };
 }
 
 export interface RoccoTitleMessage {

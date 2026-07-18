@@ -40,8 +40,6 @@ export const CONSOLE_SUPPORTED_CAPABILITIES: readonly CartridgeCapability[] = [
 export const CARTRIDGE_SDK_V1_CAPABILITIES: readonly CartridgeCapability[] =
   CONSOLE_SUPPORTED_CAPABILITIES;
 
-export function isSupportedCapability(
-  value: string,
-): value is CartridgeCapability {
+export function isSupportedCapability(value: string): value is CartridgeCapability {
   return (CONSOLE_SUPPORTED_CAPABILITIES as readonly string[]).includes(value);
 }

@@ -168,7 +168,9 @@ describe('RoccoCursorHost', () => {
       size: 40,
     });
 
-    const attachment = root.querySelector<HTMLImageElement>('[data-rocco-cursor-attachment="true"]');
+    const attachment = root.querySelector<HTMLImageElement>(
+      '[data-rocco-cursor-attachment="true"]',
+    );
     const lines = root.querySelectorAll<HTMLSpanElement>('[data-rocco-cursor-line]');
     expect(attachment?.src).toContain('/keys.png');
     expect(attachment?.style.display).toBe('block');

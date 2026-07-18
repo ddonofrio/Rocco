@@ -58,4 +58,3 @@ describe('RoccoGraphicPlaneSDK', () => {
     expect(cell?.rotate).toBe(90);
   });
 });
-

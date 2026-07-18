@@ -34,11 +34,11 @@ The current concrete implementation and assets live in
 
 ## Levels
 
-| Level          | ID            | Scene ID                  | Background Scroll | Role                         |
-| -------------- | ------------- | ------------------------- | ----------------- | ---------------------------- |
-| Pier Beginning | `pier-start`  | `rocco-pier-start-scene`  | Right window      | Side level west of middle    |
-| Pier Middle    | `pier-middle` | `rocco-pier-middle-scene` | Center window     | Main interactive level       |
-| Pier End       | `pier-end`    | `rocco-pier-end-scene`    | Left window       | Side level east of middle    |
+| Level          | ID            | Scene ID                  | Background Scroll | Role                      |
+| -------------- | ------------- | ------------------------- | ----------------- | ------------------------- |
+| Pier Beginning | `pier-start`  | `rocco-pier-start-scene`  | Right window      | Side level west of middle |
+| Pier Middle    | `pier-middle` | `rocco-pier-middle-scene` | Center window     | Main interactive level    |
+| Pier End       | `pier-end`    | `rocco-pier-end-scene`    | Left window       | Side level east of middle |
 
 ## Connections
 

@@ -1,7 +1,4 @@
-export {
-  RoccoBaitShopLevel,
-  ROCCO_BAIT_SHOP_LEVEL_ID,
-} from './bait-shop-level';
+export { RoccoBaitShopLevel, ROCCO_BAIT_SHOP_LEVEL_ID } from './bait-shop-level';
 export {
   RoccoBaitShopSecondLevel,
   ROCCO_BAIT_SHOP_SECOND_LEVEL_ID,

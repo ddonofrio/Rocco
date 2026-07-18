@@ -48,10 +48,7 @@ describe('RoccoSceneTargetSystemSDK', () => {
     ]);
     expect(
       system.hitTestVisible(20, 20).map((hit) => `${hit.instanceId}:${hit.text}:${hit.priority}`),
-    ).toEqual([
-      'shell-city-sign-target:Shell City sign:24',
-      'crate-target:Crate:2',
-    ]);
+    ).toEqual(['shell-city-sign-target:Shell City sign:24', 'crate-target:Crate:2']);
   });
 
   it('supports look-only hotspots that hover but do not interact', () => {

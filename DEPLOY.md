@@ -35,15 +35,15 @@ Rollback is a one-command atomic symlink swap to a previous release (see below).
 
 ## Required repository secrets
 
-| Secret | Purpose |
-|---|---|
-| `SSH_PRIVATE_KEY` | Private key for the deploy user (loaded by `webfactory/ssh-agent`). |
+| Secret            | Purpose                                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `SSH_PRIVATE_KEY` | Private key for the deploy user (loaded by `webfactory/ssh-agent`).                                                             |
 | `SSH_KNOWN_HOSTS` | **Verified** `known_hosts` line(s) for the server (`host:port <type> <key>`). Obtain it once out-of-band and paste it verbatim. |
-| `SERVER_HOST` | SSH host of the playtesting server. |
-| `SERVER_PORT` | SSH port (e.g. `22`). |
-| `SERVER_USER` | Deploy user on the server. |
-| `REMOTE_PATH` | **Parent** deploy base dir on the server (contains `releases/` and `current`). This is no longer the docroot. |
-| `DEPLOY_URL` | (Optional) Base URL for the post-deploy smoke test, e.g. `https://playtest.example.com`. |
+| `SERVER_HOST`     | SSH host of the playtesting server.                                                                                             |
+| `SERVER_PORT`     | SSH port (e.g. `22`).                                                                                                           |
+| `SERVER_USER`     | Deploy user on the server.                                                                                                      |
+| `REMOTE_PATH`     | **Parent** deploy base dir on the server (contains `releases/` and `current`). This is no longer the docroot.                   |
+| `DEPLOY_URL`      | (Optional) Base URL for the post-deploy smoke test, e.g. `https://playtest.example.com`.                                        |
 
 ## Server setup (one time)
 

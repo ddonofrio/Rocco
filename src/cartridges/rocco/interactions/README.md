@@ -43,10 +43,7 @@ interface InteractionRule {
 
   matches(context: InteractionContext): boolean;
 
-  execute(
-    context: InteractionContext,
-    signal: AbortSignal,
-  ): CartridgeActionDisposition | undefined;
+  execute(context: InteractionContext, signal: AbortSignal): CartridgeActionDisposition | undefined;
 }
 ```
 

@@ -1,4 +1,10 @@
-export type RoccoRenderLayerKind = 'background' | 'world' | 'foreground' | 'overlay' | 'ui' | 'display';
+export type RoccoRenderLayerKind =
+  | 'background'
+  | 'world'
+  | 'foreground'
+  | 'overlay'
+  | 'ui'
+  | 'display';
 
 export type RoccoDepthSortMode = 'none' | 'y-sort' | 'baseline-sort';
 

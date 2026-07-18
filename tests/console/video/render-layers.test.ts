@@ -11,4 +11,3 @@ describe('video render layers', () => {
     expect(zIndexes).toEqual(sorted);
   });
 });
-

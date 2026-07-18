@@ -47,7 +47,10 @@ describe('Deployment workflow characterization', () => {
 
   it('CLOSE-011: deploy and rollback share a remote lock and cleanup trap', async () => {
     const deployScript = await readFile(deployScriptPath, 'utf8');
-    const rollbackScript = await readFile(path.join(repoRoot, 'scripts', 'rollback-web.sh'), 'utf8');
+    const rollbackScript = await readFile(
+      path.join(repoRoot, 'scripts', 'rollback-web.sh'),
+      'utf8',
+    );
 
     expect(deployScript).toContain('.deploy-lock');
     expect(deployScript).toContain('trap cleanup EXIT');

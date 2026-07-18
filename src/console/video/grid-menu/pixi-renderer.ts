@@ -22,10 +22,7 @@ import {
   resolveDefinitionTitleHeight,
 } from './definition';
 import { resolveGridMenuPanelBounds } from './geometry';
-import {
-  applyGridMenuPanelSlots,
-  type GridMenuSlotNode,
-} from './slot-renderer';
+import { applyGridMenuPanelSlots, type GridMenuSlotNode } from './slot-renderer';
 
 interface GridMenuButtonNode {
   root: Container;
@@ -36,7 +33,6 @@ interface GridMenuButtonNode {
 interface PixiRoccoGridMenuRendererOptions {
   resolveRenderLayerZIndex?: (renderLayer: string) => number;
 }
-
 
 export class PixiRoccoGridMenuRenderer {
   private readonly slotNodes = new Map<number, GridMenuSlotNode>();
@@ -404,10 +400,15 @@ export class PixiRoccoGridMenuRenderer {
     node.frame.clear();
     node.frame
       .roundRect(0, 0, width, height, 8)
-      .fill(Object.assign({}, {
-        color: '#101810',
-        alpha: isEnabled ? 0.9 : 0.42,
-      }))
+      .fill(
+        Object.assign(
+          {},
+          {
+            color: '#101810',
+            alpha: isEnabled ? 0.9 : 0.42,
+          },
+        ),
+      )
       .stroke({
         color: isHovered && isEnabled ? '#8ecf6e' : '#d7e6c5',
         width: isHovered && isEnabled ? 3 : 2,
@@ -420,7 +421,10 @@ export class PixiRoccoGridMenuRenderer {
     node.label.alpha = isEnabled ? 1 : 0.45;
   }
 
-  private isButtonEnabled(button: RoccoGridMenuButton, renderable: RoccoGridMenuRenderable): boolean {
+  private isButtonEnabled(
+    button: RoccoGridMenuButton,
+    renderable: RoccoGridMenuRenderable,
+  ): boolean {
     if (button.enabled === false) {
       return false;
     }

@@ -1,9 +1,6 @@
 import type { RoccoActionMenuDefinition } from '../../../../../../console/video/action-menu';
 import type { RoccoSpriteDefinition } from '../../../../../../console/video/sprites';
-import {
-  roccoDefaultActionMenuAssetUrls,
-  roccoDefaultKeysAssetUrl,
-} from '../../sprites';
+import { roccoDefaultActionMenuAssetUrls, roccoDefaultKeysAssetUrl } from '../../sprites';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import {
   DEFAULT_KEYS_ANIMATION_ID,

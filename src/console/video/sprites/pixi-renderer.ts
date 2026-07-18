@@ -1,7 +1,11 @@
 import { Assets, ColorMatrixFilter, Container, Rectangle, Sprite, Texture } from 'pixi.js';
 
 import type { RoccoRenderableSprite } from './system';
-import type { RoccoSpriteDefinition, RoccoSpriteImage, RoccoSpritePresentationTransform } from './types';
+import type {
+  RoccoSpriteDefinition,
+  RoccoSpriteImage,
+  RoccoSpritePresentationTransform,
+} from './types';
 
 interface SpriteNode {
   root: Container;
@@ -26,7 +30,10 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function resolvePresentationScale(transform?: RoccoSpritePresentationTransform): { x: number; y: number } {
+function resolvePresentationScale(transform?: RoccoSpritePresentationTransform): {
+  x: number;
+  y: number;
+} {
   const yawDegrees = clamp(transform?.yawDegrees ?? 0, -89.9, 89.9);
   const pitchDegrees = clamp(transform?.pitchDegrees ?? 0, -89.9, 89.9);
   return {
@@ -87,7 +94,11 @@ export class PixiRoccoSpriteRenderer {
     return layerRoot;
   }
 
-  private applyRenderable(node: SpriteNode, renderable: RoccoRenderableSprite, sortIndex: number): void {
+  private applyRenderable(
+    node: SpriteNode,
+    renderable: RoccoRenderableSprite,
+    sortIndex: number,
+  ): void {
     const resolved = this.resolveTexture(renderable);
     if (node.frameKey !== resolved.key || node.sprite.texture !== resolved.texture) {
       node.sprite.texture = resolved.texture;
@@ -109,8 +120,12 @@ export class PixiRoccoSpriteRenderer {
     node.root.position.set(renderable.instance.transform.x, renderable.instance.transform.y);
     const presentationScale = resolvePresentationScale(renderable.instance.transform.presentation);
     node.root.scale.set(
-      renderable.instance.transform.scaleX * presentationScale.x * (renderable.instance.transform.flipX ? -1 : 1),
-      renderable.instance.transform.scaleY * presentationScale.y * (renderable.instance.transform.flipY ? -1 : 1),
+      renderable.instance.transform.scaleX *
+        presentationScale.x *
+        (renderable.instance.transform.flipX ? -1 : 1),
+      renderable.instance.transform.scaleY *
+        presentationScale.y *
+        (renderable.instance.transform.flipY ? -1 : 1),
     );
     node.root.rotation = renderable.instance.transform.rotation ?? 0;
     node.root.alpha = renderable.instance.opacity;
@@ -186,7 +201,11 @@ export class PixiRoccoSpriteRenderer {
     } else if (image.dataRef?.startsWith('placeholder:')) {
       texture = this.createPlaceholderTexture(image.dataRef, image.width ?? 64, image.height ?? 32);
     } else {
-      texture = this.createPlaceholderTexture(`placeholder:${key}`, image.width ?? 64, image.height ?? 32);
+      texture = this.createPlaceholderTexture(
+        `placeholder:${key}`,
+        image.width ?? 64,
+        image.height ?? 32,
+      );
     }
 
     this.baseTextures.set(key, texture);
@@ -340,7 +359,10 @@ export class PixiRoccoSpriteRenderer {
         node = this.createNode();
         this.nodes.set(renderable.instance.id, node);
         layerRoot.addChild(node.root);
-      } else if (node.renderLayer !== renderable.instance.renderLayer || node.root.parent !== layerRoot) {
+      } else if (
+        node.renderLayer !== renderable.instance.renderLayer ||
+        node.root.parent !== layerRoot
+      ) {
         node.root.removeFromParent();
         layerRoot.addChild(node.root);
         node.renderLayer = renderable.instance.renderLayer;

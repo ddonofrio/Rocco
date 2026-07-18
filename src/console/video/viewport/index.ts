@@ -1,7 +1,4 @@
-export {
-  defaultDisplayProfile,
-  RoccoDisplayProfileRenderer,
-} from '../display/profile';
+export { defaultDisplayProfile, RoccoDisplayProfileRenderer } from '../display/profile';
 export { RoccoViewportHost } from './host';
 export type {
   RoccoViewportHostOptions,

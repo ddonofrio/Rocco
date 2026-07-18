@@ -47,7 +47,12 @@ export interface RoccoActionMenuSystem {
   registerMenu(definition: RoccoActionMenuDefinition): void;
   unregisterMenu(definitionId: string): void;
   listMenus(): RoccoActionMenuDefinition[];
-  openMenuForTarget(targetInstanceId: string, targetDefinitionId: string, x: number, y: number): boolean;
+  openMenuForTarget(
+    targetInstanceId: string,
+    targetDefinitionId: string,
+    x: number,
+    y: number,
+  ): boolean;
   closeMenu(): void;
   isOpen(): boolean;
   setHoverAt(x: number, y: number): boolean;

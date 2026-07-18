@@ -75,8 +75,16 @@ export interface RoccoSpriteMessageRenderable {
 
 export interface RoccoSpriteMessageSystem {
   showMessage(message: RoccoSpriteMessageRequest): void;
-  say(spriteInstanceId: string, text: RoccoSpriteMessageText, options?: RoccoSpriteMessageOptions): void;
-  think(spriteInstanceId: string, text: RoccoSpriteMessageText, options?: RoccoSpriteMessageOptions): void;
+  say(
+    spriteInstanceId: string,
+    text: RoccoSpriteMessageText,
+    options?: RoccoSpriteMessageOptions,
+  ): void;
+  think(
+    spriteInstanceId: string,
+    text: RoccoSpriteMessageText,
+    options?: RoccoSpriteMessageOptions,
+  ): void;
   removeMessage(messageId: string): void;
   clearMessages(): void;
   listMessages(): RoccoSpriteMessageState[];

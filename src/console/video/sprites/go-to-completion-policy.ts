@@ -56,8 +56,14 @@ interface ResolveGoToCompletionFacingOptions {
   options?: RoccoMoveOptions;
   resolveTargetInstance: (instanceId: string) => RoccoSpriteInstance | undefined;
   requireDefinition: (definitionId: string) => RoccoSpriteDefinition;
-  resolveGroundPoint: (instance: RoccoSpriteInstance, definition: RoccoSpriteDefinition) => RoccoPoint;
-  resolveActiveFrame: (definition: RoccoSpriteDefinition, instance: RoccoSpriteInstance) => RoccoSpriteFrame;
+  resolveGroundPoint: (
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+  ) => RoccoPoint;
+  resolveActiveFrame: (
+    definition: RoccoSpriteDefinition,
+    instance: RoccoSpriteInstance,
+  ) => RoccoSpriteFrame;
 }
 
 export function resolveGoToCompletionFacing({

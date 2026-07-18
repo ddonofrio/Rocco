@@ -86,9 +86,7 @@ export function selectNonRepeatingLines(
       remainingIndexes = refillIndexes(
         totalCount,
         pickedIndexes,
-        pickedIndexes.length > 0
-          ? pickedIndexes.at(-1)
-          : priorLastSelectedIndex,
+        pickedIndexes.length > 0 ? pickedIndexes.at(-1) : priorLastSelectedIndex,
         isAvoidImmediateRepeat && pickedIndexes.length === 0,
       );
       if (remainingIndexes.length === 0) {

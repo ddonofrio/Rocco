@@ -1,10 +1,6 @@
 import { Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 
-import type {
-  RoccoGridMenuDefinition,
-  RoccoGridMenuItem,
-  RoccoGridMenuRenderable,
-} from './types';
+import type { RoccoGridMenuDefinition, RoccoGridMenuItem, RoccoGridMenuRenderable } from './types';
 
 export interface GridMenuSlotNode {
   root: Container;
@@ -147,12 +143,19 @@ export function applyGridMenuSlotNode(
   node.frame.clear();
   node.frame
     .roundRect(0, 0, slotWidth, slotHeight, 6)
-    .fill(Object.assign({}, {
-      color: definition.slotFill ?? '#182317',
-      alpha: slotFillAlpha,
-    }))
+    .fill(
+      Object.assign(
+        {},
+        {
+          color: definition.slotFill ?? '#182317',
+          alpha: slotFillAlpha,
+        },
+      ),
+    )
     .stroke({
-      color: isHovered ? definition.hoverStroke ?? '#8ecf6e' : definition.slotStroke ?? '#5b704f',
+      color: isHovered
+        ? (definition.hoverStroke ?? '#8ecf6e')
+        : (definition.slotStroke ?? '#5b704f'),
       width: isHovered ? 3 : 1,
       alpha: isHovered ? 1 : 0.82,
     });

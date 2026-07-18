@@ -120,7 +120,11 @@ describe('CompositionServiceImpl', () => {
   it('prefers the newest exclusive session over later shared ones', () => {
     const service = new CompositionServiceImpl();
     service.begin({ ownerId: 'shared-a', mode: 'shared', message: 'SHARED A' });
-    const exclusive = service.begin({ ownerId: 'exclusive', mode: 'exclusive', message: 'EXCLUSIVE' });
+    const exclusive = service.begin({
+      ownerId: 'exclusive',
+      mode: 'exclusive',
+      message: 'EXCLUSIVE',
+    });
     service.begin({ ownerId: 'shared-b', mode: 'shared', message: 'SHARED B' });
 
     expect(service.getActiveSessionInfo()).toMatchObject({

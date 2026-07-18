@@ -105,7 +105,9 @@ export async function createRoccoSpriteAutoCroppedFrames(
   return { images, frames, frameIds };
 }
 
-async function loadAutoCropImage(source: RoccoSpriteAutoCropImageSource): Promise<LoadedAutoCropImage> {
+async function loadAutoCropImage(
+  source: RoccoSpriteAutoCropImageSource,
+): Promise<LoadedAutoCropImage> {
   if (typeof document === 'undefined') {
     throw new Error('Sprite auto-crop requires a DOM canvas environment.');
   }
@@ -135,7 +137,9 @@ async function loadImage(uri: string): Promise<HTMLImageElement> {
   const image = new Image();
   const loaded = new Promise<HTMLImageElement>((resolve, reject) => {
     image.addEventListener('load', () => resolve(image));
-    image.addEventListener('error', () => reject(new Error(`Could not load sprite auto-crop image '${uri}'.`)));
+    image.addEventListener('error', () =>
+      reject(new Error(`Could not load sprite auto-crop image '${uri}'.`)),
+    );
   });
 
   image.src = uri;
@@ -198,7 +202,10 @@ function findComponentRects(
   options: RoccoSpriteAutoCropOptions,
 ): ComponentRect[] {
   const threshold = resolveAlphaThreshold(options);
-  const minOpaquePixels = Math.max(1, Math.floor(options.minOpaquePixels ?? DEFAULT_MIN_OPAQUE_PIXELS));
+  const minOpaquePixels = Math.max(
+    1,
+    Math.floor(options.minOpaquePixels ?? DEFAULT_MIN_OPAQUE_PIXELS),
+  );
   const visited = new Uint8Array(image.width * image.height);
   const rects: ComponentRect[] = [];
 
@@ -296,7 +303,9 @@ function sortRects(rects: ComponentRect[], options: RoccoSpriteAutoCropOptions):
   const rows: RowGroup[] = [];
   const sortedRects = rects.toSorted((left, right) => centerY(left) - centerY(right));
   for (const rect of sortedRects) {
-    const row = rows.find((candidate) => Math.abs(candidate.centerY - centerY(rect)) <= rowTolerance);
+    const row = rows.find(
+      (candidate) => Math.abs(candidate.centerY - centerY(rect)) <= rowTolerance,
+    );
     if (!row) {
       rows.push({
         centerY: centerY(rect),
@@ -398,12 +407,7 @@ function resolveHitbox(
   };
 }
 
-function isOpaque(
-  image: LoadedAutoCropImage,
-  x: number,
-  y: number,
-  threshold: number,
-): boolean {
+function isOpaque(image: LoadedAutoCropImage, x: number, y: number, threshold: number): boolean {
   return (image.data[(y * image.width + x) * 4 + 3] ?? 0) >= threshold;
 }
 

@@ -59,7 +59,11 @@ describe('RoccoRuntimeDefaultPlayerMovePolicyCoordinator', () => {
     });
 
     const isResult = coordinatorWithTarget.shouldSuppressDefaultPlayerMove({
-      target: { kind: 'scene-target', instanceId: 'bait-shop-door', definitionId: 'bait-shop-door' },
+      target: {
+        kind: 'scene-target',
+        instanceId: 'bait-shop-door',
+        definitionId: 'bait-shop-door',
+      },
       cartridgeDisposition: undefined,
     });
 

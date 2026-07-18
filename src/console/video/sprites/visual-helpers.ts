@@ -145,7 +145,14 @@ function isPointOnVisibleSpritePixel(
     return false;
   }
   const frameRect = resolveFrameRect(frame, image, mask);
-  const localPoint = toSpriteLocalPoint(instance, definition, frame, frameRect, point, visualAdjustment);
+  const localPoint = toSpriteLocalPoint(
+    instance,
+    definition,
+    frame,
+    frameRect,
+    point,
+    visualAdjustment,
+  );
   if (!localPoint) {
     return false;
   }
@@ -231,7 +238,9 @@ async function loadImage(uri: string): Promise<HTMLImageElement> {
 
   return new Promise((resolve, reject) => {
     image.addEventListener('load', () => resolve(image));
-    image.addEventListener('error', () => reject(new Error(`Could not load sprite image '${uri}'.`)));
+    image.addEventListener('error', () =>
+      reject(new Error(`Could not load sprite image '${uri}'.`)),
+    );
   });
 }
 
@@ -248,7 +257,10 @@ function resolveImageSourceKey(image: RoccoSpriteImage, definitionId: string): s
   return `placeholder:${definitionId}:${image.id}`;
 }
 
-function calculateVisibleBounds(mask: SpriteAlphaMask, frameRect: RoccoRect): SpriteVisibleBounds | undefined {
+function calculateVisibleBounds(
+  mask: SpriteAlphaMask,
+  frameRect: RoccoRect,
+): SpriteVisibleBounds | undefined {
   const startX = clamp(Math.floor(frameRect.x), 0, mask.width - 1);
   const startY = clamp(Math.floor(frameRect.y), 0, mask.height - 1);
   const endX = clamp(Math.ceil(frameRect.x + frameRect.width), 0, mask.width);
@@ -290,7 +302,12 @@ function collectVisibleBoundsExtent(
   return { minX, minY, maxX, maxY };
 }
 
-function scanRowAlphaExtent(mask: SpriteAlphaMask, startX: number, endX: number, y: number): { minX: number; maxX: number } {
+function scanRowAlphaExtent(
+  mask: SpriteAlphaMask,
+  startX: number,
+  endX: number,
+  y: number,
+): { minX: number; maxX: number } {
   let minX = endX;
   let maxX = startX - 1;
   for (let x = startX; x < endX; x += 1) {
@@ -305,7 +322,11 @@ function scanRowAlphaExtent(mask: SpriteAlphaMask, startX: number, endX: number,
   return { minX, maxX };
 }
 
-function resolveFrameRect(frame: RoccoSpriteFrame, image: RoccoSpriteImage, mask: SpriteAlphaMask): RoccoRect {
+function resolveFrameRect(
+  frame: RoccoSpriteFrame,
+  image: RoccoSpriteImage,
+  mask: SpriteAlphaMask,
+): RoccoRect {
   return (
     frame.rect ?? {
       x: 0,
@@ -325,8 +346,10 @@ function toSpriteLocalPoint(
   visualAdjustment?: RoccoSpriteVisualAdjustment,
 ): RoccoPoint | undefined {
   const presentationScale = resolvePresentationScale(instance.transform.presentation);
-  const scaleX = (instance.transform.scaleX || 1) * presentationScale.x * (instance.transform.flipX ? -1 : 1);
-  const scaleY = (instance.transform.scaleY || 1) * presentationScale.y * (instance.transform.flipY ? -1 : 1);
+  const scaleX =
+    (instance.transform.scaleX || 1) * presentationScale.x * (instance.transform.flipX ? -1 : 1);
+  const scaleY =
+    (instance.transform.scaleY || 1) * presentationScale.y * (instance.transform.flipY ? -1 : 1);
   if (Math.abs(scaleX) < EPSILON || Math.abs(scaleY) < EPSILON) {
     return undefined;
   }
@@ -336,8 +359,10 @@ function toSpriteLocalPoint(
   const dy = point.y - instance.transform.y;
   const cos = Math.cos(rotation);
   const sin = Math.sin(rotation);
-  const localX = ((dx * cos - dy * sin) / scaleX) + (frame.pivot ?? definition.pivot ?? { x: 0, y: 0 }).x;
-  const localY = ((dx * sin + dy * cos) / scaleY) + (frame.pivot ?? definition.pivot ?? { x: 0, y: 0 }).y;
+  const localX =
+    (dx * cos - dy * sin) / scaleX + (frame.pivot ?? definition.pivot ?? { x: 0, y: 0 }).x;
+  const localY =
+    (dx * sin + dy * cos) / scaleY + (frame.pivot ?? definition.pivot ?? { x: 0, y: 0 }).y;
   const adjustedScaleX = visualAdjustment?.scaleX ?? 1;
   const adjustedScaleY = visualAdjustment?.scaleY ?? 1;
   if (Math.abs(adjustedScaleX) < EPSILON || Math.abs(adjustedScaleY) < EPSILON) {
@@ -357,7 +382,10 @@ function toSpriteLocalPoint(
   return { x: imageX, y: imageY };
 }
 
-function resolvePresentationScale(transform?: RoccoSpritePresentationTransform): { x: number; y: number } {
+function resolvePresentationScale(transform?: RoccoSpritePresentationTransform): {
+  x: number;
+  y: number;
+} {
   const yawDegrees = clamp(transform?.yawDegrees ?? 0, -89.9, 89.9);
   const pitchDegrees = clamp(transform?.pitchDegrees ?? 0, -89.9, 89.9);
   return {

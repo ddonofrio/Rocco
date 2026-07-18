@@ -113,7 +113,12 @@ export function updateWaterColorPlaneAnimation(
   animation: WaterColorPlaneAnimation | undefined,
   deltaMs: number,
 ): void {
-  if (!animation?.ready || !animation.sourceCanvas || !animation.frameContext || !animation.texture) {
+  if (
+    !animation?.ready ||
+    !animation.sourceCanvas ||
+    !animation.frameContext ||
+    !animation.texture
+  ) {
     return;
   }
 
@@ -130,9 +135,29 @@ export function updateWaterColorPlaneAnimation(
     const offsetX = Math.round(wave);
     frameContext.drawImage(sourceCanvas, 0, y, width, sliceHeight, offsetX, y, width, sliceHeight);
     if (offsetX > 0) {
-      frameContext.drawImage(sourceCanvas, 0, y, width, sliceHeight, offsetX - width, y, width, sliceHeight);
+      frameContext.drawImage(
+        sourceCanvas,
+        0,
+        y,
+        width,
+        sliceHeight,
+        offsetX - width,
+        y,
+        width,
+        sliceHeight,
+      );
     } else if (offsetX < 0) {
-      frameContext.drawImage(sourceCanvas, 0, y, width, sliceHeight, offsetX + width, y, width, sliceHeight);
+      frameContext.drawImage(
+        sourceCanvas,
+        0,
+        y,
+        width,
+        sliceHeight,
+        offsetX + width,
+        y,
+        width,
+        sliceHeight,
+      );
     }
   }
 

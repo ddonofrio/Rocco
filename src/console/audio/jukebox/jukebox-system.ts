@@ -1,5 +1,10 @@
 import { AudioAnalyzer, type AudioAnalysisResult } from './audio-analyzer';
-import type { PlaylistHandle, RoccoJukeboxPlaylist, RoccoJukeboxSystem, RoccoJukeboxTrack } from './types';
+import type {
+  PlaylistHandle,
+  RoccoJukeboxPlaylist,
+  RoccoJukeboxSystem,
+  RoccoJukeboxTrack,
+} from './types';
 
 interface Deferred<T> {
   readonly promise: Promise<T>;
@@ -282,10 +287,11 @@ export class RoccoJukeboxSystemImpl implements RoccoJukeboxSystem {
       return;
     }
 
-    const maxAttempts = this.trackStates.reduce(
-      (sum, trackState) => sum + trackState.analysis.audioSegments.length,
-      0,
-    ) + this.trackStates.length;
+    const maxAttempts =
+      this.trackStates.reduce(
+        (sum, trackState) => sum + trackState.analysis.audioSegments.length,
+        0,
+      ) + this.trackStates.length;
 
     for (let attempts = 0; attempts < maxAttempts; attempts += 1) {
       const trackState = this.trackStates[this.currentTrackIndex];

@@ -339,8 +339,7 @@ export class RpceInventoryTransferSession {
     const dividerX = this.padding + this.resolveDividerCenterX();
     const topY = this.padding + Math.max(4, headerHeight - 10);
     const contentHeight =
-      this.resolveTotalRows() * this.slotSize +
-      Math.max(0, this.resolveTotalRows() - 1) * this.gap;
+      this.resolveTotalRows() * this.slotSize + Math.max(0, this.resolveTotalRows() - 1) * this.gap;
     const bottomY = this.padding + headerHeight + contentHeight - 4;
 
     return [

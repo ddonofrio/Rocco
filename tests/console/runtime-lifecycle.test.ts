@@ -81,7 +81,9 @@ describe('GameRuntime lifecycle', () => {
 
     await runtime.dispose();
     // renderTick is private; invoke through the instance to assert the guard.
-    (runtime as unknown as { renderTick(ticker: { deltaMS: number; deltaTime: number }): void }).renderTick({
+    (
+      runtime as unknown as { renderTick(ticker: { deltaMS: number; deltaTime: number }): void }
+    ).renderTick({
       deltaMS: 16,
       deltaTime: 1,
     });

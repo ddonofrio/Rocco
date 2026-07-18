@@ -21,7 +21,9 @@ export interface RoccoGridMenuBounds {
   height: number;
 }
 
-export function resolveGridMenuPanelBounds(definition: RoccoGridMenuDefinition): RoccoGridMenuBounds {
+export function resolveGridMenuPanelBounds(
+  definition: RoccoGridMenuDefinition,
+): RoccoGridMenuBounds {
   const columns = definition.columns ?? DEFAULT_COLUMNS;
   const rows = definition.rows ?? DEFAULT_ROWS;
   const slotWidth = definition.slotWidth ?? definition.slotSize ?? DEFAULT_SLOT_SIZE;
@@ -62,7 +64,8 @@ export function resolveGridMenuButtonBounds(
   const totalGapWidth = Math.max(0, buttonCount - 1) * buttonGap;
   const buttonWidth = Math.max(44, (innerWidth - totalGapWidth) / buttonCount);
   const slotSectionHeight =
-    (definition.rows ?? DEFAULT_ROWS) * (definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE) +
+    (definition.rows ?? DEFAULT_ROWS) *
+      (definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE) +
     Math.max(0, (definition.rows ?? DEFAULT_ROWS) - 1) * (definition.gap ?? DEFAULT_GAP);
   const titleHeight = resolveDefinitionTitleHeight(definition);
   const headerHeight = resolveDefinitionHeaderHeight(definition);

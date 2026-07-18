@@ -90,16 +90,16 @@ describe('RoccoDisplayProfileRenderer', () => {
 describe('RoccoViewportHost display profile integration', () => {
   it('tracks contain metrics and allows toggling the display profile', () => {
     Object.defineProperties(globalThis, {
-    	innerWidth: {
-	      value: 1280,
-	      configurable: true,
-	      writable: true,
-	    },
-    	innerHeight: {
-	      value: 720,
-	      configurable: true,
-	      writable: true,
-	    },
+      innerWidth: {
+        value: 1280,
+        configurable: true,
+        writable: true,
+      },
+      innerHeight: {
+        value: 720,
+        configurable: true,
+        writable: true,
+      },
     });
 
     const root = document.createElement('div');
@@ -130,16 +130,16 @@ describe('RoccoViewportHost display profile integration', () => {
 
   it('uses full viewport overlay in cover mode', () => {
     Object.defineProperties(globalThis, {
-    	innerWidth: {
-	      value: 375,
-	      configurable: true,
-	      writable: true,
-	    },
-    	innerHeight: {
-	      value: 812,
-	      configurable: true,
-	      writable: true,
-	    },
+      innerWidth: {
+        value: 375,
+        configurable: true,
+        writable: true,
+      },
+      innerHeight: {
+        value: 812,
+        configurable: true,
+        writable: true,
+      },
     });
 
     const root = document.createElement('div');

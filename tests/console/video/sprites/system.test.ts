@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { RoccoSpriteDefinition, RoccoSpriteWalkMap } from '../../../../src/console/video/sprites/types';
+import type {
+  RoccoSpriteDefinition,
+  RoccoSpriteWalkMap,
+} from '../../../../src/console/video/sprites/types';
 import { RoccoSpriteSystemSDK } from '../../../../src/console/video/sprites/system';
 
 function createTestDefinition(): RoccoSpriteDefinition {
@@ -380,12 +383,7 @@ describe('RoccoSpriteSystemSDK', () => {
           alphaMask: {
             width: 4,
             height: 4,
-            alpha: [
-              0, 0, 0, 0,
-              0, 255, 0, 0,
-              0, 0, 0, 0,
-              0, 0, 0, 0,
-            ],
+            alpha: [0, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
           },
         },
       ],
@@ -583,9 +581,9 @@ describe('RoccoSpriteSystemSDK', () => {
       transform: { x: 40, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
     });
 
-    expect(system.goTo(sprite.id, 40, 0, { targetInstanceId: target.id, keepDistance: 10, speed: 80 })).toBe(
-      true,
-    );
+    expect(
+      system.goTo(sprite.id, 40, 0, { targetInstanceId: target.id, keepDistance: 10, speed: 80 }),
+    ).toBe(true);
 
     const commanded = system.getSprite(sprite.id);
     expect(commanded?.motion.command?.kind).toBe('move-to');
@@ -740,7 +738,9 @@ describe('RoccoSpriteSystemSDK', () => {
       visible.id,
     ]);
     expect(
-      system.listRenderableSprites({ includeTransparent: true }).map((renderable) => renderable.instance.id),
+      system
+        .listRenderableSprites({ includeTransparent: true })
+        .map((renderable) => renderable.instance.id),
     ).toEqual(expect.arrayContaining([visible.id, transparent.id]));
 
     const hidden = system.createSpriteFromDefinition('hero', {
@@ -749,10 +749,14 @@ describe('RoccoSpriteSystemSDK', () => {
       enabled: false,
     });
     expect(
-      system.listRenderableSprites({ includeTransparent: true }).map((renderable) => renderable.instance.id),
+      system
+        .listRenderableSprites({ includeTransparent: true })
+        .map((renderable) => renderable.instance.id),
     ).toEqual(expect.arrayContaining([visible.id, transparent.id]));
     expect(
-      system.listRenderableSprites({ includeTransparent: true }).map((renderable) => renderable.instance.id),
+      system
+        .listRenderableSprites({ includeTransparent: true })
+        .map((renderable) => renderable.instance.id),
     ).not.toContain(hidden.id);
   });
 });

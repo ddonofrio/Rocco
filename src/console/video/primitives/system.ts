@@ -30,4 +30,3 @@ export class RoccoPrimitiveSystemSDK implements RoccoPrimitiveSystem {
     return [...this.primitives.values()].map((primitive) => clone(primitive));
   }
 }
-

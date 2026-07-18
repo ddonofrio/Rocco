@@ -34,9 +34,7 @@ export class RoccoRuntimeDefaultPlayerMovePolicyCoordinator {
     return disposition?.defaultPlayerMovement === 'suppress';
   }
 
-  shouldSuppressDefaultPlayerMove(
-    options: ResolveDefaultPlayerMoveSuppressionOptions,
-  ): boolean {
+  shouldSuppressDefaultPlayerMove(options: ResolveDefaultPlayerMoveSuppressionOptions): boolean {
     return (
       this.shouldSuppressFromSceneTarget(options.target) ||
       this.shouldSuppressFromCartridgeDisposition(options.cartridgeDisposition)

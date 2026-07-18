@@ -92,10 +92,7 @@ export const englishPierDoorText: RoccoTextCatalog['pierDoor'] = {
     'I think I still have the keys in my pocket.',
     'I should try them from my inventory.',
   ],
-  openWithoutKeyLines: [
-    'It is not going to open by itself.',
-    'I need a key first.',
-  ],
+  openWithoutKeyLines: ['It is not going to open by itself.', 'I need a key first.'],
   kickSleepingKnownStanLines: [
     'I am not going to wake Stan up.',
     'Better not wake Stan up for this.',

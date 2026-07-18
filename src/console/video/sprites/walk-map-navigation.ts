@@ -37,7 +37,13 @@ export function buildWalkMapGroundPath(
     return undefined;
   }
 
-  return buildGroundWaypointsFromWalkMapNodePath(walkMap, columnIndex, nodePath, startGround, goalGround);
+  return buildGroundWaypointsFromWalkMapNodePath(
+    walkMap,
+    columnIndex,
+    nodePath,
+    startGround,
+    goalGround,
+  );
 }
 
 export function resolveWalkMapPoint(
@@ -202,7 +208,10 @@ function listAdjacentWalkMapPathNodes(
   return adjacent;
 }
 
-function isWalkMapSpansOverlap(left: { yMin: number; yMax: number }, right: { yMin: number; yMax: number }): boolean {
+function isWalkMapSpansOverlap(
+  left: { yMin: number; yMax: number },
+  right: { yMin: number; yMax: number },
+): boolean {
   return Math.max(left.yMin, right.yMin) <= Math.min(left.yMax, right.yMax);
 }
 
@@ -213,7 +222,12 @@ function buildGroundWaypointsFromWalkMapNodePath(
   startGround: RoccoPoint,
   goalGround: RoccoPoint,
 ): RoccoPoint[] {
-  const densePath = buildDenseGroundPathFromWalkMapNodePath(walkMap, nodePath, startGround, goalGround);
+  const densePath = buildDenseGroundPathFromWalkMapNodePath(
+    walkMap,
+    nodePath,
+    startGround,
+    goalGround,
+  );
   const simplifiedPath = simplifyWalkMapGroundPath(walkMap, columnIndex, densePath);
   if (simplifiedPath.length <= 1) {
     return [];
@@ -303,7 +317,10 @@ function simplifyWalkMapGroundPath(
     let canAdvance = true;
     while (nextIndex + 1 < points.length && canAdvance) {
       const candidatePoint = points[nextIndex + 1];
-      if (candidatePoint && isWalkMapSegmentTraversable(walkMap, columnIndex, anchorPoint, candidatePoint)) {
+      if (
+        candidatePoint &&
+        isWalkMapSegmentTraversable(walkMap, columnIndex, anchorPoint, candidatePoint)
+      ) {
         nextIndex += 1;
       } else {
         canAdvance = false;
@@ -332,7 +349,12 @@ function resolveWalkMapInteriorY(value: number, yMin: number, yMax: number): num
   return clamp(value, safeMin, safeMax);
 }
 
-function pushWalkMapWaypoint(waypoints: RoccoPoint[], origin: RoccoPoint, localX: number, localY: number): void {
+function pushWalkMapWaypoint(
+  waypoints: RoccoPoint[],
+  origin: RoccoPoint,
+  localX: number,
+  localY: number,
+): void {
   const point: RoccoPoint = {
     x: origin.x + localX,
     y: origin.y + localY,
@@ -342,7 +364,11 @@ function pushWalkMapWaypoint(waypoints: RoccoPoint[], origin: RoccoPoint, localX
 
 function pushDistinctPoint(points: RoccoPoint[], point: RoccoPoint): void {
   const previous = points.at(-1);
-  if (previous && Math.abs(previous.x - point.x) <= EPSILON && Math.abs(previous.y - point.y) <= EPSILON) {
+  if (
+    previous &&
+    Math.abs(previous.x - point.x) <= EPSILON &&
+    Math.abs(previous.y - point.y) <= EPSILON
+  ) {
     return;
   }
 

@@ -1,7 +1,4 @@
-import {
-  RoccoDisplayProfileRenderer,
-  type RoccoDisplayProfile,
-} from '../display/profile';
+import { RoccoDisplayProfileRenderer, type RoccoDisplayProfile } from '../display/profile';
 import { RoccoBuildBadgeRenderer } from '../badge';
 import {
   RoccoCursorHost,
@@ -148,10 +145,14 @@ export class RoccoViewportHost {
 
   constructor(options: RoccoViewportHostOptions) {
     if (!Number.isFinite(options.designWidth) || options.designWidth <= 0) {
-      throw new Error(`Invalid designWidth '${options.designWidth}'. It must be a positive number.`);
+      throw new Error(
+        `Invalid designWidth '${options.designWidth}'. It must be a positive number.`,
+      );
     }
     if (!Number.isFinite(options.designHeight) || options.designHeight <= 0) {
-      throw new Error(`Invalid designHeight '${options.designHeight}'. It must be a positive number.`);
+      throw new Error(
+        `Invalid designHeight '${options.designHeight}'. It must be a positive number.`,
+      );
     }
 
     this.designWidth = options.designWidth;

@@ -2,7 +2,10 @@ import type { InteractionContext, InteractionRule } from './interaction-types';
 import { normalizeDisposition } from './interaction-types';
 import type { RoccoActionMenuActivation } from '../../../console/video/action-menu';
 import type { RoccoSceneClickAction } from '../../../console/cartridges';
-import type { RoccoGridMenuActivation, RoccoGridMenuCarriedItem } from '../../../console/video/grid-menu';
+import type {
+  RoccoGridMenuActivation,
+  RoccoGridMenuCarriedItem,
+} from '../../../console/video/grid-menu';
 import type { RoccoLevel } from '../levels/rocco-level-types';
 
 const LEVEL_PRIORITY = 0;
@@ -24,7 +27,8 @@ function hasInventorySceneClickHandler(
 ): level is RoccoLevel & LevelInventorySceneClickHandler {
   return (
     'handleInventorySceneClick' in level &&
-    typeof (level as Partial<LevelInventorySceneClickHandler>).handleInventorySceneClick === 'function'
+    typeof (level as Partial<LevelInventorySceneClickHandler>).handleInventorySceneClick ===
+      'function'
   );
 }
 
@@ -76,9 +80,7 @@ export function createLevelInteractionRules(): readonly InteractionRule[] {
       kind: 'advance-sequence',
       matches: () => true,
       execute: (context) =>
-        normalizeDisposition(
-          context.activeLevel?.handleSceneClick?.(ADVANCE_SEQUENCE_SCENE_CLICK),
-        ),
+        normalizeDisposition(context.activeLevel?.handleSceneClick?.(ADVANCE_SEQUENCE_SCENE_CLICK)),
     },
   ];
 }

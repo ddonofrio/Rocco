@@ -135,7 +135,7 @@ export class InputPolicyStackImpl implements InputPolicyStack {
     let isChanged = false;
     for (let index = this.leases.length - 1; index >= 0; index -= 1) {
       if (this.leases[index]?.ownerId !== ownerId) {
-      	continue;
+        continue;
       }
 
       this.leases.splice(index, 1);

@@ -81,7 +81,10 @@ function resolveNormalizedDefinitionMetrics(
   const columns = Math.max(1, Math.floor(definition.columns ?? DEFAULT_COLUMNS));
   const rows = Math.max(1, Math.floor(definition.rows ?? DEFAULT_ROWS));
   const slotWidth = Math.max(24, definition.slotWidth ?? definition.slotSize ?? DEFAULT_SLOT_SIZE);
-  const slotHeight = Math.max(24, definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE);
+  const slotHeight = Math.max(
+    24,
+    definition.slotHeight ?? definition.slotSize ?? DEFAULT_SLOT_SIZE,
+  );
   const gap = Math.max(0, definition.gap ?? DEFAULT_GAP);
   const padding = Math.max(0, definition.padding ?? DEFAULT_PADDING);
   const headerHeight = resolveDefinitionHeaderHeight(definition);

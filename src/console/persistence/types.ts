@@ -34,11 +34,7 @@ export interface SaveEnvelopeRow<TPayload = unknown> extends SaveEnvelope<TPaylo
 export type SceneStoreKey = readonly [cartridgeId: string, sceneId: string];
 
 /** Compound primary key for save rows. */
-export type SaveStoreKey = readonly [
-  cartridgeId: string,
-  profileId: string,
-  slotId: string,
-];
+export type SaveStoreKey = readonly [cartridgeId: string, profileId: string, slotId: string];
 
 /** Formats a save store key for diagnostics. */
 export function formatSaveKey(key: SaveStoreKey): string {
@@ -146,11 +142,7 @@ export class SaveRevisionConflictError extends Error {
   readonly expectedRevision: number;
   readonly actualRevision: number;
 
-  constructor(detail: {
-    key: string;
-    expectedRevision: number;
-    actualRevision: number;
-  }) {
+  constructor(detail: { key: string; expectedRevision: number; actualRevision: number }) {
     super(
       `Save revision conflict on '${detail.key}': expected ${detail.expectedRevision} but current is ${detail.actualRevision}`,
     );

@@ -119,13 +119,17 @@ describe('RoccoInventory', () => {
 
     expect(inventory.listItems()).toHaveLength(9);
     expect(inventory.hasOpenSlot()).toBe(false);
-    expect(inventory.listItems().map((item) => item.slotIndex)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(inventory.listItems().map((item) => item.slotIndex)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8,
+    ]);
     const overflowItem = souvenirs[5];
     expect(overflowItem).toBeDefined();
     if (!overflowItem) {
       throw new Error('Expected a tenth souvenir item for the overflow check.');
     }
-    expect(() => inventory.addItem(overflowItem)).toThrow("Storage 'rocco-player-inventory' is full.");
+    expect(() => inventory.addItem(overflowItem)).toThrow(
+      "Storage 'rocco-player-inventory' is full.",
+    );
     expect(inventory.listItems()).toHaveLength(9);
   });
 

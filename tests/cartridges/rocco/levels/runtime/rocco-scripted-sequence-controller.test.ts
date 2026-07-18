@@ -7,9 +7,7 @@ function flushMicrotasks(): Promise<void> {
   return Promise.resolve();
 }
 
-function createMockEngine(options: {
-  isMoving?: boolean;
-}) {
+function createMockEngine(options: { isMoving?: boolean }) {
   const acquiredLeases: string[] = [];
   const releasedLeases: string[] = [];
   const goTo = vi.fn(() => true);

@@ -29,10 +29,7 @@ export const englishNetherText: RoccoTextCatalog['nether'] = {
       "And we can't reset the console because...",
       'The main character of the game has escaped.',
     ],
-    secondReplyThoughtLines: [
-      'Wait... is that me?',
-      'Am I a video game character?',
-    ],
+    secondReplyThoughtLines: ['Wait... is that me?', 'Am I a video game character?'],
     thirdChoices: {
       whatIfNotFound: "Hey... what happens if you don't find him?",
       howToResetConsole: 'How do you reset the console?',
@@ -49,14 +46,10 @@ export const englishNetherText: RoccoTextCatalog['nether'] = {
     securityAlertLine: 'Security!',
   },
   timbre: {
-    lookLines: [
-      'It is a golden doorbell.',
-    ],
+    lookLines: ['It is a golden doorbell.'],
   },
   doorHandle: {
-    lookLines: [
-      'It looks like a mechanism to open the door from the outside.',
-    ],
+    lookLines: ['It looks like a mechanism to open the door from the outside.'],
   },
   ascendingPipes: {
     lookLines: [
@@ -72,8 +65,6 @@ export const englishNetherText: RoccoTextCatalog['nether'] = {
       'A big, heavy valve wheel.',
       'The spokes are a bit rusty but still firm.',
     ],
-    grabLines: [
-      "No way I'm touching anything here, this is about to blow.",
-    ],
+    grabLines: ["No way I'm touching anything here, this is about to blow."],
   },
 };

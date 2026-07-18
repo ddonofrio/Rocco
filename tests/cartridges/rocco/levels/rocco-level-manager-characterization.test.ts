@@ -101,7 +101,7 @@ function createMockEngine() {
     endComposition: endCompositionCalls,
     setCompositionText(text: string | null) {
       if (!text) {
-      	return;
+        return;
       }
 
       compositionTextCalls.push(text);

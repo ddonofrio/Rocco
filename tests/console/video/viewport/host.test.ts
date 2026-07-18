@@ -6,16 +6,16 @@ import { RoccoViewportHost } from '../../../../src/console/video/viewport/host';
 
 function setViewportSize(width: number, height: number): void {
   Object.defineProperties(globalThis, {
-  	innerWidth: {
-	    value: width,
-	    configurable: true,
-	    writable: true,
-	  },
-  	innerHeight: {
-	    value: height,
-	    configurable: true,
-	    writable: true,
-	  },
+    innerWidth: {
+      value: width,
+      configurable: true,
+      writable: true,
+    },
+    innerHeight: {
+      value: height,
+      configurable: true,
+      writable: true,
+    },
   });
 }
 

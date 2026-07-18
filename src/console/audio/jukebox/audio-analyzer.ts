@@ -112,7 +112,7 @@ export class AudioAnalyzer {
     if (currentStart < duration) {
       segments.push({ start: currentStart, end: duration });
     }
-    
+
     return segments;
   }
 }

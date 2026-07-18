@@ -17,9 +17,7 @@ describe('RoccoCartridgeMenu', () => {
     } as Application);
     const menuAccess = menu as unknown as RoccoCartridgeMenuTestAccess;
 
-    const renderSpy = vi
-      .spyOn(menuAccess, 'render')
-      .mockImplementation(() => {});
+    const renderSpy = vi.spyOn(menuAccess, 'render').mockImplementation(() => {});
     const activateSpy = vi
       .spyOn(menuAccess, 'activateSettingsSelection')
       .mockImplementation(() => {});

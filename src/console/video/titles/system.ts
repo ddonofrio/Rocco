@@ -25,7 +25,10 @@ export class RoccoTitleSystemSDK implements RoccoTitleSystem {
   }
 
   listTitles(): RoccoTitleMessage[] {
-    return this.titles.values().map((message) => clone(message)).toArray();
+    return this.titles
+      .values()
+      .map((message) => clone(message))
+      .toArray();
   }
 
   update(deltaMs: number): void {

@@ -1,7 +1,4 @@
-export {
-  createRoccoDefaultGameDefinition,
-  ROCCO_DEFAULT_GAME_ID,
-} from './rocco-default-game';
+export { createRoccoDefaultGameDefinition, ROCCO_DEFAULT_GAME_ID } from './rocco-default-game';
 export {
   createRoccoDefaultGameMaps,
   ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS,

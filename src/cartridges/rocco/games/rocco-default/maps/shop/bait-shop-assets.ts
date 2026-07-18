@@ -21,10 +21,8 @@ export const baitShopToiletAssetUrls = {
   background: new URL('assets/bait-shop-toilet-background.png', import.meta.url).href,
   walkMap: new URL('assets/bait-shop-toilet-walkmap.png', import.meta.url).href,
   sheet: new URL('assets/bait-shop-toilet-sheet.png', import.meta.url).href,
-  readingMagazine: new URL(
-    'assets/bait-shop-toilet-rocco-reading-magazine.png',
-    import.meta.url,
-  ).href,
+  readingMagazine: new URL('assets/bait-shop-toilet-rocco-reading-magazine.png', import.meta.url)
+    .href,
   smokeFrames: [
     new URL('assets/smoke/1.png', import.meta.url).href,
     new URL('assets/smoke/2.png', import.meta.url).href,

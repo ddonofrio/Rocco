@@ -13,7 +13,9 @@ function pickMaxSpeed(definition: RoccoSpriteDefinition): number | undefined {
   const actionSpeeds = Object.values(definition.actions ?? {})
     .map((action) => action.speed)
     .filter(isFiniteNumber);
-  const candidates = [profile?.maxSpeedX, profile?.maxSpeedY, ...actionSpeeds].filter(isFiniteNumber);
+  const candidates = [profile?.maxSpeedX, profile?.maxSpeedY, ...actionSpeeds].filter(
+    isFiniteNumber,
+  );
   if (candidates.length === 0) {
     return undefined;
   }
@@ -74,7 +76,10 @@ export class RoccoSpriteStore {
   private readonly definitions = new Map<string, RoccoSpriteDefinition>();
   private nextInstanceSerial = 1;
 
-  private mergeInstance(base: RoccoSpriteInstance, options?: Partial<RoccoSpriteInstance>): RoccoSpriteInstance {
+  private mergeInstance(
+    base: RoccoSpriteInstance,
+    options?: Partial<RoccoSpriteInstance>,
+  ): RoccoSpriteInstance {
     if (!options) {
       return clone(base);
     }
@@ -99,7 +104,10 @@ export class RoccoSpriteStore {
     };
   }
 
-  private ensureAnimationState(instance: RoccoSpriteInstance, definition: RoccoSpriteDefinition): void {
+  private ensureAnimationState(
+    instance: RoccoSpriteInstance,
+    definition: RoccoSpriteDefinition,
+  ): void {
     const clip = definition.animations[instance.animation.animationId];
     if (!clip || clip.frames.length === 0) {
       throw new Error(
@@ -155,7 +163,9 @@ export class RoccoSpriteStore {
     const frameIds = new Set(definition.frames.map((frame) => frame.id));
     for (const animation of Object.values(definition.animations)) {
       if (animation.frames.length === 0) {
-        throw new Error(`Sprite definition '${definition.id}' animation '${animation.id}' has no frames.`);
+        throw new Error(
+          `Sprite definition '${definition.id}' animation '${animation.id}' has no frames.`,
+        );
       }
 
       for (const frameReference of animation.frames) {
@@ -197,23 +207,37 @@ export class RoccoSpriteStore {
     action: NonNullable<RoccoSpriteDefinition['actions']>[string],
   ): void {
     if (!action.id) {
-      throw new Error(`Sprite definition '${definition.id}' action '${actionId}' must include an id.`);
+      throw new Error(
+        `Sprite definition '${definition.id}' action '${actionId}' must include an id.`,
+      );
     }
     if (action.id !== actionId) {
-      throw new Error(`Sprite definition '${definition.id}' action '${actionId}' has mismatched id '${action.id}'.`);
+      throw new Error(
+        `Sprite definition '${definition.id}' action '${actionId}' has mismatched id '${action.id}'.`,
+      );
     }
     if (action.speed !== undefined && (!Number.isFinite(action.speed) || action.speed <= 0)) {
-      throw new Error(`Sprite definition '${definition.id}' action '${actionId}' has invalid speed.`);
+      throw new Error(
+        `Sprite definition '${definition.id}' action '${actionId}' has invalid speed.`,
+      );
     }
-    if (action.playbackRate !== undefined && (!Number.isFinite(action.playbackRate) || action.playbackRate <= 0)) {
-      throw new Error(`Sprite definition '${definition.id}' action '${actionId}' has invalid playback rate.`);
+    if (
+      action.playbackRate !== undefined &&
+      (!Number.isFinite(action.playbackRate) || action.playbackRate <= 0)
+    ) {
+      throw new Error(
+        `Sprite definition '${definition.id}' action '${actionId}' has invalid playback rate.`,
+      );
     }
 
     const animationIds = [
       action.animationId,
       action.directionalAnimations?.default,
       ...Object.values(action.directionalAnimations ?? {}),
-    ].filter((animationId): animationId is string => typeof animationId === 'string' && animationId.length > 0);
+    ].filter(
+      (animationId): animationId is string =>
+        typeof animationId === 'string' && animationId.length > 0,
+    );
     for (const animationId of animationIds) {
       if (!Object.hasOwn(definition.animations, animationId)) {
         throw new Error(
@@ -257,7 +281,9 @@ export class RoccoSpriteStore {
   ): RoccoSpriteInstance {
     const definition = this.requireDefinition(definitionId);
     const defaultFacing = definition.defaultFacing ?? 'down';
-    const defaultAction = definition.defaultIdleAction ? definition.actions?.[definition.defaultIdleAction] : undefined;
+    const defaultAction = definition.defaultIdleAction
+      ? definition.actions?.[definition.defaultIdleAction]
+      : undefined;
     const defaultAnimationId =
       defaultAction?.directionalAnimations?.[defaultFacing] ??
       defaultAction?.directionalAnimations?.default ??
@@ -281,6 +307,9 @@ export class RoccoSpriteStore {
   }
 
   list(): RoccoSpriteDefinition[] {
-    return this.definitions.values().map((definition) => clone(definition)).toArray();
+    return this.definitions
+      .values()
+      .map((definition) => clone(definition))
+      .toArray();
   }
 }

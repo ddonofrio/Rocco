@@ -14,7 +14,10 @@ export const roccoDefaultRunRightAssetUrls = [
   new URL('assets/characters/rocco/run-right-2.png', import.meta.url).href,
 ] as const;
 
-export const roccoDefaultPickUpAssetUrl = new URL('assets/characters/rocco/pick-up.png', import.meta.url).href;
+export const roccoDefaultPickUpAssetUrl = new URL(
+  'assets/characters/rocco/pick-up.png',
+  import.meta.url,
+).href;
 
 export const roccoDefaultPelikanAssetUrls = [
   new URL('assets/characters/pelikan/idle-1.png', import.meta.url).href,
@@ -23,16 +26,32 @@ export const roccoDefaultPelikanAssetUrls = [
   new URL('assets/characters/pelikan/idle-4.png', import.meta.url).href,
 ] as const;
 
-export const roccoDefaultPelikanFlightAssetUrl = new URL('assets/characters/pelikan/flight.png', import.meta.url).href;
+export const roccoDefaultPelikanFlightAssetUrl = new URL(
+  'assets/characters/pelikan/flight.png',
+  import.meta.url,
+).href;
 
-export const roccoDefaultPelikanFeedingAssetUrl = new URL('assets/characters/pelikan/feeding.png', import.meta.url).href;
+export const roccoDefaultPelikanFeedingAssetUrl = new URL(
+  'assets/characters/pelikan/feeding.png',
+  import.meta.url,
+).href;
 
-export const roccoDefaultPelikanFlyingSoundUrl = new URL('assets/characters/pelikan/flying.mp3', import.meta.url).href;
+export const roccoDefaultPelikanFlyingSoundUrl = new URL(
+  'assets/characters/pelikan/flying.mp3',
+  import.meta.url,
+).href;
 
-export const roccoDefaultStanAssetUrl = new URL('assets/characters/stan/stan-sheet.png', import.meta.url).href;
+export const roccoDefaultStanAssetUrl = new URL(
+  'assets/characters/stan/stan-sheet.png',
+  import.meta.url,
+).href;
 
-export const roccoDefaultYouLoseSoundUrl = new URL('assets/sounds/you-lose.mp3', import.meta.url).href;
-export const roccoDefaultPoliceWhistleSoundUrl = new URL('assets/sounds/police-whistle.mp3', import.meta.url).href;
+export const roccoDefaultYouLoseSoundUrl = new URL('assets/sounds/you-lose.mp3', import.meta.url)
+  .href;
+export const roccoDefaultPoliceWhistleSoundUrl = new URL(
+  'assets/sounds/police-whistle.mp3',
+  import.meta.url,
+).href;
 
 export const roccoDefaultBaitBucketAssetUrls = {
   normal: new URL('assets/props/bait-bucket/normal.png', import.meta.url).href,
@@ -101,20 +120,15 @@ export const roccoLabCoatRunRightAssetUrls = [
 
 export const roccoLabCoatStandingAssetUrls = {
   down: new URL('assets/characters/rocco/lab-coat/stand-down.png', import.meta.url).href,
-  'down-left': new URL(
-    'assets/characters/rocco/lab-coat/stand-down-left.png',
-    import.meta.url,
-  ).href,
+  'down-left': new URL('assets/characters/rocco/lab-coat/stand-down-left.png', import.meta.url)
+    .href,
   left: new URL('assets/characters/rocco/lab-coat/stand-left.png', import.meta.url).href,
   'up-left': new URL('assets/characters/rocco/lab-coat/stand-up-left.png', import.meta.url).href,
   up: new URL('assets/characters/rocco/lab-coat/stand-up.png', import.meta.url).href,
-  'up-right': new URL('assets/characters/rocco/lab-coat/stand-up-right.png', import.meta.url)
-    .href,
+  'up-right': new URL('assets/characters/rocco/lab-coat/stand-up-right.png', import.meta.url).href,
   right: new URL('assets/characters/rocco/lab-coat/stand-right.png', import.meta.url).href,
-  'down-right': new URL(
-    'assets/characters/rocco/lab-coat/stand-down-right.png',
-    import.meta.url,
-  ).href,
+  'down-right': new URL('assets/characters/rocco/lab-coat/stand-down-right.png', import.meta.url)
+    .href,
 } as const;
 
 interface RoccoPlayerAppearanceAssetUrls {

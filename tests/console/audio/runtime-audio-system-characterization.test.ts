@@ -75,13 +75,15 @@ describe('RoccoRuntimeAudioSystem characterization', () => {
   it('AUD-002: re-registering a sound invalidates a previously cached buffer', async () => {
     const fetchMock = vi.fn<typeof fetch>();
 
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
-    } as Response).mockResolvedValueOnce({
-      ok: true,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(16)),
-    } as Response);
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(16)),
+      } as Response);
 
     vi.stubGlobal('fetch', fetchMock);
 

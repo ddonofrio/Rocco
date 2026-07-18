@@ -8,10 +8,14 @@ export interface QualifiedId {
 
 export function qualifyId(cartridgeId: string, resourceType: string, localId: string): string {
   if (!cartridgeId || cartridgeId.includes(':')) {
-    throw new Error(`Invalid cartridgeId '${cartridgeId}': must be non-empty and contain no colons.`);
+    throw new Error(
+      `Invalid cartridgeId '${cartridgeId}': must be non-empty and contain no colons.`,
+    );
   }
   if (!resourceType || resourceType.includes(':')) {
-    throw new Error(`Invalid resourceType '${resourceType}': must be non-empty and contain no colons.`);
+    throw new Error(
+      `Invalid resourceType '${resourceType}': must be non-empty and contain no colons.`,
+    );
   }
   if (!localId || localId.includes(':')) {
     throw new Error(`Invalid localId '${localId}': must be non-empty and contain no colons.`);

@@ -40,8 +40,7 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
   ],
   toiletMagazineReadingCraftableRelicIntroLine:
     'If I move fast enough, I can still assemble the Coral Relic.',
-  toiletMagazineReadingCraftStepLine:
-    'I need to join {first} with {second} to make {result}.',
+  toiletMagazineReadingCraftStepLine: 'I need to join {first} with {second} to make {result}.',
   toiletMagazineReadingCraftableRelicOutroLine:
     'I need to stand up right now, assemble it, drop it on the floor, and break it.',
   toiletMagazineKnownStanLine: 'AND STAN OUTSIDE!',
@@ -63,7 +62,7 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
   coralRelicLookLine: 'A Coral Relic. It glows like it knows what is coming.',
   coralRelicRefuseLines: [
     'No. I am supposed to break it now.',
-    "I do not need to pick that up, I need to break it.",
+    'I do not need to pick that up, I need to break it.',
     'You read the magazine: it has to be broken, not picked up.',
     'Leave it there. It needs to smash on the floor.',
   ],
@@ -140,8 +139,7 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'Bits and pieces from the shore, arranged like little treasures.',
     'Things found on the shore of any beach.',
   ],
-  souvenirTableKnownStanLine:
-    'Stan finds these on the beach, cleans them, and sells them here.',
+  souvenirTableKnownStanLine: 'Stan finds these on the beach, cleans them, and sells them here.',
   souvenirTableUnknownStanLine:
     'The old man finds these on the beach, cleans them, and sells them here.',
   souvenirTableKickLines: [
@@ -178,9 +176,6 @@ export const englishBaitShopText: RoccoTextCatalog['baitShop'] = {
     'A barrel, a cask.',
     'What a shame I do not have a car or a house, or I would take it with me.',
   ],
-  shopExitDoorLookLines: [
-    'It is a door. Looks like the way out.',
-    'A wooden door. The shop exit.',
-  ],
+  shopExitDoorLookLines: ['It is a door. Looks like the way out.', 'A wooden door. The shop exit.'],
   shopExitDoorOpenLine: 'Time to go back to the pier.',
 };

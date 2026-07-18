@@ -1,24 +1,9 @@
-import {
-  resolveRoccoSoundProfile,
-  type RoccoSoundProfile,
-} from '../audio';
+import { resolveRoccoSoundProfile, type RoccoSoundProfile } from '../audio';
 import type { RoccoCartridgeBootSetting, RoccoCartridgeManifest } from '../cartridges/types';
-import {
-  resolveRoccoDisplayProfile,
-  type RoccoDisplayProfile,
-} from '../video/display';
-import type {
-  FilterRowId,
-  SoundRowId,
-  VideoRowId,
-} from './system-settings-page-renderer';
+import { resolveRoccoDisplayProfile, type RoccoDisplayProfile } from '../video/display';
+import type { FilterRowId, SoundRowId, VideoRowId } from './system-settings-page-renderer';
 
-export type RoccoCartridgeMenuPage =
-  | 'cartridges'
-  | 'settings'
-  | 'video'
-  | 'sound'
-  | 'filters';
+export type RoccoCartridgeMenuPage = 'cartridges' | 'settings' | 'video' | 'sound' | 'filters';
 
 export interface RoccoCartridgeMenuSessionOptions {
   initialLocales?: Record<string, string>;

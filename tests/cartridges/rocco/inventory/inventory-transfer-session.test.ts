@@ -63,13 +63,13 @@ describe('RoccoInventoryTransferSession', () => {
     });
     expect(definition.buttons).toBeUndefined();
     expect(definition.blockedSlotIndexes).toEqual([29, 30, 31]);
-    expect(
-      definition.items.find((item) => item.id === ROCCO_INVENTORY_KEYS_ITEM_ID),
-    ).toMatchObject({
-      id: ROCCO_INVENTORY_KEYS_ITEM_ID,
-      slotIndex: 5,
-      label: 'Keys',
-    });
+    expect(definition.items.find((item) => item.id === ROCCO_INVENTORY_KEYS_ITEM_ID)).toMatchObject(
+      {
+        id: ROCCO_INVENTORY_KEYS_ITEM_ID,
+        slotIndex: 5,
+        label: 'Keys',
+      },
+    );
   });
 
   it('lets souvenirs move into Rocco inventory and rejects parking Rocco-only items on the table', () => {

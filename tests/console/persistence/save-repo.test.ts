@@ -41,12 +41,10 @@ class MemorySaveStore implements SaveStore {
     await Promise.resolve();
   }
 
-  async queryByProfile(
-    cartridgeId: string,
-    profileId: string,
-  ): Promise<SaveEnvelopeRow[]> {
+  async queryByProfile(cartridgeId: string, profileId: string): Promise<SaveEnvelopeRow[]> {
     await Promise.resolve();
-    return this.rows.values()
+    return this.rows
+      .values()
       .filter((row) => row.cartridgeId === cartridgeId && row.profileId === profileId)
       .map((row) => clone(row))
       .toArray();
@@ -101,10 +99,7 @@ class CommitCrashStore extends MemorySaveStore {
   }
 }
 
-function makeProvider(
-  schemaVersion: number,
-  state: TestState,
-): CartridgeSaveProvider<TestState> {
+function makeProvider(schemaVersion: number, state: TestState): CartridgeSaveProvider<TestState> {
   return {
     schemaVersion,
     serializeState: () => clone(state),
@@ -205,9 +200,9 @@ describe('versioned save repository', () => {
       revision: 6,
     });
 
-    await expect(
-      repo.save('p', 's', { expectedRevision: 5 }),
-    ).rejects.toBeInstanceOf(SaveRevisionConflictError);
+    await expect(repo.save('p', 's', { expectedRevision: 5 })).rejects.toBeInstanceOf(
+      SaveRevisionConflictError,
+    );
 
     const after = await store.get(['cart', 'p', 's']);
     expect(after?.revision).toBe(6);
@@ -312,7 +307,9 @@ describe('versioned save repository', () => {
     const pSlots = await repo.listSlots('p');
     const qSlots = await repo.listSlots('q');
 
-    expect(pSlots.map((s) => s.slotId).toSorted((left, right) => left.localeCompare(right))).toEqual(['s1', 's2']);
+    expect(
+      pSlots.map((s) => s.slotId).toSorted((left, right) => left.localeCompare(right)),
+    ).toEqual(['s1', 's2']);
     expect(qSlots.map((s) => s.slotId)).toEqual(['s3']);
   });
 

@@ -127,7 +127,8 @@ export class RpceInventoryStorage {
   }
 
   listItems(): RpceInventoryItem[] {
-    return this.items.values()
+    return this.items
+      .values()
       .toArray()
       .toSorted((left, right) => (left.slotIndex ?? 0) - (right.slotIndex ?? 0))
       .map((item) => clone(item));

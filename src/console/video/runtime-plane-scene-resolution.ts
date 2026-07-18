@@ -21,7 +21,9 @@ export interface ResolveDepthModeSampleYOptions extends RuntimePlaneDepthResolut
   depthMode: RoccoPlaneDepthMode;
 }
 
-export function resolveRuntimePlaneScene(options: ResolveRuntimePlaneSceneOptions): RoccoPlaneScene {
+export function resolveRuntimePlaneScene(
+  options: ResolveRuntimePlaneSceneOptions,
+): RoccoPlaneScene {
   let isChanged = false;
   const planes = options.scene.planes.map((plane) => {
     const resolvedRenderLayer = resolvePlaneRenderLayer({
@@ -79,14 +81,18 @@ export function resolvePlaneRenderLayer(options: ResolvePlaneRenderLayerOptions)
   return isFront ? depthMode.frontLayer : depthMode.backLayer;
 }
 
-export function resolveDepthModeSampleY(options: ResolveDepthModeSampleYOptions): number | undefined {
+export function resolveDepthModeSampleY(
+  options: ResolveDepthModeSampleYOptions,
+): number | undefined {
   const depthMode = options.depthMode;
   if (!depthMode || depthMode === 'fixed' || depthMode.kind !== 'sprite-y-threshold') {
     return undefined;
   }
 
   const instanceId =
-    depthMode.subject === 'active-player' ? options.activePlayerSpriteId : depthMode.spriteInstanceId;
+    depthMode.subject === 'active-player'
+      ? options.activePlayerSpriteId
+      : depthMode.spriteInstanceId;
   if (!instanceId) {
     return undefined;
   }
@@ -105,10 +111,11 @@ export function resolveDepthModeSampleY(options: ResolveDepthModeSampleYOptions)
     return sprite.transform.y;
   }
 
-  const groundAnchor = sprite.navigation?.groundAnchor ?? definition.groundAnchor ?? {
-    x: 0,
-    y: definition.baseline ?? 0,
-  };
+  const groundAnchor = sprite.navigation?.groundAnchor ??
+    definition.groundAnchor ?? {
+      x: 0,
+      y: definition.baseline ?? 0,
+    };
   const scaleY = sprite.transform.scaleY || 1;
   return sprite.transform.y + groundAnchor.y * scaleY;
 }

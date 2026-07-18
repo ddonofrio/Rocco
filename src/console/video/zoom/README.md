@@ -37,14 +37,14 @@ The identity transform is:
 
 Its state and control surface includes:
 
-* `getTransform()` — returns the current transform;
-* `setTransform(transform)` — immediately replaces the current transform;
-* `animateTo(transform, durationMs, options?)` — interpolates from the current transform to a target transform;
-* `clear()` — cancels the active animation and restores the identity transform;
-* `isEnabled()` — reports whether the current transform is non-identity;
-* `isAnimating()` — reports whether an animation is active;
-* `update(deltaMs)` — advances the active animation;
-* `apply(stage)` — applies the current transform to the Pixi stage.
+- `getTransform()` — returns the current transform;
+- `setTransform(transform)` — immediately replaces the current transform;
+- `animateTo(transform, durationMs, options?)` — interpolates from the current transform to a target transform;
+- `clear()` — cancels the active animation and restores the identity transform;
+- `isEnabled()` — reports whether the current transform is non-identity;
+- `isAnimating()` — reports whether an animation is active;
+- `update(deltaMs)` — advances the active animation;
+- `apply(stage)` — applies the current transform to the Pixi stage.
 
 `update` and `apply` are console-runtime operations. They are not cartridge-facing methods.
 
@@ -52,8 +52,8 @@ Its state and control surface includes:
 
 Supported easing values (`RoccoVideoZoomEasing`) are:
 
-* `linear`;
-* `ease-in-out`.
+- `linear`;
+- `ease-in-out`.
 
 An animation begins from the transform active when `animateTo` is called. The runtime advances it during video updates and settles exactly on the requested target transform when its duration completes. `animateTo` accepts an optional `RoccoVideoZoomAnimationOptions` with `easing` and an `onComplete` callback.
 
@@ -65,20 +65,20 @@ SDK v1 cartridges may receive `sdk.video.camera`.
 
 The facade exposes only:
 
-* `setTransform`;
-* `animateTo`;
-* `clear`.
+- `setTransform`;
+- `animateTo`;
+- `clear`.
 
 It does not expose:
 
-* `getTransform`;
-* `isEnabled`;
-* `isAnimating`;
-* `update`;
-* `apply`;
-* Pixi stage access;
-* renderer access;
-* viewport control.
+- `getTransform`;
+- `isEnabled`;
+- `isAnimating`;
+- `update`;
+- `apply`;
+- Pixi stage access;
+- renderer access;
+- viewport control.
 
 The facade is created by the SDK v1 adapter and delegates its three allowed methods to the runtime zoom controller.
 
@@ -88,9 +88,9 @@ There is no separate camera capability identifier. The camera facade exists when
 
 `clear()`:
 
-* cancels the active animation;
-* restores the identity transform;
-* allows the runtime to restore the corresponding identity stage transform during its normal frame processing.
+- cancels the active animation;
+- restores the identity transform;
+- allows the runtime to restore the corresponding identity stage transform during its normal frame processing.
 
 Cartridge-owned presentation sequences must clear their camera transform during cleanup or register that cleanup in their cartridge resource scope.
 

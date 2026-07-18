@@ -135,10 +135,18 @@ export class RoccoActionMenuSystemSDK implements RoccoActionMenuSystem {
   }
 
   listMenus(): RoccoActionMenuDefinition[] {
-    return this.definitions.values().map((definition) => clone(definition)).toArray();
+    return this.definitions
+      .values()
+      .map((definition) => clone(definition))
+      .toArray();
   }
 
-  openMenuForTarget(targetInstanceId: string, targetDefinitionId: string, x: number, y: number): boolean {
+  openMenuForTarget(
+    targetInstanceId: string,
+    targetDefinitionId: string,
+    x: number,
+    y: number,
+  ): boolean {
     const definition = this.findMenuForTarget(targetInstanceId, targetDefinitionId);
     if (!definition) {
       return false;
@@ -238,5 +246,4 @@ export class RoccoActionMenuSystemSDK implements RoccoActionMenuSystem {
 
     this.activeState.elapsedMs += deltaMs;
   }
-
 }

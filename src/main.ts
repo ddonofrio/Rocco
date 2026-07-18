@@ -114,9 +114,7 @@ function installGlobalErrorHandlers(
 ): () => void {
   const handleWindowError = (event: ErrorEvent): void => {
     event.preventDefault();
-    const location = event.filename
-      ? ` at ${event.filename}:${event.lineno}:${event.colno}`
-      : '';
+    const location = event.filename ? ` at ${event.filename}:${event.lineno}:${event.colno}` : '';
     const error: unknown = event.error ?? event.message;
     onLog('System', `Unhandled error${location}: ${describeUnknownError(error)}`);
     onFatalError('A runtime error occurred.', error);
@@ -165,11 +163,7 @@ async function bootstrapRoccoApp(): Promise<void> {
     void runtime?.dispose();
     viewportHost.unmount();
   };
-  window.addEventListener(
-    'beforeunload',
-    handleBeforeUnload,
-    { once: true },
-  );
+  window.addEventListener('beforeunload', handleBeforeUnload, { once: true });
 
   try {
     runtime = new GameRuntime({
@@ -200,5 +194,9 @@ try {
   await bootstrapRoccoApp();
 } catch (error) {
   writeBrowserLog('System', `Bootstrap failed before mount: ${describeUnknownError(error)}`);
-  renderBootError(document.querySelector<HTMLElement>('#app') ?? document.body, 'ROCCO could not start.', error);
+  renderBootError(
+    document.querySelector<HTMLElement>('#app') ?? document.body,
+    'ROCCO could not start.',
+    error,
+  );
 }

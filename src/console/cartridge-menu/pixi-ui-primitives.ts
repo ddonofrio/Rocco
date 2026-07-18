@@ -36,9 +36,7 @@ export const ROCCO_CARTRIDGE_MENU_COLORS = {
 export const ROCCO_CARTRIDGE_MENU_TOGGLE_W = 94;
 export const ROCCO_CARTRIDGE_MENU_TOGGLE_H = 24;
 
-export type RoccoCartridgeMenuTextStyle = Partial<
-  ConstructorParameters<typeof TextStyle>[0]
->;
+export type RoccoCartridgeMenuTextStyle = Partial<ConstructorParameters<typeof TextStyle>[0]>;
 
 export interface RoccoCartridgeMenuFooterHintAction {
   key: string;
@@ -118,7 +116,8 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
 
     const headerLineY = y + 30;
     this.root.addChild(
-      new Graphics().rect(x, headerLineY, width, 1)
+      new Graphics()
+        .rect(x, headerLineY, width, 1)
         .fill(createGraphicsFillStyle(ROCCO_CARTRIDGE_MENU_COLORS.bgLine)),
     );
 
@@ -142,7 +141,8 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
         .fill(createGraphicsFillStyle(0x0a_0f_09)),
     );
     this.root.addChild(
-      new Graphics().rect(0, options.footerY, options.designWidth, 1)
+      new Graphics()
+        .rect(0, options.footerY, options.designWidth, 1)
         .fill(createGraphicsFillStyle(ROCCO_CARTRIDGE_MENU_COLORS.titleBrand, 0.2)),
     );
 
@@ -160,9 +160,7 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
         fill: ROCCO_CARTRIDGE_MENU_COLORS.footerHint,
         letterSpacing: 2,
       });
-      const isInteractive =
-        interactiveHint?.key === key
-        && interactiveHint?.label === label;
+      const isInteractive = interactiveHint?.key === key && interactiveHint?.label === label;
 
       if (isInteractive && interactiveHint) {
         const action = this.createInteractiveContainer(
@@ -286,24 +284,11 @@ export class RoccoCartridgeMenuPixiUiPrimitives {
     valueText.y = y + 6;
     parent.addChild(valueText);
 
-    const plus = this.createControlButton(
-      x + width - 24,
-      y + 4,
-      '+',
-      14,
-      5,
-      1,
-      onIncrease,
-    );
+    const plus = this.createControlButton(x + width - 24, y + 4, '+', 14, 5, 1, onIncrease);
     parent.addChild(plus);
   }
 
-  drawToggleControl(
-    parent: Container,
-    x: number,
-    y: number,
-    isEnabled: boolean,
-  ): void {
+  drawToggleControl(parent: Container, x: number, y: number, isEnabled: boolean): void {
     const toggle = new Container();
     toggle.x = x;
     toggle.y = y;

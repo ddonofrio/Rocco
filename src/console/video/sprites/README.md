@@ -56,12 +56,12 @@ Sprite definitions can opt into `autoAdjust` when the rendered pose needs runtim
 
 ### Depth Modes
 
-| Mode            | Description                                   |
-| --------------- | --------------------------------------------- |
-| `fixed`         | Static z-index                                |
-| `y-sort`        | Z-index follows Y position                    |
-| `baseline-sort` | Z-index follows the sprite baseline           |
-| `manual`        | Z-index is set explicitly by cartridge logic  |
+| Mode            | Description                                  |
+| --------------- | -------------------------------------------- |
+| `fixed`         | Static z-index                               |
+| `y-sort`        | Z-index follows Y position                   |
+| `baseline-sort` | Z-index follows the sprite baseline          |
+| `manual`        | Z-index is set explicitly by cartridge logic |
 
 ### Auto Crop
 

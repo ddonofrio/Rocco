@@ -26,9 +26,11 @@ export function isRoccoToiletLevelCapability(
 ): level is RoccoLevel & RoccoToiletLevelCapability {
   return (
     typeof (level as Partial<RoccoToiletLevelCapability>).isEscapeUrgencyActive === 'function' &&
-    typeof (level as Partial<RoccoToiletLevelCapability>).startThrowCoralRelicSequence === 'function' &&
+    typeof (level as Partial<RoccoToiletLevelCapability>).startThrowCoralRelicSequence ===
+      'function' &&
     typeof (level as Partial<RoccoToiletLevelCapability>).openCoralRelicWishMenu === 'function' &&
-    typeof (level as Partial<RoccoToiletLevelCapability>).refreshDeveloperEventPresentation === 'function' &&
+    typeof (level as Partial<RoccoToiletLevelCapability>).refreshDeveloperEventPresentation ===
+      'function' &&
     typeof (level as Partial<RoccoToiletLevelCapability>).shouldLoseOnExit === 'function' &&
     typeof (level as Partial<RoccoToiletLevelCapability>).beginExitDefeat === 'function'
   );

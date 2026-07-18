@@ -32,9 +32,7 @@ export const PIER_END_CONNECTORS: readonly RoccoLevelConnector[] = [
 ] as const;
 
 export class RoccoPierEndLevel extends RoccoPierSideLevel {
-  constructor(options: {
-    localization: RoccoLocalization;
-  }) {
+  constructor(options: { localization: RoccoLocalization }) {
     super({
       id: ROCCO_PIER_END_LEVEL_ID,
       title: options.localization.text.levels.end,

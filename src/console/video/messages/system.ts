@@ -17,7 +17,10 @@ function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
-function normalizeMessage(message: RoccoSpriteMessageRequest, lines: string[]): RoccoSpriteMessageState {
+function normalizeMessage(
+  message: RoccoSpriteMessageRequest,
+  lines: string[],
+): RoccoSpriteMessageState {
   if (!message.spriteInstanceId) {
     throw new Error('Sprite message requires a sprite instance id.');
   }
@@ -59,7 +62,11 @@ export class RoccoSpriteMessageSystemSDK implements RoccoSpriteMessageSystem {
     this.messages.set(normalized.id, normalized);
   }
 
-  say(spriteInstanceId: string, text: RoccoSpriteMessageText, options?: RoccoSpriteMessageOptions): void {
+  say(
+    spriteInstanceId: string,
+    text: RoccoSpriteMessageText,
+    options?: RoccoSpriteMessageOptions,
+  ): void {
     this.showMessage({
       ...options,
       spriteInstanceId,
@@ -68,7 +75,11 @@ export class RoccoSpriteMessageSystemSDK implements RoccoSpriteMessageSystem {
     });
   }
 
-  think(spriteInstanceId: string, text: RoccoSpriteMessageText, options?: RoccoSpriteMessageOptions): void {
+  think(
+    spriteInstanceId: string,
+    text: RoccoSpriteMessageText,
+    options?: RoccoSpriteMessageOptions,
+  ): void {
     this.showMessage({
       ...options,
       spriteInstanceId,
@@ -86,7 +97,10 @@ export class RoccoSpriteMessageSystemSDK implements RoccoSpriteMessageSystem {
   }
 
   listMessages(): RoccoSpriteMessageState[] {
-    return this.messages.values().map((message) => clone(message)).toArray();
+    return this.messages
+      .values()
+      .map((message) => clone(message))
+      .toArray();
   }
 
   listRenderableMessages(
@@ -136,5 +150,4 @@ export class RoccoSpriteMessageSystemSDK implements RoccoSpriteMessageSystem {
       this.messages.delete(messageId);
     }
   }
-
 }

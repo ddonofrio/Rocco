@@ -31,7 +31,7 @@
 
 ## RPCE and game boundary
 
-The cartridge bootstrap mounts RPCE, RPCE mounts the current `rocco-default` game, and the game owns Pier, Shop, and Nether map definitions plus the concrete implementations under `games/rocco-default/maps/*`. The `levels/**` folders re-export those game-owned implementations so existing imports resolve through a stable path.
+The cartridge bootstrap mounts RPCE, RPCE mounts the current `rocco-default` game, and the game owns Pier, Shop, and Nether map definitions plus the concrete implementations under `games/rocco-default/maps/*`. The `levels/pier`, `levels/bait-shop`, and `levels/nether` folders re-export those game-owned map implementations. New implementation work belongs in the owning map directory under `games/rocco-default/maps`.
 
 ## Localization
 

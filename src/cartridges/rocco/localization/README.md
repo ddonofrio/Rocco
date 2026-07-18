@@ -66,7 +66,7 @@ Dialogue text and choice trees remain in the localization catalogs.
 
 The canonical dialogue runtime lives in [`../rpce/dialogue`](../rpce/dialogue/README.md). It owns menu projection, timed conversation flow, input leases, sequence advancement, line selection, and reusable message helpers.
 
-The directory `../dialogue` is an import surface that re-exports this localization directory.
+The directory `../dialogue` is an import surface that re-exports the runtime owned by `../rpce/dialogue`. Localized text and dialogue trees remain owned by `localization/`; the dialogue runtime behavior is owned by `rpce/dialogue/`.
 
 Authored localized text must remain separate from reusable runtime sequencing.
 

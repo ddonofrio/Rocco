@@ -38,7 +38,7 @@ export function isRoccoToiletLevelCapability(
 
 /**
  * Optional capability for a level that keeps its player appearance in sync at
- * runtime. Replaces the manager's cast that mutated `activeLevel.options`.
+ * runtime.
  */
 export interface RoccoAppearanceCapability {
   applyRoccoAppearance(appearance: RoccoPlayerAppearance): void;

@@ -1,6 +1,6 @@
 # Effects
 
-The effects system provides per-tick operations on runtime targets. Cartridges manage active effects through `effects`. Effects run during the runtime render tick and stay independent from cartridge logic.
+The effects system provides per-tick operations on runtime targets. Cartridges manage active effects through `context.sdk.effects`. Effects run during the runtime render tick and stay independent from cartridge logic.
 
 ## Files
 
@@ -19,6 +19,10 @@ Target type: `graphic-plane`.
 `auto-scroll` scrolls a graphic plane at a configured velocity and supports wrap-around when the target plane has wrapping enabled.
 
 ```typescript
+const effects = context.sdk.effects;
+if (!effects) {
+  return;
+}
 effects.add({
   id: 'clouds-scroll',
   kind: 'auto-scroll',

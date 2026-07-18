@@ -62,8 +62,8 @@ export type InteractionDisposition = CartridgeActionDisposition;
  * Distributed interaction rule.
  *
  * `matches()` must be a cheap, side-effect-free predicate. `execute()` performs
- * the real work and may return `undefined` to mean "not consumed", preserving the
- * pre-refactor contract used by level fallbacks and menu-opening scene clicks.
+ * the real work and may return `undefined` to mean "not consumed", which lets
+ * level fallbacks and menu-opening scene clicks run after this rule declines.
  */
 export interface InteractionRule {
   readonly id: string;

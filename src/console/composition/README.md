@@ -1,6 +1,6 @@
 # Composition Service
 
-This directory owns the owned, nestable loading-overlay primitive, which supersedes the previous single global `compositionOverlay` field, which any caller could close regardless of who opened it.
+This directory owns the composable, nestable loading-overlay sessions. Each session owns the overlay it opens, so only its owner can close it.
 
 ## Sessions
 

@@ -1,6 +1,6 @@
 # Input Policy Stack
 
-This directory owns the composable input-locking primitive, which supersedes the previous single global `inputEnabled` boolean.
+This directory owns the composable input-policy stack.
 
 ## Modes
 

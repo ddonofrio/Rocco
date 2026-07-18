@@ -1,6 +1,6 @@
 # Jukebox
 
-The jukebox manages continuous background music and ambient playlists through `jukebox`.
+The jukebox manages continuous background music and ambient playlists through `context.sdk.jukebox`.
 
 ## Files
 
@@ -20,6 +20,10 @@ The jukebox manages continuous background music and ambient playlists through `j
 ## Cartridge Usage
 
 ```typescript
+const jukebox = context.sdk.jukebox;
+if (!jukebox) {
+  return;
+}
 jukebox.registerPlaylist({
   id: 'pier-ambient',
   tracks: [

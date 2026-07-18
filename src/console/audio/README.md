@@ -1,6 +1,6 @@
 # Audio
 
-The audio system provides Web Audio sound registration, preloading, playback, and stopping through `audio`.
+The audio system provides Web Audio sound registration, preloading, playback, and stopping through `context.sdk.audio`.
 
 ## Files
 
@@ -11,6 +11,10 @@ The audio system provides Web Audio sound registration, preloading, playback, an
 ## Cartridge Usage
 
 ```typescript
+const audio = context.sdk.audio;
+if (!audio) {
+  return;
+}
 audio.registerSound({ id: 'footstep', uri: '/sounds/footstep.mp3', volume: 0.8 });
 await audio.preloadSound('footstep');
 audio.playSound('footstep');

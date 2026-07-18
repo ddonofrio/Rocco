@@ -36,7 +36,7 @@ export type InteractionStage = 'default' | 'before-exit-intent';
 /**
  * Frozen view of everything an interaction rule needs to decide and act.
  * Rules receive this instead of reaching into the central router, so the
- * router stops importing feature-specific scene or inventory IDs (audit DOM-002).
+ * router stops importing feature-specific scene or inventory IDs.
  */
 export interface InteractionContext {
   readonly action: RoccoCartridgeAction;
@@ -59,7 +59,7 @@ export interface InteractionContext {
 export type InteractionDisposition = CartridgeActionDisposition;
 
 /**
- * Distributed interaction rule (audit ROCCO-016 / DOM-002).
+ * Distributed interaction rule.
  *
  * `matches()` must be a cheap, side-effect-free predicate. `execute()` performs
  * the real work and may return `undefined` to mean "not consumed", preserving the

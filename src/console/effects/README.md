@@ -1,6 +1,6 @@
 # Effects
 
-The effects system provides per-tick operations on engine targets. Cartridges manage active effects through `effects`. Effects run during the engine render tick and stay independent from cartridge logic.
+The effects system provides per-tick operations on runtime targets. Cartridges manage active effects through `effects`. Effects run during the runtime render tick and stay independent from cartridge logic.
 
 ## Files
 

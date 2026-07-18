@@ -136,7 +136,7 @@ function createSelfTalkRule(): InteractionRule {
 /**
  * Core interaction rules that are not owned by a specific map: developer mode
  * actions, the player self-inventory toggle, and self-talk. These used to live
- * inline in the central router; they are now distributed rules (audit DOM-002).
+ * inline in the central router; they are now distributed rules.
  */
 export function createCoreInteractionRules(): readonly InteractionRule[] {
   return [

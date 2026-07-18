@@ -1,9 +1,8 @@
 /**
  * Lifecycle and resource-ownership contracts for the ROCCO console runtime.
  *
- * These types implement the `Lifecycle` (§6.1) and `ResourceScope` (§6.2)
- * cross-cutting contracts from the architecture audit and back the runtime
- * state machine (ROCCO-007) and hierarchical scopes (ROCCO-008).
+ * These types implement the `Lifecycle` and `ResourceScope` cross-cutting
+ * contracts and back the runtime state machine and hierarchical scopes.
  */
 
 export type LifecycleState =

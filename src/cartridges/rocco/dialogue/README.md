@@ -1,4 +1,4 @@
-# Dialogue compatibility path
+# Dialogue import surface
 
 This directory re-exports the canonical Rocco dialogue runtime from [`../rpce/dialogue`](../rpce/dialogue/README.md).
 

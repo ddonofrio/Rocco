@@ -1,6 +1,6 @@
 # Composition Service
 
-This directory owns the owned, nestable loading-overlay primitive. It replaces the previous single global `compositionOverlay` field, which any caller could close regardless of who opened it.
+This directory owns the owned, nestable loading-overlay primitive, which supersedes the previous single global `compositionOverlay` field, which any caller could close regardless of who opened it.
 
 ## Sessions
 
@@ -18,8 +18,8 @@ session.dispose(); // only the owner can close its overlay
 - Only the returned session may `report`, `fail`, or `dispose` its own overlay.
   A cross-owner call throws `CompositionOwnershipError`.
 - `getActiveMessage()` returns the message of the most-recently-begun still-open
-  session, or `null` when none is open. The engine renders (or hides) the overlay
-  from this value via an `onChange` subscription.
+  session, or `null` when none is open. `RuntimeCompositionPresenter` renders (or
+  hides) the overlay from this value via an `onChange` subscription.
 - `getActiveStatus()` / `listSessions()` expose diagnostics.
 - IDs are a monotonic `composition-<n>` counter, so tests are deterministic.
 

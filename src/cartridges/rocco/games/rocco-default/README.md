@@ -2,8 +2,7 @@
 
 This directory is the game layer that runs on top of RPCE inside the `rocco` cartridge.
 
-The current game is still the shipped `rocco-default` experience, but its structure is now
-expressed in game terms instead of treating the cartridge runtime as the game itself.
+The shipped game is `rocco-default`, expressed in game terms: the cartridge runtime is not the game itself.
 
 Current map model:
 
@@ -29,7 +28,7 @@ Map folders are the structural ownership point:
 - `maps/nether/`
 
 Each map folder exports its map definition, the concrete level implementations, and the local
-asset surface for that map. The `src/cartridges/rocco/levels/**` folders now re-export
+asset surface for that map. The `src/cartridges/rocco/levels/**` folders re-export
 from these game-owned paths.
 
 ## Game graph and the compiled model

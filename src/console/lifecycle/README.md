@@ -61,16 +61,15 @@ stop order, so LIFO disposal matches the stop sequence:
 8. destroy Pixi app + DOM
 ```
 
-`GameScope`, `LevelScope`, and `SequenceScope` are added by later work
-(transition service, level decomposition) as further children of
-`CartridgeScope`.
+`GameScope`, `LevelScope`, and `SequenceScope` are further children of
+`CartridgeScope`, owned by the transition service and level decomposition.
 
 ## Fitness-function alignment
 
 - Every resource is registered under an owner scope (no orphan resources).
 - Cleanup is idempotent and aggregates errors instead of stopping early.
 - Async operations receive cancellation through the scope `AbortSignal`.
-- Input locking and the composition overlay are now composed from leases
+- Input locking and the composition overlay are composed from leases
   (`src/console/input`, `src/console/composition`) that live on top of the same
   `ResourceScope` ownership model, so a released lock or overlay never
   invalidates another owner's lease.

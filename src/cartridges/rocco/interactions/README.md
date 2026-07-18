@@ -65,7 +65,7 @@ Higher numerical priority runs first within the same action kind and stage.
 
 Duplicate rule IDs are rejected during registry validation.
 
-`{ suppressDefaultPlayerMove?: boolean }` exists only as an input accepted by internal normalization for remaining level-return compatibility. It is not part of the public rule result.
+`{ suppressDefaultPlayerMove?: boolean }` is an input accepted by internal normalization. It is not part of the public rule result.
 
 ## Interaction context
 

@@ -34,16 +34,10 @@ For agent work, prefer `scripts/run-npm.ps1` with a real PowerShell array and a 
 powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','typecheck')"
 ```
 
-Focused test example:
+Focused test example (used only after functional approval, unless a work order explicitly requires otherwise):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','test','--','tests/cartridges/rocco/rocco-default-cartridge.test.ts')"
-```
-
-Build example:
-
-```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','build')"
 ```
 
 Windows portable example:
@@ -97,14 +91,9 @@ The GitHub Actions `Build` workflow uploads these artifacts:
 The unsigned macOS DMG is built in the workflow on `macos-26`.
 The Linux AppImage is built in the workflow on `ubuntu-latest`.
 
-## Validation Workflow
+## Validation Gate
 
-Start with the narrowest useful validation:
-
-1. Run the focused test for the touched module when one exists.
-2. Run `npm run typecheck` through the wrapper for TypeScript changes.
-3. Run `npm run verify` when the change touches shared runtime behavior, tests, or repo-wide contracts.
-4. Run `npm run build:web` when bundling, assets, imports, or integration behavior need production-build coverage.
+`AGENTS.md` owns the delivery workflow. Tests run after functional approval; do not run focused tests or `npm run verify` / `npm run build:web` during normal implementation iteration.
 
 Before any `git push`, always run the full web pre-push gate through the wrapper:
 
@@ -113,8 +102,6 @@ powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string
 ```
 
 Treat `npm run build:web` as mandatory before a push even if focused tests and `npm run typecheck` already passed. It is the closest local match to the default CI gate because it runs the quality gate and the browser production build together.
-
-When you need the smallest repo-wide CI-equivalent validation flow, run `npm run verify` through the wrapper. `npm run check` is a short alias for the same command.
 
 Do not run `npm run format` for a narrow task unless the user asks for whole-repository formatting. `npm run format` runs Prettier across the entire repository and must not be used to format a single changed file or directory.
 

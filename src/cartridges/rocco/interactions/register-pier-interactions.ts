@@ -80,8 +80,7 @@ function resolvePierDoorKickHistoryVariant(
 
 /**
  * Pier bait shop door action-menu rule (look / open / kick). Encapsulates the
- * pier-specific door IDs so the central router no longer imports them
- * (audit DOM-002). Registered as an action-menu rule so it shares the same
+ * pier-specific door IDs so the central router does not import them. Registered as an action-menu rule so it shares the same
  * pipeline order as the other action-menu rules.
  */
 export function createPierActionMenuRules(): readonly InteractionRule[] {
@@ -301,7 +300,7 @@ function createLabCoatEquipRule(): SpecialInventorySceneClickRule {
  * Pier-specific carried-item scene-click rules, evaluated by the inventory
  * runtime's `handleSpecialSceneClick` sub-dispatch. Each rule owns its own
  * item + target combination so the router stops importing pier/Stan/lab-coat
- * IDs (audit DOM-002).
+ * IDs.
  */
 export function createPierSpecialSceneClickRules(): readonly SpecialInventorySceneClickRule[] {
   return [

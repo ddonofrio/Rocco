@@ -41,7 +41,7 @@ Rollback is a one-command atomic symlink swap to a previous release (see below).
 | `SERVER_HOST`     | SSH host of the playtesting server.                                                                                             |
 | `SERVER_PORT`     | SSH port (e.g. `22`).                                                                                                           |
 | `SERVER_USER`     | Deploy user on the server.                                                                                                      |
-| `REMOTE_PATH`     | **Parent** deploy base dir on the server (contains `releases/` and `current`). This is no longer the docroot.                   |
+| `REMOTE_PATH`     | **Parent** deploy base dir on the server (contains `releases/` and `current`).                         |
 | `DEPLOY_URL`      | (Optional) Base URL for the post-deploy smoke test, e.g. `https://playtest.example.com`.                                        |
 
 ## Server setup (one time)
@@ -61,10 +61,6 @@ Rollback is a one-command atomic symlink swap to a previous release (see below).
    ssh-keyscan -p "$SERVER_PORT" "$SERVER_HOST"
    ```
    Verify the fingerprint through a trusted channel before saving it as a secret.
-
-> **Breaking change:** previously `REMOTE_PATH` was the live docroot and files were
-> copied straight into it. Now `REMOTE_PATH` is the parent base and the docroot must
-> be `REMOTE_PATH/current`. Update the server config when adopting this pipeline.
 
 ## Rollback
 

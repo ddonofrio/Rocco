@@ -178,7 +178,7 @@ const databaseState = {
 /**
  * Lazily opens the singleton IndexedDB database. Recreated after
  * {@link closeRoccoDatabase} so the resource can be released on runtime
- * dispose and reopened transparently (audit ROCCO-014: resource close).
+ * dispose and reopened transparently.
  */
 export function getRoccoDatabase(): RoccoDatabase {
   if (!databaseState.instance) {

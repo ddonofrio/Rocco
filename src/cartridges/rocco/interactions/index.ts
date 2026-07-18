@@ -19,7 +19,7 @@ export * from './register-level-interactions';
 /**
  * Builds the default ROCCO interaction registry, registering every feature's
  * distributed rules and validating them so duplicate or ambiguous rules fail
- * during game load (audit DOM-002 / ROCCO-016).
+ * during game load.
  */
 export function createRoccoInteractionRegistry(): InteractionRegistry {
   const registry = new InteractionRegistry();

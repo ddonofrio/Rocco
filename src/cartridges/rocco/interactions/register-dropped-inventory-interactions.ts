@@ -8,7 +8,7 @@ const DROPPED_CORAL_RELIC_ACTION_MENU_PRIORITY = 200;
  * Dropped-inventory interaction rules: picking up a dropped item on scene
  * click, and the coral-relic action menu on the toilet level. The toilet-level
  * guard is encapsulated in `canHandle*` predicates that use the level capability
- * instead of an `instanceof` cast (audit DOM-002).
+ * instead of an `instanceof` cast.
  */
 export function createDroppedInventoryInteractionRules(): readonly InteractionRule[] {
   return [

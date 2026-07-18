@@ -23,7 +23,7 @@ audio.unregisterSound('footstep');
 ## Notes
 
 - Browser audio requires a user gesture before playback unlocks.
-- The engine unlocks audio on the first pointer action in the viewport.
+- The console unlocks audio on the first pointer action in the viewport.
 - Sounds are loaded and cached as `AudioBuffer`.
 - Multiple simultaneous instances of the same sound are supported.
 - `restart: true` stops active instances before starting the next one.

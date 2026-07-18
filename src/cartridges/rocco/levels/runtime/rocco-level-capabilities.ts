@@ -5,7 +5,7 @@ import type { RoccoLevel } from '../rocco-level-types';
 
 /**
  * Optional capabilities of the bait shop toilet level, declared separately from
- * the base level type so `RoccoLevel` / `RpceLevel` stay generic (audit DOM-002).
+ * the base level type so `RoccoLevel` / `RpceLevel` stay generic.
  * The manager and dropped-inventory controller detect these via
  * {@link isRoccoToiletLevelCapability} instead of `instanceof` or casts.
  */

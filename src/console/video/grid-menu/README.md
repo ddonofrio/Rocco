@@ -47,4 +47,4 @@ sdk.video.gridMenus.toggleMenu({
 });
 ```
 
-The engine renders the panel, moves items between slots, carries generic item payloads, and routes generic activations. The cartridge owns the meaning of each item and persists any game state implied by the activation or by a later scene click while something is being carried.
+The console renders the panel, moves items between slots, carries generic item payloads, and routes generic activations. The cartridge owns the meaning of each item and persists any game state implied by the activation or by a later scene click while something is being carried.

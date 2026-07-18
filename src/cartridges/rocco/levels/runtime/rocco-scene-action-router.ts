@@ -27,9 +27,9 @@ import type { RoccoLevelTransitionController } from './rocco-level-transition-co
 import type { RoccoScriptedSequenceController } from './rocco-scripted-sequence-controller';
 
 /**
- * Options for {@link RoccoSceneActionRouter}. The router no longer imports
+ * Options for {@link RoccoSceneActionRouter}. The router does not import
  * feature-specific scene or inventory IDs; every interaction is resolved by the
- * distributed {@link InteractionRegistry} (audit DOM-002 / ROCCO-016).
+ * distributed {@link InteractionRegistry}.
  */
 export interface RoccoSceneActionRouterOptions {
   localization?: RoccoLocalization;

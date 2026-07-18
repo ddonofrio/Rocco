@@ -35,7 +35,7 @@ function hasInventorySceneClickHandler(
 /**
  * Lowest-priority bridge rules that delegate to the active level's own
  * interaction handlers. Because every level owns its interactions, this is the
- * distributed fallback for each action kind (audit DOM-002).
+ * distributed fallback for each action kind.
  */
 export function createLevelInteractionRules(): readonly InteractionRule[] {
   return [

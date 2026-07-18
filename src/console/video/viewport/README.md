@@ -5,7 +5,7 @@ The viewport subsystem hosts the entire console inside the browser window. It ow
 ## Files
 
 - `host.ts` - `RoccoViewportHost`, viewport metrics, scaling, DOM host creation, display-profile integration, and cursor-event wiring.
-- `index.ts` - Barrel export plus type re-exports used by the engine entry point and runtime.
+- `index.ts` - Barrel export plus type re-exports used by the runtime entry point and runtime.
 
 ## Runtime Role
 

@@ -1,12 +1,10 @@
 # Console Lifecycle and Resource Scopes
 
 This directory owns the runtime lifecycle state machine and the hierarchical
-`ResourceScope` primitives introduced for ROCCO-007 (Runtime lifecycle FSM) and
-ROCCO-008 (Hierarchical ResourceScope).
+`ResourceScope` primitives.
 
-They implement the cross-cutting `Lifecycle` (audit §6.1) and `ResourceScope`
-(§6.2) contracts and back the `GameRuntime` teardown ordering described in
-LIF-001.
+They implement the cross-cutting `Lifecycle` and `ResourceScope` contracts and
+back the `GameRuntime` teardown ordering.
 
 ## Lifecycle states
 
@@ -50,7 +48,7 @@ RuntimeScope
 cartridge-owned resources, so cartridge `stop()` and `dispose()` still run
 while cartridge resources remain available.
 After that, the remaining root-scope disposers run in reverse of the required
-stop order, so LIFO disposal matches the LIF-001 stop sequence:
+stop order, so LIFO disposal matches the stop sequence:
 
 ```text
 1. stop ticker + remove resize listener

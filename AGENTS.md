@@ -1,94 +1,116 @@
 # ROCCO Agent Instructions
 
-This file applies to the entire repository.
+This file is the only repository-wide operating contract for coding agents.
 
-## Search Priority
+## Delivery Workflow
 
-Treat semantic search as a required first step for repository discovery whenever it is available. Use it before any other search method for code discovery, ownership discovery, intent lookup, and related-implementation discovery. This rule is as important as the minimum documentation reading protocol. Use `rg "<concept>" src` and `rg "<id-or-file-name>" src` only for exact string matches, file-name lookups, or when semantic search is unavailable.
+Assume the repository starts clean, up to date, and with all validations passing. Treat new failures and unrelated modifications as consequences of the current work until demonstrated otherwise.
 
-## Core Rules
+For every implementation task:
 
-- Communicate with the user in their language, but write all code and documentation in English.
-- Do not inspect local images or other visual assets unless the user explicitly asks for it or gives permission. Use the user's coordinates, descriptions, and file context first. If visual confirmation would help, ask the user to do the check or grant permission.
-- Read documentation before editing. Do not jump directly into code unless the change is trivial and the relevant README has already been read in the same context window.
-- Keep documentation as present-tense reference material. Do not add historical edit logs, dated notes, or narrative descriptions of edits.
-- Maintain the relevant README when behavior, concepts, public interfaces, SDK surfaces, folder roles, or cartridge structure shift.
-- During active refinement loops, implement the requested code change first, hand it to the user for manual validation, and wait for explicit approval before adding or updating tests and broader feature documentation for that change.
-- If the user pivots to a new development request while earlier validated work still has deferred tests or documentation pending, call out that outstanding follow-up before continuing.
-- Prefer focused, root-cause fixes. Do not fix unrelated bugs or reformat unrelated files.
-- Do not commit, branch, or stage changes unless the user explicitly asks.
+1. Read the required documentation chain and relevant authoritative configuration.
+2. Inspect the nearest existing implementation and its relevant tests before introducing a new pattern.
+3. Implement the complete requested behavior, including all directly affected files.
+4. Update the affected documentation in the same work.
+5. If source code changed, run the repository typecheck and the applicable non-mutating lint validation against the changed source scope. Fix every introduced failure.
+6. Hand the implementation to the user for functional verification before adding or changing tests.
+7. Give precise manual verification instructions derived from the affected behavior. State the location, action, expected result, and any important adjacent behavior to check. A gameplay change must be verified in the actual affected screen or interaction.
+8. Wait for explicit user approval of the behavior.
+9. Only after approval, implement or update the corresponding automated tests.
+10. During normal iteration, run only tests relevant to the files or behavior changed.
 
-## Minimum Reading Protocol
+Do not write tests before functional approval. Gameplay and creative requirements may change during manual verification; tests must codify the approved behavior, not an intermediate interpretation.
 
-Before touching code, read this minimum set:
+When the user explicitly asks for a commit or push:
+
+1. Complete any tests deferred until functional approval.
+2. Run the complete test suite.
+3. Run `build:web`.
+4. Fix every failure.
+5. Review the final changed-file and staged-file scope.
+6. Commit and push only the files belonging to the approved task.
+
+Do not stage, commit, create branches, or push unless explicitly requested.
+
+## Context Loading
+
+Before modifying a file, read:
+
+1. `AGENTS.md`.
+2. Every `README.md` encountered from the repository root down to the target file's directory, in path order.
+3. `DEVELOPMENT.md` only when commands, validation, setup, or environment behavior are relevant.
+4. The authoritative configuration files directly relevant to the change.
+
+Each README inherits all parent instructions and adds only information specific to its own directory. It must not repeat parent content.
+
+For example, before modifying `src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts`, read in order:
 
 1. `AGENTS.md`
-2. `README.md`
-3. `README-AGENT.md`
-4. `DEVELOPMENT.md`
-5. The README chain for the files you expect to touch, from broadest to narrowest directory.
+2. `src/README.md`
+3. `src/cartridges/README.md`
+4. `src/cartridges/rocco/README.md`
+5. `src/cartridges/rocco/games/README.md`
+6. `src/cartridges/rocco/games/rocco-default/README.md`
+7. `src/cartridges/rocco/games/rocco-default/maps/README.md`
+8. `src/cartridges/rocco/games/rocco-default/maps/shop/README.md`
 
-Use this command to list project-owned docs without dependency noise:
+Define the information and scope to inspect; use the capabilities available in your environment.
 
-```powershell
-Get-ChildItem -Path . -Filter "README*.md" -Recurse | Where-Object { $_.FullName -notmatch 'node_modules|dist|[\\/]\.[^\\/]+[\\/]' } | Select-Object FullName
-```
+## Scope and Modifying Tools
 
-If the available context window is large, prefer reading all project-owned documentation before editing. The docs are intentionally layered: root docs give the map, engine docs give system concepts, cartridge docs give cartridge rules, and leaf docs give implementation details.
+- Modify only files required by the task and its directly affected documentation or tests.
+- Do not fix unrelated defects, perform opportunistic refactors, or reformat unrelated files.
+- Any tool capable of modifying files must be explicitly scoped to the files included in the task. Repository-wide autofix, formatting, codemods, migrations, generators, or repair commands are prohibited unless the work order explicitly authorizes repository-wide changes.
+- This applies to every command or tool with behavior equivalent to `--write`, `--fix`, `--apply`, automatic migration, generated replacement, or bulk rewrite.
+- Do not introduce or expand allowlists, exclusions, ignored paths, disabled rules, inline suppressions, validation bypasses, or equivalent exceptions unless the work order explicitly requires them or the user explicitly approves them.
+- Do not alter lint, TypeScript, test, coverage, format, or tracked-content configuration merely to make a change pass.
+- When a command fails, verify the supported syntax or available repository command and continue toward the requested outcome. Do not invent an environmental explanation.
 
-## Efficient Reading Routes
+## Authoritative Sources
 
-- For cartridge behavior, read `README-AGENT.md`, `src/console/cartridges/README.md`, the cartridge README, and any level README involved.
-- For the Rocco Pier map, read `src/cartridges/rocco/README.md`, `src/cartridges/rocco/games/rocco-default/README.md`, and `src/cartridges/rocco/games/rocco-default/maps/pier/README.md`. Read `src/cartridges/rocco/levels/pier/README.md` when you need the compatibility path details.
-- For localization, read `src/console/cartridges/README.md`, `src/console/cartridge-menu/README.md`, `src/cartridges/rocco/README.md`, and `src/cartridges/rocco/localization/README.md`.
-- For water, planes, or rendering artifacts, read `src/console/video/README.md`, `src/console/video/planes/README.md`, `src/console/video/post-processing/README.md`, and the relevant cartridge/level README.
-- For sprites, action menus, motion, walk maps, or interaction sequences, read `src/console/video/sprites/README.md` and the relevant cartridge README.
-- For commands, tests, Windows quirks, or local workflow, read `DEVELOPMENT.md`.
+Documentation points to authoritative files rather than copying volatile rules:
 
-After reading docs, inspect the closest existing implementation and its tests before writing new code. If a semantic search tool is available, use it before any other repository search method. This repository is indexed, so semantic search usually finds conceptually related code, ownership boundaries, and intent more reliably than literal grep. Use `rg "<concept>" src` and `rg "<id-or-file-name>" src` for exact string matches, file-name lookups, and fallback when semantic search is unavailable.
+- `package.json` owns available npm scripts and the supported Node.js range.
+- `eslint.config.js` owns lint scopes, enabled plugins, rules, and existing file-specific exceptions. Inspect it before changing TypeScript or JavaScript.
+- `tsconfig.json` owns TypeScript compiler behavior.
+- `vitest.config.ts` and the relevant tests own test-runner behavior and established test patterns.
+- `.prettierignore`, the Prettier configuration, and repository format scripts own formatting scope.
+- `.github/workflows/**` owns CI workflow behavior.
+- Source interfaces and exported types own API shape. Documentation describes intent, boundaries, and invariants instead of reproducing whole interfaces.
+- The nearest current implementation owns concrete behavior when documentation and code disagree. Correct the documentation in the same task.
 
-## Documentation Shape
+## Documentation Rules
 
-- `README.md` is the human overview.
-- `README-AGENT.md` is the technical architecture and console SDK reference.
-- `DEVELOPMENT.md` is the local workflow and command guide.
-- `src/console/**/README.md` files document console systems.
-- `src/cartridges/**/README.md` files document cartridge content, rules, and state.
+- Write in English.
+- Use present tense.
+- Describe current ownership and behavior only.
+- Do not include dated notes, edit narratives, audit identifiers, work-order identifiers, migration commentary, previous designs, or future intentions.
+- Do not mention removed console surfaces or deleted compatibility types.
+- Do not prescribe a specific code-search implementation or discovery tool.
+- Do not reproduce lint-rule lists.
+- Do not reproduce large interfaces or API method catalogs that are already discoverable in source.
+- Do not restate parent documentation.
+- Prefer links to the nearest authoritative child README over summaries of that child's contents.
+- Keep examples only when they clarify a non-obvious invariant or workflow.
+- Maintain the relevant README when behavior, concepts, public interfaces, SDK surfaces, folder roles, or cartridge structure shift.
 
-Keep repeated concepts at increasing depth. For example, the root README may say that Rocco has connected Pier levels; the cartridge README should name those levels; the Pier README should define connectors, state, and transition rules.
-
-## Command Usage on Windows
-
-Run npm scripts through the repository wrapper with a PowerShell array and a repo-root lookup:
-
-```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','typecheck')"
-```
-
-Focused Rocco cartridge test:
-
-```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','test','--','tests/cartridges/rocco/rocco-default-cartridge.test.ts')"
-```
-
-Avoid direct `.\scripts\run-npm.ps1` calls without `-ExecutionPolicy Bypass`, and avoid passing npm arguments after `-File` as plain positional arguments.
-
-## Rocco Cartridge Notes
-
-- The default cartridge is the Pier map.
-- Current Pier implementation code lives in `src/cartridges/rocco/games/rocco-default/maps/pier`. `src/cartridges/rocco/levels/pier` remains the compatibility path.
-- `RoccoLevelManager` lives in `src/cartridges/rocco/levels/rocco-level-manager.ts` and owns map transitions, per-level state retention, and inventory-based exit gates across Rocco screens.
-- Pier Middle east and west exits are available without an inventory gate.
-- `rocco-default` is localized in English and Spanish through `src/cartridges/rocco/localization`.
-- `rocco-default` uses `engine.video.gridMenus` as generic console UI for its cartridge inventory.
-- The console owns cursor rendering. Cartridges pass generic grid item payloads; cartridge folders decide what item use means.
-- The boot menu language radio buttons are only shown for manifests with `localizations`.
-- The water animation is clipped to its original alpha mask to avoid sliding over pier posts. Read `src/console/video/post-processing/README.md` before changing water constants or plane composition.
-
-## Validation
+## Validation and User Approval
 
 - For code changes, run the most focused test first.
-- Run `npm run typecheck` through the wrapper before handing off TypeScript changes.
+- Run `npm run typecheck` before handing off TypeScript changes.
 - Run `npm run build` only when broader integration or bundling needs verification.
-- Before any `git push`, always run `npm run build:web` through the wrapper, even if focused tests and `npm run typecheck` already passed locally.
-- Avoid `npm run format` for narrow tasks because it rewrites the whole repository.
+- Before any `git push`, always run `npm run build:web`, even if focused tests and `npm run typecheck` already passed locally.
+- Keep repository-wide validation commands as non-mutating gates, not as autofix instructions.
+
+## Commit and Push Gate
+
+Do not stage, commit, branch, or push changes unless the user explicitly asks.
+
+When the user explicitly asks:
+
+1. Complete any tests deferred until functional approval.
+2. Run the complete test suite.
+3. Run `build:web` through the wrapper.
+4. Fix every failure.
+5. Review the final changed-file and staged-file scope.
+6. Commit and push only the files belonging to the approved task.

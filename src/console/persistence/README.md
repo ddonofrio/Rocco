@@ -54,7 +54,7 @@ The engine normalizes restored scenes on boot so missing default planes can be
 repaired. This is a _technical, recreatable_ cache and is intentionally
 separate from domain saves.
 
-## Versioned saves (audit DAT-001 / ROCCO-014)
+## Versioned saves
 
 A cartridge obtains a `CartridgeSaveRepo` bound to its `cartridgeId`
 and a `CartridgeSaveProvider`:

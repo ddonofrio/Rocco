@@ -1,9 +1,6 @@
 # Input Policy Stack
 
-This directory owns the composable input-locking primitive introduced for
-ROCCO-009 (InputPolicyStack), implementing the `InputPolicyLease` cross-cutting
-contract from audit §6.4. It replaces the previous single global
-`inputEnabled` boolean (INP-001).
+This directory owns the composable input-locking primitive. It replaces the previous single global `inputEnabled` boolean (INP-001).
 
 ## Modes
 

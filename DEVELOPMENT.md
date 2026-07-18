@@ -118,11 +118,9 @@ When you need the smallest repo-wide CI-equivalent validation flow, run `npm run
 
 Do not run `npm run format` for a narrow task unless the user asks for whole-repository formatting.
 
-## Refinement Workflow
+## Test Environment Notes
 
-- During an active refinement session, make the requested gameplay or UI change first and ask the user to validate it manually before adding tests or broader feature-documentation updates for that specific change.
-- After the user explicitly confirms the behavior is correct, add the deferred automated coverage and documentation updates that belong to the validated change before final handoff.
-- If a new development request arrives while earlier validated work still has deferred tests or docs pending, flag that outstanding follow-up before starting the new scope.
+- Vitest runs with the configuration in `vitest.config.ts`.
 
 ## Text Encoding
 
@@ -138,7 +136,6 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 
 ## Test Environment Notes
 
-- Vitest runs with the configuration in `vitest.config.ts`.
 - Tests that instantiate Pixi asset loading should mock `pixi.js` `Assets.load`.
 - jsdom can print canvas-related limitations after the test summary. Treat the Vitest summary and process exit code as authoritative.
 - Test mocks mirror the engine SDK surface and exposed subsystem contracts. When a required member changes, nearby mocks usually need the same member.
@@ -159,34 +156,6 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 - `dist/` contains generated production output.
 - Workspace-only generated tools and temporary files stay untracked.
 
-## Rocco Pier Notes
+## Scoped Lint and Format
 
-- The active Rocco cartridge is `rocco-default`.
-- Current Pier implementation code lives in `src/cartridges/rocco/games/rocco-default/maps/pier`.
-- `src/cartridges/rocco/levels/pier` remains the compatibility path for older imports.
-- The Pier map has three levels: `pier-start`, `pier-middle`, and `pier-end`.
-- `RoccoLevelManager` owns level registration, transitions, entry placement, status text, and per-level state retention across Rocco screens.
-- Pier Middle east and west exits are available without an inventory gate.
-- `rocco-default` supports English and Spanish localization through `src/cartridges/rocco/localization`.
-- Rocco inventory is cartridge state. The engine provides generic reorderable slot-panel UI and generic cursor item payloads through `engine.video.gridMenus` and the cursor subsystem.
-
-## Water Rendering Notes
-
-The Pier water effect selects water-colored pixels, animates those pixels with a horizontal wave, and clips each animated frame back to the original water alpha mask.
-
-Relevant files:
-
-- `src/console/video/post-processing/water-color-effect.ts`
-- `src/console/video/planes/pixi-renderer.ts`
-- `src/cartridges/rocco/levels/pier/pier-video-effects.ts`
-- `src/cartridges/rocco/rocco-default-constants.ts`
-
-If water appears over wooden posts or pier edges, inspect the color mask, tolerance, strength, foreground transparency, clipping behavior, and plane layering together.
-
-## Documentation Workflow
-
-- Read `AGENTS.md` before editing.
-- Read `README-AGENT.md` for architecture, the engine SDK surface, and subsystem SDKs.
-- Read the README chain for the target folder.
-- Keep documentation in present tense and focused on current behavior.
-- Do not add dated notes, historical edit logs, or narrative descriptions of edits.
+Lint and format act on task files. Variants that accept specific paths or files must stay scoped to the files included in the task. Repository-wide autofix and formatting commands are non-mutating gates, not autofix instructions.

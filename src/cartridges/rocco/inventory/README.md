@@ -94,3 +94,31 @@ The Rocco cartridge owns:
 - item-use results;
 - world-drop behavior;
 - transfer semantics.
+
+## Adding a carried item
+
+If you add or change a player-carried item, handle the full lifecycle:
+
+1. Add the item id and factory in `rocco-inventory.ts`.
+2. Export it from `index.ts` if another module needs it.
+3. Add localized labels in the inventory catalogs.
+4. Decide whether the item is droppable.
+5. If droppable, define `groundSprite` and a repo-owned ground asset.
+6. Verify pickup, drop, and pickup-again behavior manually.
+7. If the item can be used on targets, wire the responses through the inventory interaction path.
+
+An inventory item without `groundSprite` cannot be dropped by the generic inventory drop flow. A new pickup should not mutate scene state until inventory admission succeeds.
+
+## Pickup pattern
+
+Use the manager-owned pickup callbacks from `RoccoLevelMountOptions`:
+
+- `onPickupRequested(item)` checks whether the pickup is currently allowed, including full inventory cases.
+- `onPickupCollected(item)` commits the pickup and shows the generic success line.
+
+Safe order:
+
+1. Build the item.
+2. Call `onPickupRequested(item)`.
+3. If it returns `false`, leave the level state unchanged.
+4. Only then mark the prop as taken and call `onPickupCollected(item)`.

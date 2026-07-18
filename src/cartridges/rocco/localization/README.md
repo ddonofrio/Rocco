@@ -83,3 +83,14 @@ The same localization object is passed throughout one cartridge run.
 A cartridge restart reuses the selected locale.
 
 Callers should consume `RoccoLocalization` instead of independently resolving locale fragments.
+
+## Adding visible text
+
+When adding a new visible object, verb response, caption, or item label:
+
+1. Add the key to `types.ts`.
+2. Add English and Spanish text in the correct locale files.
+3. Resolve the text through `createRoccoLocalization(locale).text` or a localized helper.
+4. Re-check the touched files for mojibake fragments before handoff.
+
+Do not mix localized strings and hardcoded strings for the same interaction. Hover captions must match the current gameplay state; if the object state changes, refresh the caption too. Do not bypass localization for placeholders.

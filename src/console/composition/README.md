@@ -1,10 +1,6 @@
 # Composition Service
 
-This directory owns the owned, nestable loading-overlay primitive introduced for
-ROCCO-010 (CompositionSession), implementing the `CompositionSession`
-cross-cutting contract from audit §6.5. It replaces the previous single global
-`compositionOverlay` field (CMP-001), which any caller could close regardless of
-who opened it.
+This directory owns the owned, nestable loading-overlay primitive. It replaces the previous single global `compositionOverlay` field (CMP-001), which any caller could close regardless of who opened it.
 
 ## Sessions
 
@@ -29,8 +25,7 @@ session.dispose(); // only the owner can close its overlay
 
 Because each overlay is owned by its session, two nested compositions do not
 close each other, and an overlay only disappears when its owner disposes it
-(CMP-001 fix). The engine shows `100%` only after the success path reports it; a
-failed transition disposes the session without ever displaying `100%`.
+(CMP-001 fix). A failed transition disposes the session without ever displaying `100%`.
 
 ## Wiring
 

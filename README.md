@@ -4,15 +4,6 @@ ROCCO is a browser-based retro console runtime with built-in cartridges. The pro
 
 The console is called ROCCO, the main demo cartridge is called ROCCO, and the player character is also Rocco.
 
-## For AI Agents
-
-Start with these files before editing:
-
-- `AGENTS.md` for repository rules and reading routes.
-- `README-AGENT.md` for architecture, the console SDK surface, subsystem SDKs, and cartridge conventions.
-- `DEVELOPMENT.md` for local commands and Windows workflow notes.
-- The README files inside the console or cartridge folders related to the requested change.
-
 ## For Humans
 
 ROCCO is a cartridge-oriented console runtime. Its console layer provides rendering, audio, input, effects, persistence, and cartridge loading. Cartridges provide the cartridge content and interact with the runtime through a stable TypeScript SDK surface plus subsystem SDKs.
@@ -46,6 +37,7 @@ ROCCO works well with AI-powered coding tools because the codebase is organized 
 ```text
 src/
   main.ts                  Entry point
+  style.css                Global page style
   console/                 Console runtime implementation and SDK surface
     audio/                 Sound and jukebox systems
     cartridges/            Cartridge interfaces, loader, and providers
@@ -72,24 +64,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\dev.ps1
 ```
 
-Common scripts:
-
-- `.\scripts\setup.ps1` installs dependencies.
-- `.\scripts\dev.ps1` starts the Vite dev server.
-- `.\scripts\build.ps1` runs the production build.
-- `.\scripts\test.ps1` runs the Vitest suite.
-- `.\scripts\lint.ps1` runs ESLint.
-- `npm run build:web` builds the browser bundle.
-- `npm run build:mac` builds the unsigned macOS DMG.
-- `npm run build:windows` builds the portable Windows executable.
-- `npm run build:linux` builds the Linux AppImage.
-
 If a compatible global Node installation is already available, standard npm commands also work:
 
 ```powershell
 npm install
 npm run dev
 ```
+
+See [`DEVELOPMENT.md`](DEVELOPMENT.md) for the full command and validation guide.
 
 ## Build Artifacts
 
@@ -104,20 +86,9 @@ The GitHub Actions workflow publishes these downloadable artifacts:
 
 ### ROCCO Default Cartridge
 
-`rocco-default` is the main demo cartridge.
+`rocco-default` is the main demo cartridge. It implements the Pier exterior, the bait shop interior, the Nether path including the Reset Office branch, and the cartridge-owned inventory systems that tie those spaces together.
 
-- Three connected Pier exterior levels with shared panorama artwork and edge connectors.
-- Separate bait shop interior screens, a toilet-room branch, and a Nether path that also includes the Reset Office branch.
-- Reset Office currently remains developer-only in gameplay flow, but it is modeled as part of Nether ownership.
-- Per-level state retention across Pier, bait shop, Nether, and developer screens.
-- Opening beat where Rocco arrives at the pier, asks the player for help, and can be skipped with a scene click.
-- Click-to-walk pathfinding through walk maps.
-- Pelikan NPC, Stan branching dialogue, bait bucket interaction, bait shop door gating, keys reveal, key collection, and Nether interaction sequences.
-- Rocco action menu with self-talk, inventory access, and shared transfer storage for the bait shop souvenir table.
-- Cartridge inventory shown through a generic reorderable 3x3 grid menu with carried-item cursor use.
-- Inventory fusion chains that craft Floating Amulet, Turritella Razor, Abyssal Talisman, and Coral Relic from compatible souvenir items, with the rules living under `src/cartridges/rocco/inventory`.
-- English and Spanish localization for menu metadata, level titles, actions, descriptions, and dialogue.
-- Water wave post-processing clipped to the original water mask.
+See [`src/cartridges/rocco/README.md`](src/cartridges/rocco/README.md) for cartridge ownership, map structure, interactions, and localization details.
 
 ## Architecture Overview
 
@@ -125,9 +96,9 @@ ROCCO uses a console/cartridge architecture:
 
 1. The console is the generic host runtime.
 2. Cartridges are self-contained software cartridges.
-3. The Rocco cartridge now layers `RPCE` between the cartridge bootstrap and the `rocco-default` game, so the structure reads `console -> cartridge -> RPCE -> game -> maps -> levels`.
+3. The Rocco cartridge layers `RPCE` between the cartridge bootstrap and the `rocco-default` game, so the structure reads `console -> cartridge -> RPCE -> game -> maps -> levels`.
 4. Cartridges mount through `RoccoCartridge` with a required `context.sdk`; the console kernel is never handed to a cartridge.
 5. Cartridges can contribute boot-time setup and settings modules before a cartridge is mounted.
 6. The console runtime stays generic; cartridge logic stays inside cartridge folders.
 
-For implementation details, read `README-AGENT.md`.
+For implementation details, read the README chain under `src/console` and `src/cartridges`.

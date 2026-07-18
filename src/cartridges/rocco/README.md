@@ -1,6 +1,6 @@
 # Default Cartridge: `rocco-default`
 
-`rocco-default` is the main built-in cartridge for the ROCCO console. The cartridge now reads as `cartridge bootstrap -> RPCE -> rocco-default game`. It implements the Pier exterior, the bait shop interior, the Nether path including the Reset Office branch, and the cartridge-owned inventory systems that tie those spaces together.
+`rocco-default` is the main built-in cartridge for the ROCCO console. The cartridge reads as `cartridge bootstrap -> RPCE -> rocco-default game`. It implements the Pier exterior, the bait shop interior, the Nether path including the Reset Office branch, and the cartridge-owned inventory systems that tie those spaces together.
 
 ## Files
 
@@ -16,7 +16,7 @@
 - `scripted-scene-interaction-controller.ts` - Shared walk-then-react controller for scene-target choreography.
 - `rpce/` - Cartridge-local point-and-click runtime, reusable dialogue helpers, inventory primitives, and RPCE contracts.
 - `games/rocco-default/` - Current game definition and map-first ownership for Pier, Shop, and Nether.
-- `levels/rocco-asset-preloader.ts` - Compatibility path for the RPCE asset preloader during migration.
+- `levels/rocco-asset-preloader.ts` - Compatibility re-export of the RPCE asset preloader.
 
 ## Subdirectories
 
@@ -26,7 +26,7 @@
 | `rpce/`             | Cartridge-local point-and-click runtime, reusable dialogue helpers, and generic inventory primitives      |
 | `games/`            | Game definitions, shared game-owned barrels, and map-first ownership                                      |
 | `interactions/`     | Distributed interaction rules and interaction-registry assembly                                           |
-| `dialogue/`         | Compatibility path for RPCE dialogue helpers                                                              |
+| `dialogue/`         | Compatibility re-export of RPCE dialogue helpers                                                          |
 | `inventory/`        | Rocco cartridge inventory state, souvenir assets, fusion recipes, prop storages, and grid-menu projection |
 | `levels/runtime/`   | Compatibility-path runtime helpers backed by the RPCE/game split                                          |
 | `levels/pier/`      | Compatibility exports for the game-owned Pier implementation                                              |
@@ -51,7 +51,7 @@ The cartridge starts in Pier Middle and currently spans three maps.
 | Nether        | Reset Office 1         | `nether-reset-office`           | `rocco-nether-reset-office-scene`           | Developer-only branch inside the Nether map                 |
 | Nether        | Reset Office 2         | `nether-reset-office-second`    | `rocco-nether-reset-office-second-scene`    | Developer-only branch                                       |
 
-Rocco transitions through edge connectors on connected screens. The cartridge bootstrap mounts RPCE, RPCE mounts the current `rocco-default` game, and the game owns Pier, Shop, and Nether map definitions plus the current concrete implementations under `games/rocco-default/maps/*`. The legacy `levels/**` folders remain compatibility wrappers so older imports can keep resolving while the game-layer paths act as the source of truth.
+Rocco transitions through edge connectors on connected screens. The cartridge bootstrap mounts RPCE, RPCE mounts the current `rocco-default` game, and the game owns Pier, Shop, and Nether map definitions plus the current concrete implementations under `games/rocco-default/maps/*`. The `levels/**` folders re-export the game-owned implementations so existing imports keep resolving.
 
 ## Interactions
 
@@ -131,5 +131,5 @@ inventory/
 - Map definitions live under `games/rocco-default/maps/*`.
 - Shared game-owned barrels live under `games/rocco-default/{constants,inventory,localization,player,sprites}`.
 - Map folders under `games/rocco-default/maps/*` own the level list, connection graph, current concrete implementations, and local assets.
-- `src/cartridges/rocco/levels/pier`, `levels/bait-shop`, and `levels/nether` are compatibility wrappers over those game-owned paths.
+- `src/cartridges/rocco/levels/pier`, `levels/bait-shop`, and `levels/nether` re-export the game-owned paths.
 - Localized dialogue trees stay in `localization/`; reusable turn sequencing now lives under `rpce/dialogue` with compatibility exports in `dialogue/`.

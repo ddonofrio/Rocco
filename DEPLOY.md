@@ -5,8 +5,7 @@ ROCCO deploys the built web app to a playtesting server over SSH. The pipeline i
 publishes immutable, versioned releases and swaps them with a single symlink
 rename, so the server never serves a mix of two builds).
 
-This is the implementation of architecture audit point 6 (ROCCO-SEC-001 / ROCCO-006,
-findings SEC-001 and DEP-001). The deploy job lives in
+The deploy job lives in
 `.github/workflows/build.yml` and delegates the steps to `scripts/deploy-web.sh`.
 
 ## How it works

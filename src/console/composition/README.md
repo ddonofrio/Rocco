@@ -2,7 +2,16 @@
 
 This directory owns the composable, nestable loading-overlay sessions. Each session owns the overlay it opens, so only its owner can close it.
 
-## Sessions
+## Two API layers
+
+The composition system exposes two distinct surfaces. The `ConsoleKernel`
+facade is the narrowed kernel boundary; the internal `CompositionService` is the
+owned implementation. Cartridges never receive `ConsoleKernel` and use the
+capability-filtered SDK instead.
+
+### ConsoleKernel facade
+
+The kernel opens a composition session as a narrowed facade:
 
 ```ts
 const session = kernel.beginCompositionSession('level-transition', {
@@ -13,10 +22,49 @@ session.fail(error);
 session.dispose(); // only the owner can close its overlay
 ```
 
-- `beginCompositionSession({ ownerId, mode?, message? })` returns a
-  `CompositionSession` capability.
+Documented kernel method:
+
+```ts
+beginCompositionSession(
+  ownerId: string,
+  options?: { message?: string },
+): CompositionSession;
+```
+
+`ConsoleKernel.beginCompositionSession()` takes the owner id and an optional
+`message`. It does not accept `mode`. `GameRuntime` implements this facade by
+delegating to the owned `CompositionService` (`runtime.ts`:
+`this.compositionService.begin({ ownerId, message: options.message })`).
+
+### Internal service
+
+Console-internal callers that hold the owned service use the options-object API,
+which is where `mode` lives:
+
+```ts
+const session = composition.begin({
+  ownerId: 'level-transition',
+  mode: 'exclusive',
+  message: 'LOADING 0%',
+});
+```
+
+Documented service method:
+
+```ts
+begin(options: {
+  ownerId: string;
+  mode?: CompositionMode;
+  message?: string;
+}): CompositionSession;
+```
+
+See `composition-service.ts` for the authoritative interface and implementation.
+
 - Only the returned session may `report`, `fail`, or `dispose` its own overlay.
   A cross-owner call throws `CompositionOwnershipError`.
+- When several sessions are open, the most recently begun active session drives
+  the visible overlay.
 - `getActiveMessage()` returns the message of the most-recently-begun still-open
   session, or `null` when none is open. `RuntimeCompositionPresenter` renders (or
   hides) the overlay from this value via an `onChange` subscription.

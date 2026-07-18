@@ -1,6 +1,10 @@
 # Video SDK
 
-The video SDK is the visual rendering layer of the ROCCO console. It keeps cartridge-facing state modules separate from PixiJS renderer implementations.
+The video tree contains both console-runtime implementation and cartridge-facing visual facades.
+
+`RoccoRuntimeVideoSystem` is the console-owned runtime coordinator. It owns visual subsystem instances, update ordering, stage synchronization, rendering integration, and the internal zoom controller.
+
+SDK v1 cartridges access negotiated visual operations through `CartridgeSdkV1.video`. They do not receive `RoccoRuntimeVideoSystem`.
 
 ## Key Files
 
@@ -43,29 +47,87 @@ display.profile      90
 | `cursor/`          | Custom cursor, image attachments, and pointer coordinates                    |
 | `viewport/`        | Runtime-owned fullscreen contain-scaling host                                |
 | `post-processing/` | Pixel-level helpers and water effects                                        |
+| `zoom/`            | Runtime presentation-transform controller and cartridge camera-facade boundary |
 
-## Architecture Notes
+## Architecture
 
-- `RoccoRuntimeVideoSystem` owns SDK and renderer pairs for visual subsystems.
-- SDK modules manage state and domain rules.
-- Pixi renderer modules sync SDK state into Pixi containers.
-- `sceneTargets` are console-owned interactive regions with no rendered sprite; input resolves hover and clicks across sprites plus scene targets.
-- Plane `depthMode` can resolve a runtime render layer from sprite state, including player-aware front/back swaps driven by the active player sprite.
-- Rendering is initiated by `GameRuntime`; subsystems do not self-render.
-- SDK v1 cartridges should call `sdk.video` modules and avoid Pixi renderer internals; legacy cartridges use their explicit engine context.
+- `RoccoRuntimeVideoSystem` owns console-side visual subsystem instances and renderer coordination.
+- Cartridge-facing SDK modules contain domain operations and controlled facades, not render-loop ownership.
+- Pixi renderer implementations synchronize subsystem state into Pixi objects.
+- `GameRuntime` initiates the console update and render cycle.
+- Cartridges do not call console update or render methods.
+- The console owns the Pixi stage and renderer.
+- The viewport subsystem owns browser and canvas sizing, contain scaling, DOM integration, and pointer-coordinate plumbing.
+- The zoom subsystem owns a presentation transform applied inside the Pixi scene.
+- Viewport scaling and presentation zoom are separate systems.
 
-## Cartridge-Facing Entry Points
+## SDK v1 cartridge entry points
 
-- `engine.video.preloadAssetUrls(assetUrls)` preloads raw image or UI asset URLs that belong to the console video layer.
-- `engine.video.preloadPlaneScene(scene)` and `engine.video.preloadSpriteDefinition(definition)` preload scene and sprite-definition assets.
-- PixiJS `Assets.load` does not accept an `AbortSignal`; transition cancellation therefore invalidates the transition's consumption at its lifecycle boundary, while the in-flight Pixi load remains owned by Pixi and is not described as network cancellation.
-- Use `engine.loadPlaneScene(scene)` through the engine SDK surface when replacing the active scene so runtime bookkeeping stays in sync.
-- `engine.video.planes` handles plane-level inspection and mutation after a scene is active, including planes that resolve their render layer dynamically at render time.
-- `engine.video.sprites`, `sceneTargets`, `actionMenus`, `gridMenus`, `messages`, `primitives`, `titles`, and `display` expose cartridge-facing visual capabilities.
-- The default runtime always wires `sceneTargets`, but the top-level `RoccoVideoSystem` interface keeps it optional so alternative implementations can omit it.
-- `engine.video.viewport` exists for runtime coordination with the browser host. Cartridges should treat viewport lifecycle and DOM ownership as runtime-internal.
-- The active player selected through `engine.setPlayerSprite(id | null)` is also used by player-aware plane depth modes.
-- The console render loop synchronizes visual state after scripted changes; cartridges do not call the kernel render method.
+SDK v1 cartridges use the optional members exposed through `context.sdk`.
+
+```ts
+const video = context.sdk.video;
+
+await video?.preloadAssetUrls(assetUrls);
+await video?.preloadPlaneScene?.(scene);
+await video?.preloadSpriteDefinition?.(spriteDefinition);
+
+video?.planes?.loadScene(scene);
+video?.planes?.updatePlane(sceneId, planeId, patch);
+
+video?.sprites?.registerSpriteDefinition(definition);
+video?.sprites?.createSpriteFromDefinition(definitionId, options);
+
+video?.sceneTargets?.registerTarget(target);
+video?.actionMenus?.registerMenu(menu);
+video?.gridMenus?.openMenu(menu);
+video?.messages?.say(spriteId, text);
+video?.titles?.addTitle(title);
+video?.primitives?.addPrimitive(primitive);
+video?.display?.setProfile(profile);
+```
+
+Every subsystem is optional on the public SDK type. Availability depends on the negotiated capability set.
+
+Legacy cartridges use their explicit `context.engine.video` surface. Legacy examples must be labelled as legacy and must not be presented as SDK v1 usage.
+
+## Camera facade
+
+`sdk.video?.camera` is the complete cartridge-facing presentation-transform API.
+
+It exposes only:
+
+```ts
+sdk.video?.camera?.setTransform(transform);
+sdk.video?.camera?.animateTo(transform, durationMs, options);
+sdk.video?.camera?.clear();
+```
+
+The facade intentionally excludes:
+
+* transform-state inspection;
+* animation-state inspection;
+* per-frame update;
+* stage application;
+* direct Pixi stage access;
+* renderer access;
+* viewport sizing;
+* browser fullscreen handling;
+* pointer-coordinate conversion.
+
+The facade delegates to the internal runtime zoom controller documented in [`zoom/README.md`](zoom/README.md).
+
+## Frame interaction
+
+During a frame:
+
+1. The console advances time-based visual subsystem state.
+2. The zoom controller advances any active transform animation.
+3. Visual subsystem state is synchronized with Pixi objects.
+4. The current presentation transform is applied to the Pixi stage.
+5. The console renders the frame.
+
+Cartridges can request camera transforms but cannot drive this frame lifecycle.
 
 ## Reading Next
 
@@ -75,3 +137,4 @@ display.profile      90
 - `src/console/video/primitives/README.md` for debug geometry overlays.
 - `src/console/video/titles/README.md` for hover descriptions and other text overlays.
 - `src/console/video/viewport/README.md` for browser-host scaling, cursor plumbing, and display integration.
+- [`zoom/README.md`](zoom/README.md) for presentation transforms and the camera-facade boundary.

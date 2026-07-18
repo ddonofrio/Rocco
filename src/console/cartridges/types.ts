@@ -85,7 +85,7 @@ export type RoccoCartridgeLocalizedManifest = Partial<
 /**
  * Declares the console SDK runtime a cartridge targets and the capabilities it
  * negotiates. Every cartridge manifest must declare it, and it is validated by
- * `assertCartridgeSdkCompatibility` before mount (audit SDK-001 / ROCCO-011).
+ * `assertCartridgeSdkCompatibility` before mount.
  */
 export interface CartridgeManifestRuntime {
   /** Semver range the cartridge requires, e.g. `'^1.0.0'`. */

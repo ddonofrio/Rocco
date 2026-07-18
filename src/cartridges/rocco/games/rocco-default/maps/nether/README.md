@@ -13,4 +13,4 @@ part of the Nether map for structural ownership, reset behavior, and developer-m
 This folder also owns the current concrete Nether and Reset Office implementations plus the local
 Nether assets.
 
-`src/cartridges/rocco/levels/nether/**` remains as a compatibility wrapper over this folder.
+`src/cartridges/rocco/levels/nether/**` re-exports the game-owned implementations from this folder.

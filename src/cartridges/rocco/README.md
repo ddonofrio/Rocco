@@ -131,5 +131,15 @@ inventory/
 - Map definitions live under `games/rocco-default/maps/*`.
 - Shared game-owned barrels live under `games/rocco-default/{constants,inventory,localization,player,sprites}`.
 - Map folders under `games/rocco-default/maps/*` own the level list, connection graph, current concrete implementations, and local assets.
-- `src/cartridges/rocco/levels/pier`, `levels/bait-shop`, and `levels/nether` re-export the game-owned paths.
-- Localized dialogue trees stay in `localization/`; reusable turn sequencing now lives under `rpce/dialogue` with compatibility exports in `dialogue/`.
+- `src/cartridges/rocco/levels/pier`, `levels/bait-shop`, and `levels/nether` re-export the game-owned paths under [`games/rocco-default/maps`](games/rocco-default/maps/README.md).
+- Localized dialogue trees stay in `localization/`; reusable turn sequencing lives under `rpce/dialogue` with re-exports in `dialogue/`.
+
+## Reading next
+
+- [`rpce/README.md`](rpce/README.md) — the cartridge-local point-and-click runtime and game-graph compiler.
+- [`games/rocco-default/README.md`](games/rocco-default/README.md) — the `rocco-default` game graph and shared game-owned barrels.
+- [`interactions/README.md`](interactions/README.md) — the distributed interaction registry and rule dispatch.
+- [`inventory/README.md`](inventory/README.md) — inventory domain, storage, and fusion behavior.
+- [`localization/README.md`](localization/README.md) — locale resolution and text catalogs.
+- [`dialogue/README.md`](dialogue/README.md) — re-export of the RPCE dialogue runtime.
+- [`levels/README.md`](levels/README.md) — the `RoccoLevel` contract and runtime orchestration.

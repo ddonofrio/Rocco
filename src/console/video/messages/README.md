@@ -7,7 +7,7 @@ The messages subsystem shows sprite-anchored speech and thought bubbles. It keep
 - `types.ts` - Message mode, style, request, state, renderable, and SDK contract types.
 - `system.ts` - `RoccoSpriteMessageSystemSDK`, the pure SDK state for adding, updating, sequencing, and removing messages.
 - `pixi-renderer.ts` - PixiJS renderer for bubble layout, side selection, thought trails, and stage-aware placement.
-- `pixi-renderer.test.ts` - Renderer tests for bubble layout and visual constraints.
+- `pixi-renderer.test.ts` - Renderer tests under `tests/console/video/messages/` for bubble layout and visual constraints.
 - `index.ts` - Barrel export.
 
 ## Behavior
@@ -20,4 +20,4 @@ The messages subsystem shows sprite-anchored speech and thought bubbles. It keep
 
 ## Boundary
 
-Cartridges use the subsystem through `engine.video.messages`. They supply text, timing, and optional styling, but they do not position Pixi text or bubble geometry directly. The runtime contributes live sprite bounds and design-size metrics, and the renderer decides final placement on the `overlay.messages` layer or another specified render layer.
+Cartridges use the subsystem through `sdk.video.messages`. They supply text, timing, and optional styling, but they do not position Pixi text or bubble geometry directly. The runtime contributes live sprite bounds and design-size metrics, and the renderer decides final placement on the `overlay.messages` layer or another specified render layer.

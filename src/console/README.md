@@ -52,6 +52,11 @@ runtime scope with a `cartridge` child.
 - [`lifecycle/README.md`](lifecycle/README.md) — runtime states, `ResourceScope`, and teardown ownership.
 - [`input/README.md`](input/README.md) — input routing and composable input-policy leases.
 - [`composition/README.md`](composition/README.md) — owned loading and composition sessions.
+- [`cartridge-menu/README.md`](cartridge-menu/README.md) — boot-time cartridge selection and system settings.
+- [`persistence/README.md`](persistence/README.md) — scene cache and versioned cartridge saves.
+- [`audio/README.md`](audio/README.md) — one-shot sound registration and playback.
+- [`audio/jukebox/README.md`](audio/jukebox/README.md) — continuous music and ambient playlists.
+- [`effects/README.md`](effects/README.md) — per-tick visual effects and the effect runtime registry.
 - [`cartridges/README.md`](cartridges/README.md) — cartridge discovery, contexts, lifecycle, manifests, and actions.
 - [`cartridges/sdk-v1/README.md`](cartridges/sdk-v1/README.md) — the public SDK v1 contract and capability model.
 - [`video/README.md`](video/README.md) — video runtime architecture and cartridge-facing visual APIs.

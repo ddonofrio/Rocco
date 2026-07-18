@@ -58,12 +58,9 @@ Only `mount()` is required. All other lifecycle members are optional:
 
 ## Cartridge Context
 
-```typescript
-interface CartridgeContextV1 {
-  readonly sdk: CartridgeSdkV1;
-  readonly locale?: string;
-}
-```
+`CartridgeContextV1` carries the capability-filtered `sdk` (`CartridgeSdkV1`)
+and an optional `locale`. It is defined in `types.ts` alongside the manifest and
+loader types.
 
 - Every cartridge receives `CartridgeContextV1`.
 - The context never exposes the console kernel.
@@ -92,30 +89,9 @@ runtime: {
 before mounting and rejects a missing `runtime` block, incompatible SDK ranges,
 or unknown capabilities. The v1 SDK and capability set live in `sdk-v1/`.
 
-Boot-time setup uses a narrower context:
+Boot-time setup uses a narrower `RoccoCartridgeSetupContext` that exposes only `console.getFlags()` and `console.setFlags(patch)`; both context and boot-setting types are defined in `types.ts`.
 
-```typescript
-interface RoccoCartridgeSetupContext {
-  console: {
-    getFlags(): RoccoConsoleFlags;
-    setFlags(patch: Partial<RoccoConsoleFlags>): void;
-  };
-}
-```
-
-The setup result can contribute generic boot settings:
-
-```typescript
-interface RoccoCartridgeBootSetting {
-  id: string;
-  label: string;
-  description: string;
-  statusLabel?: string;
-  detailLabel?: string;
-  getValueLabel(): string;
-  activate?(): Promise<void> | void;
-}
-```
+The setup result can contribute generic boot settings (`RoccoCartridgeBootSetting`): an `id`, `label`, `description`, optional `statusLabel`/`detailLabel`, `getValueLabel()`, and an optional `activate()`.
 
 `RoccoCartridgeManager` merges contributed boot settings by `id` and passes them to the cartridge menu.
 
@@ -123,61 +99,17 @@ interface RoccoCartridgeBootSetting {
 
 `RoccoCartridgeAction` contains action-menu activations, `scene-click`, `grid-menu`, `advance-sequence`, and `carry-use` actions.
 
-`handleAction` receives an optional action context and returns a synchronous disposition:
-
-```typescript
-interface CartridgeActionContext {
-  readonly signal: AbortSignal;
-  readonly actionId: string;
-  readonly correlationId: string;
-  readonly cartridgeId: string;
-  readonly levelId: string | undefined;
-}
-
-interface CartridgeActionDisposition {
-  consumed: boolean;
-  defaultPlayerMovement: 'allow' | 'suppress';
-  completion?: Promise<void>;
-}
-```
+`handleAction` receives an optional `CartridgeActionContext` (signal, action id, correlation id, cartridge id, level id) and returns a synchronous `CartridgeActionDisposition` (consumed, `defaultPlayerMovement`, optional `completion`). Both types are defined in `types.ts`.
 
 `handleAction` returns its disposition synchronously. The host uses `defaultPlayerMovement` immediately and does not await a movement decision. Optional asynchronous work belongs in `completion`. The host monitors that promise separately and aborts `context.signal` when the action is cancelled.
 
 ## Manifest
 
-```typescript
-interface RoccoCartridgeManifest {
-  id: string;
-  title: string;
-  version: string;
-  description?: string;
-  author?: string;
-  publisher?: string;
-  releaseYear?: number;
-  genre?: string;
-  players?: string;
-  engineVersion?: string;
-  tags?: string[];
-  localizations?: Record<string, RoccoCartridgeLocalizedManifest>;
-  runtime: {
-    sdk: string;
-    capabilities?: readonly string[];
-  };
-}
-```
-
-`id`, `title`, `version`, and `runtime` are required. Other fields improve boot-menu presentation.
+`RoccoCartridgeManifest` declares the cartridge identity and a required `runtime` block (`sdk` range plus optional `capabilities`). `id`, `title`, `version`, and `runtime` are required; the remaining fields improve boot-menu presentation. The full shape is defined in `types.ts`.
 
 ## Localized Manifest Fields
 
-```typescript
-type RoccoCartridgeLocalizedManifest = Partial<
-  Pick<
-    RoccoCartridgeManifest,
-    'title' | 'description' | 'author' | 'publisher' | 'genre' | 'players' | 'tags'
-  >
->;
-```
+`RoccoCartridgeLocalizedManifest` is a `Partial<Pick<RoccoCartridgeManifest, ...>>` keyed by menu-facing fields (`title`, `description`, `author`, `publisher`, `genre`, `players`, `tags`); it is defined in `types.ts`.
 
 `localizations` is keyed by locale code and contains menu-facing overrides. Locale selection and fallback behavior belong to the cartridge localization implementation; the console passes the selected locale through the mount context.
 

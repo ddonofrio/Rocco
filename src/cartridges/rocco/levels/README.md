@@ -54,6 +54,6 @@ walkable, transparent pixels are blocked.
 ## Persistence
 
 Scene persistence is keyed by `scene.id`. The scene loaders try
-`engine.storage.loadPlaneSceneRecord(sceneId)`, create and save a default scene
+`sdk.storage.loadPlaneSceneRecord(sceneId)`, create and save a default scene
 when none exists, normalize built-in planes when a saved scene exists, and keep
 extra custom planes.

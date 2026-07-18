@@ -31,47 +31,12 @@ viewport ownership.
 
 When `scope.v1` is negotiated, the SDK exposes the cartridge-owned `ResourceScope` through `scope`, allowing the cartridge to register disposers that are cleaned up with the cartridge. `sdkVersion` and the negotiated `capabilities` are always present.
 
-```typescript
-interface CartridgeSdkV1 {
-  readonly video?: CartridgeVideoApi;
-  readonly audio?: CartridgeAudioApi;
-  readonly jukebox?: CartridgeJukeboxApi;
-  readonly effects?: CartridgeEffectsApi;
-  readonly input?: CartridgeInputApi;
-  readonly storage?: CartridgeStorageApi;
-  readonly logger?: CartridgeLoggerApi;
-
-  readonly log?: CartridgeLoggerApi['log'];
-  readonly setStatus?: CartridgeLoggerApi['setStatus'];
-  readonly scope?: ResourceScope;
-
-  readonly sdkVersion: string;
-  readonly capabilities: readonly CartridgeCapability[];
-
-  acquireInputLease?: CartridgeInputApi['acquireInputLease'];
-  getInputMode?: CartridgeInputApi['getInputMode'];
-
-  loadPlaneScene?: (scene: RoccoPlaneScene) => void;
-  serializePlaneScene?: (sceneId: string) => RoccoPlaneScene;
-
-  setPlayerSprite?: (instanceId: string | undefined) => void;
-  getPlayerSprite?: () => string | undefined;
-
-  isDeveloperModeEnabled?: () => boolean;
-  getConsoleFlags?: () => RoccoConsoleFlags | undefined;
-  setConsoleFlags?: (patch: Partial<RoccoConsoleFlags>) => void;
-
-  beginCompositionSession?: (ownerId: string, options?: { message?: string }) => CompositionSession;
-}
-```
-
-- `sdkVersion` and `capabilities` are always present.
-- All other public members are optional.
-- The adapter filters subsystem availability from the negotiated capability list.
-- Callers using the public type must narrow or use optional access.
-- A manifest that omits `runtime.capabilities` receives the complete SDK v1 capability set.
-
-Most optional members are controlled by capability negotiation. The adapter also installs `isDeveloperModeEnabled`, `getConsoleFlags`, and `setConsoleFlags` as optional compatibility helpers without a dedicated capability identifier.
+The full member surface is defined in `api.ts` (`CartridgeSdkV1` and the neutral
+`Cartridge*Api` subsystem interfaces). Members other than `sdkVersion` and
+`capabilities` are optional; the adapter filters subsystem availability from the
+negotiated capability list, so callers must narrow or use optional access. A
+manifest that omits `runtime.capabilities` receives the complete SDK v1
+capability set.
 
 `beginCompositionSession` is exposed flat as part of the SDK v1 contract.
 

@@ -23,8 +23,7 @@ interface RegisteredInteractionIdentity {
 }
 
 /**
- * Owns the distributed interaction rules for a cartridge session (audit
- * ROCCO-016 / DOM-002). Feature modules register their own rules; the central
+ * Owns the distributed interaction rules for a cartridge session. Feature modules register their own rules; the central
  * router builds an {@link InteractionContext} and delegates to {@link dispatch}.
  *
  * Dispatch selects the first rule whose `matches()` returns true within the

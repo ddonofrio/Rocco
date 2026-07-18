@@ -6,7 +6,7 @@ The post-processing module contains pixel-level helpers used by video renderers.
 
 - `color-key.ts` - Color parsing, color distance, matching, and pixel replacement helpers.
 - `water-color-effect.ts` - Water color effect configuration, defaults, parsing, clamping, and cloning.
-- `water-color-effect.test.ts` - Unit tests for water color parsing and option resolution.
+- `water-color-effect.test.ts` - Unit tests under `tests/console/video/post-processing/` for water color parsing and option resolution.
 - `index.ts` - Barrel export.
 
 ## Water Color Effect

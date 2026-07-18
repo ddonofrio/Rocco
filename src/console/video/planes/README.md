@@ -35,10 +35,10 @@ The current Pixi runtime renders these source kinds directly:
 
 ## Cartridge-Facing Usage
 
-- Use `engine.video.preloadPlaneScene(scene)` to preload plane assets.
-- Use `engine.loadPlaneScene(scene)` to replace the active scene through the runtime.
-- Use `engine.video.planes.updatePlane(sceneId, planeId, patch)` to mutate an active plane.
-- Use `engine.video.planes.resolvePlane(sceneId, planeId)` to inspect a live plane definition.
+- Use `video.preloadPlaneScene(scene)` to preload plane assets.
+- Use `kernel.loadPlaneScene(scene)` to replace the active scene through the runtime.
+- Use `video.planes.updatePlane(sceneId, planeId, patch)` to mutate an active plane.
+- Use `video.planes.resolvePlane(sceneId, planeId)` to inspect a live plane definition.
 
 ## Color Models
 
@@ -68,7 +68,7 @@ The current runtime supports:
 
 `sprite-y-threshold` can watch either:
 
-- `subject: 'active-player'`, which follows the player selected through `engine.setPlayerSprite(...)`.
+- `subject: 'active-player'`, which follows the player selected through `kernel.setPlayerSprite(...)`.
 - `subject: 'sprite'`, which targets a specific `spriteInstanceId`.
 
 The comparison can sample either `origin-y` or `ground-y`, then apply `frontWhen`, `thresholdY`, `frontLayer`, and `backLayer` to decide where the plane should render for that frame.

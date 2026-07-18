@@ -30,7 +30,7 @@ The current implementation keeps boot-menu session state and page routing in `ca
 
 The boot menu includes a `System Settings` page.
 
-- The engine contributes built-in console modules such as video and sound.
+- The console contributes built-in modules such as video and sound.
 - Cartridge setup hooks can contribute additional generic boot settings through `RoccoCartridgeBootSetting`.
 - The runtime seeds the menu with the current display profile, sound profile, and merged boot settings so the settings pages reflect live console state.
 - A settings row can expose a live value label and an activation callback.
@@ -97,29 +97,9 @@ For `rocco-default`, the menu shows `EN` and `ES`. The selected value is persist
 
 Cartridges without `localizations` do not show language controls.
 
-## Layout Constants
+## Layout
 
-- Design resolution: `960 x 540`.
-- Header height: `90`.
-- Footer height: `52`.
-- Item height: `64`.
-- Visible items: calculated from available height.
-- Item margin: `6`.
-
-## Palette
-
-| Element         | Color     |
-| --------------- | --------- |
-| Background      | `#0d110c` |
-| Selected item   | `#1f3c1b` |
-| Selected border | `#5cb84a` |
-| Brand title     | `#8ecf6e` |
-| Item title      | `#d4ecc8` |
-| Detail labels   | `#4a6b42` |
-| Detail values   | `#b0c8a8` |
-| Scanlines       | `#000000` |
-
-## Usage
+The menu uses the `960 x 540` design resolution. Cartridge list items support scrolling when more cartridges exist than fit on screen.
 
 Minimal engine-side usage:
 
@@ -139,14 +119,14 @@ The runtime-owned cartridge manager uses the fuller integration shape:
 ```typescript
 const result = await menu.show(manifests, {
   initialLocales,
-  initialDisplayProfile: runtimeEngine.video.display.getProfile(),
-  initialSoundProfile: runtimeEngine.getSoundProfile(),
+  initialDisplayProfile: runtime.video.display.getProfile(),
+  initialSoundProfile: runtime.getSoundProfile(),
   bootSettings,
   onDisplayProfileChange: (profile) => {
-    runtimeEngine.video.display.setProfile(profile);
+    runtime.video.display.setProfile(profile);
   },
   onSoundProfileChange: (profile) => {
-    runtimeEngine.setSoundProfile(profile);
+    runtime.setSoundProfile(profile);
   },
 });
 ```

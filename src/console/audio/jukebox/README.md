@@ -1,6 +1,6 @@
 # Jukebox
 
-The jukebox manages continuous background music and ambient playlists through `engine.jukebox`.
+The jukebox manages continuous background music and ambient playlists through `jukebox`.
 
 ## Files
 
@@ -20,7 +20,7 @@ The jukebox manages continuous background music and ambient playlists through `e
 ## Cartridge Usage
 
 ```typescript
-engine.jukebox.registerPlaylist({
+jukebox.registerPlaylist({
   id: 'pier-ambient',
   tracks: [
     { id: 'track-1', uri: '/music/pier-1.mp3', volume: 0.8 },
@@ -35,12 +35,12 @@ engine.jukebox.registerPlaylist({
   globalVolume: 0.6,
 });
 
-await engine.jukebox.playPlaylist('pier-ambient');
-engine.jukebox.setVolume(0.5);
-engine.jukebox.stopPlaylist();
+await jukebox.playPlaylist('pier-ambient');
+jukebox.setVolume(0.5);
+jukebox.stopPlaylist();
 ```
 
-`engine.jukebox.unregisterPlaylist(id)` removes a playlist, `engine.jukebox.isPlaying()` reports current playback state, and `engine.jukebox.getCurrentTrack()` returns the active track id when one is playing.
+`jukebox.unregisterPlaylist(id)` removes a playlist, `jukebox.isPlaying()` reports current playback state, and `jukebox.getCurrentTrack()` returns the active track id when one is playing.
 
 ## Auto-Mix
 
@@ -55,7 +55,7 @@ Auto-mix analyzes each track, finds non-silent audio segments, skips segments sh
 - `minSegmentDurationMs` filters short segments.
 - Track `volume` controls individual track loudness.
 - Playlist `globalVolume` sets the playlist mix level.
-- `engine.jukebox.setVolume()` multiplies that playlist mix level as the master jukebox volume.
+- `jukebox.setVolume()` multiplies that playlist mix level as the master jukebox volume.
 
 ## Runtime Notes
 

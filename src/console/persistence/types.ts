@@ -1,5 +1,5 @@
 /**
- * Versioned cartridge-save domain contracts (audit DAT-001 / §6.6 / ROCCO-014).
+ * Versioned cartridge-save domain contracts.
  *
  * These types separate the console-owned storage mechanics (envelope, key,
  * revision, transaction) from the cartridge-owned domain payload. The console
@@ -62,7 +62,7 @@ export type PortableSaveEnvelope<TPayload> = SaveEnvelope<TPayload>;
 /**
  * Cartridge-owned contract. The console never inspects `payload`; the
  * cartridge declares the current `schemaVersion` and knows how to serialize and
- * migrate its own domain state (audit DAT-001).
+ * migrate its own domain state.
  */
 export interface CartridgeSaveProvider<TState> {
   /** Current domain schema version produced by `serializeState`. */
@@ -91,7 +91,7 @@ export interface SaveOptions {
 /**
  * Console-provided, cartridge-scoped save repository. Bound to one
  * `cartridgeId` + `CartridgeSaveProvider` at creation time, so the methods
- * only take `profileId` + `slotId` (audit §6.6).
+ * only take `profileId` + `slotId`.
  */
 export interface CartridgeSaveRepo<TState> {
   listSlots(profileId: string): Promise<readonly SaveMetadata[]>;

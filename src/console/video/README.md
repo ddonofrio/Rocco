@@ -63,55 +63,19 @@ display.profile      90
 
 ## SDK v1 cartridge entry points
 
-SDK v1 cartridges use the optional members exposed through `context.sdk`.
-
-```ts
-const video = context.sdk.video;
-
-await video?.preloadAssetUrls(assetUrls);
-await video?.preloadPlaneScene?.(scene);
-await video?.preloadSpriteDefinition?.(spriteDefinition);
-
-video?.planes?.loadScene(scene);
-video?.planes?.updatePlane(sceneId, planeId, patch);
-
-video?.sprites?.registerSpriteDefinition(definition);
-video?.sprites?.createSpriteFromDefinition(definitionId, options);
-
-video?.sceneTargets?.registerTarget(target);
-video?.actionMenus?.registerMenu(menu);
-video?.gridMenus?.openMenu(menu);
-video?.messages?.say(spriteId, text);
-video?.titles?.addTitle(title);
-video?.primitives?.addPrimitive(primitive);
-video?.display?.setProfile(profile);
-```
-
-Every subsystem is optional on the public SDK type. Availability depends on the negotiated capability set.
+SDK v1 cartridges use the optional members exposed through `context.sdk`. Every
+subsystem is optional on the public SDK type; availability depends on the
+negotiated capability set. See
+[`cartridges/sdk-v1/README.md`](../cartridges/sdk-v1/README.md) for the full
+entry-point surface and capability model.
 
 ## Camera facade
 
 `sdk.video?.camera` is the complete cartridge-facing presentation-transform API.
-
-It exposes only:
-
-```ts
-sdk.video?.camera?.setTransform(transform);
-sdk.video?.camera?.animateTo(transform, durationMs, options);
-sdk.video?.camera?.clear();
-```
-
-The facade intentionally excludes:
-
-- transform-state inspection;
-- animation-state inspection;
-- per-frame update;
-- stage application;
-- direct Pixi stage access;
-- renderer access;
-- viewport sizing;
-- browser fullscreen handling;
-- pointer-coordinate conversion.
+It exposes only `setTransform`, `animateTo`, and `clear`, and intentionally
+excludes transform-state inspection, animation-state inspection, per-frame
+update, stage application, direct Pixi stage access, renderer access, viewport
+sizing, browser fullscreen handling, and pointer-coordinate conversion.
 
 The facade delegates to the internal runtime zoom controller documented in [`zoom/README.md`](zoom/README.md).
 
@@ -129,10 +93,16 @@ Cartridges can request camera transforms but cannot drive this frame lifecycle.
 
 ## Reading Next
 
-- `src/console/video/action-menu/README.md` for radial target actions.
-- `src/console/video/display/README.md` for display-profile state and CRT chrome.
-- `src/console/video/messages/README.md` for sprite-anchored speech and thought bubbles.
-- `src/console/video/primitives/README.md` for debug geometry overlays.
-- `src/console/video/titles/README.md` for hover descriptions and other text overlays.
-- `src/console/video/viewport/README.md` for browser-host scaling, cursor plumbing, and display integration.
+- `sprites/README.md` for animated entities, motion, walk maps, and depth modes.
+- `planes/README.md` for layered graphic backgrounds and plane scenes.
+- `scene-targets/README.md` for invisible hotspots and hover descriptions.
+- `action-menu/README.md` for radial target actions.
+- `grid-menu/README.md` for generic slot-panel and text-choice menus.
+- `messages/README.md` for sprite-anchored speech and thought bubbles.
+- `primitives/README.md` for debug geometry overlays.
+- `titles/README.md` for hover descriptions and other text overlays.
+- `display/README.md` for display-profile state and CRT chrome.
+- `cursor/README.md` for the custom cursor and pointer plumbing.
+- `viewport/README.md` for browser-host scaling, cursor plumbing, and display integration.
+- `post-processing/README.md` for pixel-level helpers and water-color effects.
 - [`zoom/README.md`](zoom/README.md) for presentation transforms and the camera-facade boundary.

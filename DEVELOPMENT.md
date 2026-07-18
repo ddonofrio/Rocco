@@ -116,11 +116,7 @@ Treat `npm run build:web` as mandatory before a push even if focused tests and `
 
 When you need the smallest repo-wide CI-equivalent validation flow, run `npm run verify` through the wrapper. `npm run check` is a short alias for the same command.
 
-Do not run `npm run format` for a narrow task unless the user asks for whole-repository formatting.
-
-## Test Environment Notes
-
-- Vitest runs with the configuration in `vitest.config.ts`.
+Do not run `npm run format` for a narrow task unless the user asks for whole-repository formatting. `npm run format` runs Prettier across the entire repository and must not be used to format a single changed file or directory.
 
 ## Text Encoding
 
@@ -130,15 +126,16 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 - After UTF-8 validation, the check tries a narrow mojibake repair pass for common Latin-1 and Windows-1252 misdecodes and reports lines whose repaired text scores as clearly less suspicious than the original.
 - The check also rejects literal Unicode replacement characters (`U+FFFD`) because they mean the text is already lossy.
 - Mojibake detection is heuristic by design. Treat reports as "this line deserves inspection", not as proof that every non-ASCII character is wrong.
-- When a legitimate line needs an exception, add the narrowest possible entry to the allowlist in `scripts/check-tracked-content.mjs` and scope it to one file, one rule, and one stable line pattern.
+- When a legitimate line needs an exception, ask the user before adding an entry to the allowlist in `scripts/check-tracked-content.mjs`, and scope it to one file, one rule, and one stable line pattern.
 - If a terminal, patch path, or editor risks mangling non-ASCII text, prefer ASCII-only text or TypeScript Unicode escapes such as `\u00f1` instead of pasting raw accented characters.
 - Before handing off localization edits, scan the touched files for likely mojibake, such as stray `U+00C3`/`U+00C2` lead characters, Windows-1252 punctuation fragments, or literal replacement glyphs, and fix them immediately.
 
 ## Test Environment Notes
 
+- Vitest runs with the configuration in `vitest.config.ts`.
 - Tests that instantiate Pixi asset loading should mock `pixi.js` `Assets.load`.
 - jsdom can print canvas-related limitations after the test summary. Treat the Vitest summary and process exit code as authoritative.
-- Test mocks mirror the engine SDK surface and exposed subsystem contracts. When a required member changes, nearby mocks usually need the same member.
+- Test mocks mirror the SDK surface and exposed subsystem contracts. When a required member changes, nearby mocks usually need the same member.
 
 ## Git Status Notes
 
@@ -158,4 +155,4 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 
 ## Scoped Lint and Format
 
-Lint and format act on task files. Variants that accept specific paths or files must stay scoped to the files included in the task. Repository-wide autofix and formatting commands are non-mutating gates, not autofix instructions.
+Lint and format act on task files. `npm run lint` and `npm run format` are repository-wide when run without arguments; variants that accept specific paths or files must stay scoped to the files included in the task. Repository-wide autofix and formatting commands are non-mutating gates, not autofix instructions. Do not add allowlists, suppressions, ignored paths, or validation exceptions as part of a narrow task.

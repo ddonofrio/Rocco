@@ -5,7 +5,7 @@ The cursor subsystem owns the console pointer overlay and converts browser point
 ## Files
 
 - `host.ts` - DOM cursor overlay, pointer event routing, design-space conversion, and image attachments.
-- `host.test.ts` - jsdom tests for cursor visibility, coordinates, events, and attachments.
+- `host.test.ts` - jsdom tests under `tests/console/video/cursor/` for cursor visibility, coordinates, events, and attachments.
 - `index.ts` - Barrel export.
 
 ## Behavior

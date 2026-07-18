@@ -22,28 +22,6 @@ saves in IndexedDB through Dexie.
 | `scenes_v4` | `[cartridgeId+sceneId]`          | Recreatable visual scene cache |
 | `saves`     | `[cartridgeId+profileId+slotId]` | Versioned domain saves (v5)    |
 
-`legacy_saves` is a temporary migration store. It exists only while a v2
-database is upgrading and is removed after the v5 save envelope is restored.
-
-## Historical schema policy
-
-- v2 stores saves with an auto-increment key and stores scenes and plane assets.
-- v2.5 stages valid v2 save rows before the v3 schema removes the old `saves`
-  store.
-- v3 intentionally removes saves. A database that is already at v3 has no save
-  data available for recovery; the upgrade proceeds without inventing it.
-- v4 adds the compound-key `scenes_v4` cache.
-- v4.5 creates the current `saves` envelope and restores staged v2 rows before
-  v5 removes the temporary `legacy_saves` store.
-- v5 keeps the current save indexes and removes the temporary `legacy_saves`
-  store.
-
-The v2 policy is conservative preservation: valid legacy metadata and
-timestamps are retained, missing dimensions receive documented defaults, and
-re-running or reopening the migration does not duplicate rows. IndexedDB
-upgrade transactions roll back all staged writes if a row fails to normalize;
-repairing the source row allows the upgrade to be retried.
-
 ## Scene cache
 
 - `loadPlaneSceneRecord(cartridgeId, sceneId)` loads a scene record or
@@ -77,22 +55,6 @@ const state = await saves.load(profileId, slotId); // undefined if absent
 The console owns the envelope, key, transaction, revision guard and quota
 handling; the cartridge owns how `payload` is produced and migrated. The
 console never imports game-internal fields.
-
-### Save envelope
-
-```ts
-interface SaveEnvelope<TPayload> {
-  cartridgeId: string;
-  cartridgeVersion: string;
-  schemaVersion: number;
-  profileId: string;
-  slotId: string;
-  revision: number;
-  createdAt: number;
-  updatedAt: number;
-  payload: TPayload;
-}
-```
 
 Key `[cartridgeId + profileId + slotId]` guarantees two cartridges,
 profiles, or slots never collide.

@@ -1,6 +1,6 @@
 # Input Policy Stack
 
-This directory owns the composable input-locking primitive. It replaces the previous single global `inputEnabled` boolean (INP-001).
+This directory owns the composable input-locking primitive. It replaces the previous single global `inputEnabled` boolean.
 
 ## Modes
 
@@ -17,7 +17,7 @@ Effective mode = most restrictive of every active lease, priority
 ## Leases
 
 ```ts
-const lease = engine.acquireInputLease('level-transition', 'blocked');
+const lease = kernel.acquireInputLease('level-transition', 'blocked');
 try {
   // ...
 } finally {

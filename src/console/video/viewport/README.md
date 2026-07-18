@@ -22,4 +22,4 @@ The viewport subsystem hosts the entire console inside the browser window. It ow
 
 ## Boundary
 
-This folder is runtime-facing, not cartridge-facing. Cartridges do not manipulate viewport DOM or scaling logic. `RoccoRuntimeVideoSystem` can keep a host reference through `engine.video.viewport` so subsystems can resolve design metrics and cursor integration, but the entry point and runtime own viewport lifecycle.
+This folder is runtime-facing, not cartridge-facing. Cartridges do not manipulate viewport DOM or scaling logic. `RoccoRuntimeVideoSystem` can keep a host reference through `video.viewport` so subsystems can resolve design metrics and cursor integration, but the entry point and runtime own viewport lifecycle.

@@ -20,4 +20,4 @@ The action-menu subsystem is the console-owned radial interaction menu used for 
 
 ## Boundary
 
-Cartridges use this subsystem through `engine.video.actionMenus`. They usually register and unregister menu definitions while a level is active, and the input handler opens the matching menu when the player clicks a visible scene target. The console owns hover, close-on-miss, cursor flow, and rendering; the cartridge owns the meaning of each returned `actionId`.
+Cartridges use this subsystem through `sdk.video.actionMenus`. They usually register and unregister menu definitions while a level is active, and the input handler opens the matching menu when the player clicks a visible scene target. The console owns hover, close-on-miss, cursor flow, and rendering; the cartridge owns the meaning of each returned `actionId`.

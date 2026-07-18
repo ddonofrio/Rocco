@@ -8,27 +8,26 @@ Assume the repository starts clean, up to date, and with all validations passing
 
 For every implementation task:
 
-1. Read the required documentation chain and relevant authoritative configuration.
-2. Inspect the nearest existing implementation and its relevant tests before introducing a new pattern.
-3. Implement the complete requested behavior, including all directly affected files.
-4. Update the affected documentation in the same work.
-5. If source code changed, run the repository typecheck and the applicable non-mutating lint validation against the changed source scope. Fix every introduced failure.
-6. Hand the implementation to the user for functional verification before adding or changing tests.
-7. Give precise manual verification instructions derived from the affected behavior. State the location, action, expected result, and any important adjacent behavior to check. A gameplay change must be verified in the actual affected screen or interaction.
-8. Wait for explicit user approval of the behavior.
-9. Only after approval, implement or update the corresponding automated tests.
-10. During normal iteration, run only tests relevant to the files or behavior changed.
+1. Implement the complete requested behavior.
+2. Update the directly affected documentation in the same work.
+3. Run typecheck and the applicable non-mutating lint validation against the changed source scope. Fix every introduced failure.
+4. Provide precise manual verification instructions derived from the affected behavior. State the location, action, expected result, and any important adjacent behavior to check. A gameplay change must be verified in the actual affected screen or interaction.
+5. Wait for explicit user approval.
+6. Only after approval, implement or update the automated tests.
+7. During normal iteration, run only tests relevant to the approved behavior.
 
-Do not write tests before functional approval. Gameplay and creative requirements may change during manual verification; tests must codify the approved behavior, not an intermediate interpretation.
+Read the required documentation chain and the nearest existing implementation and tests before introducing a new pattern. Gameplay and creative requirements may change during manual verification; tests must codify the approved behavior, not an intermediate interpretation.
 
-When the user explicitly asks for a commit or push:
+Do not run tests before functional approval. Do not run `npm run build` during normal iteration; it is an alias of `build:web` and executes the full quality gate.
+
+When the user explicitly requests commit or push:
 
 1. Complete any tests deferred until functional approval.
 2. Run the complete test suite.
 3. Run `build:web`.
 4. Fix every failure.
-5. Review the final changed-file and staged-file scope.
-6. Commit and push only the files belonging to the approved task.
+5. Review the changed and staged file scope.
+6. Commit and push only the files owned by the task.
 
 Do not stage, commit, create branches, or push unless explicitly requested.
 
@@ -96,21 +95,8 @@ Documentation points to authoritative files rather than copying volatile rules:
 
 ## Validation and User Approval
 
-- For code changes, run the most focused test first.
 - Run `npm run typecheck` before handing off TypeScript changes.
-- Run `npm run build` only when broader integration or bundling needs verification.
-- Before any `git push`, always run `npm run build:web`, even if focused tests and `npm run typecheck` already passed locally.
+- Run the non-mutating lint validation against the changed source scope.
+- Do not run `npm run build` during normal iteration. It is an alias of `build:web` and runs the full quality gate; reserve it for the commit or push gate.
+- Before any `git push`, run `npm run build:web`, even if focused tests and `npm run typecheck` already passed locally.
 - Keep repository-wide validation commands as non-mutating gates, not as autofix instructions.
-
-## Commit and Push Gate
-
-Do not stage, commit, branch, or push changes unless the user explicitly asks.
-
-When the user explicitly asks:
-
-1. Complete any tests deferred until functional approval.
-2. Run the complete test suite.
-3. Run `build:web` through the wrapper.
-4. Fix every failure.
-5. Review the final changed-file and staged-file scope.
-6. Commit and push only the files belonging to the approved task.

@@ -1,11 +1,11 @@
 # Display
 
-The display subsystem defines the console display profile and applies CRT-style chrome to the scaled console stage. It is the DOM-side companion to `engine.video.display`.
+The display subsystem defines the console display profile and applies CRT-style chrome to the scaled console stage. It is the DOM-side companion to `video.display`.
 
 ## Files
 
 - `profile.ts` - Display profile types, defaults, clamping helpers, and `RoccoDisplayProfileRenderer`.
-- `profile.test.ts` - Unit and viewport-host integration tests for profile normalization and DOM application.
+- `profile.test.ts` - Unit and viewport-host integration tests under `tests/console/video/display/` for profile normalization and DOM application.
 - `index.ts` - Barrel export.
 
 ## Profile
@@ -32,4 +32,4 @@ It also applies the stage `brightness()` and `contrast()` filter and keeps borde
 
 ## Boundary
 
-Cartridges can inspect the current display-profile state through `engine.video.display.getProfile()` and patch it through `engine.video.display.setProfile()`, but they do not touch the DOM overlay directly. `RoccoRuntimeVideoSystem` stores the current profile, and `RoccoViewportHost` applies it through `RoccoDisplayProfileRenderer` whenever viewport metrics or profile values change.
+Cartridges can inspect the current display-profile state through `video.display.getProfile()` and patch it through `video.display.setProfile()`, but they do not touch the DOM overlay directly. `RoccoRuntimeVideoSystem` stores the current profile, and `RoccoViewportHost` applies it through `RoccoDisplayProfileRenderer` whenever viewport metrics or profile values change.

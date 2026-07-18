@@ -12,7 +12,7 @@ Current map model:
 - `nether` for the hardware spawn, hallway, and Reset Office path
 
 Reset Office is modeled as part of the Nether map. It remains a separate branch in current
-behavior, but it is no longer treated as a separate map in the structural model.
+behavior, but it is not treated as a separate map in the structural model.
 
 Shared game-owned barrels:
 
@@ -29,8 +29,8 @@ Map folders are the structural ownership point:
 - `maps/nether/`
 
 Each map folder exports its map definition, the concrete level implementations, and the local
-asset surface for that map. The legacy `src/cartridges/rocco/levels/**` folders now re-export
-from these game-owned paths as compatibility wrappers.
+asset surface for that map. The `src/cartridges/rocco/levels/**` folders now re-export
+from these game-owned paths.
 
 ## Game graph and the compiled model
 
@@ -56,3 +56,7 @@ missing `initialMapId`, an initial map without an `initialLevelId`, duplicate co
 self-loop connections. It also computes `reachableLevelIds` from the initial level for
 observability; note that pier and shop are linked by scripted transitions (for example
 `enterBaitShop`), not by the connector graph, so the shop is intentionally not connector-reachable.
+
+## Reading next
+
+- [`maps/README.md`](maps/README.md) — map ownership and the Pier, Shop, and Nether maps.

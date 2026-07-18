@@ -15,4 +15,4 @@ the exported level classes remain small coordinators for the common `RoccoLevel`
 contracts. The toilet controller also owns reading, wish, police-alert, portal, and dropped-relic
 sequences, while the public level forwards those capabilities explicitly.
 
-`src/cartridges/rocco/levels/bait-shop/**` remains as a compatibility wrapper over this folder.
+`src/cartridges/rocco/levels/bait-shop/**` re-exports the game-owned implementations from this folder.

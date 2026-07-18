@@ -1,6 +1,5 @@
 /**
- * Versioned, slot/profile-scoped cartridge save repository (audit DAT-001,
- * §6.6, ROCCO-014).
+ * Versioned, slot/profile-scoped cartridge save repository.
  *
  * A cartridge obtains one repository bound to its `cartridgeId` and a
  * `CartridgeSaveProvider` via `createSaveRepo`. The console owns the

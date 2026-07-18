@@ -7,7 +7,7 @@ The grid menu system is a generic console UI capability for slot-based panels. I
 - `types.ts` - Grid menu definitions, items, state, renderables, activations, and system interface.
 - `system.ts` - Pure SDK state for opening, toggling, hovering, activating, reordering, and carrying grid items.
 - `pixi-renderer.ts` - PixiJS renderer for panels, slots, labels, and item icons.
-- `system.test.ts` - Unit tests for the SDK behavior.
+- `system.test.ts` - Unit tests under `tests/console/video/grid-menu/` for the SDK behavior.
 - `index.ts` - Barrel export.
 
 ## Concepts
@@ -21,16 +21,16 @@ The grid menu system is a generic console UI capability for slot-based panels. I
 - Clicking outside the panel closes the active menu and returns a generic `close` interaction.
 - Clicking outside a reorderable panel while carrying an item closes the panel and keeps a generic carried payload with the source menu id and item data for cursor use.
 
-The console owns those generic interactions. A cartridge decides whether a carried payload represents inventory, crafting ingredients, puzzle tokens, or anything else, and it interprets target use through its own `scene-click` handling plus `engine.video.gridMenus.getCarriedItem()`.
+The console owns those generic interactions. A cartridge decides whether a carried payload represents inventory, crafting ingredients, puzzle tokens, or anything else, and it interprets target use through its own `scene-click` handling plus `sdk.video.gridMenus.getCarriedItem()`.
 
 `text-list` layout uses rectangular slots and is suitable for dialogue choice panels while still routing the same generic `RoccoGridMenuActivation` payload back to the cartridge.
 
 ## Cartridge Usage
 
-Cartridges use the grid menu through `engine.video.gridMenus`.
+Cartridges use the grid menu through `sdk.video.gridMenus`.
 
 ```typescript
-engine.video.gridMenus.toggleMenu({
+sdk.video.gridMenus.toggleMenu({
   id: 'my-cartridge-bag',
   title: 'Bag',
   columns: 3,

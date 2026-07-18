@@ -20,7 +20,7 @@ The implementation in this directory is the canonical Rocco inventory domain.
 - `souvenir-table-storage.ts` — creates the bait-shop souvenir storage.
 - `rocco-inventory-interactions.ts` — resolves item-use text and inventory-domain responses.
 - `assets/souvenirs/` — souvenir-table item art plus crafted ritual-item images owned by the inventory domain.
-- `rocco-inventory.test.ts` and `inventory-transfer-session.test.ts` — focused unit tests for inventory behavior and shared storage transfers.
+- `rocco-inventory.test.ts` and `inventory-transfer-session.test.ts` — focused unit tests under `tests/cartridges/rocco/inventory/` for inventory behavior and shared storage transfers.
 - `index.ts` — public barrel.
 
 ## Runtime orchestration

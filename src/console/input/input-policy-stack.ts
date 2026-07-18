@@ -3,8 +3,8 @@ import type { DisposableResource, Disposer } from '../lifecycle';
 /**
  * Effective input policy modes, ordered from least to most restrictive.
  *
- * Implements the `InputPolicyLease` cross-cutting contract (audit §6.4) that
- * replaces the previous single global `inputEnabled` boolean (INP-001).
+ * Implements the `InputPolicyLease` cross-cutting contract that
+ * replaces the previous single global `inputEnabled` boolean.
  */
 export type InputMode = 'interactive' | 'advance-only' | 'blocked';
 

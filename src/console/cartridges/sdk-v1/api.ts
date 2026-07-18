@@ -5,7 +5,7 @@
  * composed from the already-narrow neutral subsystem module interfaces, so the
  * host-only runtime methods (`video.update`, `video.render`, `video.viewport`,
  * `video.zoom`, `effects.tick`, `jukebox.unlock`, render-layer ordering) are
- * never part of the contract. See audit SDK-001 / ROCCO-011.
+ * never part of the contract.
  */
 
 import type { RoccoConsoleFlags } from '../../console-flags';

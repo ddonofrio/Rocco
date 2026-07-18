@@ -14,7 +14,7 @@ export interface ConsolePersistence {
 
   /**
    * Opens a versioned, slot/profile-scoped save repository bound to a
-   * cartridge and its `CartridgeSaveProvider` (audit ROCCO-014 / DAT-001).
+   * cartridge and its `CartridgeSaveProvider`.
    * The returned repository owns transaction, revision guard, migration and
    * quota handling; the cartridge only supplies domain serialization.
    */

@@ -21,7 +21,7 @@ The scene target system adds console-owned interactive hotspots that are not bac
 Register targets while a level or scene is mounted:
 
 ```ts
-engine.video.sceneTargets?.registerTarget({
+sdk.video.sceneTargets?.registerTarget({
   instanceId: 'bait-shop-cash-register-target',
   definitionId: 'cash-register',
   renderPlaneId: 'rocco-bait-shop-foreground',
@@ -43,7 +43,7 @@ engine.video.sceneTargets?.registerTarget({
 Unregister them when the owning scene unmounts:
 
 ```ts
-engine.video.sceneTargets?.unregisterTarget('bait-shop-shell-city-sign-target');
+sdk.video.sceneTargets?.unregisterTarget('bait-shop-shell-city-sign-target');
 ```
 
 ## Behavior Notes

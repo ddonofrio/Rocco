@@ -27,8 +27,8 @@ The sprite system manages animated entities such as player characters, NPCs, and
 - Definitions and instances can set `ignoreMessages` so the speech-bubble layout skips that sprite as an obstacle.
 - Instances can also set `tint` and `contrast` for per-sprite color grading without changing the shared sprite definition.
 - Cartridges can retune those values at runtime through the sprite SDK, which is useful for local lighting reactions without swapping sprite art.
-- Load a definition with `engine.video.sprites.loadSpriteDefinition()`.
-- Create instances with `engine.video.sprites.createSpriteFromDefinition()`.
+- Load a definition with `video.sprites.loadSpriteDefinition()`.
+- Create instances with `video.sprites.createSpriteFromDefinition()`.
 
 ### Actions
 
@@ -42,7 +42,7 @@ An action profile groups:
 
 Walk maps are alpha-mask images. Opaque pixels are walkable and transparent pixels are blocked.
 
-Use `loadRoccoSpriteWalkMapFromImage()`, register the map with `engine.video.sprites.registerWalkMap()`, and bind it with `engine.video.sprites.bindToWalkMap()` before using walk-map-constrained movement.
+Use `loadRoccoSpriteWalkMapFromImage()`, register the map with `video.sprites.registerWalkMap()`, and bind it with `video.sprites.bindToWalkMap()` before using walk-map-constrained movement.
 
 `goTo()` builds walk-map-aware routes from those spans and simplifies dense curve segments into longer traversable lines before movement starts. This keeps click-to-walk motion responsive on curved corridors instead of repeatedly scraping against nearby blocked pixels.
 

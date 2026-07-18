@@ -394,6 +394,8 @@ const EXPECTED_FACADE_KEYS = {
   ],
   effects: ['add', 'remove', 'enable', 'disable', 'update'],
   logger: ['log', 'setStatus'],
+  input: ['acquireInputLease', 'getInputMode'],
+  storage: ['loadPlaneSceneRecord', 'savePlaneScene', 'createSaveRepository'],
 } as const;
 
 function sortedKeys(value: Record<string, unknown>): string[] {
@@ -425,6 +427,50 @@ describe('Cartridge SDK v1 adapter — version, scope and capabilities', () => {
 
     expect(record.engine).toBeUndefined();
     expect(record.kernel).toBeUndefined();
+  });
+});
+
+describe('Cartridge SDK v1 adapter — exact root runtime surface (fully negotiated)', () => {
+  it('exposes exactly the declared root members for a fully negotiated SDK', () => {
+    const { sdk } = build(manifest(), createResourceScope('t'), { sceneTargets: true });
+    const record = sdk as unknown as Record<string, unknown>;
+
+    // Oracle derived from `CartridgeSdkV1` / `CartridgeSdkV1Runtime` in `api.ts`.
+    const expectedRootKeys = [
+      'sdkVersion',
+      'capabilities',
+      'video',
+      'audio',
+      'jukebox',
+      'effects',
+      'input',
+      'acquireInputLease',
+      'getInputMode',
+      'storage',
+      'logger',
+      'log',
+      'setStatus',
+      'scope',
+      'loadPlaneScene',
+      'serializePlaneScene',
+      'setPlayerSprite',
+      'getPlayerSprite',
+      'isDeveloperModeEnabled',
+      'getConsoleFlags',
+      'setConsoleFlags',
+      'beginCompositionSession',
+    ].toSorted((a, b) => a.localeCompare(b));
+
+    expect(sortedKeys(record)).toEqual(expectedRootKeys);
+  });
+
+  it('does not expose unexpected kernel or host properties on the root', () => {
+    const { sdk } = build(manifest(), createResourceScope('t'), { sceneTargets: true });
+    const record = sdk as unknown as Record<string, unknown>;
+
+    for (const unexpected of ['engine', 'kernel', 'zoom', 'viewport', 'beginComposition']) {
+      expect(record[unexpected]).toBeUndefined();
+    }
   });
 });
 
@@ -513,6 +559,18 @@ describe('Cartridge SDK v1 adapter — independent facade surface registry', () 
   it('matches logger enumerable keys exactly', () => {
     expect(sortedKeys(sdk.logger as unknown as Record<string, unknown>)).toEqual(
       [...EXPECTED_FACADE_KEYS.logger].toSorted((a, b) => a.localeCompare(b)),
+    );
+  });
+
+  it('matches input enumerable keys exactly', () => {
+    expect(sortedKeys(sdk.input as unknown as Record<string, unknown>)).toEqual(
+      [...EXPECTED_FACADE_KEYS.input].toSorted((a, b) => a.localeCompare(b)),
+    );
+  });
+
+  it('matches storage enumerable keys exactly', () => {
+    expect(sortedKeys(sdk.storage as unknown as Record<string, unknown>)).toEqual(
+      [...EXPECTED_FACADE_KEYS.storage].toSorted((a, b) => a.localeCompare(b)),
     );
   });
 });
@@ -708,42 +766,126 @@ function assertCapabilityFacadePresence(sdk: CartridgeSdkV1, capability: string)
   }
 }
 
+/**
+ * Independent oracle: the kernel subsystem whose spies back each facade group.
+ * Derived from `api.ts` method groupings, never from private adapter arrays.
+ */
+const FACADE_SPY_PREFIX: Record<string, string> = {
+  'video.planes': 'planes',
+  'video.sprites': 'sprites',
+  'video.sceneTargets': 'sceneTargets',
+  'video.actionMenus': 'actionMenus',
+  'video.gridMenus': 'gridMenus',
+  'video.messages': 'messages',
+  'video.primitives': 'primitives',
+  'video.titles': 'titles',
+  'video.display': 'display',
+  'video.camera': 'zoom',
+  audio: 'audio',
+  jukebox: 'jukebox',
+  effects: 'effects',
+};
+
+/** Video-level methods declared directly on `CartridgeVideoApi` (not facades). */
+const VIDEO_LEVEL_METHODS: Array<{ member: string; spy: string }> = [
+  { member: 'preloadAssetUrls', spy: 'video.preloadAssetUrls' },
+  { member: 'preloadPlaneScene', spy: 'video.preloadPlaneScene' },
+  { member: 'preloadSpriteDefinition', spy: 'video.preloadSpriteDefinition' },
+  { member: 'preloadSpriteDefinitions', spy: 'video.preloadSpriteDefinitions' },
+];
+
+const sentinelFor = (key: string): unknown => Symbol(`arg-${key}`);
+
+// Non-createMethodFacade signatures: the adapter forwards the caller's
+// arguments verbatim, so each entry declares the exact argument list it
+// supplies and expects the kernel spy to receive.
+const ARG_SHAPES: Record<string, Record<string, unknown[]>> = {
+  logger: {
+    log: [sentinelFor('logger.log'), sentinelFor('logger.log')],
+    setStatus: [sentinelFor('logger.setStatus')],
+  },
+  input: {
+    acquireInputLease: [
+      sentinelFor('input.acquireInputLease'),
+      sentinelFor('input.acquireInputLease'),
+    ],
+    getInputMode: [],
+  },
+};
+
+function getVideoChild(video: unknown, childKey: string): Record<string, unknown> {
+  return (video as Record<string, Record<string, unknown>>)[childKey];
+}
+
+function getFacadeTarget(sdk: CartridgeSdkV1, facadeKey: string): Record<string, unknown> {
+  if (facadeKey === 'video') {
+    return sdk.video as unknown as Record<string, unknown>;
+  }
+  if (facadeKey.startsWith('video.')) {
+    return getVideoChild(sdk.video, facadeKey.slice('video.'.length));
+  }
+  return sdk[facadeKey as keyof CartridgeSdkV1] as Record<string, unknown>;
+}
+
+interface MatrixEntry {
+  facadeKey: string;
+  member: string;
+  spy: string;
+  args: unknown[];
+}
+
+function addFacadeMethods(
+  matrix: MatrixEntry[],
+  facadeKey: string,
+  methods: readonly string[],
+): void {
+  // Storage is owned by its own boundary tests (ownership injection).
+  if (facadeKey === 'storage') {
+    return;
+  }
+  const prefix = FACADE_SPY_PREFIX[facadeKey];
+  const shapeArguments = ARG_SHAPES[facadeKey];
+  for (const member of methods) {
+    if (shapeArguments && Object.hasOwn(shapeArguments, member)) {
+      matrix.push({ facadeKey, member, spy: `kernel.${member}`, args: shapeArguments[member] });
+      continue;
+    }
+    if (prefix) {
+      matrix.push({
+        facadeKey,
+        member,
+        spy: `${prefix}.${member}`,
+        args: [sentinelFor(`${facadeKey}.${member}`)],
+      });
+    }
+  }
+}
+
 describe('Cartridge SDK v1 adapter — every facade method is callable and delegates', () => {
-  const { sdk, spies } = build(manifest(), createResourceScope('t'));
+  const { sdk, spies } = build(manifest(), createResourceScope('t'), { sceneTargets: true });
 
-  const callCases: Array<{
-    facade: keyof CartridgeSdkV1 | 'video';
-    member: string;
-    args: unknown[];
-    spy: string;
-  }> = [
-    { facade: 'video', member: 'preloadAssetUrls', args: [['u1']], spy: 'video.preloadAssetUrls' },
-    { facade: 'audio', member: 'playSound', args: ['boom'], spy: 'audio.playSound' },
-    {
-      facade: 'jukebox',
-      member: 'registerPlaylist',
-      args: [{ id: 'p', tracks: [], mixMode: { type: 'auto-mix' }, globalVolume: 1 }],
-      spy: 'jukebox.registerPlaylist',
-    },
-    {
-      facade: 'effects',
-      member: 'add',
-      args: [{ id: 'e', kind: 'k', targetType: 't', targetId: 'i', params: {}, enabled: true }],
-      spy: 'effects.add',
-    },
-    { facade: 'logger', member: 'log', args: ['System', 'hi'], spy: 'kernel.log' },
-    { facade: 'logger', member: 'setStatus', args: ['ready'], spy: 'kernel.setStatus' },
-  ];
+  const matrix: MatrixEntry[] = [];
 
-  it.each(callCases)(
-    'calls %s.%s through the facade and delegates to the kernel spy',
-    ({ facade, member, args, spy }) => {
-      const target =
-        facade === 'video'
-          ? (sdk.video as unknown as Record<string, unknown>)
-          : (sdk[facade] as unknown as Record<string, unknown>);
+  for (const [facadeKey, methods] of Object.entries(EXPECTED_FACADE_KEYS)) {
+    addFacadeMethods(matrix, facadeKey, methods);
+  }
+  for (const entry of VIDEO_LEVEL_METHODS) {
+    matrix.push({
+      facadeKey: 'video',
+      member: entry.member,
+      spy: entry.spy,
+      args: [sentinelFor(`video.${entry.member}`)],
+    });
+  }
+
+  it.each(matrix)(
+    'calls $facadeKey.$member through the facade and delegates to the kernel spy',
+    ({ facadeKey, member, spy, args }) => {
+      const target = getFacadeTarget(sdk, facadeKey);
       expect(typeof target[member]).toBe('function');
+
       (target[member] as (...a: unknown[]) => unknown)(...args);
+      expect(spies[spy]).toHaveBeenCalledTimes(1);
       expect(spies[spy]).toHaveBeenCalledWith(...args);
     },
   );

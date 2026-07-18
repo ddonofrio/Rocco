@@ -274,6 +274,32 @@ describe('CartridgeSdkIncompatibleError', () => {
     expect(thrown?.result.errors).toEqual(result.errors);
     expect(thrown?.result.errors).toHaveLength(2);
   });
+
+  it('composes the multi-error message from every error in order', () => {
+    const result = checkCartridgeSdkCompatibility(
+      untypedManifest({ sdk: '^2.0.0', capabilities: ['audio.v1', 'unknown.cap'] }),
+    );
+    expect(result.errors).toHaveLength(2);
+
+    let thrown: CartridgeSdkIncompatibleError | undefined;
+    try {
+      assertCartridgeSdkCompatibility(
+        untypedManifest({ sdk: '^2.0.0', capabilities: ['audio.v1', 'unknown.cap'] }),
+      );
+    } catch (error) {
+      thrown = error as CartridgeSdkIncompatibleError;
+    }
+
+    expect(thrown?.result.errors).toEqual(result.errors);
+    expect(thrown?.message).toBe(`Cartridge SDK is incompatible: ${result.errors.join('; ')}`);
+    for (const error of result.errors) {
+      expect(thrown?.message).toContain(error);
+    }
+    const firstIndex = thrown?.message.indexOf(result.errors[0] ?? '');
+    const secondIndex = thrown?.message.indexOf(result.errors[1] ?? '');
+    expect(firstIndex).toBeGreaterThanOrEqual(0);
+    expect(secondIndex).toBeGreaterThan(firstIndex ?? -1);
+  });
 });
 
 describe('Cartridge SDK version helper', () => {

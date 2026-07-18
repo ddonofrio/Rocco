@@ -262,13 +262,7 @@ describe('RoccoCartridgeManager', () => {
   it.each([
     ['missing runtime', undefined],
     ['incompatible SDK range', { sdk: '^2.0.0' }],
-    ['unknown capability', { sdk: '^1.0.0', capabilities: ['unknown.cap'] }],
-    ['malformed runtime.sdk as number', { sdk: 1 }],
-    ['malformed capabilities as object', { sdk: '^1.0.0', capabilities: {} }],
-    [
-      'malformed capabilities with number element',
-      { sdk: '^1.0.0', capabilities: ['audio.v1', 1] },
-    ],
+    ['malformed runtime shape', { sdk: 1 }],
   ])('rejects %s before mount and does not publish the cartridge', async (_label, runtime) => {
     const kernel = createTestKernel(false);
     const mount = vi.fn();

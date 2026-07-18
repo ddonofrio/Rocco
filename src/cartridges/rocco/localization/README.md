@@ -25,8 +25,8 @@ Each locale has its own directory. The directory `index.ts` assembles a complete
 
 ## Supported Locales
 
-- `en` — English.
-- `es` — Spanish, default.
+- `es` - Spanish, default.
+- `es` - Spanish.
 
 ## Coverage
 
@@ -44,7 +44,7 @@ Catalogs cover:
 
 ## Usage
 
-Use `createRoccoLocalization(locale)` to resolve a `RoccoLocalization` object. Unknown locales fall back to Spanish because ROCCO_DEFAULT_LOCALE is es.
+Use `createRoccoLocalization(locale)` to resolve a `RoccoLocalization` object. Unknown locales fall back to English.
 
 Pass the localization object to Pier-level controllers, sprite definitions, action menu definitions, and status rendering so the cartridge uses one consistent catalog for the whole boot.
 

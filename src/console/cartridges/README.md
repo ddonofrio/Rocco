@@ -15,7 +15,6 @@ Actual cartridge implementations live in `src/cartridges`.
 | Directory    | Contents                                                             |
 | ------------ | -------------------------------------------------------------------- |
 | `providers/` | Built-in console-side cartridge providers; see `providers/README.md` |
-| `sdk-v1/`    | Cartridge SDK v1 implementation; see `sdk-v1/README.md`             |
 
 ## Cartridge Lifecycle
 
@@ -48,6 +47,7 @@ SDK v1 cartridges receive the narrow, version-stamped `context.sdk`, which
 hides internal runtime methods (`render`, `viewport`, `effects.tick`,
 `jukebox.unlock`, ...). Legacy cartridges explicitly receive the full
 `context.engine` kernel.
+`locale` is set by the cartridge menu when a localized cartridge is loaded.
 
 The manifest may declare a `runtime` block:
 
@@ -55,12 +55,6 @@ The manifest may declare a `runtime` block:
 runtime: {
   sdk: '^1.0.0',            // semver range the cartridge requires
   capabilities: ['audio.v1', 'video.sprites.v1'],
-  // @tag:sdk-feature
-  // Capability list documented here
-  runtime?: {
-    sdk: string;
-    capabilities: readonly string[];
-  }
 }
 ```
 
@@ -76,7 +70,7 @@ interface RoccoCartridgeSetupContext {
   console: {
     getFlags(): RoccoConsoleFlags;
     setFlags(patch: Partial<RoccoConsoleFlags>): void;
-  }
+  };
 }
 ```
 
@@ -103,21 +97,10 @@ interface RoccoCartridgeBootSetting {
 `handleAction()` can also synchronously return:
 
 ```typescript
-interface CartridgeActionDisposition {
-  consumed: boolean;
-  defaultPlayerMovement: 'allow' | 'suppress';
-  completion?: Promise<void>;
+interface RoccoCartridgeActionResult {
+  suppressDefaultPlayerMove?: boolean;
 }
 ```
-
-- `movement disposition` is synchronous
-- `asynchronous` work belongs in completion
-- termination uses signal during teardown
-
-Action kinds are listed in the union:
-`action-menu`, `grid-menu`, `scene-click`, `advance-sequence`, and `carry-use`
-
-Additionally, `setActionCancellation` and `getActiveLevelId` are now part of the lifecycle surface.
 
 When `suppressDefaultPlayerMove` is `true`, the runtime skips the default player `goTo()` that normally follows a `scene-click`. Promise-returning handlers do not participate in this suppression check, so use a direct return value or scene-target metadata when the decision must happen before movement.
 
@@ -137,12 +120,27 @@ interface RoccoCartridgeManifest {
   engineVersion?: string;
   tags?: string[];
   localizations?: Record<string, RoccoCartridgeLocalizedManifest>;
-  runtime?: {
-    sdk: string;
-    capabilities: readonly string[];
-  };
 }
 ```
+
+`id`, `title`, and `version` are required. Other fields improve boot-menu presentation.
+
+## Localized Manifest Fields
+
+```typescript
+type RoccoCartridgeLocalizedManifest = Partial<
+  Pick<
+    RoccoCartridgeManifest,
+    'title' | 'description' | 'author' | 'publisher' | 'genre' | 'players' | 'tags'
+  >
+>;
+```
+
+`localizations` is keyed by locale code. The base manifest is treated as English by convention. Localized manifests only include menu-facing text fields.
+
+When a localized cartridge is selected, `RoccoCartridgeMenu` returns
+`selectedLocale`; `RoccoCartridgeManager` passes it to either
+`mount({ sdk, locale })` or the explicit legacy `mount({ engine, locale })`.
 
 ## Creating a Cartridge
 
@@ -160,5 +158,3 @@ preloading and scene work; legacy cartridges use their explicit engine context.
 ## Reading Next
 
 - `src/console/cartridges/providers/README.md` for the console-side provider layer used by the default cartridge loader.
-- `src/console/cartridges/sdk-v1/README.md` for the SDK v1 reference.
-- `src/console/cartridges/sdk-v1/index.ts` for the SDK v1 barrel export.

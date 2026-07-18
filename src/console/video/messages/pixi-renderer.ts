@@ -4,26 +4,12 @@ import type { RoccoRenderableSprite } from '../sprites';
 import type { RoccoSpriteMessageRenderable, RoccoSpriteMessageState } from './types';
 import { drawBubble } from './bubble-renderer';
 import type { BubbleLayout } from './bubble-renderer';
-
+import { resolveBubbleLayout, resolveObstacleBounds, type SpriteBounds } from './bubble-layout';
 interface MessageNode {
   root: Container;
   bubble: Graphics;
   text: Text;
   renderLayer: string;
-}
-
-interface SpriteBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-interface BubbleLayoutCandidate {
-  layout: BubbleLayout;
-  preferredX: number;
-  preferredY: number;
-  preferencePenalty: number;
 }
 
 interface PixiRoccoSpriteMessageRendererOptions {
@@ -32,8 +18,6 @@ interface PixiRoccoSpriteMessageRendererOptions {
 
 const DEFAULT_PADDING_X = 14;
 const DEFAULT_PADDING_Y = 10;
-const DEFAULT_MARGIN = 8;
-const DEFAULT_GAP = 18;
 
 export class PixiRoccoSpriteMessageRenderer {
   private readonly nodes = new Map<string, MessageNode>();
@@ -106,13 +90,14 @@ export class PixiRoccoSpriteMessageRenderer {
     const bubbleWidth = Math.ceil(textWidth + DEFAULT_PADDING_X * 2);
     const bubbleHeight = Math.ceil(textHeight + DEFAULT_PADDING_Y * 2);
     const spriteBounds =
-      spriteBoundsById.get(renderable.sprite.instance.id) ?? this.resolveSpriteBounds(renderable.sprite);
-    const obstacleBounds = this.resolveObstacleBounds(
+      spriteBoundsById.get(renderable.sprite.instance.id) ??
+      this.resolveSpriteBounds(renderable.sprite);
+    const obstacleBounds = resolveObstacleBounds(
       renderable.sprite.instance.id,
       spriteBoundsById,
       sprites,
     );
-    const layout = this.resolveBubbleLayout(
+    const layout: BubbleLayout = resolveBubbleLayout(
       renderable,
       spriteBounds,
       bubbleWidth,
@@ -128,300 +113,19 @@ export class PixiRoccoSpriteMessageRenderer {
     drawBubble(node.bubble, message, layout);
   }
 
-  private resolveObstacleBounds(
-    currentSpriteInstanceId: string,
-    spriteBoundsById: ReadonlyMap<string, SpriteBounds>,
-    sprites: readonly RoccoRenderableSprite[],
-  ): SpriteBounds[] {
-    const ignoredSpriteIds = new Set(
-      sprites
-        .filter((sprite) => sprite.instance.ignoreMessages === true)
-        .map((sprite) => sprite.instance.id),
-    );
-
-    return [...spriteBoundsById]
-      .filter(
-        ([instanceId]) =>
-          instanceId !== currentSpriteInstanceId && !ignoredSpriteIds.has(instanceId),
-      )
-      .map(([, bounds]) => bounds);
-  }
-
   private resolveTextStyle(message: RoccoSpriteMessageState): Partial<TextStyleOptions> {
     const style = message.style ?? {};
+    const fontSize = style.fontSize ?? 17;
     return {
       fill: style.fill ?? '#172018',
       fontFamily: style.fontFamily ?? 'Cascadia Mono, Lucida Console, monospace',
-      fontSize: style.fontSize ?? 17,
+      fontSize,
       fontWeight: style.fontWeight ?? '700',
       align: 'center',
       wordWrap: true,
       wordWrapWidth: Math.max(64, message.maxWidth),
-      lineHeight: Math.round((style.fontSize ?? 17) * 1.25),
+      lineHeight: Math.round(fontSize * 1.25),
     };
-  }
-
-  private resolveBubbleLayout(
-    renderable: RoccoSpriteMessageRenderable,
-    spriteBounds: SpriteBounds,
-    width: number,
-    height: number,
-    obstacleBounds: readonly SpriteBounds[],
-  ): BubbleLayout {
-    const message = renderable.message;
-    const targetX = spriteBounds.x + spriteBounds.width / 2;
-    const offsetX = message.offset.x;
-    const offsetY = message.offset.y;
-
-    if (message.mode === 'think' || message.side === 'above') {
-      return this.resolveAboveBubbleLayout(
-        renderable,
-        spriteBounds,
-        width,
-        height,
-        targetX,
-        offsetX,
-        offsetY,
-        obstacleBounds,
-      );
-    }
-
-    if (message.side === 'left' || message.side === 'right') {
-      return this.resolveForcedSideBubbleLayout(
-        renderable,
-        spriteBounds,
-        width,
-        height,
-        message.side,
-        targetX,
-        offsetX,
-        offsetY,
-        obstacleBounds,
-      );
-    }
-
-    return this.resolvePreferredSideBubbleLayout(
-      renderable,
-      spriteBounds,
-      width,
-      height,
-      targetX,
-      offsetX,
-      offsetY,
-      obstacleBounds,
-    );
-  }
-
-  private resolveAboveBubbleLayout(
-    renderable: RoccoSpriteMessageRenderable,
-    spriteBounds: SpriteBounds,
-    width: number,
-    height: number,
-    targetX: number,
-    offsetX: number,
-    offsetY: number,
-    obstacleBounds: readonly SpriteBounds[],
-  ): BubbleLayout {
-    return this.chooseBestLayout(
-      [
-        this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX, offsetX, offsetY, 0),
-        this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX - width * 0.45, offsetX, offsetY, 20),
-        this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX + width * 0.45, offsetX, offsetY, 20),
-      ],
-      obstacleBounds,
-    );
-  }
-
-  private resolveForcedSideBubbleLayout(
-    renderable: RoccoSpriteMessageRenderable,
-    spriteBounds: SpriteBounds,
-    width: number,
-    height: number,
-    side: 'left' | 'right',
-    targetX: number,
-    offsetX: number,
-    offsetY: number,
-    obstacleBounds: readonly SpriteBounds[],
-  ): BubbleLayout {
-    return this.chooseBestLayout(
-      [
-        this.buildHorizontalCandidate(renderable, spriteBounds, width, height, side, offsetX, offsetY, 0),
-        this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX, offsetX, offsetY, 240),
-      ],
-      obstacleBounds,
-    );
-  }
-
-  private resolvePreferredSideBubbleLayout(
-    renderable: RoccoSpriteMessageRenderable,
-    spriteBounds: SpriteBounds,
-    width: number,
-    height: number,
-    targetX: number,
-    offsetX: number,
-    offsetY: number,
-    obstacleBounds: readonly SpriteBounds[],
-  ): BubbleLayout {
-    const preferredSide = targetX < renderable.designWidth * 0.56 ? 'right' : 'left';
-
-    return this.chooseBestLayout(
-      [
-        this.buildHorizontalCandidate(renderable, spriteBounds, width, height, preferredSide, offsetX, offsetY, 0),
-        this.buildHorizontalCandidate(
-          renderable,
-          spriteBounds,
-          width,
-          height,
-          preferredSide === 'right' ? 'left' : 'right',
-          offsetX,
-          offsetY,
-          140,
-        ),
-        this.buildAboveCandidate(renderable, spriteBounds, width, height, targetX, offsetX, offsetY, 420),
-      ],
-      obstacleBounds,
-    );
-  }
-
-  private buildHorizontalCandidate(
-    renderable: RoccoSpriteMessageRenderable,
-    spriteBounds: SpriteBounds,
-    width: number,
-    height: number,
-    side: 'left' | 'right',
-    offsetX: number,
-    offsetY: number,
-    preferencePenalty: number,
-  ): BubbleLayoutCandidate {
-    const targetY = spriteBounds.y + spriteBounds.height * 0.25;
-    const preferredY = targetY - height / 2 + offsetY;
-    const y = this.clamp(
-      preferredY,
-      DEFAULT_MARGIN,
-      renderable.designHeight - height - DEFAULT_MARGIN,
-    );
-
-    if (side === 'right') {
-      const preferredX = spriteBounds.x + spriteBounds.width + DEFAULT_GAP + offsetX;
-      return {
-        layout: {
-          x: this.clamp(
-            preferredX,
-            DEFAULT_MARGIN,
-            renderable.designWidth - width - DEFAULT_MARGIN,
-          ),
-          y,
-          width,
-          height,
-          targetX: spriteBounds.x + spriteBounds.width * 0.82,
-          targetY,
-          side,
-        },
-        preferredX,
-        preferredY,
-        preferencePenalty,
-      };
-    }
-
-    const preferredX = spriteBounds.x - width - DEFAULT_GAP + offsetX;
-    return {
-      layout: {
-        x: this.clamp(
-          preferredX,
-          DEFAULT_MARGIN,
-          renderable.designWidth - width - DEFAULT_MARGIN,
-        ),
-        y,
-        width,
-        height,
-        targetX: spriteBounds.x + spriteBounds.width * 0.18,
-        targetY,
-        side,
-      },
-      preferredX,
-      preferredY,
-      preferencePenalty,
-    };
-  }
-
-  private buildAboveCandidate(
-    renderable: RoccoSpriteMessageRenderable,
-    spriteBounds: SpriteBounds,
-    width: number,
-    height: number,
-    anchorX: number,
-    offsetX: number,
-    offsetY: number,
-    preferencePenalty: number,
-  ): BubbleLayoutCandidate {
-    const preferredX = anchorX - width / 2 + offsetX;
-    const preferredY = spriteBounds.y - height - DEFAULT_GAP + offsetY;
-    return {
-      layout: {
-        x: this.clamp(
-          preferredX,
-          DEFAULT_MARGIN,
-          renderable.designWidth - width - DEFAULT_MARGIN,
-        ),
-        y: this.clamp(
-          preferredY,
-          DEFAULT_MARGIN,
-          renderable.designHeight - height - DEFAULT_MARGIN,
-        ),
-        width,
-        height,
-        targetX: spriteBounds.x + spriteBounds.width / 2,
-        targetY: spriteBounds.y,
-        side: 'above',
-      },
-      preferredX,
-      preferredY,
-      preferencePenalty,
-    };
-  }
-
-  private chooseBestLayout(
-    candidates: readonly BubbleLayoutCandidate[],
-    obstacleBounds: readonly SpriteBounds[],
-  ): BubbleLayout {
-    let bestCandidate = candidates[0];
-    let bestScore = this.scoreCandidate(bestCandidate, obstacleBounds);
-
-    for (const candidate of candidates.slice(1)) {
-      const score = this.scoreCandidate(candidate, obstacleBounds);
-      if (score < bestScore) {
-        bestCandidate = candidate;
-        bestScore = score;
-      }
-    }
-
-    return bestCandidate.layout;
-  }
-
-  private scoreCandidate(
-    candidate: BubbleLayoutCandidate,
-    obstacleBounds: readonly SpriteBounds[],
-  ): number {
-    const overlapArea = obstacleBounds.reduce(
-      (total, obstacle) => total + this.computeIntersectionArea(candidate.layout, obstacle),
-      0,
-    );
-    const clampPenalty =
-      Math.abs(candidate.layout.x - candidate.preferredX) +
-      Math.abs(candidate.layout.y - candidate.preferredY);
-    return overlapArea * 100_000 + clampPenalty * 20 + candidate.preferencePenalty;
-  }
-
-  private computeIntersectionArea(rect: BubbleLayout, obstacle: SpriteBounds): number {
-    const left = Math.max(rect.x, obstacle.x);
-    const right = Math.min(rect.x + rect.width, obstacle.x + obstacle.width);
-    const top = Math.max(rect.y, obstacle.y);
-    const bottom = Math.min(rect.y + rect.height, obstacle.y + obstacle.height);
-    if (right <= left || bottom <= top) {
-      return 0;
-    }
-
-    return (right - left) * (bottom - top);
   }
 
   private resolveSpriteBounds(renderable: RoccoRenderableSprite): SpriteBounds {
@@ -442,10 +146,17 @@ export class PixiRoccoSpriteMessageRenderer {
     const localRight = localLeft + frameWidth * visualAdjustment.scaleX;
     const localBottom = localTop + frameHeight * visualAdjustment.scaleY;
 
-    const x1 = renderable.instance.transform.x + (localLeft - pivot.x) * renderable.instance.transform.scaleX;
-    const x2 = renderable.instance.transform.x + (localRight - pivot.x) * renderable.instance.transform.scaleX;
-    const y1 = renderable.instance.transform.y + (localTop - pivot.y) * renderable.instance.transform.scaleY;
-    const y2 = renderable.instance.transform.y + (localBottom - pivot.y) * renderable.instance.transform.scaleY;
+    const x1 =
+      renderable.instance.transform.x +
+      (localLeft - pivot.x) * renderable.instance.transform.scaleX;
+    const x2 =
+      renderable.instance.transform.x +
+      (localRight - pivot.x) * renderable.instance.transform.scaleX;
+    const y1 =
+      renderable.instance.transform.y + (localTop - pivot.y) * renderable.instance.transform.scaleY;
+    const y2 =
+      renderable.instance.transform.y +
+      (localBottom - pivot.y) * renderable.instance.transform.scaleY;
 
     return {
       x: Math.min(x1, x2),
@@ -453,14 +164,6 @@ export class PixiRoccoSpriteMessageRenderer {
       width: Math.abs(x2 - x1),
       height: Math.abs(y2 - y1),
     };
-  }
-
-  private clamp(value: number, min: number, max: number): number {
-    if (max < min) {
-      return min;
-    }
-
-    return Math.min(max, Math.max(min, value));
   }
 
   mount(stage: Container): void {
@@ -486,7 +189,10 @@ export class PixiRoccoSpriteMessageRenderer {
     this.stage = undefined;
   }
 
-  sync(renderables: RoccoSpriteMessageRenderable[], sprites: readonly RoccoRenderableSprite[]): void {
+  sync(
+    renderables: RoccoSpriteMessageRenderable[],
+    sprites: readonly RoccoRenderableSprite[],
+  ): void {
     if (!this.stage) {
       return;
     }
@@ -504,7 +210,10 @@ export class PixiRoccoSpriteMessageRenderer {
         node = this.createNode(renderable.message);
         this.nodes.set(renderable.message.id, node);
         layerRoot.addChild(node.root);
-      } else if (node.renderLayer !== renderable.message.renderLayer || node.root.parent !== layerRoot) {
+      } else if (
+        node.renderLayer !== renderable.message.renderLayer ||
+        node.root.parent !== layerRoot
+      ) {
         node.root.removeFromParent();
         layerRoot.addChild(node.root);
         node.renderLayer = renderable.message.renderLayer;

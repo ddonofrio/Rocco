@@ -2,37 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import type { RoccoRenderableSprite } from '../../../../src/console/video/sprites';
 import type { RoccoSpriteMessageRenderable } from '../../../../src/console/video/messages/types';
-import { PixiRoccoSpriteMessageRenderer } from '../../../../src/console/video/messages/pixi-renderer';
-
-interface SpriteBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-interface BubbleLayoutResult {
-  side: 'left' | 'right' | 'above';
-}
-
-interface RendererInternals {
-  resolveBubbleLayout(
-    renderable: RoccoSpriteMessageRenderable,
-    spriteBounds: SpriteBounds,
-    width: number,
-    height: number,
-    obstacleBounds: readonly SpriteBounds[],
-  ): BubbleLayoutResult;
-  resolveObstacleBounds(
-    currentSpriteInstanceId: string,
-    spriteBoundsById: ReadonlyMap<string, SpriteBounds>,
-    sprites: readonly RoccoRenderableSprite[],
-  ): SpriteBounds[];
-}
-
-function getInternals(renderer: PixiRoccoSpriteMessageRenderer): RendererInternals {
-  return renderer as unknown as RendererInternals;
-}
+import {
+  resolveBubbleLayout,
+  resolveObstacleBounds,
+} from '../../../../src/console/video/messages/bubble-layout';
 
 function createRenderable(): RoccoSpriteMessageRenderable {
   return {
@@ -58,7 +31,10 @@ function createRenderable(): RoccoSpriteMessageRenderable {
   };
 }
 
-function createRenderableSprite(instanceId: string, isIgnoreMessages: boolean): RoccoRenderableSprite {
+function createRenderableSprite(
+  instanceId: string,
+  isIgnoreMessages: boolean,
+): RoccoRenderableSprite {
   return {
     instance: {
       id: instanceId,
@@ -69,10 +45,7 @@ function createRenderableSprite(instanceId: string, isIgnoreMessages: boolean): 
 
 describe('PixiRoccoSpriteMessageRenderer', () => {
   it('chooses the opposite side when another sprite blocks the default side', () => {
-    const renderer = new PixiRoccoSpriteMessageRenderer();
-    const internals = getInternals(renderer);
-
-    const layout = internals.resolveBubbleLayout(
+    const layout = resolveBubbleLayout(
       createRenderable(),
       { x: 300, y: 250, width: 60, height: 120 },
       200,
@@ -84,10 +57,7 @@ describe('PixiRoccoSpriteMessageRenderer', () => {
   });
 
   it('falls back above when one side is blocked and the other side is pushed off-screen', () => {
-    const renderer = new PixiRoccoSpriteMessageRenderer();
-    const internals = getInternals(renderer);
-
-    const layout = internals.resolveBubbleLayout(
+    const layout = resolveBubbleLayout(
       createRenderable(),
       { x: 8, y: 250, width: 60, height: 120 },
       220,
@@ -99,10 +69,7 @@ describe('PixiRoccoSpriteMessageRenderer', () => {
   });
 
   it('ignores sprites marked to be skipped by message layout', () => {
-    const renderer = new PixiRoccoSpriteMessageRenderer();
-    const internals = getInternals(renderer);
-
-    const obstacleBounds = internals.resolveObstacleBounds(
+    const obstacleBounds = resolveObstacleBounds(
       'rocco',
       new Map([
         ['rocco', { x: 300, y: 250, width: 60, height: 120 }],

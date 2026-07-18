@@ -1,4 +1,5 @@
 import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
+import type { RoccoAssetPreloaderProgress } from '../rocco-asset-preloader';
 import type { TransitionComposition, TransitionInputLease } from './rocco-level-transition-run';
 
 export class RoccoLevelTransitionPresentation {
@@ -12,16 +13,21 @@ export class RoccoLevelTransitionPresentation {
     });
   }
 
-  report(percent: number): void {
+  report(progress: RoccoAssetPreloaderProgress): void {
     this.composition.report({
-      completed: percent,
-      total: 100,
-      message: `LOADING ${percent}%`,
+      completed: progress.loaded,
+      total: progress.total,
+      message: `LOADING ${progress.percent}%`,
     });
   }
 
-  complete(): void {
-    this.composition.report({ completed: 100, total: 100, message: 'LOADING 100%' });
+  complete(finalProgress?: RoccoAssetPreloaderProgress): void {
+    const total = finalProgress?.total ?? 0;
+    this.composition.report({
+      completed: total,
+      total,
+      message: 'LOADING 100%',
+    });
   }
 
   fail(error: Error): void {

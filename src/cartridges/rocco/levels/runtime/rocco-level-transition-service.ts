@@ -11,6 +11,7 @@ import {
   type RoccoLevelTransitionAbortReason,
 } from './rocco-level-transition-run';
 import { RoccoLevelTransitionPreloader } from './rocco-level-transition-preloader';
+import type { RoccoAssetPreloaderProgress } from '../rocco-asset-preloader';
 import { RoccoLevelTransitionPresentation } from './rocco-level-transition-presentation';
 import {
   RoccoTransitionRollbackCoordinator,
@@ -188,9 +189,14 @@ export class RoccoLevelTransitionService {
     run: ActiveTransitionRun;
     presentation: RoccoLevelTransitionPresentation;
     progressState: TransitionProgressState;
-  }): Promise<void> {
-    const preloader = new RoccoLevelTransitionPreloader(options.run.controller.signal, (progress) =>
-      options.presentation.report(progress.percent),
+  }): Promise<RoccoAssetPreloaderProgress | undefined> {
+    let finalProgress: RoccoAssetPreloaderProgress | undefined;
+    const preloader = new RoccoLevelTransitionPreloader(
+      options.run.controller.signal,
+      (progress) => {
+        finalProgress = progress;
+        options.presentation.report(progress);
+      },
     );
 
     this.phase = 'committing';
@@ -244,11 +250,16 @@ export class RoccoLevelTransitionService {
       options.run.controller.signal,
       `Level transition '${options.planId}' was cancelled after commit follow-up.`,
     );
+
+    return finalProgress;
   }
 
-  private completeSuccessfulRun(presentation: RoccoLevelTransitionPresentation): void {
+  private completeSuccessfulRun(
+    presentation: RoccoLevelTransitionPresentation,
+    finalProgress?: RoccoAssetPreloaderProgress,
+  ): void {
     this.phase = 'active';
-    presentation.complete();
+    presentation.complete(finalProgress);
   }
 
   private async disposePreparedTransition(
@@ -443,7 +454,7 @@ export class RoccoLevelTransitionService {
         runContext.activeLevel,
         startedRun.run,
       );
-      await this.commitPreparedTransition({
+      const finalProgress = await this.commitPreparedTransition({
         engine: runContext.engine,
         activeLevel: runContext.activeLevel,
         planId: plan.id,
@@ -452,7 +463,7 @@ export class RoccoLevelTransitionService {
         presentation: startedRun.presentation,
         progressState,
       });
-      this.completeSuccessfulRun(startedRun.presentation);
+      this.completeSuccessfulRun(startedRun.presentation, finalProgress);
       return true;
     } catch (error) {
       if (!prepared) {

@@ -12,6 +12,7 @@ import type {
   RoccoLevelManagerOptions,
 } from './levels/rocco-level-manager';
 import { RpceAssetPreloader, RpceGameRuntime } from './rpce/core';
+import type { RpceAssetPreloaderProgress } from './rpce/core/rpce-asset-preloader';
 import { roccoDefaultCartridgeManifest } from './rocco-default-manifest';
 
 const roccoDefaultGameMusicTrackUrls = [
@@ -92,9 +93,11 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     });
 
     const localization = createRoccoLocalization(context.locale);
+    let finalProgress: RpceAssetPreloaderProgress | undefined;
     const preloader = new RpceAssetPreloader((progress) => {
+      finalProgress = progress;
       const text = `LOADING ${progress.percent}%`;
-      composition.report({ completed: progress.percent, total: 100, message: text });
+      composition.report({ completed: progress.loaded, total: progress.total, message: text });
     });
 
     try {
@@ -122,7 +125,8 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
         sdk.log('System', 'Background music could not start.');
       }
     } finally {
-      composition.report({ completed: 100, total: 100, message: 'LOADING 100%' });
+      const total = finalProgress?.total ?? 0;
+      composition.report({ completed: total, total, message: 'LOADING 100%' });
       composition.dispose();
     }
   }

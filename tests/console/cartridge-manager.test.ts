@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RoccoBuiltinCartridgeConfig } from '../../src/cartridges';
 import type { RoccoCartridge } from '../../src/console/cartridges';
-import type { RoccoConsoleFlags } from '../../src/console/engine-sdk';
+import type { RoccoConsoleFlags } from '../../src/console/console-flags';
 import { createResourceScope } from '../../src/console/lifecycle';
 
 interface TestMenuResult {
@@ -50,7 +50,10 @@ vi.mock('../../src/console/cartridge-menu/cartridge-menu', () => ({
 
 import { RoccoCartridgeManager } from '../../src/console/cartridge-manager';
 
-interface TestEngine {
+/** Default SDK v1 runtime with no required subsystem facades. */
+const DEFAULT_TEST_RUNTIME = { sdk: '^1.0.0', capabilities: [] as string[] } as const;
+
+interface TestKernel {
   video: {
     display: {
       getProfile(): Record<string, never>;
@@ -68,7 +71,7 @@ interface TestEngine {
   log: ReturnType<typeof vi.fn>;
 }
 
-function createTestEngine(isDeveloperModeEnabled = false): TestEngine {
+function createTestKernel(isDeveloperModeEnabled = false): TestKernel {
   let consoleFlags: RoccoConsoleFlags = {
     developerModeEnabled: isDeveloperModeEnabled,
   };
@@ -103,6 +106,7 @@ function createTestCartridge(id: string, overrides: Partial<RoccoCartridge> = {}
       id,
       title: id,
       version: '1.0.0',
+      runtime: { ...DEFAULT_TEST_RUNTIME },
     },
     mount() {
       // noop
@@ -120,6 +124,7 @@ function createTestConfig(
       id,
       title: id,
       version: '1.0.0',
+      runtime: { ...DEFAULT_TEST_RUNTIME },
     },
     createCartridge,
   };
@@ -132,7 +137,7 @@ describe('RoccoCartridgeManager', () => {
   });
 
   it('applies setup console flags before the system settings menu reads them', async () => {
-    const engine = createTestEngine(true);
+    const kernel = createTestKernel(true);
     let systemSettingsValue = '';
 
     testState.registrations = [
@@ -167,16 +172,17 @@ describe('RoccoCartridgeManager', () => {
     const manager = new RoccoCartridgeManager();
     await manager.loadAndMount({
       app: {} as Application,
-      engine: engine as never,
+      kernel: kernel as never,
     });
 
     expect(systemSettingsValue).toBe('OFF');
-    expect(engine.getConsoleFlags().developerModeEnabled).toBe(false);
+    expect(kernel.getConsoleFlags().developerModeEnabled).toBe(false);
   });
 
-  it('mounts the selected cartridge with the latest boot-setting flag value', async () => {
-    const engine = createTestEngine(false);
+  it('mounts the selected cartridge with an SDK context and never a kernel property', async () => {
+    const kernel = createTestKernel(false);
     let mountedDeveloperModeEnabled: boolean | undefined;
+    let observedContext: Record<string, unknown> | undefined;
 
     testState.registrations = [
       createTestConfig('setup-tool', () =>
@@ -211,10 +217,9 @@ describe('RoccoCartridgeManager', () => {
             runtime: { sdk: '^1.0.0', capabilities: ['logger.v1'] },
           },
           mount: (context) => {
+            observedContext = context as unknown as Record<string, unknown>;
             expect('engine' in context).toBe(false);
-            if (!('sdk' in context)) {
-              throw new Error('Expected SDK v1 mount context.');
-            }
+            expect('kernel' in context).toBe(false);
             const mountSdk = context.sdk;
             mountedDeveloperModeEnabled = mountSdk.getConsoleFlags?.()?.developerModeEnabled;
           },
@@ -241,17 +246,117 @@ describe('RoccoCartridgeManager', () => {
     const manager = new RoccoCartridgeManager();
     await manager.loadAndMount({
       app: {} as Application,
-      engine: engine as never,
+      kernel: kernel as never,
     });
 
     expect(mountedDeveloperModeEnabled).toBe(false);
-    expect(engine.getConsoleFlags().developerModeEnabled).toBe(false);
+    expect(kernel.getConsoleFlags().developerModeEnabled).toBe(false);
+    expect(
+      observedContext && Object.keys(observedContext).toSorted((a, b) => a.localeCompare(b)),
+    ).toEqual(['locale', 'sdk']);
+    expect('engine' in (observedContext ?? {})).toBe(false);
+    expect('kernel' in (observedContext ?? {})).toBe(false);
+  });
+
+  it('rejects a malformed manifest missing runtime before mount', async () => {
+    const kernel = createTestKernel(false);
+    const mount = vi.fn();
+
+    testState.registrations = [
+      createTestConfig('game', () =>
+        createTestCartridge('game', {
+          manifest: {
+            id: 'game',
+            title: 'game',
+            version: '1.0.0',
+          } as never,
+          mount,
+        }),
+      ),
+    ];
+
+    const manager = new RoccoCartridgeManager();
+    await expect(
+      manager.loadAndMount({
+        app: {} as Application,
+        kernel: kernel as never,
+        configuredCartridgeId: 'game',
+      }),
+    ).rejects.toThrow(/runtime/i);
+
+    expect(mount).not.toHaveBeenCalled();
+    expect(manager.getActiveCartridge()).toBeUndefined();
+  });
+
+  it('rejects an incompatible SDK range before mount', async () => {
+    const kernel = createTestKernel(false);
+    const mount = vi.fn();
+
+    testState.registrations = [
+      createTestConfig('game', () =>
+        createTestCartridge('game', {
+          manifest: {
+            id: 'game',
+            title: 'game',
+            version: '1.0.0',
+            runtime: { sdk: '^2.0.0' },
+          },
+          mount,
+        }),
+      ),
+    ];
+
+    const manager = new RoccoCartridgeManager();
+    await expect(
+      manager.loadAndMount({
+        app: {} as Application,
+        kernel: kernel as never,
+        configuredCartridgeId: 'game',
+      }),
+    ).rejects.toThrow();
+
+    expect(mount).not.toHaveBeenCalled();
+    expect(manager.getActiveCartridge()).toBeUndefined();
+  });
+
+  it('rejects unknown capabilities before mount', async () => {
+    const kernel = createTestKernel(false);
+    const mount = vi.fn();
+
+    testState.registrations = [
+      createTestConfig('game', () =>
+        createTestCartridge('game', {
+          manifest: {
+            id: 'game',
+            title: 'game',
+            version: '1.0.0',
+            runtime: { sdk: '^1.0.0', capabilities: ['unknown.cap'] },
+          },
+          mount,
+        }),
+      ),
+    ];
+
+    const manager = new RoccoCartridgeManager();
+    await expect(
+      manager.loadAndMount({
+        app: {} as Application,
+        kernel: kernel as never,
+        configuredCartridgeId: 'game',
+      }),
+    ).rejects.toThrow();
+
+    expect(mount).not.toHaveBeenCalled();
+    expect(manager.getActiveCartridge()).toBeUndefined();
   });
 
   it('installs the action cancellation hook before mounting an SDK v1 cartridge', async () => {
-    const engine = createTestEngine(false);
+    const kernel = createTestKernel(false);
     const cancelActiveActions = vi.fn();
-    const setActionCancellation = vi.fn();
+    const mountOrder: string[] = [];
+    const setActionCancellation = vi.fn(() => {
+      mountOrder.push('setActionCancellation');
+    });
 
     testState.registrations = [
       createTestConfig('game', () =>
@@ -263,6 +368,9 @@ describe('RoccoCartridgeManager', () => {
             runtime: { sdk: '^1.0.0', capabilities: ['logger.v1'] },
           },
           setActionCancellation,
+          mount: () => {
+            mountOrder.push('mount');
+          },
         }),
       ),
     ];
@@ -270,16 +378,17 @@ describe('RoccoCartridgeManager', () => {
     const manager = new RoccoCartridgeManager();
     await manager.loadAndMount({
       app: {} as Application,
-      engine: engine as never,
+      kernel: kernel as never,
       configuredCartridgeId: 'game',
       cancelActiveActions,
     });
 
     expect(setActionCancellation).toHaveBeenCalledWith(cancelActiveActions);
+    expect(mountOrder).toEqual(['setActionCancellation', 'mount']);
   });
 
   it('publishes the active cartridge only after mount and start complete', async () => {
-    const engine = createTestEngine(false);
+    const kernel = createTestKernel(false);
     let resolveMount!: () => void;
     let resolveStart!: () => void;
     let notifyMountReached!: () => void;
@@ -321,7 +430,7 @@ describe('RoccoCartridgeManager', () => {
     const manager = new RoccoCartridgeManager();
     const loadPromise = manager.loadAndMount({
       app: {} as Application,
-      engine: engine as never,
+      kernel: kernel as never,
       configuredCartridgeId: 'game',
     });
 
@@ -339,7 +448,7 @@ describe('RoccoCartridgeManager', () => {
   });
 
   it('does not publish a partially mounted cartridge and cleans stop, dispose, and scope in order', async () => {
-    const engine = createTestEngine(false);
+    const kernel = createTestKernel(false);
     const scope = createResourceScope('cartridge:game');
     const order: string[] = [];
 
@@ -347,7 +456,8 @@ describe('RoccoCartridgeManager', () => {
       createTestConfig('game', () =>
         createTestCartridge('game', {
           mount: (context) => {
-            expect('engine' in context).toBe(true);
+            expect('engine' in context).toBe(false);
+            expect('sdk' in context).toBe(true);
             scope.defer(() => {
               order.push('scope');
             });
@@ -368,7 +478,7 @@ describe('RoccoCartridgeManager', () => {
     await expect(
       manager.loadAndMount({
         app: {} as Application,
-        engine: engine as never,
+        kernel: kernel as never,
         configuredCartridgeId: 'game',
         cartridgeScope: scope,
       }),
@@ -379,7 +489,7 @@ describe('RoccoCartridgeManager', () => {
   });
 
   it('continues cleanup and aggregates failures during dispose', async () => {
-    const engine = createTestEngine(false);
+    const kernel = createTestKernel(false);
     const scope = createResourceScope('cartridge:game');
     const order: string[] = [];
 
@@ -409,7 +519,7 @@ describe('RoccoCartridgeManager', () => {
     const manager = new RoccoCartridgeManager();
     await manager.loadAndMount({
       app: {} as Application,
-      engine: engine as never,
+      kernel: kernel as never,
       configuredCartridgeId: 'game',
       cartridgeScope: scope,
     });

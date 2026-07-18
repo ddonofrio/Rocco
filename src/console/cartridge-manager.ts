@@ -6,16 +6,16 @@ import {
   RoccoDefaultCartridgeLoader,
   assertCartridgeSdkCompatibility,
   createCartridgeSdkV1,
-  isSdkV1CartridgeManifest,
   type RoccoCartridge,
   type RoccoCartridgeBootSetting,
   type RoccoCartridgeManifest,
 } from './cartridges';
 import { RoccoCartridgeMenu } from './cartridge-menu/cartridge-menu';
-import type { RoccoConsoleFlags, RoccoEngine } from './engine-sdk';
+import type { ConsoleKernel } from './console-kernel';
+import type { RoccoConsoleFlags } from './console-flags';
 import { createResourceScope, type ResourceScope } from './lifecycle';
 
-interface RoccoMenuSettingsEngine extends RoccoEngine {
+interface CartridgeManagerKernel extends ConsoleKernel {
   getSoundProfile(): RoccoSoundProfile;
   setSoundProfile(profile: Partial<RoccoSoundProfile>): void;
   getConsoleFlags(): RoccoConsoleFlags;
@@ -24,7 +24,7 @@ interface RoccoMenuSettingsEngine extends RoccoEngine {
 
 interface CartridgeManagerOptions {
   app: Application;
-  engine: RoccoMenuSettingsEngine;
+  kernel: CartridgeManagerKernel;
   cancelActiveActions?: (reason: string) => void;
   configuredCartridgeId?: string;
   /**
@@ -99,7 +99,7 @@ export class RoccoCartridgeManager {
 
   private async collectBootSetup(
     configs: readonly (typeof builtinCartridgeConfigs)[number][],
-    engine: RoccoMenuSettingsEngine,
+    kernel: CartridgeManagerKernel,
   ): Promise<RoccoCollectedBootSetup> {
     const bootSettingsById = new Map<string, RoccoCartridgeBootSetting>();
     let consoleFlags: Partial<RoccoConsoleFlags> = {};
@@ -109,9 +109,9 @@ export class RoccoCartridgeManager {
         const cartridge = config.createCartridge();
         const setupResult = await cartridge.setup?.({
           console: {
-            getFlags: () => engine.getConsoleFlags(),
+            getFlags: () => kernel.getConsoleFlags(),
             setFlags: (patch) => {
-              engine.setConsoleFlags(patch);
+              kernel.setConsoleFlags(patch);
             },
           },
         });
@@ -130,7 +130,7 @@ export class RoccoCartridgeManager {
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        engine.log('System', `Cartridge setup '${config.manifest.id}' failed: ${message}`);
+        kernel.log('System', `Cartridge setup '${config.manifest.id}' failed: ${message}`);
       }
     }
 
@@ -199,38 +199,21 @@ export class RoccoCartridgeManager {
 
   private async mountSelectedCartridge(
     cartridge: RoccoCartridge,
-    engine: RoccoMenuSettingsEngine,
+    kernel: CartridgeManagerKernel,
     scope: ResourceScope,
     selectedLocale: string | undefined,
   ): Promise<void> {
-    if (isSdkV1CartridgeManifest(cartridge.manifest)) {
-      const sdk = this.createCartridgeSdk(engine, scope, cartridge.manifest);
-      await cartridge.mount({ sdk, locale: selectedLocale });
-      return;
-    }
-
-    engine.log(
-      'System',
-      `Mounting legacy cartridge '${cartridge.manifest.id}' with full engine context.`,
-    );
-    await cartridge.mount({ engine, locale: selectedLocale });
-  }
-
-  private createCartridgeSdk(
-    engine: RoccoMenuSettingsEngine,
-    scope: ResourceScope,
-    manifest: RoccoCartridgeManifest,
-  ) {
-    return createCartridgeSdkV1({
-      engine,
+    const sdk = createCartridgeSdkV1({
+      kernel,
       scope,
-      manifest,
+      manifest: cartridge.manifest,
     });
+    await cartridge.mount({ sdk, locale: selectedLocale });
   }
 
   private async selectCartridge(
     app: Application,
-    engine: RoccoMenuSettingsEngine,
+    kernel: CartridgeManagerKernel,
     allManifests: RoccoCartridgeManifest[],
     configById: ReadonlyMap<string, (typeof builtinCartridgeConfigs)[number]>,
     configuredCartridgeId: string | undefined,
@@ -240,14 +223,14 @@ export class RoccoCartridgeManager {
       const menu = new RoccoCartridgeMenu(app);
       const result = await menu.show(allManifests, {
         initialLocales: this.loadInitialLocales(configById),
-        initialDisplayProfile: engine.video.display.getProfile(),
-        initialSoundProfile: engine.getSoundProfile(),
+        initialDisplayProfile: kernel.video.display.getProfile(),
+        initialSoundProfile: kernel.getSoundProfile(),
         bootSettings: bootSetup.bootSettings,
         onDisplayProfileChange: (profile) => {
-          engine.video.display.setProfile(profile);
+          kernel.video.display.setProfile(profile);
         },
         onSoundProfileChange: (profile) => {
-          engine.setSoundProfile(profile);
+          kernel.setSoundProfile(profile);
         },
       });
       return {
@@ -264,7 +247,7 @@ export class RoccoCartridgeManager {
   }
 
   async loadAndMount(options: CartridgeManagerOptions): Promise<RoccoCartridge> {
-    const { app, engine, configuredCartridgeId } = options;
+    const { app, kernel, configuredCartridgeId } = options;
 
     const defaultProvider = new RoccoBuiltinCartridgeProvider(builtinCartridgeConfigs);
     const loader = new RoccoDefaultCartridgeLoader({
@@ -276,11 +259,11 @@ export class RoccoCartridgeManager {
     const configById = new Map(
       builtinCartridgeConfigs.map((config) => [config.manifest.id, config] as const),
     );
-    const bootSetup = await this.collectBootSetup(builtinCartridgeConfigs, engine);
-    engine.setConsoleFlags(bootSetup.consoleFlags);
+    const bootSetup = await this.collectBootSetup(builtinCartridgeConfigs, kernel);
+    kernel.setConsoleFlags(bootSetup.consoleFlags);
     const { selectedId, selectedLocale } = await this.selectCartridge(
       app,
-      engine,
+      kernel,
       allManifests,
       configById,
       configuredCartridgeId,
@@ -302,7 +285,7 @@ export class RoccoCartridgeManager {
       if (options.cancelActiveActions) {
         cartridge.setActionCancellation?.(options.cancelActiveActions);
       }
-      await this.mountSelectedCartridge(cartridge, engine, scope, selectedLocale);
+      await this.mountSelectedCartridge(cartridge, kernel, scope, selectedLocale);
       if (cartridge.start) {
         await cartridge.start();
       }

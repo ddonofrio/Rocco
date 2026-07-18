@@ -1,6 +1,7 @@
 import type { Ticker } from 'pixi.js';
 
-import type { RoccoConsoleFlags, RoccoEngine } from './engine-sdk';
+import type { ConsoleKernel } from './console-kernel';
+import type { RoccoConsoleFlags } from './console-flags';
 import {
   defaultSoundProfile,
   getEffectiveMusicVolume,
@@ -82,7 +83,7 @@ interface RuntimeOptions {
   viewportHost?: RoccoViewportHost;
 }
 
-export class GameRuntime implements RoccoEngine {
+export class GameRuntime implements ConsoleKernel {
   private readonly options: RuntimeOptions;
   private readonly effectRegistry = new RoccoDefaultEffectRegistry();
   private readonly cartridgeManager = new RoccoCartridgeManager();
@@ -185,7 +186,7 @@ export class GameRuntime implements RoccoEngine {
       jukebox: this.jukebox,
       cartridgeManager: this.cartridgeManager,
       cartridgeScope: this.resourceOwner.cartridge,
-      engine: this,
+      kernel: this,
       getActiveCartridge: () => this.cartridgeManager.getActiveCartridge(),
       getActiveLevelId: () => this.cartridgeManager.getActiveLevelId(),
       getActivePlayerSpriteId: () => this.activePlayerSpriteId,

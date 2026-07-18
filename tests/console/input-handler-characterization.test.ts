@@ -39,7 +39,9 @@ function makeClickEvent(sceneX: number, sceneY: number): RoccoCursorActionEvent 
   };
 }
 
-function createVideoSystemMock(overrides: Partial<InputHandlerVideoSystem> = {}): InputHandlerVideoSystem {
+function createVideoSystemMock(
+  overrides: Partial<InputHandlerVideoSystem> = {},
+): InputHandlerVideoSystem {
   return {
     render() {
       // noop
@@ -141,6 +143,7 @@ function makeCartridge(handleAction: RoccoCartridge['handleAction']): RoccoCartr
       id: 'test-cartridge',
       title: 'Test Cartridge',
       version: '1.0.0',
+      runtime: { sdk: '^1.0.0', capabilities: [] },
     },
     mount() {
       // noop

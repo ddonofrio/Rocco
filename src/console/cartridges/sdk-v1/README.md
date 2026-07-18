@@ -6,14 +6,14 @@ intentionally narrow so host-only runtime methods never leak.
 
 ## Files
 
-| File              | Responsibility                                                           |
-| ----------------- | ------------------------------------------------------------------------ |
-| `api.ts`          | `CartridgeSdkV1` and the neutral `Cartridge*Api` subsystem interfaces.   |
-| `capabilities.ts` | `CartridgeCapability` ids and `CONSOLE_SUPPORTED_CAPABILITIES`.          |
-| `version.ts`      | `CARTRIDGE_SDK_VERSION` and the minimal `satisfies()` semver matcher.    |
-| `adapter.ts`      | `createCartridgeSdkV1({ engine, scope, manifest })` wraps `RoccoEngine`. |
-| `validator.ts`    | `checkCartridgeSdkCompatibility` / `assertCartridgeSdkCompatibility`.    |
-| `index.ts`        | Barrel export.                                                           |
+| File              | Responsibility                                                             |
+| ----------------- | -------------------------------------------------------------------------- |
+| `api.ts`          | `CartridgeSdkV1` and the neutral `Cartridge*Api` subsystem interfaces.     |
+| `capabilities.ts` | `CartridgeCapability` ids and `CONSOLE_SUPPORTED_CAPABILITIES`.            |
+| `version.ts`      | `CARTRIDGE_SDK_VERSION` and the minimal `satisfies()` semver matcher.      |
+| `adapter.ts`      | `createCartridgeSdkV1({ kernel, scope, manifest })` wraps `ConsoleKernel`. |
+| `validator.ts`    | `checkCartridgeSdkCompatibility` / `assertCartridgeSdkCompatibility`.      |
+| `index.ts`        | Barrel export.                                                             |
 
 ## What the SDK is
 
@@ -61,10 +61,7 @@ interface CartridgeSdkV1 {
   getConsoleFlags?: () => RoccoConsoleFlags | undefined;
   setConsoleFlags?: (patch: Partial<RoccoConsoleFlags>) => void;
 
-  beginCompositionSession?: (
-    ownerId: string,
-    options?: { message?: string },
-  ) => CompositionSession;
+  beginCompositionSession?: (ownerId: string, options?: { message?: string }) => CompositionSession;
 }
 ```
 
@@ -77,8 +74,6 @@ interface CartridgeSdkV1 {
 Most optional members are controlled by capability negotiation. The adapter also installs `isDeveloperModeEnabled`, `getConsoleFlags`, and `setConsoleFlags` as optional compatibility helpers without a dedicated capability identifier.
 
 `beginCompositionSession` is exposed flat as part of the SDK v1 contract.
-Legacy cartridges remain on the explicit `LegacyCartridgeContext` path and do
-not receive an SDK v1 fallback.
 
 ## Video capability structure
 
@@ -103,9 +98,8 @@ runtime: {
 ```
 
 `RoccoCartridgeManager` validates this with
-`assertCartridgeSdkCompatibility` before `mount()` and rejects incompatible
-SDK ranges or unknown capabilities. Legacy cartridges without a `runtime`
-block keep mounting against the full `RoccoEngine` kernel.
+`assertCartridgeSdkCompatibility` before `mount()` and rejects a missing
+`runtime` block, incompatible SDK ranges, or unknown capabilities.
 
 ## Capabilities
 
@@ -129,7 +123,7 @@ Unknown capability identifiers are rejected before mount.
 
 `CartridgeSdkV1Runtime` is an internal type used by the official cartridge after its manifest has negotiated every capability required by that cartridge.
 
-It converts the negotiated public facade into the required view expected by the official runtime. It still contains only cartridge-facing facades and must not be described as `RoccoEngine` or as direct kernel access.
+It converts the negotiated public facade into the required view expected by the official runtime. It still contains only cartridge-facing facades and must not be described as the console kernel or as direct kernel access.
 
 General cartridge documentation and third-party cartridge examples must use `CartridgeSdkV1`, not `CartridgeSdkV1Runtime`.
 
@@ -144,10 +138,6 @@ The facade exposes only:
 - `clear`
 
 It does not expose the kernel zoom controller, transform inspection, animation-state inspection, `update`, stage application, rendering, or viewport ownership.
-
-## Legacy boundary
-
-Legacy cartridges do not receive an SDK v1 fallback. They mount through `LegacyCartridgeContext` and use `context.engine`.
 
 ## Contract tests
 

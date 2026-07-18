@@ -1,4 +1,4 @@
-import type { RoccoConsoleFlags, RoccoEngine } from '../engine-sdk';
+import type { RoccoConsoleFlags } from '../console-flags';
 import type { RoccoActionMenuActivation } from '../video/action-menu';
 import type { RoccoGridMenuActivation, RoccoGridMenuCarriedItem } from '../video/grid-menu';
 import type { CartridgeSdkV1 } from './sdk-v1';
@@ -72,7 +72,7 @@ export interface RoccoCartridgeManifest {
   engineVersion?: string;
   tags?: string[];
   localizations?: Record<string, RoccoCartridgeLocalizedManifest>;
-  runtime?: CartridgeManifestRuntime;
+  runtime: CartridgeManifestRuntime;
 }
 
 export type RoccoCartridgeLocalizedManifest = Partial<
@@ -84,9 +84,8 @@ export type RoccoCartridgeLocalizedManifest = Partial<
 
 /**
  * Declares the console SDK runtime a cartridge targets and the capabilities it
- * negotiates. Validated by `assertCartridgeSdkCompatibility` before mount
- * (audit SDK-001 / ROCCO-011). Absent for legacy cartridges, which mount
- * with the full `RoccoEngine` kernel.
+ * negotiates. Every cartridge manifest must declare it, and it is validated by
+ * `assertCartridgeSdkCompatibility` before mount (audit SDK-001 / ROCCO-011).
  */
 export interface CartridgeManifestRuntime {
   /** Semver range the cartridge requires, e.g. `'^1.0.0'`. */
@@ -95,22 +94,9 @@ export interface CartridgeManifestRuntime {
   capabilities?: readonly string[];
 }
 
-export interface LegacyCartridgeContext {
-  engine: RoccoEngine;
-  locale?: string;
-}
-
 export interface CartridgeContextV1 {
-  sdk: CartridgeSdkV1;
-  locale?: string;
-}
-
-export type RoccoCartridgeContext = LegacyCartridgeContext | CartridgeContextV1;
-
-export function isSdkV1CartridgeManifest(
-  manifest: RoccoCartridgeManifest,
-): manifest is RoccoCartridgeManifest & { runtime: CartridgeManifestRuntime } {
-  return manifest.runtime !== undefined;
+  readonly sdk: CartridgeSdkV1;
+  readonly locale?: string;
 }
 
 export interface RoccoCartridgeSetupConsole {
@@ -144,7 +130,7 @@ export interface RoccoCartridge {
   setup?(
     context: RoccoCartridgeSetupContext,
   ): Promise<RoccoCartridgeSetupResult | void> | RoccoCartridgeSetupResult | void;
-  mount(context: RoccoCartridgeContext): Promise<void> | void;
+  mount(context: CartridgeContextV1): Promise<void> | void;
   start?(): Promise<void> | void;
   update?(deltaMs: number): void;
   handleAction?(

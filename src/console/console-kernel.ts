@@ -6,8 +6,9 @@ import type { RoccoPlaneScene, RoccoPlaneSceneRecord } from './video/planes';
 import type { InputMode, InputPolicyLease } from './input/input-policy-stack';
 import type { CompositionSession } from './composition/composition-service';
 import type { CartridgeSaveRepo, CreateSaveRepoOptions } from './persistence/types';
+import type { RoccoConsoleFlags } from './console-flags';
 
-export interface RoccoEnginePersistence {
+export interface ConsolePersistence {
   loadPlaneSceneRecord(cartridgeId: string, sceneId: string): Promise<RoccoPlaneSceneRecord | null>;
   savePlaneScene(cartridgeId: string, scene: RoccoPlaneScene): Promise<void>;
 
@@ -20,17 +21,18 @@ export interface RoccoEnginePersistence {
   createSaveRepository<TState>(options: CreateSaveRepoOptions<TState>): CartridgeSaveRepo<TState>;
 }
 
-export interface RoccoConsoleFlags {
-  developerModeEnabled: boolean;
-}
-
-export interface RoccoEngine {
+/**
+ * Internal host contract implemented by `GameRuntime`. The kernel owns host
+ * runtime infrastructure and is never handed to a cartridge; cartridges receive
+ * the capability-filtered `CartridgeSdkV1` produced by `createCartridgeSdkV1`.
+ */
+export interface ConsoleKernel {
   // Direct subsystem access
   readonly video: RoccoVideoSystem;
   readonly audio: RoccoAudioSystem;
   readonly jukebox: RoccoJukeboxSystem;
   readonly effects: RoccoEffectManager;
-  readonly persistence: RoccoEnginePersistence;
+  readonly persistence: ConsolePersistence;
 
   // Scene management
   loadPlaneScene(scene: RoccoPlaneScene): void;
@@ -62,7 +64,7 @@ export interface RoccoEngine {
   // Composition control (loading overlay)
   /**
    * Opens an owned composition session. Only the returned session may update or
-   * close its overlay. Prefer this over the deprecated `beginComposition`.
+   * close its overlay.
    */
   beginCompositionSession(ownerId: string, options?: { message?: string }): CompositionSession;
 

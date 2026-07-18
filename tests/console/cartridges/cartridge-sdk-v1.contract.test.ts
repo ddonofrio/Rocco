@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createResourceScope, type ResourceScope } from '../../../src/console/lifecycle';
-import type { RoccoEngine } from '../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../src/console/console-kernel';
 import type { RoccoCartridgeManifest } from '../../../src/console/cartridges/types';
 import {
   CARTRIDGE_SDK_VERSION,
@@ -14,12 +14,26 @@ import {
 } from '../../../src/console/cartridges/sdk-v1';
 
 /**
- * A fake full `RoccoEngine` kernel. It deliberately implements the host-only
- * members (`video.update`, `video.render`, `video.viewport`, `effects.tick`,
+ * Builds a valid cartridge manifest. Every manifest must declare `runtime`;
+ * capabilities default to the full supported set unless overridden.
+ */
+function manifest(overrides: Partial<RoccoCartridgeManifest> = {}): RoccoCartridgeManifest {
+  return {
+    id: 'c',
+    title: 'c',
+    version: '1.0.0',
+    runtime: { sdk: '^1.0.0' },
+    ...overrides,
+  };
+}
+
+/**
+ * A fake `ConsoleKernel`. It deliberately implements the host-only members
+ * (`video.update`, `video.render`, `video.viewport`, `effects.tick`,
  * `jukebox.unlock`, ...) so the contract proves the adapter *hides* them from
  * the cartridge-facing SDK rather than just never having them.
  */
-interface FakeEngineSpies {
+interface FakeKernelSpies {
   audioPlaySound: ReturnType<typeof vi.fn>;
   effectsAdd: ReturnType<typeof vi.fn>;
   jukeboxRegisterPlaylist: ReturnType<typeof vi.fn>;
@@ -28,13 +42,10 @@ interface FakeEngineSpies {
 }
 
 /**
- * A fake full `RoccoEngine` kernel. It deliberately implements the host-only
- * members (`video.update`, `video.render`, `video.viewport`, `effects.tick`,
- * `jukebox.unlock`, ...) so the contract proves the adapter *hides* them from
- * the cartridge-facing SDK rather than just never having them. Spies are
- * returned alongside the engine so assertions reference bare identifiers.
+ * A fake `ConsoleKernel`. Spies are returned alongside the kernel so
+ * assertions reference bare identifiers.
  */
-function createFakeEngine(): { engine: RoccoEngine; spies: FakeEngineSpies } {
+function createFakeKernel(): { kernel: ConsoleKernel; spies: FakeKernelSpies } {
   const audioPlaySound = vi.fn(() => ({
     stop: vi.fn(),
     setVolume: vi.fn(),
@@ -108,7 +119,7 @@ function createFakeEngine(): { engine: RoccoEngine; spies: FakeEngineSpies } {
     savePlaneScene: vi.fn(),
   };
 
-  const engine = {
+  const kernel = {
     video: video as never,
     audio: audio as never,
     jukebox: jukebox as never,
@@ -124,21 +135,25 @@ function createFakeEngine(): { engine: RoccoEngine; spies: FakeEngineSpies } {
     setCompositionText: vi.fn(),
     setStatus: vi.fn(),
     log,
-  } as unknown as RoccoEngine;
+  } as unknown as ConsoleKernel;
 
   return {
-    engine,
+    kernel,
     spies: { audioPlaySound, effectsAdd, jukeboxRegisterPlaylist, log, beginCompositionSession },
   };
 }
 
-function buildSdk(manifest: RoccoCartridgeManifest, scope: ResourceScope): CartridgeSdkV1 {
-  return createCartridgeSdkV1({ engine: createFakeEngine().engine, scope, manifest });
+function buildSdk(cartridgeManifest: RoccoCartridgeManifest, scope: ResourceScope): CartridgeSdkV1 {
+  return createCartridgeSdkV1({
+    kernel: createFakeKernel().kernel,
+    scope,
+    manifest: cartridgeManifest,
+  });
 }
 
 describe('Cartridge SDK v1 contract', () => {
   it('hides internal video runtime methods from the cartridge', () => {
-    const sdk = buildSdk({ id: 'c', title: 'c', version: '1.0.0' }, createResourceScope('t'));
+    const sdk = buildSdk(manifest(), createResourceScope('t'));
     const video = sdk.video as unknown as Record<string, unknown>;
 
     expect(video.update).toBeUndefined();
@@ -151,18 +166,18 @@ describe('Cartridge SDK v1 contract', () => {
   });
 
   it('hides effects.tick and jukebox.unlock from the cartridge', () => {
-    const sdk = buildSdk({ id: 'c', title: 'c', version: '1.0.0' }, createResourceScope('t'));
+    const sdk = buildSdk(manifest(), createResourceScope('t'));
 
     expect((sdk.effects as unknown as Record<string, unknown>).tick).toBeUndefined();
     expect((sdk.jukebox as unknown as Record<string, unknown>).unlock).toBeUndefined();
   });
 
-  it('delegates public members to the underlying engine', () => {
-    const { engine, spies } = createFakeEngine();
+  it('delegates public members to the underlying kernel', () => {
+    const { kernel, spies } = createFakeKernel();
     const sdk = createCartridgeSdkV1({
-      engine,
+      kernel,
       scope: createResourceScope('t'),
-      manifest: { id: 'c', title: 'c', version: '1.0.0' },
+      manifest: manifest(),
     });
 
     sdk.audio?.playSound('boom');
@@ -194,7 +209,7 @@ describe('Cartridge SDK v1 contract', () => {
 
   it('exposes the negotiated scope, version and capabilities', () => {
     const scope = createResourceScope('cartridge:c');
-    const sdk = buildSdk({ id: 'c', title: 'c', version: '1.0.0' }, scope);
+    const sdk = buildSdk(manifest(), scope);
 
     expect(sdk.scope).toBe(scope);
     expect(sdk.sdkVersion).toBe(CARTRIDGE_SDK_VERSION);
@@ -203,12 +218,7 @@ describe('Cartridge SDK v1 contract', () => {
 
   it('reflects explicitly declared capabilities', () => {
     const sdk = buildSdk(
-      {
-        id: 'c',
-        title: 'c',
-        version: '1.0.0',
-        runtime: { sdk: '^1.0.0', capabilities: ['audio.v1'] },
-      },
+      manifest({ runtime: { sdk: '^1.0.0', capabilities: ['audio.v1'] } }),
       createResourceScope('t'),
     );
 
@@ -216,16 +226,15 @@ describe('Cartridge SDK v1 contract', () => {
   });
 
   it('filters modules and methods by negotiated capability at runtime', () => {
-    const { engine } = createFakeEngine();
+    const { kernel } = createFakeKernel();
     const sdk = createCartridgeSdkV1({
-      engine,
+      kernel,
       scope: createResourceScope('audio-only'),
-      manifest: {
+      manifest: manifest({
         id: 'audio-only',
         title: 'audio-only',
-        version: '1.0.0',
         runtime: { sdk: '^1.0.0', capabilities: ['audio.v1'] },
-      },
+      }),
     });
 
     expect(sdk.audio).toBeDefined();
@@ -237,15 +246,19 @@ describe('Cartridge SDK v1 contract', () => {
   });
 
   it('returns method facades instead of the kernel subsystem objects', () => {
-    const { engine } = createFakeEngine();
-    const sdk = buildSdk({ id: 'c', title: 'c', version: '1.0.0' }, createResourceScope('facades'));
+    const { kernel } = createFakeKernel();
+    const sdk = createCartridgeSdkV1({
+      kernel,
+      scope: createResourceScope('facades'),
+      manifest: manifest(),
+    });
 
-    expect(sdk.video?.planes).not.toBe(engine.video.planes);
-    expect(sdk.video?.sprites).not.toBe(engine.video.sprites);
-    expect(sdk.video?.camera).not.toBe(engine.video.zoom);
-    expect(sdk.audio).not.toBe(engine.audio);
-    expect(sdk.effects).not.toBe(engine.effects);
-    expect(sdk.jukebox).not.toBe(engine.jukebox);
+    expect(sdk.video?.planes).not.toBe(kernel.video.planes);
+    expect(sdk.video?.sprites).not.toBe(kernel.video.sprites);
+    expect(sdk.video?.camera).not.toBe((kernel.video as unknown as { zoom: unknown }).zoom);
+    expect(sdk.audio).not.toBe(kernel.audio);
+    expect(sdk.effects).not.toBe(kernel.effects);
+    expect(sdk.jukebox).not.toBe(kernel.jukebox);
   });
 
   it('recognises supported capabilities', () => {
@@ -255,56 +268,49 @@ describe('Cartridge SDK v1 contract', () => {
 });
 
 describe('Cartridge SDK compatibility validation', () => {
-  it('accepts a manifest without runtime (legacy cartridge)', () => {
-    const result = checkCartridgeSdkCompatibility({ id: 'c', title: 'c', version: '1.0.0' });
+  it('rejects a malformed manifest missing runtime', () => {
+    const malformedManifest = {
+      id: 'legacy',
+      title: 'Legacy',
+      version: '1.0.0',
+    } as unknown as RoccoCartridgeManifest;
 
-    expect(result.ok).toBe(true);
-    expect(result.errors).toEqual([]);
+    const result = checkCartridgeSdkCompatibility(malformedManifest);
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/runtime/i);
   });
 
   it('accepts a valid SDK range and supported capabilities', () => {
-    const result = checkCartridgeSdkCompatibility({
-      id: 'c',
-      title: 'c',
-      version: '1.0.0',
-      runtime: { sdk: '^1.0.0', capabilities: ['audio.v1', 'video.sprites.v1'] },
-    });
+    const result = checkCartridgeSdkCompatibility(
+      manifest({ runtime: { sdk: '^1.0.0', capabilities: ['audio.v1', 'video.sprites.v1'] } }),
+    );
 
     expect(result.ok).toBe(true);
     expect(result.errors).toEqual([]);
   });
 
   it('rejects an incompatible SDK range', () => {
-    const result = checkCartridgeSdkCompatibility({
-      id: 'c',
-      title: 'c',
-      version: '1.0.0',
-      runtime: { sdk: '^2.0.0' },
-    });
+    const result = checkCartridgeSdkCompatibility(manifest({ runtime: { sdk: '^2.0.0' } }));
 
     expect(result.ok).toBe(false);
     expect(result.errors.join(' ')).toMatch(/sdk/i);
   });
 
   it('rejects an unknown capability', () => {
-    const result = checkCartridgeSdkCompatibility({
-      id: 'c',
-      title: 'c',
-      version: '1.0.0',
-      runtime: { sdk: '^1.0.0', capabilities: ['video.sprites.v1', 'unknown.cap'] },
-    });
+    const result = checkCartridgeSdkCompatibility(
+      manifest({ runtime: { sdk: '^1.0.0', capabilities: ['video.sprites.v1', 'unknown.cap'] } }),
+    );
 
     expect(result.ok).toBe(false);
     expect(result.errors.join(' ')).toMatch(/unknown\.cap/);
   });
 
   it('rejects an SDK runtime without its required SDK range', () => {
-    const result = checkCartridgeSdkCompatibility({
-      id: 'c',
-      title: 'c',
-      version: '1.0.0',
-      runtime: { capabilities: ['audio.v1'] } as unknown as RoccoCartridgeManifest['runtime'],
-    });
+    const result = checkCartridgeSdkCompatibility(
+      manifest({
+        runtime: { capabilities: ['audio.v1'] } as unknown as RoccoCartridgeManifest['runtime'],
+      }),
+    );
 
     expect(result.ok).toBe(false);
     expect(result.errors.join(' ')).toMatch(/runtime\.sdk/);
@@ -312,26 +318,31 @@ describe('Cartridge SDK compatibility validation', () => {
 
   it('throws from assertCartridgeSdkCompatibility on an incompatible manifest', () => {
     expect(() =>
-      assertCartridgeSdkCompatibility({
-        id: 'c',
-        title: 'c',
-        version: '1.0.0',
-        runtime: { sdk: '^2.0.0' },
-      }),
+      assertCartridgeSdkCompatibility(manifest({ runtime: { sdk: '^2.0.0' } })),
     ).toThrow();
   });
 
   it('validates a minimal-capability cartridge and still builds an SDK', () => {
-    const manifest: RoccoCartridgeManifest = {
+    const minimalManifest = manifest({
       id: 'mini',
       title: 'mini',
-      version: '1.0.0',
       runtime: { sdk: '^1.0.0', capabilities: ['audio.v1'] },
-    };
+    });
 
-    expect(checkCartridgeSdkCompatibility(manifest).ok).toBe(true);
-    const sdk = buildSdk(manifest, createResourceScope('mini'));
+    expect(checkCartridgeSdkCompatibility(minimalManifest).ok).toBe(true);
+    const sdk = buildSdk(minimalManifest, createResourceScope('mini'));
     expect(sdk.audio).toBeDefined();
     expect(sdk.capabilities).toEqual(['audio.v1']);
+  });
+
+  it('requires runtime at the type level', () => {
+    // @ts-expect-error runtime is mandatory for every cartridge manifest
+    const invalidManifest: RoccoCartridgeManifest = {
+      id: 'invalid',
+      title: 'Invalid',
+      version: '1.0.0',
+    };
+
+    expect(invalidManifest.id).toBe('invalid');
   });
 });

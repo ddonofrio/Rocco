@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 import type { RoccoGridMenuItem } from '../../../../src/console/video/grid-menu';
@@ -102,7 +102,7 @@ function createEngineMock(state: IntercomEngineMockState): CartridgeSdkV1Runtime
       fail() {},
       dispose() {},
     }),
-  } as unknown as RoccoEngine);
+  } as unknown as ConsoleKernel);
 }
 
 const NETHER_INTERCOM_DIALOGUE_MENU_ID = 'nether-intercom-dialogue-menu';

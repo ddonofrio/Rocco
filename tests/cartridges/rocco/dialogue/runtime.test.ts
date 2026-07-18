@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 import type {
@@ -180,7 +180,7 @@ function createEngineMock(state: DialogueEngineMockState): CartridgeSdkV1Runtime
       fail() {},
       dispose() {},
     }),
-  } as unknown as RoccoEngine);
+  } as unknown as ConsoleKernel);
 }
 
 function makeState(): DialogueEngineMockState {

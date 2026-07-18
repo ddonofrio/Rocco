@@ -94,13 +94,9 @@ The session disposes only its own lease.
 
 ```ts
 interface RoccoDialogueSessionHooks {
-  beforeNpcReply?: (
-    choice: RoccoDialogueChoiceNode,
-  ) => number | void;
+  beforeNpcReply?: (choice: RoccoDialogueChoiceNode) => number | void;
 
-  afterNpcLine?: (
-    choice: RoccoDialogueChoiceNode,
-  ) => void;
+  afterNpcLine?: (choice: RoccoDialogueChoiceNode) => void;
 }
 ```
 
@@ -165,4 +161,4 @@ Selection state is maintained per history key.
 
 The official Rocco runtime constructs dialogue sessions with `CartridgeSdkV1Runtime`.
 
-Despite the option property currently being named `engine`, it contains the required SDK v1 facade, not `RoccoEngine` and not direct console-kernel access.
+Despite the option property currently being named `engine`, it contains the required SDK v1 facade, not direct kernel access.

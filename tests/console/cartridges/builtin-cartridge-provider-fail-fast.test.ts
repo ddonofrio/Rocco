@@ -9,6 +9,7 @@ function makeRegistration(id: string): RoccoCartridgeRegistration {
       id,
       title: id,
       version: '0.1.0',
+      runtime: { sdk: '^1.0.0', capabilities: [] },
     },
     createCartridge: () =>
       ({
@@ -30,8 +31,9 @@ describe('RoccoBuiltinCartridgeProvider', () => {
   });
 
   it('throws on duplicate cartridge id', () => {
-    expect(() =>
-      new RoccoBuiltinCartridgeProvider([makeRegistration('alpha'), makeRegistration('alpha')]),
+    expect(
+      () =>
+        new RoccoBuiltinCartridgeProvider([makeRegistration('alpha'), makeRegistration('alpha')]),
     ).toThrow("Duplicate cartridge registration 'alpha'.");
   });
 

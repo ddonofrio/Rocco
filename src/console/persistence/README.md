@@ -117,8 +117,7 @@ profiles, or slots never collide.
 
 ## Notes
 
-- SDK v1 cartridges use persistence through `sdk.storage`; legacy cartridges use
-  the explicit `LegacyCartridgeContext.engine.persistence` surface.
+- Cartridges use persistence through `sdk.storage`.
 - Cartridges do not access Dexie directly.
 - Plane scenes are stored as plain JSON.
 - The database connection is lazily opened and released by

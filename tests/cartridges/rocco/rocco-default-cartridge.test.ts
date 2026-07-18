@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { RoccoCartridgeAction } from '../../../src/console/cartridges';
-import type { RoccoEnginePersistence } from '../../../src/console/engine-sdk';
+import type { ConsolePersistence } from '../../../src/console/console-kernel';
 import { asRoccoTestSdk } from './test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../src/console/cartridges/sdk-v1';
 import type { RoccoAudioSystem } from '../../../src/console/audio';
@@ -1132,7 +1132,7 @@ function createEngineMock(state: EngineMockState): CartridgeSdkV1Runtime {
     },
   };
 
-  const persistence: RoccoEnginePersistence = {
+  const persistence: ConsolePersistence = {
     loadPlaneSceneRecord(_cartridgeId: string, _sceneId: string) {
       return Promise.resolve(state.restoredRecord as RoccoPlaneSceneRecord | null);
     },

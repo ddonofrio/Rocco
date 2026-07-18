@@ -33,20 +33,20 @@ display.profile      90
 
 ## Subsystems
 
-| Directory          | Purpose                                                                      |
-| ------------------ | ---------------------------------------------------------------------------- |
-| `planes/`          | Layered graphic backgrounds and plane scenes                                 |
-| `sprites/`         | Animated entities, motion, action profiles, and walk maps                    |
-| `scene-targets/`   | Invisible rect, circle, and polygon hotspots                                 |
-| `action-menu/`     | SCUMM-style radial action menus                                              |
-| `grid-menu/`       | Generic slot-panel menus, text choice lists, slot reorder, and item payloads |
-| `messages/`        | Sprite-anchored speech and thought bubbles                                   |
-| `primitives/`      | Debug shapes                                                                 |
-| `titles/`          | Temporary text overlays and hover descriptions                               |
-| `display/`         | CRT-style display profile                                                    |
-| `cursor/`          | Custom cursor, image attachments, and pointer coordinates                    |
-| `viewport/`        | Runtime-owned fullscreen contain-scaling host                                |
-| `post-processing/` | Pixel-level helpers and water effects                                        |
+| Directory          | Purpose                                                                        |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `planes/`          | Layered graphic backgrounds and plane scenes                                   |
+| `sprites/`         | Animated entities, motion, action profiles, and walk maps                      |
+| `scene-targets/`   | Invisible rect, circle, and polygon hotspots                                   |
+| `action-menu/`     | SCUMM-style radial action menus                                                |
+| `grid-menu/`       | Generic slot-panel menus, text choice lists, slot reorder, and item payloads   |
+| `messages/`        | Sprite-anchored speech and thought bubbles                                     |
+| `primitives/`      | Debug shapes                                                                   |
+| `titles/`          | Temporary text overlays and hover descriptions                                 |
+| `display/`         | CRT-style display profile                                                      |
+| `cursor/`          | Custom cursor, image attachments, and pointer coordinates                      |
+| `viewport/`        | Runtime-owned fullscreen contain-scaling host                                  |
+| `post-processing/` | Pixel-level helpers and water effects                                          |
 | `zoom/`            | Runtime presentation-transform controller and cartridge camera-facade boundary |
 
 ## Architecture
@@ -89,8 +89,6 @@ video?.display?.setProfile(profile);
 
 Every subsystem is optional on the public SDK type. Availability depends on the negotiated capability set.
 
-Legacy cartridges use their explicit `context.engine.video` surface. Legacy examples must be labelled as legacy and must not be presented as SDK v1 usage.
-
 ## Camera facade
 
 `sdk.video?.camera` is the complete cartridge-facing presentation-transform API.
@@ -105,15 +103,15 @@ sdk.video?.camera?.clear();
 
 The facade intentionally excludes:
 
-* transform-state inspection;
-* animation-state inspection;
-* per-frame update;
-* stage application;
-* direct Pixi stage access;
-* renderer access;
-* viewport sizing;
-* browser fullscreen handling;
-* pointer-coordinate conversion.
+- transform-state inspection;
+- animation-state inspection;
+- per-frame update;
+- stage application;
+- direct Pixi stage access;
+- renderer access;
+- viewport sizing;
+- browser fullscreen handling;
+- pointer-coordinate conversion.
 
 The facade delegates to the internal runtime zoom controller documented in [`zoom/README.md`](zoom/README.md).
 

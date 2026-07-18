@@ -4,7 +4,6 @@ import type {
   CartridgeContextV1,
   RoccoCartridge,
   RoccoCartridgeAction,
-  RoccoCartridgeContext,
 } from '../../console/cartridges/types';
 import type { CartridgeSdkV1Runtime } from '../../console/cartridges/sdk-v1';
 import { createRoccoDefaultGameDefinition, createRoccoLocalization } from './games/rocco-default';
@@ -82,11 +81,7 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     this.cancelActiveActions = cancelActiveActions;
   }
 
-  async mount(context: RoccoCartridgeContext): Promise<void> {
-    if (!('sdk' in context)) {
-      throw new Error('The official cartridge requires an SDK v1 mount context.');
-    }
-
+  async mount(context: CartridgeContextV1): Promise<void> {
     const sdk = context.sdk as RoccoCartridgeSdk;
     this.mountContext = { ...context };
     this.cancelActiveActions?.('cartridge-remount:rocco-default');

@@ -4,7 +4,7 @@ import type {
   RoccoSoundDefinition,
   RoccoSoundPlayOptions,
 } from '../../../../../src/console/audio/types';
-import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../../src/console/cartridges/sdk-v1';
 import type { RoccoActionMenuDefinition } from '../../../../../src/console/video/action-menu';
@@ -211,7 +211,7 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
           state.activeGridMenuDefinitionId = undefined;
         },
         clearCarriedItem: () => {},
-      } as unknown as RoccoEngine['video']['gridMenus'],
+      } as unknown as ConsoleKernel['video']['gridMenus'],
       messages: {
         think: (instanceId: string, text: string | string[]) => {
           state.spriteMessages.push(
@@ -227,7 +227,7 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
         clearMessages: () => {
           state.spriteMessages.length = 0;
         },
-      } as unknown as RoccoEngine['video']['messages'],
+      } as unknown as ConsoleKernel['video']['messages'],
       sceneTargets: {
         registerTarget: (definition: { instanceId: string }) => {
           state.sceneTargetsById.set(definition.instanceId, definition);
@@ -236,18 +236,18 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
           state.sceneTargetsById.delete(instanceId);
           state.unregisteredSceneTargetIds.push(instanceId);
         },
-      } as unknown as RoccoEngine['video']['sceneTargets'],
+      } as unknown as ConsoleKernel['video']['sceneTargets'],
       planes: {
         updatePlane: () => {},
-      } as unknown as RoccoEngine['video']['planes'],
+      } as unknown as ConsoleKernel['video']['planes'],
       titles: {
         addTitle: () => {},
         removeTitle: () => {},
-      } as unknown as RoccoEngine['video']['titles'],
+      } as unknown as ConsoleKernel['video']['titles'],
       primitives: {
         addPrimitive: () => {},
         removePrimitive: () => {},
-      } as unknown as RoccoEngine['video']['primitives'],
+      } as unknown as ConsoleKernel['video']['primitives'],
       sprites: {
         registerWalkMap: (walkMap: RoccoSpriteWalkMap) => {
           state.registeredWalkMapIds.push(walkMap.id);
@@ -367,8 +367,8 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
             sprite.animation.frameIndex = frameIndex;
           }
         },
-      } as unknown as RoccoEngine['video']['sprites'],
-    } as unknown as RoccoEngine['video'],
+      } as unknown as ConsoleKernel['video']['sprites'],
+    } as unknown as ConsoleKernel['video'],
     audio: {
       registerSound: (definition: RoccoSoundDefinition) => {
         state.registeredSounds.set(definition.id, definition);
@@ -390,14 +390,14 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
         state.stoppedSoundIds.push(soundId);
       },
       stopAllSounds: () => {},
-    } as unknown as RoccoEngine['audio'],
+    } as unknown as ConsoleKernel['audio'],
     persistence: {
       loadPlaneSceneRecord: () => Promise.resolve(state.restoredRecord),
       savePlaneScene: (scene: RoccoPlaneScene) => {
         state.savedScenes.push(scene);
         return Promise.resolve();
       },
-    } as unknown as RoccoEngine['persistence'],
+    } as unknown as ConsoleKernel['persistence'],
     loadPlaneScene: (scene: RoccoPlaneScene) => {
       state.loadedScene = scene;
     },
@@ -430,7 +430,7 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
       state.playerSpriteId = instanceId;
     },
     log: () => {},
-  } as unknown as RoccoEngine);
+  } as unknown as ConsoleKernel);
 }
 
 function countCoralRelicReadingLines(localization: RoccoLocalization): number {

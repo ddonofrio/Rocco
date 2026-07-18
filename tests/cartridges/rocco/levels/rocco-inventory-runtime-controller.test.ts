@@ -8,7 +8,7 @@ import {
   ROCCO_INVENTORY_MENU_ID,
 } from '../../../../src/cartridges/rocco/inventory';
 import { RoccoInventoryRuntimeController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-inventory-runtime-controller';
-import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 
@@ -67,7 +67,7 @@ function createInventoryEngine(initialCarriedItem?: InventoryEngineState['carrie
         state.renderCalls += 1;
       },
     },
-  } as unknown as RoccoEngine);
+  } as unknown as ConsoleKernel);
 
   return { engine, state };
 }

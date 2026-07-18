@@ -22,7 +22,7 @@ export interface RuntimeBootstrapOptions {
   jukebox: RoccoJukeboxSystemImpl;
   cartridgeManager: RoccoCartridgeManager;
   cartridgeScope?: ResourceScope;
-  engine: CartridgeLoadOptions['engine'];
+  kernel: CartridgeLoadOptions['kernel'];
   getActiveCartridge: () => RoccoCartridge | null | undefined;
   getActiveLevelId: () => string | null | undefined;
   getActivePlayerSpriteId: () => string | undefined;
@@ -86,7 +86,7 @@ export class RuntimeBootstrap {
 
     await this.options.cartridgeManager.loadAndMount({
       app,
-      engine: this.options.engine,
+      kernel: this.options.kernel,
       configuredCartridgeId: this.options.configuredCartridgeId,
       cartridgeScope: this.options.cartridgeScope,
       cancelActiveActions: this.options.cancelActiveActions,

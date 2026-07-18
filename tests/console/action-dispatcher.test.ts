@@ -15,7 +15,12 @@ function makeCartridge(
   ) => CartridgeActionDisposition | void,
 ): RoccoCartridge {
   return {
-    manifest: { id: 'test-cartridge', title: 'Test', version: '1.0.0' },
+    manifest: {
+      id: 'test-cartridge',
+      title: 'Test',
+      version: '1.0.0',
+      runtime: { sdk: '^1.0.0', capabilities: [] },
+    },
     mount() {},
     handleAction,
   };

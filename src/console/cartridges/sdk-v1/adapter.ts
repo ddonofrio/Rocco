@@ -1,6 +1,6 @@
 import type { ResourceScope } from '../../lifecycle';
 import type { RoccoCartridgeManifest } from '../types';
-import type { RoccoEngine } from '../../engine-sdk';
+import type { ConsoleKernel } from '../../console-kernel';
 import type {
   CartridgeAudioApi,
   CartridgeCreateSaveRepoOptions,
@@ -14,7 +14,7 @@ import { CARTRIDGE_SDK_V1_CAPABILITIES, type CartridgeCapability } from './capab
 import { CARTRIDGE_SDK_VERSION } from './version';
 
 export interface CreateCartridgeSdkV1Options {
-  engine: RoccoEngine;
+  kernel: ConsoleKernel;
   scope: ResourceScope;
   manifest: RoccoCartridgeManifest;
 }
@@ -192,7 +192,7 @@ function selectForCapability<T>(
 }
 
 function createVideoSdk(
-  engine: RoccoEngine,
+  kernel: ConsoleKernel,
   capabilities: readonly CartridgeCapability[],
 ): CartridgeVideoApi | undefined {
   const hasPlanes = hasCapability(capabilities, 'video.planes.v1');
@@ -203,58 +203,58 @@ function createVideoSdk(
   }
 
   const video: MutableCartridgeVideoApi = {
-    preloadAssetUrls: (assetUrls) => engine.video.preloadAssetUrls(assetUrls),
-    camera: createMethodFacade(engine.video.zoom, CAMERA_METHODS),
+    preloadAssetUrls: (assetUrls) => kernel.video.preloadAssetUrls(assetUrls),
+    camera: createMethodFacade(kernel.video.zoom, CAMERA_METHODS),
   };
   if (hasPlanes) {
-    video.planes = createMethodFacade(engine.video.planes, PLANE_METHODS);
-    video.display = createMethodFacade(engine.video.display, DISPLAY_METHODS);
-    video.preloadPlaneScene = (scene) => engine.video.preloadPlaneScene(scene);
+    video.planes = createMethodFacade(kernel.video.planes, PLANE_METHODS);
+    video.display = createMethodFacade(kernel.video.display, DISPLAY_METHODS);
+    video.preloadPlaneScene = (scene) => kernel.video.preloadPlaneScene(scene);
   }
   if (hasSprites) {
-    video.sprites = createMethodFacade(engine.video.sprites, SPRITE_METHODS);
-    video.sceneTargets = engine.video.sceneTargets
-      ? createMethodFacade(engine.video.sceneTargets, SCENE_TARGET_METHODS)
+    video.sprites = createMethodFacade(kernel.video.sprites, SPRITE_METHODS);
+    video.sceneTargets = kernel.video.sceneTargets
+      ? createMethodFacade(kernel.video.sceneTargets, SCENE_TARGET_METHODS)
       : undefined;
     video.preloadSpriteDefinition = (definition) =>
-      engine.video.preloadSpriteDefinition(definition);
+      kernel.video.preloadSpriteDefinition(definition);
     video.preloadSpriteDefinitions = (definitions) =>
-      engine.video.preloadSpriteDefinitions(definitions);
+      kernel.video.preloadSpriteDefinitions(definitions);
   }
   if (hasMenus) {
-    video.actionMenus = createMethodFacade(engine.video.actionMenus, ACTION_MENU_METHODS);
-    video.gridMenus = createMethodFacade(engine.video.gridMenus, GRID_MENU_METHODS);
-    video.messages = createMethodFacade(engine.video.messages, MESSAGE_METHODS);
-    video.primitives = createMethodFacade(engine.video.primitives, PRIMITIVE_METHODS);
-    video.titles = createMethodFacade(engine.video.titles, TITLE_METHODS);
-    video.display = createMethodFacade(engine.video.display, DISPLAY_METHODS);
+    video.actionMenus = createMethodFacade(kernel.video.actionMenus, ACTION_MENU_METHODS);
+    video.gridMenus = createMethodFacade(kernel.video.gridMenus, GRID_MENU_METHODS);
+    video.messages = createMethodFacade(kernel.video.messages, MESSAGE_METHODS);
+    video.primitives = createMethodFacade(kernel.video.primitives, PRIMITIVE_METHODS);
+    video.titles = createMethodFacade(kernel.video.titles, TITLE_METHODS);
+    video.display = createMethodFacade(kernel.video.display, DISPLAY_METHODS);
   }
 
   return video;
 }
 
-function createAudioSdk(engine: RoccoEngine): CartridgeAudioApi {
-  return createMethodFacade(engine.audio, AUDIO_METHODS);
+function createAudioSdk(kernel: ConsoleKernel): CartridgeAudioApi {
+  return createMethodFacade(kernel.audio, AUDIO_METHODS);
 }
 
-function createJukeboxSdk(engine: RoccoEngine): CartridgeJukeboxApi {
-  return createMethodFacade(engine.jukebox, JUKEBOX_METHODS);
+function createJukeboxSdk(kernel: ConsoleKernel): CartridgeJukeboxApi {
+  return createMethodFacade(kernel.jukebox, JUKEBOX_METHODS);
 }
 
-function createEffectsSdk(engine: RoccoEngine): CartridgeEffectsApi {
-  return createMethodFacade(engine.effects, EFFECT_METHODS);
+function createEffectsSdk(kernel: ConsoleKernel): CartridgeEffectsApi {
+  return createMethodFacade(kernel.effects, EFFECT_METHODS);
 }
 
 function createStorageSdk(
-  engine: RoccoEngine,
+  kernel: ConsoleKernel,
   manifest: RoccoCartridgeManifest,
 ): CartridgeStorageApi {
   return {
     loadPlaneSceneRecord: (sceneId) =>
-      engine.persistence.loadPlaneSceneRecord(manifest.id, sceneId),
-    savePlaneScene: (scene) => engine.persistence.savePlaneScene(manifest.id, scene),
+      kernel.persistence.loadPlaneSceneRecord(manifest.id, sceneId),
+    savePlaneScene: (scene) => kernel.persistence.savePlaneScene(manifest.id, scene),
     createSaveRepository: <TState>(repoOptions: CartridgeCreateSaveRepoOptions<TState>) =>
-      engine.persistence.createSaveRepository<TState>({
+      kernel.persistence.createSaveRepository<TState>({
         ...repoOptions,
         cartridgeId: manifest.id,
         cartridgeVersion: manifest.version,
@@ -262,39 +262,39 @@ function createStorageSdk(
   };
 }
 
-function createLoggerSdk(engine: RoccoEngine) {
+function createLoggerSdk(kernel: ConsoleKernel) {
   return {
-    log: (channel: string, message: string) => engine.log(channel, message),
-    setStatus: (status: string) => engine.setStatus(status),
+    log: (channel: string, message: string) => kernel.log(channel, message),
+    setStatus: (status: string) => kernel.setStatus(status),
   };
 }
 
 /**
- * Wraps the kernel in a capability-filtered SDK v1 surface. Every exposed
- * subsystem is a method facade; no engine subsystem object is returned.
+ * Wraps the console kernel in a capability-filtered SDK v1 surface. Every
+ * exposed subsystem is a method facade; no kernel subsystem object is returned.
  */
 export function createCartridgeSdkV1(options: CreateCartridgeSdkV1Options): CartridgeSdkV1 {
-  const { engine, scope, manifest } = options;
-  const capabilities = (manifest.runtime?.capabilities ??
+  const { kernel, scope, manifest } = options;
+  const capabilities = (manifest.runtime.capabilities ??
     CARTRIDGE_SDK_V1_CAPABILITIES) as readonly CartridgeCapability[];
-  const logger = createForCapability(capabilities, 'logger.v1', () => createLoggerSdk(engine));
+  const logger = createForCapability(capabilities, 'logger.v1', () => createLoggerSdk(kernel));
   const input = createForCapability(capabilities, 'input.v1', () => ({
-    acquireInputLease: (ownerId: string, mode: Parameters<RoccoEngine['acquireInputLease']>[1]) =>
-      engine.acquireInputLease(ownerId, mode),
-    getInputMode: () => engine.getInputMode(),
+    acquireInputLease: (ownerId: string, mode: Parameters<ConsoleKernel['acquireInputLease']>[1]) =>
+      kernel.acquireInputLease(ownerId, mode),
+    getInputMode: () => kernel.getInputMode(),
   }));
   const sdk: MutableCartridgeSdkV1 = {
     sdkVersion: CARTRIDGE_SDK_VERSION,
     capabilities,
-    video: createVideoSdk(engine, capabilities),
-    audio: createForCapability(capabilities, 'audio.v1', () => createAudioSdk(engine)),
-    jukebox: createForCapability(capabilities, 'jukebox.v1', () => createJukeboxSdk(engine)),
-    effects: createForCapability(capabilities, 'effects.v1', () => createEffectsSdk(engine)),
+    video: createVideoSdk(kernel, capabilities),
+    audio: createForCapability(capabilities, 'audio.v1', () => createAudioSdk(kernel)),
+    jukebox: createForCapability(capabilities, 'jukebox.v1', () => createJukeboxSdk(kernel)),
+    effects: createForCapability(capabilities, 'effects.v1', () => createEffectsSdk(kernel)),
     input,
     acquireInputLease: input?.acquireInputLease,
     getInputMode: input?.getInputMode,
     storage: createForCapability(capabilities, 'storage.v1', () =>
-      createStorageSdk(engine, manifest),
+      createStorageSdk(kernel, manifest),
     ),
     logger,
     log: logger?.log,
@@ -303,30 +303,30 @@ export function createCartridgeSdkV1(options: CreateCartridgeSdkV1Options): Cart
     loadPlaneScene: selectForCapability(
       capabilities,
       'video.planes.v1',
-      engine.loadPlaneScene?.bind(engine),
+      kernel.loadPlaneScene?.bind(kernel),
     ),
     serializePlaneScene: selectForCapability(
       capabilities,
       'video.planes.v1',
-      engine.serializePlaneScene?.bind(engine),
+      kernel.serializePlaneScene?.bind(kernel),
     ),
     setPlayerSprite: selectForCapability(
       capabilities,
       'video.sprites.v1',
-      engine.setPlayerSprite?.bind(engine),
+      kernel.setPlayerSprite?.bind(kernel),
     ),
     getPlayerSprite: selectForCapability(
       capabilities,
       'video.sprites.v1',
-      engine.getPlayerSprite?.bind(engine),
+      kernel.getPlayerSprite?.bind(kernel),
     ),
-    isDeveloperModeEnabled: () => engine.isDeveloperModeEnabled?.() ?? false,
-    getConsoleFlags: () => engine.getConsoleFlags?.(),
-    setConsoleFlags: (patch) => engine.setConsoleFlags?.(patch),
+    isDeveloperModeEnabled: () => kernel.isDeveloperModeEnabled?.() ?? false,
+    getConsoleFlags: () => kernel.getConsoleFlags?.(),
+    setConsoleFlags: (patch) => kernel.setConsoleFlags?.(patch),
     beginCompositionSession: selectForCapability(
       capabilities,
       'composition.v1',
-      engine.beginCompositionSession?.bind(engine),
+      kernel.beginCompositionSession?.bind(kernel),
     ),
   };
 

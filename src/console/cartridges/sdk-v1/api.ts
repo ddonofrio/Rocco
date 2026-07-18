@@ -8,7 +8,7 @@
  * never part of the contract. See audit SDK-001 / ROCCO-011.
  */
 
-import type { RoccoConsoleFlags } from '../../engine-sdk';
+import type { RoccoConsoleFlags } from '../../console-flags';
 import type { RoccoVideoPlaneModule, RoccoVideoDisplayModule } from '../../video/types';
 import type { RoccoVideoZoomModule } from '../../video/zoom';
 import type { RoccoSpriteSystem } from '../../video/sprites/types';
@@ -241,8 +241,7 @@ export interface CartridgeSdkV1 {
   setConsoleFlags?: (patch: Partial<RoccoConsoleFlags>) => void;
   /**
    * Opens an owned composition/loading session. It is exposed flat for the
-   * stable SDK v1 surface; legacy cartridges continue to receive their
-   * explicit `RoccoEngine` context. See capability `composition.v1`.
+   * stable SDK v1 surface. See capability `composition.v1`.
    */
   beginCompositionSession?: (ownerId: string, options?: { message?: string }) => CompositionSession;
 }
@@ -250,7 +249,7 @@ export interface CartridgeSdkV1 {
 /**
  * Internal type used only after a manifest has negotiated every capability
  * required by the official cartridge runtime. It still contains facades only;
- * it is never the kernel `RoccoEngine`.
+ * it is never the console kernel.
  */
 export type CartridgeSdkV1Runtime = Omit<CartridgeSdkV1, 'video'> & {
   readonly video: Required<CartridgeVideoApi>;

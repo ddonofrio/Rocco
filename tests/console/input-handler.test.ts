@@ -155,6 +155,7 @@ function createInputHandler(
       id: 'test-cartridge',
       title: 'Test Cartridge',
       version: '1.0.0',
+      runtime: { sdk: '^1.0.0', capabilities: [] },
     },
     mount() {
       // noop
@@ -275,7 +276,12 @@ describe('RoccoInputHandler', () => {
         setCursorAttachment() {},
       }),
       getActiveCartridge: () => ({
-        manifest: { id: 'test-cartridge', title: 'Test', version: '1.0.0' },
+        manifest: {
+          id: 'test-cartridge',
+          title: 'Test',
+          version: '1.0.0',
+          runtime: { sdk: '^1.0.0', capabilities: [] },
+        },
         mount() {},
         handleAction() {
           // should not be called
@@ -355,7 +361,12 @@ describe('RoccoInputHandler', () => {
         setCursorAttachment() {},
       }),
       getActiveCartridge: () => ({
-        manifest: { id: 'test-cartridge', title: 'Test', version: '1.0.0' },
+        manifest: {
+          id: 'test-cartridge',
+          title: 'Test',
+          version: '1.0.0',
+          runtime: { sdk: '^1.0.0', capabilities: [] },
+        },
         mount() {},
         handleAction() {
           throw new Error('handler failure');
@@ -416,7 +427,12 @@ describe('RoccoInputHandler', () => {
         setCursorAttachment() {},
       }),
       getActiveCartridge: () => ({
-        manifest: { id: 'test-cartridge', title: 'Test', version: '1.0.0' },
+        manifest: {
+          id: 'test-cartridge',
+          title: 'Test',
+          version: '1.0.0',
+          runtime: { sdk: '^1.0.0', capabilities: [] },
+        },
         mount() {},
         handleAction() {
           return;
@@ -477,7 +493,12 @@ describe('RoccoInputHandler', () => {
         setCursorAttachment() {},
       }),
       getActiveCartridge: () => ({
-        manifest: { id: 'test-cartridge', title: 'Test', version: '1.0.0' },
+        manifest: {
+          id: 'test-cartridge',
+          title: 'Test',
+          version: '1.0.0',
+          runtime: { sdk: '^1.0.0', capabilities: [] },
+        },
         mount() {},
         handleAction() {
           return { consumed: true, defaultPlayerMovement: 'allow' };
@@ -657,6 +678,7 @@ describe('RoccoInputHandler', () => {
         id: 'test-cartridge',
         title: 'Test Cartridge',
         version: '1.0.0',
+        runtime: { sdk: '^1.0.0', capabilities: [] },
       },
       mount() {
         // noop
@@ -760,6 +782,7 @@ describe('RoccoInputHandler', () => {
         id: 'test-cartridge',
         title: 'Test Cartridge',
         version: '1.0.0',
+        runtime: { sdk: '^1.0.0', capabilities: [] },
       },
       mount() {
         // noop
@@ -851,6 +874,7 @@ describe('RoccoInputHandler', () => {
           id: 'test-cartridge',
           title: 'Test Cartridge',
           version: '1.0.0',
+          runtime: { sdk: '^1.0.0', capabilities: [] },
         },
         mount() {
           // noop
@@ -1071,6 +1095,7 @@ describe('RoccoInputHandler', () => {
           id: 'test-cartridge',
           title: 'Test Cartridge',
           version: '1.0.0',
+          runtime: { sdk: '^1.0.0', capabilities: [] },
         },
         mount() {
           // noop
@@ -1148,6 +1173,7 @@ describe('RoccoInputHandler', () => {
           id: 'test-cartridge',
           title: 'Test Cartridge',
           version: '1.0.0',
+          runtime: { sdk: '^1.0.0', capabilities: [] },
         },
         mount() {
           // noop
@@ -1243,6 +1269,7 @@ describe('RoccoInputHandler', () => {
           id: 'test-cartridge',
           title: 'Test Cartridge',
           version: '1.0.0',
+          runtime: { sdk: '^1.0.0', capabilities: [] },
         },
         mount() {
           // noop

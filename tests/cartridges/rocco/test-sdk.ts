@@ -1,4 +1,4 @@
-import type { RoccoEngine } from '../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../src/console/console-kernel';
 import {
   CARTRIDGE_SDK_V1_CAPABILITIES,
   type CartridgeSdkV1Runtime,
@@ -9,12 +9,21 @@ import type { CartridgeSaveRepo } from '../../../src/console/persistence/types';
 import { createResourceScope } from '../../../src/console/lifecycle';
 
 /**
- * Adapts partial engine fixtures to the SDK-shaped arguments used by the
- * official cartridge unit tests. Contract tests exercise the real capability
- * facade; these focused fixtures keep their existing subsystem spies.
+ * Broad kernel-shaped fixture accepted by the test SDK helper. Focused unit
+ * tests build partial versions of this and adapt them to an SDK-shaped object.
  */
-export function asRoccoTestSdk(engine: RoccoEngine | CartridgeSdkV1Runtime): CartridgeSdkV1Runtime {
-  const persistence = (engine as Partial<RoccoEngine>).persistence;
+export type RoccoTestKernelFixture = ConsoleKernel | CartridgeSdkV1Runtime;
+
+/**
+ * Adapts a broad kernel-shaped test fixture to the SDK-shaped arguments used by
+ * the official cartridge unit tests. Contract tests exercise the real capability
+ * facade; these focused fixtures keep their existing subsystem spies.
+ *
+ * The result is SDK-shaped and must never be used as a production mount
+ * fallback.
+ */
+export function asRoccoTestSdk(fixture: RoccoTestKernelFixture): CartridgeSdkV1Runtime {
+  const persistence = (fixture as Partial<ConsoleKernel>).persistence;
   const storage: CartridgeStorageApi = {
     loadPlaneSceneRecord: (sceneId) =>
       persistence?.loadPlaneSceneRecord('rocco-default', sceneId) ?? Promise.resolve(null),
@@ -28,7 +37,7 @@ export function asRoccoTestSdk(engine: RoccoEngine | CartridgeSdkV1Runtime): Car
   };
   const scope = createResourceScope('test:rocco-sdk');
 
-  return new Proxy(engine, {
+  return new Proxy(fixture, {
     get(target, property, receiver) {
       if (property === 'sdkVersion') {
         return '1.0.0';

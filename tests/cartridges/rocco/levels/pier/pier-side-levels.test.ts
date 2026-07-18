@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../../src/console/cartridges/sdk-v1';
 import type { RoccoSoundDefinition } from '../../../../../src/console/audio/types';
@@ -85,7 +85,7 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
       },
       sceneTargets: {
         registerTarget: () => {},
-      } as unknown as RoccoEngine['video']['sceneTargets'],
+      } as unknown as ConsoleKernel['video']['sceneTargets'],
       sprites: {
         registerWalkMap: () => {},
         loadSpriteDefinition: () => {},
@@ -131,12 +131,12 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
         },
         bindToWalkMap: () => {},
         playAction: () => {},
-      } as unknown as RoccoEngine['video']['sprites'],
-    } as unknown as RoccoEngine['video'],
+      } as unknown as ConsoleKernel['video']['sprites'],
+    } as unknown as ConsoleKernel['video'],
     persistence: {
       loadPlaneSceneRecord: () => Promise.resolve(undefined),
       savePlaneScene: () => Promise.resolve(),
-    } as unknown as RoccoEngine['persistence'],
+    } as unknown as ConsoleKernel['persistence'],
     loadPlaneScene: () => {},
     setInputEnabled: () => {},
     isInputEnabled: () => true,
@@ -166,8 +166,8 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
       playSound: () => {},
       stopSound: () => {},
       unregisterSound: () => {},
-    } as unknown as RoccoEngine['audio'],
-  } as unknown as RoccoEngine);
+    } as unknown as ConsoleKernel['audio'],
+  } as unknown as ConsoleKernel);
 }
 
 describe('RoccoPierStartLevel', () => {

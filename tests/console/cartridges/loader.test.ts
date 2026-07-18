@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { RoccoDefaultCartridgeLoader } from '../../../src/console/cartridges/loader';
 import { RoccoBuiltinCartridgeProvider } from '../../../src/console/cartridges/providers/builtin-cartridge-provider';
-import type { RoccoCartridge, RoccoCartridgeRegistration } from '../../../src/console/cartridges/types';
+import type {
+  RoccoCartridge,
+  RoccoCartridgeRegistration,
+} from '../../../src/console/cartridges/types';
 
 function makeCartridge(id: string): RoccoCartridge {
   return {
@@ -10,6 +13,7 @@ function makeCartridge(id: string): RoccoCartridge {
       id,
       title: `Cartridge ${id}`,
       version: '1.0.0',
+      runtime: { sdk: '^1.0.0', capabilities: [] },
     },
     mount() {
       // noop
@@ -23,6 +27,7 @@ function makeRegistration(id: string): RoccoCartridgeRegistration {
       id,
       title: `Cartridge ${id}`,
       version: '1.0.0',
+      runtime: { sdk: '^1.0.0', capabilities: [] },
     },
     createCartridge: () => makeCartridge(id),
   };

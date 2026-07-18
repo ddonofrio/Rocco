@@ -126,7 +126,7 @@ ROCCO uses a console/cartridge architecture:
 1. The console is the generic host runtime.
 2. Cartridges are self-contained software cartridges.
 3. The Rocco cartridge now layers `RPCE` between the cartridge bootstrap and the `rocco-default` game, so the structure reads `console -> cartridge -> RPCE -> game -> maps -> levels`.
-4. SDK v1 cartridges mount through `RoccoCartridge` with a required `context.sdk`; legacy cartridges use the explicit full `RoccoEngine` context.
+4. Cartridges mount through `RoccoCartridge` with a required `context.sdk`; the console kernel is never handed to a cartridge.
 5. Cartridges can contribute boot-time setup and settings modules before a cartridge is mounted.
 6. The console runtime stays generic; cartridge logic stays inside cartridge folders.
 

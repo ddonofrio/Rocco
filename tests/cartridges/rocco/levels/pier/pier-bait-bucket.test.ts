@@ -4,7 +4,7 @@ import type {
   RoccoSoundDefinition,
   RoccoSoundPlayOptions,
 } from '../../../../../src/console/audio/types';
-import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../../src/console/cartridges/sdk-v1';
 import type {
@@ -51,7 +51,7 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
       },
       messages: {
         think: () => {},
-      } as unknown as RoccoEngine['video']['messages'],
+      } as unknown as ConsoleKernel['video']['messages'],
       sprites: {
         loadSpriteDefinition: () => {},
         removeSprite: () => {},
@@ -100,8 +100,8 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
         playAction: () => {},
         setPosition: () => {},
         playAnimation: () => {},
-      } as unknown as RoccoEngine['video']['sprites'],
-    } as unknown as RoccoEngine['video'],
+      } as unknown as ConsoleKernel['video']['sprites'],
+    } as unknown as ConsoleKernel['video'],
     audio: {
       registerSound: (definition: RoccoSoundDefinition) => {
         state.registeredSounds.set(definition.id, definition);
@@ -119,7 +119,7 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
       },
       stopSound: () => {},
       unregisterSound: () => {},
-    } as unknown as RoccoEngine['audio'],
+    } as unknown as ConsoleKernel['audio'],
     setInputEnabled: () => {},
     acquireInputLease: () => ({
       ownerId: 'test',
@@ -127,7 +127,7 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
       acquiredAt: 0,
       dispose() {},
     }),
-  } as unknown as RoccoEngine);
+  } as unknown as ConsoleKernel);
 }
 
 describe('installDefaultBaitBucket', () => {

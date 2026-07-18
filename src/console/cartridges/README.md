@@ -6,16 +6,16 @@ Actual cartridge implementations live in `src/cartridges`.
 
 ## Files
 
-- `types.ts` - `RoccoCartridge`, `RoccoCartridgeManifest`, context, provider, and loader types.
+- `types.ts` - `RoccoCartridge`, `RoccoCartridgeManifest`, `CartridgeContextV1`, provider, and loader types.
 - `loader.ts` - `RoccoDefaultCartridgeLoader`, which resolves provider and fallback cartridges.
 - `index.ts` - Barrel export.
 
 ## Subdirectories
 
-| Directory    | Contents                                                             |
-| ------------ | -------------------------------------------------------------------- |
-| `providers/` | Built-in console-side cartridge providers; see `providers/README.md` |
-| `sdk-v1/`    | Public SDK v1 contract, capability validation, and kernel adapter; see `sdk-v1/README.md` |
+| Directory    | Contents                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------ |
+| `providers/` | Built-in console-side cartridge providers; see `providers/README.md`                                   |
+| `sdk-v1/`    | Public SDK v1 contract, capability validation, and the `ConsoleKernel` adapter; see `sdk-v1/README.md` |
 
 ## Cartridge Lifecycle
 
@@ -28,8 +28,7 @@ RoccoCartridgeManager.loadAndMount()
   -> loader.loadById(selectedId) or loader.loadDefault()
   -> validate selected cartridge compatibility
   -> selectedCartridge.setActionCancellation(...)      // optional
-  -> selectedCartridge.mount({ sdk, locale })           // SDK v1
-     or selectedCartridge.mount({ engine, locale })     // legacy
+  -> selectedCartridge.mount({ sdk, locale })
   -> selectedCartridge.start()                          // optional
   -> active runtime
        -> selectedCartridge.update(deltaMs)             // optional
@@ -60,32 +59,21 @@ Only `mount()` is required. All other lifecycle members are optional:
 ## Cartridge Context
 
 ```typescript
-interface LegacyCartridgeContext {
-  engine: RoccoEngine;
-  locale?: string;
-}
-
 interface CartridgeContextV1 {
-  sdk: CartridgeSdkV1;
-  locale?: string;
+  readonly sdk: CartridgeSdkV1;
+  readonly locale?: string;
 }
-
-type RoccoCartridgeContext =
-  | LegacyCartridgeContext
-  | CartridgeContextV1;
 ```
 
-- SDK v1 manifests receive `CartridgeContextV1`.
-- Manifests without `runtime` receive `LegacyCartridgeContext`.
-- There is no automatic SDK fallback inside a legacy context.
+- Every cartridge receives `CartridgeContextV1`.
+- The context never exposes the console kernel.
 
-SDK v1 cartridges receive the narrow, version-stamped `context.sdk`, which
+Cartridges receive the narrow, version-stamped `context.sdk`, which
 hides internal runtime methods (`render`, `viewport`, `effects.tick`,
-`jukebox.unlock`, ...). Legacy cartridges explicitly receive the full
-`context.engine` kernel.
+`jukebox.unlock`, ...).
 `locale` is set by the cartridge menu when a localized cartridge is loaded.
 
-The manifest may declare a `runtime` block:
+Every manifest declares a `runtime` block:
 
 ```typescript
 runtime: {
@@ -101,9 +89,8 @@ runtime: {
 `capabilities` may be omitted. When omitted, the adapter uses the complete SDK v1 capability set.
 
 `RoccoCartridgeManager` validates this with `assertCartridgeSdkCompatibility`
-before mounting and rejects incompatible SDK ranges or unknown capabilities.
-Legacy cartridges without a `runtime` block keep mounting against the full
-`RoccoEngine` kernel. The v1 SDK and capability set live in `sdk-v1/`.
+before mounting and rejects a missing `runtime` block, incompatible SDK ranges,
+or unknown capabilities. The v1 SDK and capability set live in `sdk-v1/`.
 
 Boot-time setup uses a narrower context:
 
@@ -172,14 +159,14 @@ interface RoccoCartridgeManifest {
   engineVersion?: string;
   tags?: string[];
   localizations?: Record<string, RoccoCartridgeLocalizedManifest>;
-  runtime?: {
+  runtime: {
     sdk: string;
     capabilities?: readonly string[];
   };
 }
 ```
 
-`id`, `title`, and `version` are required. Other fields improve boot-menu presentation.
+`id`, `title`, `version`, and `runtime` are required. Other fields improve boot-menu presentation.
 
 ## Localized Manifest Fields
 
@@ -195,8 +182,8 @@ type RoccoCartridgeLocalizedManifest = Partial<
 `localizations` is keyed by locale code and contains menu-facing overrides. Locale selection and fallback behavior belong to the cartridge localization implementation; the console passes the selected locale through the mount context.
 
 When a localized cartridge is selected, `RoccoCartridgeMenu` returns
-`selectedLocale`; `RoccoCartridgeManager` passes it to either
-`mount({ sdk, locale })` or the explicit legacy `mount({ engine, locale })`.
+`selectedLocale`; `RoccoCartridgeManager` passes it to
+`mount({ sdk, locale })`.
 
 ## Creating a Cartridge
 
@@ -208,8 +195,9 @@ When a localized cartridge is selected, `RoccoCartridgeMenu` returns
 6. Register the cartridge in `src/cartridges/index.ts`.
 
 Avoid importing PixiJS rendering classes or engine renderer internals into
-cartridge code. SDK v1 cartridges use `context.sdk.video` helpers for asset
-preloading and scene work; legacy cartridges use their explicit engine context.
+cartridge code. Cartridges use `context.sdk.video` helpers for asset
+preloading and scene work and must not import kernel contracts or runtime
+implementations.
 
 ## Reading Next
 

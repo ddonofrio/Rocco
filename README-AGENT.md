@@ -9,7 +9,7 @@ This document is written for AI coding agents. It explains the ROCCO console arc
 - If the context window is large, read all project-owned README files before touching code.
 - Keep documentation as present-tense reference material. Do not write dated notes, historical edit logs, or edit narratives.
 - Treat README files as live contracts for current shipped behavior and architecture. When cartridge scope, asset ownership, or engine-cartridge boundaries change, update the root overview and the nearest leaf README in the same change.
-- SDK v1 cartridges use the capability-filtered `CartridgeSdkV1` surface received through `context.sdk`. Legacy cartridges use the explicit `RoccoEngine` context received through `context.engine`. Cartridge code must not import PixiJS rendering classes, renderer implementations, or other console-kernel internals.
+- Cartridges use the capability-filtered `CartridgeSdkV1` surface received through `context.sdk`. Cartridge code must not import PixiJS rendering classes, renderer implementations, or other console-kernel internals.
 - Remove dead code. Do not leave unused imports, variables, or functions.
 - Match nearby naming, file layout, and test style before introducing new patterns.
 
@@ -40,10 +40,9 @@ ROCCO is a browser-based retro console runtime built with TypeScript, PixiJS, an
 
 The key boundary is:
 
-- The console kernel owns runtime initialization, rendering, viewport integration, scheduling, input routing, resource teardown, and cartridge lifecycle.
-- SDK v1 cartridges receive the stable, capability-filtered `CartridgeSdkV1` contract through `context.sdk`.
-- Legacy cartridges receive the broader `RoccoEngine` runtime surface through `context.engine`.
-- `CartridgeSdkV1Runtime` is an internal required-facade type used by the official cartridge only after its complete capability set has been negotiated. It is not the console kernel and it is not `RoccoEngine`.
+- The console kernel owns runtime initialization, rendering, viewport integration, scheduling, input routing, resource teardown, and cartridge lifecycle. `GameRuntime` implements the internal `ConsoleKernel` contract.
+- Cartridges receive the stable, capability-filtered `CartridgeSdkV1` contract through `context.sdk`. The kernel is never handed to a cartridge.
+- `CartridgeSdkV1Runtime` is an internal required-facade type used by the official cartridge only after its complete capability set has been negotiated. It is not the console kernel.
 
 The console provides capabilities such as rendering, audio, input, effects, persistence, and lifecycle management. Cartridges provide content and cartridge logic.
 
@@ -54,7 +53,7 @@ src/
   main.ts                         Entry point
   style.css                       Global page style
   console/                        Console runtime implementation and SDK surface
-    engine-sdk.ts                 Console kernel and legacy runtime infrastructure
+    console-kernel.ts             Internal ConsoleKernel host contract
     runtime.ts                    GameRuntime implementation
     input-handler.ts              Input routing and blocking
     cartridge-manager.ts          Cartridge selection and lifecycle
@@ -87,8 +86,7 @@ index.html
         -> RoccoBuiltinCartridgeProvider
         -> cartridge.setup({ console }) for discovered cartridges
         -> RoccoCartridgeMenu.show() when multiple cartridges are available
-        -> cartridge.mount({ sdk, locale })       // manifest declares runtime: SDK v1
-        -> cartridge.mount({ engine, locale })    // manifest omits runtime: legacy
+        -> cartridge.mount({ sdk, locale })       // every manifest declares runtime
         -> cartridge.start()
      -> render tick
 ```
@@ -111,7 +109,7 @@ export interface RoccoCartridge {
   setup?(
     context: RoccoCartridgeSetupContext,
   ): Promise<RoccoCartridgeSetupResult | void> | RoccoCartridgeSetupResult | void;
-  mount(context: RoccoCartridgeContext): Promise<void> | void;
+  mount(context: CartridgeContextV1): Promise<void> | void;
   start?(): Promise<void> | void;
   update?(deltaMs: number): void;
   handleAction?(
@@ -145,15 +143,14 @@ export interface RoccoCartridgeManifest {
   engineVersion?: string;
   tags?: string[];
   localizations?: Record<string, RoccoCartridgeLocalizedManifest>;
-  runtime?: {
+  runtime: {
     sdk: string;
     capabilities?: readonly string[];
   };
 }
 ```
 
-- A manifest with `runtime` uses SDK v1.
-- A manifest without `runtime` uses the legacy mount path.
+- Every manifest declares `runtime` and mounts through SDK v1.
 - `runtime.sdk` is the required semver range.
 - `runtime.capabilities` is optional. When omitted, the adapter uses the complete SDK v1 capability set.
 
@@ -168,25 +165,16 @@ export type RoccoCartridgeLocalizedManifest = Partial<
 >;
 ```
 
-The cartridge context is a discriminated union of the legacy and SDK v1 mount contexts:
+The cartridge mount context exposes only the negotiated SDK:
 
 ```typescript
-export interface LegacyCartridgeContext {
-  engine: RoccoEngine;
-  locale?: string;
-}
-
 export interface CartridgeContextV1 {
-  sdk: CartridgeSdkV1;
-  locale?: string;
+  readonly sdk: CartridgeSdkV1;
+  readonly locale?: string;
 }
-
-export type RoccoCartridgeContext =
-  | LegacyCartridgeContext
-  | CartridgeContextV1;
 ```
 
-Cartridge code discriminates the union with `'sdk' in context` or `'engine' in context`.
+Cartridge code uses `context.sdk` and never receives the console kernel.
 
 Cartridges that do not localize content can ignore `locale`.
 
@@ -255,7 +243,7 @@ CartridgeSdkV1
 
 CartridgeSdkV1Runtime
   Internal required view used by the official cartridge after negotiating
-  every capability it requires. It remains a facade and is not RoccoEngine.
+  every capability it requires. It remains a facade and is not the console kernel.
 
 CartridgeCapability
   Stable capability identifiers declared by a cartridge manifest.
@@ -263,16 +251,17 @@ CartridgeCapability
 
 Only `sdkVersion` and `capabilities` are unconditionally required by the public `CartridgeSdkV1` type. All other members are optional in the public interface. Most optional members are capability-gated, but the adapter also installs the console-flag compatibility helpers `isDeveloperModeEnabled`, `getConsoleFlags`, and `setConsoleFlags` without a dedicated capability. `video.camera` is installed whenever any negotiated video capability causes the video facade to exist.
 
-The full `RoccoEngine` kernel lives in `src/console/engine-sdk.ts`. Inside
-`mount(context)`, SDK v1 cartridges use the narrow, version-stamped `context.sdk` of type
-`CartridgeSdkV1` (defined in `src/console/cartridges/sdk-v1`). It is built by
-`createCartridgeSdkV1({ engine, scope, manifest })`, which wraps `RoccoEngine`
+The internal `ConsoleKernel` contract lives in `src/console/console-kernel.ts`
+and is implemented by `GameRuntime`. Inside `mount(context)`, cartridges use the
+narrow, version-stamped `context.sdk` of type `CartridgeSdkV1` (defined in
+`src/console/cartridges/sdk-v1`). It is built by
+`createCartridgeSdkV1({ kernel, scope, manifest })`, which wraps `ConsoleKernel`
 and exposes only the stable subset. Internal-only methods (`video.update`,
 `video.render`, `video.viewport`, the kernel `video.zoom` module, render-layer ordering,
 `effects.tick`, `jukebox.unlock`) are absent from the SDK object, so a cartridge
 cannot reach them even at runtime.
 
-The manifest may declare the runtime it targets:
+Every manifest declares the runtime it targets:
 
 ```typescript
 runtime: {
@@ -282,20 +271,17 @@ runtime: {
 ```
 
 `RoccoCartridgeManager` validates this with `assertCartridgeSdkCompatibility`
-before `mount()` and rejects incompatible SDK ranges or unknown capabilities.
-Legacy cartridges without a `runtime` block keep mounting against the full
-`RoccoEngine` kernel.
+before `mount()` and rejects a missing `runtime` block, incompatible SDK ranges,
+or unknown capabilities.
 
-`RoccoEngine` still exposes (kept for legacy callers and the kernel itself):
+`ConsoleKernel` exposes host infrastructure used internally (never handed to a cartridge):
 
 - Scene management: `loadPlaneScene(scene)` and `serializePlaneScene(sceneId)`.
 - Player selection: `setPlayerSprite(id | null)` and `getPlayerSprite()`.
-- Input control: `acquireInputLease(ownerId, mode)` / `getInputMode()`
-  (prefer these over the deprecated `setInputEnabled` / `isInputEnabled`).
+- Input control: `acquireInputLease(ownerId, mode)` / `getInputMode()`.
 - Console flags: `isDeveloperModeEnabled()`, `getConsoleFlags()`, and
   `setConsoleFlags(patch)`.
-- Composition control: `beginCompositionSession()` (prefer over the deprecated
-  `beginComposition` / `endComposition` / `setCompositionText`).
+- Composition control: `beginCompositionSession()`.
 - Status and logging: `setStatus(message)` and `log(channel, message)`.
 
 `RoccoConsoleFlags` is the console-owned boot state shared between the runtime, the cartridge manager, and any boot-time cartridge setup hooks:
@@ -332,10 +318,7 @@ A composition session owns its own progress, failure state, and disposal. A cart
 Use an input lease for non-cancelable sequences:
 
 ```typescript
-const inputLease = sdk.acquireInputLease?.(
-  'scripted-sequence',
-  'blocked',
-);
+const inputLease = sdk.acquireInputLease?.('scripted-sequence', 'blocked');
 
 try {
   // Run the sequence.
@@ -350,14 +333,13 @@ Input policy is lease-owned. A cartridge releases only the lease it acquired and
 
 - `loadPlaneScene(scene)` replaces the active graphic scene and keeps runtime scene bookkeeping in sync.
 - `serializePlaneScene(sceneId)` snapshots the current scene state.
-- `CartridgeSdkV1.storage.savePlaneScene(scene)` persists a scene for SDK v1.
-- `CartridgeSdkV1.storage.loadPlaneSceneRecord(sceneId)` loads a persisted scene for SDK v1.
-- Legacy cartridges use the explicit `LegacyCartridgeContext.engine.persistence` equivalents.
+- `CartridgeSdkV1.storage.savePlaneScene(scene)` persists a scene.
+- `CartridgeSdkV1.storage.loadPlaneSceneRecord(sceneId)` loads a persisted scene.
 
 ## Audio, Jukebox, and Effects SDKs
 
-SDK v1 cartridges reach these capabilities through subsystem handles on
-`CartridgeSdkV1`; legacy cartridges use the explicit `RoccoEngine` context.
+Cartridges reach these capabilities through subsystem handles on
+`CartridgeSdkV1`.
 
 - `sdk.audio?.registerSound(definition)` registers a sound asset.
 - `sdk.audio?.unregisterSound(id)` removes a sound definition and stops its active instances.
@@ -550,9 +532,9 @@ The menu:
 
 Boot-time settings modules are generic menu entries contributed through `RoccoCartridgeBootSetting`. They appear inside `System Settings`, can expose a current value label, and can perform synchronous or asynchronous actions when activated.
 
-`RoccoCartridgeManager` stores the selected locale for `rocco-default` in `localStorage` and passes it through the mount context, using `cartridge.mount({ sdk, locale })` for SDK v1 manifests and `cartridge.mount({ engine, locale })` for legacy manifests.
+`RoccoCartridgeManager` stores the selected locale for `rocco-default` in `localStorage` and passes it through the mount context, using `cartridge.mount({ sdk, locale })`.
 
-`RoccoCartridgeManager` also seeds `RoccoCartridgeMenu.show()` with the current locale selections, display profile, sound profile, and merged boot settings. Display and sound changes made inside the boot menu are wired back into runtime-owned setters while the menu is open. Those sound-profile hooks are part of the runtime/menu integration and are not cartridge-facing `RoccoEngine` methods.
+`RoccoCartridgeManager` also seeds `RoccoCartridgeMenu.show()` with the current locale selections, display profile, sound profile, and merged boot settings. Display and sound changes made inside the boot menu are wired back into runtime-owned setters while the menu is open. Those sound-profile hooks are part of the runtime/menu integration and are not cartridge-facing SDK methods.
 
 `rocco-default` supports English and Spanish. Text catalogs live in `src/cartridges/rocco/localization`.
 
@@ -591,7 +573,7 @@ The main demo cartridge lives in `src/cartridges/rocco`.
 5. Add assets under the cartridge folder.
 6. Register the cartridge in `src/cartridges/index.ts`.
 
-SDK v1 cartridges use the `CartridgeSdkV1` surface received through `context.sdk`; legacy cartridges use the explicit `RoccoEngine` context received through `context.engine`.
+Cartridges use the `CartridgeSdkV1` surface received through `context.sdk`.
 
 ## Constraints
 

@@ -4,7 +4,7 @@ import type {
   RoccoSoundDefinition,
   RoccoSoundPlayOptions,
 } from '../../../../../src/console/audio/types';
-import type { RoccoEngine } from '../../../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../../src/console/cartridges/sdk-v1';
 import type {
@@ -160,7 +160,7 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
           state.sceneTargetsById.delete(instanceId);
           state.unregisteredSceneTargetIds.push(instanceId);
         },
-      } as unknown as RoccoEngine['video']['sceneTargets'],
+      } as unknown as ConsoleKernel['video']['sceneTargets'],
       sprites: {
         registerWalkMap: (walkMap: RoccoSpriteWalkMap) => {
           state.registeredWalkMapIds.push(walkMap.id);
@@ -250,15 +250,15 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
             );
           }
         },
-      } as unknown as RoccoEngine['video']['sprites'],
-    } as unknown as RoccoEngine['video'],
+      } as unknown as ConsoleKernel['video']['sprites'],
+    } as unknown as ConsoleKernel['video'],
     persistence: {
       loadPlaneSceneRecord: () => Promise.resolve(state.restoredRecord),
       savePlaneScene: (scene: RoccoPlaneScene) => {
         state.savedScenes.push(scene);
         return Promise.resolve();
       },
-    } as unknown as RoccoEngine['persistence'],
+    } as unknown as ConsoleKernel['persistence'],
     loadPlaneScene: (scene: RoccoPlaneScene) => {
       state.loadedScene = scene;
     },
@@ -311,8 +311,8 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
       },
       stopSound: () => {},
       unregisterSound: () => {},
-    } as unknown as RoccoEngine['audio'],
-  } as unknown as RoccoEngine);
+    } as unknown as ConsoleKernel['audio'],
+  } as unknown as ConsoleKernel);
 }
 
 describe('RoccoBaitShopLevel', () => {

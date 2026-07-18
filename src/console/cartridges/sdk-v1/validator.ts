@@ -21,8 +21,7 @@ export class CartridgeSdkIncompatibleError extends Error {
  * Validates a cartridge manifest's `runtime` requirements against what the
  * console implements for SDK v1.
  *
- * - A manifest without `runtime` is implicitly compatible (legacy cartridges
- *   keep mounting).
+ * - `runtime` is required; a manifest without it is incompatible.
  * - `runtime.sdk` is required and must satisfy the console's implemented SDK
  *   version.
  * - Every `runtime.capabilities` entry must be a capability the console
@@ -35,7 +34,10 @@ export function checkCartridgeSdkCompatibility(
   const runtime = manifest.runtime;
 
   if (!runtime) {
-    return { ok: true, errors: Object.freeze([]) };
+    return {
+      ok: false,
+      errors: Object.freeze(['manifest.runtime is required and must declare an SDK range']),
+    };
   }
 
   if (!runtime.sdk || !satisfies(runtime.sdk, CARTRIDGE_SDK_VERSION)) {

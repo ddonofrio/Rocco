@@ -20,36 +20,36 @@
 
 ## Subdirectories
 
-| Directory       | Contents                                                          |
-| --------------- | ----------------------------------------------------------------- |
-| `assets/`       | Shared cartridge assets for characters, props, sounds, and icons  |
-| `rpce/`         | Cartridge-local point-and-click runtime, reusable dialogue helpers, and generic inventory primitives |
-| `games/`        | Game definitions, shared game-owned barrels, and map-first ownership |
-| `interactions/` | Distributed interaction rules and interaction-registry assembly |
-| `dialogue/`     | Compatibility path for RPCE dialogue helpers                      |
-| `inventory/`    | Rocco cartridge inventory state, souvenir assets, fusion recipes, prop storages, and grid-menu projection |
-| `levels/runtime/` | Compatibility-path runtime helpers backed by the RPCE/game split |
-| `levels/pier/`  | Compatibility exports for the game-owned Pier implementation |
-| `levels/bait-shop/` | Compatibility exports for the game-owned Shop implementation |
-| `levels/nether/` | Compatibility exports for the game-owned Nether implementation, including Reset Office |
-| `localization/` | English and Spanish text catalogs for the cartridge                |
+| Directory           | Contents                                                                                                  |
+| ------------------- | --------------------------------------------------------------------------------------------------------- |
+| `assets/`           | Shared cartridge assets for characters, props, sounds, and icons                                          |
+| `rpce/`             | Cartridge-local point-and-click runtime, reusable dialogue helpers, and generic inventory primitives      |
+| `games/`            | Game definitions, shared game-owned barrels, and map-first ownership                                      |
+| `interactions/`     | Distributed interaction rules and interaction-registry assembly                                           |
+| `dialogue/`         | Compatibility path for RPCE dialogue helpers                                                              |
+| `inventory/`        | Rocco cartridge inventory state, souvenir assets, fusion recipes, prop storages, and grid-menu projection |
+| `levels/runtime/`   | Compatibility-path runtime helpers backed by the RPCE/game split                                          |
+| `levels/pier/`      | Compatibility exports for the game-owned Pier implementation                                              |
+| `levels/bait-shop/` | Compatibility exports for the game-owned Shop implementation                                              |
+| `levels/nether/`    | Compatibility exports for the game-owned Nether implementation, including Reset Office                    |
+| `localization/`     | English and Spanish text catalogs for the cartridge                                                       |
 
 ## World Structure
 
 The cartridge starts in Pier Middle and currently spans three maps.
 
-| Map | Level | ID | Scene ID | Notes |
-| --- | ----- | -- | -------- | ----- |
-| Pier exterior | Pier Beginning | `pier-start` | `rocco-pier-start-scene` | Right panorama window |
-| Pier exterior | Pier Middle | `pier-middle` | `rocco-pier-middle-scene` | Center panorama window and default start |
-| Pier exterior | Pier End | `pier-end` | `rocco-pier-end-scene` | Left panorama window |
-| Bait shop | Front room | `bait-shop` | `rocco-bait-shop-scene` | First interior screen |
-| Bait shop | Back room | `bait-shop-second` | `rocco-bait-shop-second-scene` | Souvenir-table and toilet-door screen |
-| Bait shop | Toilet room | `bait-shop-toilet` | `rocco-bait-shop-toilet-scene` | Magazine sequence, ritual branch, and portal trigger |
-| Nether | Console hardware spawn | `nether-console-hardware-spawn` | `rocco-nether-console-hardware-spawn-scene` | First Nether screen after the portal arrival |
-| Nether | End of hallway door | `nether-end-of-hallway-door` | `rocco-nether-end-of-hallway-door-scene` | Second Nether screen with mounted scene-target interactions |
-| Nether | Reset Office 1 | `nether-reset-office` | `rocco-nether-reset-office-scene` | Developer-only branch inside the Nether map |
-| Nether | Reset Office 2 | `nether-reset-office-second` | `rocco-nether-reset-office-second-scene` | Developer-only branch |
+| Map           | Level                  | ID                              | Scene ID                                    | Notes                                                       |
+| ------------- | ---------------------- | ------------------------------- | ------------------------------------------- | ----------------------------------------------------------- |
+| Pier exterior | Pier Beginning         | `pier-start`                    | `rocco-pier-start-scene`                    | Right panorama window                                       |
+| Pier exterior | Pier Middle            | `pier-middle`                   | `rocco-pier-middle-scene`                   | Center panorama window and default start                    |
+| Pier exterior | Pier End               | `pier-end`                      | `rocco-pier-end-scene`                      | Left panorama window                                        |
+| Bait shop     | Front room             | `bait-shop`                     | `rocco-bait-shop-scene`                     | First interior screen                                       |
+| Bait shop     | Back room              | `bait-shop-second`              | `rocco-bait-shop-second-scene`              | Souvenir-table and toilet-door screen                       |
+| Bait shop     | Toilet room            | `bait-shop-toilet`              | `rocco-bait-shop-toilet-scene`              | Magazine sequence, ritual branch, and portal trigger        |
+| Nether        | Console hardware spawn | `nether-console-hardware-spawn` | `rocco-nether-console-hardware-spawn-scene` | First Nether screen after the portal arrival                |
+| Nether        | End of hallway door    | `nether-end-of-hallway-door`    | `rocco-nether-end-of-hallway-door-scene`    | Second Nether screen with mounted scene-target interactions |
+| Nether        | Reset Office 1         | `nether-reset-office`           | `rocco-nether-reset-office-scene`           | Developer-only branch inside the Nether map                 |
+| Nether        | Reset Office 2         | `nether-reset-office-second`    | `rocco-nether-reset-office-second-scene`    | Developer-only branch                                       |
 
 Rocco transitions through edge connectors on connected screens. The cartridge bootstrap mounts RPCE, RPCE mounts the current `rocco-default` game, and the game owns Pier, Shop, and Nether map definitions plus the current concrete implementations under `games/rocco-default/maps/*`. The legacy `levels/**` folders remain compatibility wrappers so older imports can keep resolving while the game-layer paths act as the source of truth.
 
@@ -85,7 +85,7 @@ The cartridge supports:
 - `en` - English source text.
 - `es` - Spanish text.
 
-The boot menu shows language radio buttons for this cartridge. The selected locale is passed as `RoccoCartridgeContext.locale` and resolved through `createRoccoLocalization(locale)`.
+The boot menu shows language radio buttons for this cartridge. The selected locale is passed as `CartridgeContextV1.locale` and resolved through `createRoccoLocalization(locale)`.
 
 Internal cartridge restarts such as the keys defeat or Stan police defeat restart preserve the selected locale and rebuild the cartridge with the same localization context.
 

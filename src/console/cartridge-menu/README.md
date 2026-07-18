@@ -93,7 +93,7 @@ Manifests can include `localizations`, keyed by locale. The menu uses the select
 
 The base manifest is treated as English by convention. Additional locale keys come from `manifest.localizations`.
 
-For `rocco-default`, the menu shows `EN` and `ES`. The selected value is persisted by `RoccoCartridgeManager` and passed to the cartridge through `RoccoCartridgeContext.locale`.
+For `rocco-default`, the menu shows `EN` and `ES`. The selected value is persisted by `RoccoCartridgeManager` and passed to the cartridge through `CartridgeContextV1.locale`.
 
 Cartridges without `localizations` do not show language controls.
 
@@ -108,16 +108,16 @@ Cartridges without `localizations` do not show language controls.
 
 ## Palette
 
-| Element          | Color     |
-| ---------------- | --------- |
-| Background       | `#0d110c` |
-| Selected item    | `#1f3c1b` |
-| Selected border  | `#5cb84a` |
-| Brand title      | `#8ecf6e` |
-| Item title       | `#d4ecc8` |
-| Detail labels    | `#4a6b42` |
-| Detail values    | `#b0c8a8` |
-| Scanlines        | `#000000` |
+| Element         | Color     |
+| --------------- | --------- |
+| Background      | `#0d110c` |
+| Selected item   | `#1f3c1b` |
+| Selected border | `#5cb84a` |
+| Brand title     | `#8ecf6e` |
+| Item title      | `#d4ecc8` |
+| Detail labels   | `#4a6b42` |
+| Detail values   | `#b0c8a8` |
+| Scanlines       | `#000000` |
 
 ## Usage
 
@@ -126,7 +126,7 @@ Minimal engine-side usage:
 ```typescript
 const menu = new RoccoCartridgeMenu(app);
 const result = await menu.show(manifests, {
-    initialLocales: {
+  initialLocales: {
     'rocco-default': 'es',
   },
 });
@@ -151,6 +151,6 @@ const result = await menu.show(manifests, {
 });
 ```
 
-`getSoundProfile()` and `setSoundProfile()` are runtime-owned boot-menu hooks used by `RoccoCartridgeManager`. They are not part of the cartridge-facing `RoccoEngine` interface.
+`getSoundProfile()` and `setSoundProfile()` are runtime-owned boot-menu hooks used by `RoccoCartridgeManager`. They are not part of the cartridge-facing SDK or the internal `ConsoleKernel` contract.
 
 The menu owns its Pixi containers while displayed and removes them on disposal.

@@ -9,7 +9,7 @@ import {
 import type { RoccoToiletLevelCapability } from '../../../../src/cartridges/rocco/levels/runtime/rocco-level-capabilities';
 import { RoccoDroppedInventoryController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-dropped-inventory-controller';
 import type { RoccoLevel } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
-import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 import { DEFAULT_SPRITE_INSTANCE_ID } from '../../../../src/cartridges/rocco/rocco-default-constants';
@@ -137,7 +137,7 @@ function createDroppedInventoryEngine(): {
       fail() {},
       dispose() {},
     }),
-  } as unknown as RoccoEngine);
+  } as unknown as ConsoleKernel);
 
   return { engine, state };
 }

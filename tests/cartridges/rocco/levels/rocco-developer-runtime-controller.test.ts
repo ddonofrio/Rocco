@@ -22,7 +22,7 @@ import {
 import { ROCCO_BAIT_SHOP_LEVEL_ID } from '../../../../src/cartridges/rocco/games/rocco-default/maps/shop';
 import { RoccoDeveloperRuntimeController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-developer-runtime-controller';
 import { DEFAULT_SPRITE_INSTANCE_ID } from '../../../../src/cartridges/rocco/rocco-default-constants';
-import type { RoccoEngine } from '../../../../src/console/engine-sdk';
+import type { ConsoleKernel } from '../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 import type { RoccoGridMenuDefinition } from '../../../../src/console/video/grid-menu';
@@ -270,7 +270,7 @@ function createDeveloperEngine(
     }),
     isDeveloperModeEnabled: () => true,
     log: vi.fn(),
-  } as unknown as RoccoEngine);
+  } as unknown as ConsoleKernel);
 
   return { engine, state };
 }

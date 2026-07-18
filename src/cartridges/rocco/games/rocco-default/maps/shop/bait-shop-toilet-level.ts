@@ -883,7 +883,7 @@ class RoccoBaitShopToiletController
       return isStarted;
     }
 
-    // Cerrar portal cuando el jugador hace clic fuera del área
+    // Close the portal when the player clicks outside the portal area.
     this.unregisterPortalTarget();
 
     return false;

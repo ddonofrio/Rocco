@@ -805,15 +805,15 @@ describe('RoccoBaitShopToiletLevel', () => {
     });
     expect(state.playedSoundIds).toContain(PORTAL_LOOP_SOUND_ID);
 
-    // El portal solo se activa cuando el jugador NO está sobre su zona.
-    // Salimos de la zona para permitir la activación y luego volvemos a ella.
+    // The portal only activates when the player is NOT over its zone.
+    // Leave the zone to allow activation and then return to it.
     setPlayerVisualOrigin(state, 40, 40);
     level.update(16);
 
-    // Posicionamiento en zona del portal (tras la activación)
+    // Position the player inside the portal zone.
     setPlayerVisualOrigin(state, 381, 302);
 
-    // Clic 1 dentro del portal (coordenadas seguras dentro de la zona)
+    // First click inside the portal at a safe in-zone coordinate.
     level.handleSceneClick({
       kind: 'scene-click',
       sceneX: 381,
@@ -822,7 +822,7 @@ describe('RoccoBaitShopToiletLevel', () => {
     });
     expect(getRegisteredSceneTarget(state, PORTAL_INSTANCE_ID)).toBeDefined();
 
-    // Clic 2 cerca del portal
+    // Second click near the portal.
     level.handleSceneClick({
       kind: 'scene-click',
       sceneX: 382,
@@ -831,7 +831,7 @@ describe('RoccoBaitShopToiletLevel', () => {
     });
     expect(state.playedSoundIds).toContain(PORTAL_LOOP_SOUND_ID);
 
-    // Clic externo que debería CERRAR el portal
+    // Click outside the portal to close it.
     setPlayerVisualOrigin(state, 400, 300);
     level.update(16);
     level.handleSceneClick({
@@ -844,7 +844,7 @@ describe('RoccoBaitShopToiletLevel', () => {
     setPlayerVisualOrigin(state, 40, 40);
     level.update(16);
 
-    // Verificar transición final
+    // Verify the final transition.
     expect(onConnectorTransitionRequested).toHaveBeenCalledWith('portal');
   });
 

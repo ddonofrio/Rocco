@@ -91,7 +91,7 @@ export class GameRuntime implements ConsoleKernel {
   private actionDispatcher: ActionDispatcher | undefined;
   private activePlaneSceneId: string | undefined;
   private activePlayerSpriteId: string | undefined;
-  private statusMessage = 'Engine bootstrapping cartridge...';
+  private statusMessage = 'Bootstrapping cartridge...';
   private readonly compositionPresenter = new RuntimeCompositionPresenter();
   private readonly inputPolicy = new InputPolicyStackImpl();
   private readonly compositionService = new CompositionServiceImpl();

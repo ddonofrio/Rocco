@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RoccoBuiltinCartridgeConfig } from '../../src/cartridges';
 import type { RoccoCartridge } from '../../src/console/cartridges';
 import type { RoccoConsoleFlags } from '../../src/console/console-flags';
+import { CartridgeSdkIncompatibleError } from '../../src/console/cartridges/sdk-v1';
 import { createResourceScope } from '../../src/console/lifecycle';
 
 interface TestMenuResult {
@@ -526,6 +527,44 @@ describe('RoccoCartridgeManager', () => {
 
     await expect(manager.dispose()).rejects.toBeInstanceOf(AggregateError);
     expect(order).toEqual(['stop', 'dispose', 'scope']);
+    expect(manager.getActiveCartridge()).toBeUndefined();
+  });
+
+  it.each([
+    ['runtime.sdk as number', { sdk: 1 }],
+    ['capabilities as object', { sdk: '^1.0.0', capabilities: {} }],
+    ['capabilities with number element', { sdk: '^1.0.0', capabilities: ['audio.v1', 1] }],
+  ])('rejects malformed %s before mount and does not publish it', async (_label, runtime) => {
+    const kernel = createTestKernel(false);
+    const mount = vi.fn();
+    const start = vi.fn();
+
+    testState.registrations = [
+      createTestConfig('game', () =>
+        createTestCartridge('game', {
+          manifest: {
+            id: 'game',
+            title: 'game',
+            version: '1.0.0',
+            runtime: runtime as never,
+          },
+          mount,
+          start,
+        }),
+      ),
+    ];
+
+    const manager = new RoccoCartridgeManager();
+    await expect(
+      manager.loadAndMount({
+        app: {} as Application,
+        kernel: kernel as never,
+        configuredCartridgeId: 'game',
+      }),
+    ).rejects.toBeInstanceOf(CartridgeSdkIncompatibleError);
+
+    expect(mount).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
     expect(manager.getActiveCartridge()).toBeUndefined();
   });
 });

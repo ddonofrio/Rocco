@@ -49,6 +49,10 @@ function compare(a: ParsedVersion, b: ParsedVersion): number {
  */
 // eslint-disable-next-line unicorn/consistent-boolean-name
 export function satisfies(range: string, version: string): boolean {
+  if (typeof range !== 'string' || typeof version !== 'string') {
+    return false;
+  }
+
   const target = parseVersion(version);
   const required = parseVersion(range.replace(/^[=^~]/, ''));
   if (!target || !required) {

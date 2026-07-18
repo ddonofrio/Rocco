@@ -6,6 +6,7 @@ import type { RoccoCartridgeManifest } from '../../../src/console/cartridges/typ
 import {
   CARTRIDGE_SDK_VERSION,
   CONSOLE_SUPPORTED_CAPABILITIES,
+  CartridgeSdkIncompatibleError,
   assertCartridgeSdkCompatibility,
   checkCartridgeSdkCompatibility,
   createCartridgeSdkV1,
@@ -344,5 +345,133 @@ describe('Cartridge SDK compatibility validation', () => {
     };
 
     expect(invalidManifest.id).toBe('invalid');
+  });
+});
+
+/** Builds untyped runtime-shaped values to exercise the runtime boundary. */
+function untypedManifest(runtime: unknown): RoccoCartridgeManifest {
+  return {
+    id: 'c',
+    title: 'c',
+    version: '1.0.0',
+    runtime: runtime as RoccoCartridgeManifest['runtime'],
+  };
+}
+
+describe('Cartridge SDK malformed runtime validation', () => {
+  describe('invalid runtime value', () => {
+    const cases: Array<[string, unknown]> = [
+      ['undefined', undefined],
+      ['null', null],
+      ['string', 'sdk-v1'],
+      ['number', 1],
+      ['array', []],
+    ];
+
+    it.each(cases)('rejects runtime: %s', (_label, runtime) => {
+      const result = checkCartridgeSdkCompatibility(untypedManifest(runtime));
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toMatch(/manifest\.runtime must be an object/);
+      expect(() => assertCartridgeSdkCompatibility(untypedManifest(runtime))).toThrow(
+        CartridgeSdkIncompatibleError,
+      );
+    });
+  });
+
+  describe('invalid runtime.sdk value', () => {
+    const cases: Array<[string, unknown]> = [
+      ['empty object', {}],
+      ['sdk undefined', { sdk: undefined }],
+      ['sdk null', { sdk: null }],
+      ['sdk number', { sdk: 1 }],
+      ['sdk object', { sdk: {} }],
+      ['sdk empty string', { sdk: '' }],
+      ['sdk whitespace', { sdk: ' '.repeat(3) }],
+    ];
+
+    it.each(cases)('rejects runtime: %s', (_label, runtime) => {
+      const result = checkCartridgeSdkCompatibility(untypedManifest(runtime));
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toMatch(/manifest\.runtime\.sdk must be a non-empty string/);
+      expect(() => assertCartridgeSdkCompatibility(untypedManifest(runtime))).toThrow(
+        CartridgeSdkIncompatibleError,
+      );
+    });
+  });
+
+  describe('invalid runtime.capabilities value', () => {
+    const cases: Array<[string, unknown]> = [
+      ['capabilities null', { sdk: '^1.0.0', capabilities: null }],
+      ['capabilities object', { sdk: '^1.0.0', capabilities: {} }],
+      ['capabilities string', { sdk: '^1.0.0', capabilities: 'audio.v1' }],
+      ['capabilities number element', { sdk: '^1.0.0', capabilities: [1] }],
+      ['capabilities null element', { sdk: '^1.0.0', capabilities: ['audio.v1', null] }],
+      ['capabilities object element', { sdk: '^1.0.0', capabilities: ['audio.v1', {}] }],
+    ];
+
+    it.each(cases)('rejects runtime: %s', (_label, runtime) => {
+      const result = checkCartridgeSdkCompatibility(untypedManifest(runtime));
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toMatch(/manifest\.runtime\.capabilities/);
+      expect(() => assertCartridgeSdkCompatibility(untypedManifest(runtime))).toThrow(
+        CartridgeSdkIncompatibleError,
+      );
+    });
+
+    it('identifies the index of a non-string capability element', () => {
+      const result = checkCartridgeSdkCompatibility(
+        untypedManifest({ sdk: '^1.0.0', capabilities: ['audio.v1', 1] }),
+      );
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toMatch(
+        /manifest\.runtime\.capabilities\[1\] must be a string/,
+      );
+    });
+  });
+
+  describe('valid regression cases remain compatible', () => {
+    it('accepts runtime with omitted capabilities', () => {
+      const result = checkCartridgeSdkCompatibility(untypedManifest({ sdk: '^1.0.0' }));
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('accepts runtime with an empty capability array', () => {
+      const result = checkCartridgeSdkCompatibility(
+        untypedManifest({ sdk: '^1.0.0', capabilities: [] }),
+      );
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('accepts runtime with supported capabilities', () => {
+      const result = checkCartridgeSdkCompatibility(
+        untypedManifest({ sdk: '^1.0.0', capabilities: ['audio.v1'] }),
+      );
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('still builds an SDK with the complete v1 capability set when omitted', () => {
+      const sdk = buildSdk(untypedManifest({ sdk: '^1.0.0' }), createResourceScope('t'));
+      expect(sdk.capabilities).toEqual(CONSOLE_SUPPORTED_CAPABILITIES);
+    });
+  });
+
+  describe('compatibility (not shape) errors remain distinct', () => {
+    it('rejects an incompatible but well-formed SDK range', () => {
+      const result = checkCartridgeSdkCompatibility(untypedManifest({ sdk: '^2.0.0' }));
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toMatch(/runtime\.sdk/);
+      expect(result.errors.join(' ')).not.toMatch(/must be an object|must be a non-empty string/);
+    });
+
+    it('rejects a well-formed array with an unsupported capability string', () => {
+      const result = checkCartridgeSdkCompatibility(
+        untypedManifest({ sdk: '^1.0.0', capabilities: ['audio.v1', 'unknown.cap'] }),
+      );
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(' ')).toMatch(/unknown\.cap/);
+    });
   });
 });

@@ -20,19 +20,29 @@ Actual cartridge implementations live in `src/cartridges`.
 ## Cartridge Lifecycle
 
 ```text
-CartridgeManager selection
-  -> cartridge.setActionCancellation(cancelActiveActions)  // optional
-  -> cartridge.setup({ console })                          // optional
-  -> CartridgeLoader.loadById() or loadDefault()
-  -> cartridge.mount({ sdk, locale })       // SDK v1
-  -> cartridge.mount({ engine, locale })    // legacy
-  -> cartridge.start()                                     // optional
-  -> cartridge.update(deltaMs)                             // optional
-  -> cartridge.handleAction(action, context?)             // optional
-  -> cartridge.getActiveLevelId()                         // optional
-  -> cartridge.stop()                                     // optional
-  -> cartridge.dispose()                                  // optional
+RoccoCartridgeManager.loadAndMount()
+  -> provider.list()
+  -> create temporary cartridge instances and collect setup contributions
+       -> temporaryCartridge.setup({ console })        // optional
+  -> select cartridge and locale
+  -> loader.loadById(selectedId) or loader.loadDefault()
+  -> validate selected cartridge compatibility
+  -> selectedCartridge.setActionCancellation(...)      // optional
+  -> selectedCartridge.mount({ sdk, locale })           // SDK v1
+     or selectedCartridge.mount({ engine, locale })     // legacy
+  -> selectedCartridge.start()                          // optional
+  -> active runtime
+       -> selectedCartridge.update(deltaMs)             // optional
+       -> selectedCartridge.handleAction(action, context?) // optional
+       -> selectedCartridge.getActiveLevelId()          // optional
+  -> teardown
+       -> cancel active actions
+       -> selectedCartridge.stop()                      // optional
+       -> selectedCartridge.dispose()                   // optional
+       -> cartridge resource scope disposal
 ```
+
+Boot setup and mounted-cartridge lifecycle are separate operations. `collectBootSetup()` creates temporary cartridge instances and calls their optional `setup()` hooks before cartridge selection. The cartridge selected by the user is loaded separately afterward; that selected instance receives `setActionCancellation`, `mount`, `start`, active-runtime calls, and teardown.
 
 Only `mount()` is required. All other lifecycle members are optional:
 

@@ -261,7 +261,7 @@ CartridgeCapability
   Stable capability identifiers declared by a cartridge manifest.
 ```
 
-Only `sdkVersion` and `capabilities` are unconditionally required on the public `CartridgeSdkV1` interface. Every other public member is optional and exposed only when the negotiated capability list includes it.
+Only `sdkVersion` and `capabilities` are unconditionally required by the public `CartridgeSdkV1` type. All other members are optional in the public interface. Most optional members are capability-gated, but the adapter also installs the console-flag compatibility helpers `isDeveloperModeEnabled`, `getConsoleFlags`, and `setConsoleFlags` without a dedicated capability. `video.camera` is installed whenever any negotiated video capability causes the video facade to exist.
 
 The full `RoccoEngine` kernel lives in `src/console/engine-sdk.ts`. Inside
 `mount(context)`, SDK v1 cartridges use the narrow, version-stamped `context.sdk` of type

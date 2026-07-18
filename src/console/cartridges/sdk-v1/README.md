@@ -29,9 +29,7 @@ Visual cartridges may receive `video.camera`, a controlled facade exposing only
 sequences. It is not the kernel zoom object and does not expose render timing or
 viewport ownership.
 
-It carries its own `ResourceScope` (`scope`) so a cartridge can register
-disposers that are cleaned up with the cartridge, and advertises the
-negotiated `capabilities` plus `sdkVersion`.
+When `scope.v1` is negotiated, the SDK exposes the cartridge-owned `ResourceScope` through `scope`, allowing the cartridge to register disposers that are cleaned up with the cartridge. `sdkVersion` and the negotiated `capabilities` are always present.
 
 ```typescript
 interface CartridgeSdkV1 {
@@ -76,18 +74,21 @@ interface CartridgeSdkV1 {
 - Callers using the public type must narrow or use optional access.
 - A manifest that omits `runtime.capabilities` receives the complete SDK v1 capability set.
 
+Most optional members are controlled by capability negotiation. The adapter also installs `isDeveloperModeEnabled`, `getConsoleFlags`, and `setConsoleFlags` as optional compatibility helpers without a dedicated capability identifier.
+
 `beginCompositionSession` is exposed flat as part of the SDK v1 contract.
 Legacy cartridges remain on the explicit `LegacyCartridgeContext` path and do
 not receive an SDK v1 fallback.
 
 ## Video capability structure
 
-- `video` exists when at least one video capability is negotiated.
-- `video.planes`, plane preloading, and plane/display operations require `video.planes.v1`.
-- `video.sprites`, sprite preloading, and scene-target operations require `video.sprites.v1`.
-- action menus, grid menus, messages, primitives, titles, and display menu operations require `video.menus.v1`.
-- `video.camera` is a controlled facade backed by the runtime zoom controller and is exposed when the video facade exists.
-- `video.camera` exposes only `setTransform`, `animateTo`, and `clear`.
+- `video` exists when at least one of `video.planes.v1`, `video.sprites.v1`, or `video.menus.v1` is negotiated.
+- `video.planes` and `video.preloadPlaneScene` require `video.planes.v1`.
+- `video.sprites`, `video.sceneTargets`, `video.preloadSpriteDefinition`, and `video.preloadSpriteDefinitions` require `video.sprites.v1`.
+- `video.actionMenus`, `video.gridMenus`, `video.messages`, `video.primitives`, and `video.titles` require `video.menus.v1`.
+- `video.display` is exposed when either `video.planes.v1` or `video.menus.v1` is negotiated.
+- `video.camera` is exposed whenever the video facade exists. It has no separate capability identifier and exposes only `setTransform`, `animateTo`, and `clear`.
+- `video.preloadAssetUrls` is present whenever the video facade exists.
 
 ## Capability negotiation
 

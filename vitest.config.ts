@@ -58,10 +58,10 @@ const specificCoverageThresholds = {
     branches: 72,
   },
   'src/console/cartridges/sdk-v1/adapter.ts': {
-    lines: 84,
-    functions: 63,
-    statements: 84,
-    branches: 71,
+    lines: 92,
+    functions: 90,
+    statements: 92,
+    branches: 85,
   },
 };
 

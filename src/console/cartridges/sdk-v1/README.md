@@ -25,4 +25,7 @@ The adapter returns an object filtered from the negotiated capability list, so m
 
 ## Contract tests
 
-The surface and validation behavior are pinned by `tests/console/cartridges/cartridge-sdk-v1.contract.test.ts`, which proves the adapter hides internal members, delegates public members, and that compatibility validation accepts/rejects correctly.
+The surface and validation behavior are pinned in `tests/console/cartridges/`:
+
+- `cartridge-sdk-v1-adapter.contract.test.ts` owns runtime shape, capability filtering, delegation, receiver binding, storage namespacing, aliases, and host-member exclusion.
+- `cartridge-sdk-v1-validator.test.ts` owns malformed runtime values, SDK-range compatibility, unsupported capabilities, error result contents, and `CartridgeSdkIncompatibleError`.

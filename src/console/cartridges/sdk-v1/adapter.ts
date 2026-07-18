@@ -126,7 +126,6 @@ const PRIMITIVE_METHODS = [
   'addPrimitive',
   'removePrimitive',
   'clearPrimitives',
-  'getPrimitive',
   'listPrimitives',
 ] as const;
 const TITLE_METHODS = ['addTitle', 'removeTitle', 'clearTitles', 'getTitle', 'listTitles'] as const;

@@ -259,9 +259,20 @@ describe('RoccoCartridgeManager', () => {
     expect('kernel' in (observedContext ?? {})).toBe(false);
   });
 
-  it('rejects a malformed manifest missing runtime before mount', async () => {
+  it.each([
+    ['missing runtime', undefined],
+    ['incompatible SDK range', { sdk: '^2.0.0' }],
+    ['unknown capability', { sdk: '^1.0.0', capabilities: ['unknown.cap'] }],
+    ['malformed runtime.sdk as number', { sdk: 1 }],
+    ['malformed capabilities as object', { sdk: '^1.0.0', capabilities: {} }],
+    [
+      'malformed capabilities with number element',
+      { sdk: '^1.0.0', capabilities: ['audio.v1', 1] },
+    ],
+  ])('rejects %s before mount and does not publish the cartridge', async (_label, runtime) => {
     const kernel = createTestKernel(false);
     const mount = vi.fn();
+    const start = vi.fn();
 
     testState.registrations = [
       createTestConfig('game', () =>
@@ -270,39 +281,10 @@ describe('RoccoCartridgeManager', () => {
             id: 'game',
             title: 'game',
             version: '1.0.0',
-          } as never,
-          mount,
-        }),
-      ),
-    ];
-
-    const manager = new RoccoCartridgeManager();
-    await expect(
-      manager.loadAndMount({
-        app: {} as Application,
-        kernel: kernel as never,
-        configuredCartridgeId: 'game',
-      }),
-    ).rejects.toThrow(/runtime/i);
-
-    expect(mount).not.toHaveBeenCalled();
-    expect(manager.getActiveCartridge()).toBeUndefined();
-  });
-
-  it('rejects an incompatible SDK range before mount', async () => {
-    const kernel = createTestKernel(false);
-    const mount = vi.fn();
-
-    testState.registrations = [
-      createTestConfig('game', () =>
-        createTestCartridge('game', {
-          manifest: {
-            id: 'game',
-            title: 'game',
-            version: '1.0.0',
-            runtime: { sdk: '^2.0.0' },
+            runtime: runtime as never,
           },
           mount,
+          start,
         }),
       ),
     ];
@@ -314,40 +296,10 @@ describe('RoccoCartridgeManager', () => {
         kernel: kernel as never,
         configuredCartridgeId: 'game',
       }),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(CartridgeSdkIncompatibleError);
 
     expect(mount).not.toHaveBeenCalled();
-    expect(manager.getActiveCartridge()).toBeUndefined();
-  });
-
-  it('rejects unknown capabilities before mount', async () => {
-    const kernel = createTestKernel(false);
-    const mount = vi.fn();
-
-    testState.registrations = [
-      createTestConfig('game', () =>
-        createTestCartridge('game', {
-          manifest: {
-            id: 'game',
-            title: 'game',
-            version: '1.0.0',
-            runtime: { sdk: '^1.0.0', capabilities: ['unknown.cap'] },
-          },
-          mount,
-        }),
-      ),
-    ];
-
-    const manager = new RoccoCartridgeManager();
-    await expect(
-      manager.loadAndMount({
-        app: {} as Application,
-        kernel: kernel as never,
-        configuredCartridgeId: 'game',
-      }),
-    ).rejects.toThrow();
-
-    expect(mount).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
     expect(manager.getActiveCartridge()).toBeUndefined();
   });
 
@@ -527,44 +479,6 @@ describe('RoccoCartridgeManager', () => {
 
     await expect(manager.dispose()).rejects.toBeInstanceOf(AggregateError);
     expect(order).toEqual(['stop', 'dispose', 'scope']);
-    expect(manager.getActiveCartridge()).toBeUndefined();
-  });
-
-  it.each([
-    ['runtime.sdk as number', { sdk: 1 }],
-    ['capabilities as object', { sdk: '^1.0.0', capabilities: {} }],
-    ['capabilities with number element', { sdk: '^1.0.0', capabilities: ['audio.v1', 1] }],
-  ])('rejects malformed %s before mount and does not publish it', async (_label, runtime) => {
-    const kernel = createTestKernel(false);
-    const mount = vi.fn();
-    const start = vi.fn();
-
-    testState.registrations = [
-      createTestConfig('game', () =>
-        createTestCartridge('game', {
-          manifest: {
-            id: 'game',
-            title: 'game',
-            version: '1.0.0',
-            runtime: runtime as never,
-          },
-          mount,
-          start,
-        }),
-      ),
-    ];
-
-    const manager = new RoccoCartridgeManager();
-    await expect(
-      manager.loadAndMount({
-        app: {} as Application,
-        kernel: kernel as never,
-        configuredCartridgeId: 'game',
-      }),
-    ).rejects.toBeInstanceOf(CartridgeSdkIncompatibleError);
-
-    expect(mount).not.toHaveBeenCalled();
-    expect(start).not.toHaveBeenCalled();
     expect(manager.getActiveCartridge()).toBeUndefined();
   });
 });

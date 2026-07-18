@@ -1,4 +1,4 @@
-import { Container, type Application } from 'pixi.js';
+import { Container, Texture, type Application } from 'pixi.js';
 import { describe, expect, it, vi } from 'vitest';
 
 import { GameRuntime } from '../../src/console/runtime';
@@ -77,13 +77,17 @@ describe('GameRuntime', () => {
       stage,
       screen: { width: 320, height: 180 },
       render,
+      renderer: { extract: { texture: () => Texture.WHITE } },
     } as unknown as Application;
     const presenter = new RuntimeCompositionPresenter();
 
     presenter.sync(app, session);
 
     expect(stage.children).toHaveLength(1);
-    expect(stage.children.some((child) => child.label === 'composition-overlay')).toBe(true);
+    const overlay = stage.children.find((child) => child.label === 'composition-overlay');
+    expect(overlay).toBeDefined();
+    expect(overlay?.children.some((child) => child.label === 'composition-dimmer')).toBe(true);
+    expect(overlay?.children.some((child) => child.label === 'composition-panel-text')).toBe(true);
     expect(render).toHaveBeenCalledTimes(1);
 
     presenter.sync(app, null);

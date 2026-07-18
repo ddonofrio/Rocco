@@ -1,15 +1,70 @@
 import 'fake-indexeddb/auto';
 
-// jsdom does not implement a real canvas rendering context and logs a noisy
-// "Not implemented: HTMLCanvasElement.prototype.getContext" error whenever the
-// production code touches a canvas. The runtime already treats a missing 2D
-// context as an unsupported environment (returning early or falling back), so
-// we replace getContext with a quiet stub that reports no context. Individual
-// tests that need a working context still override this via
-// their own vi.spyOn/mockImplementation calls.
+// jsdom does not implement a real canvas rendering context, which breaks PixiJS
+// text/texture measurement (CanvasTextMetrics calls getContext('2d').measureText).
+// We provide a lightweight fake 2D context so measurement succeeds without a real
+// canvas. Tests that need a no-context environment override this themselves.
+function createFake2DContext(): CanvasRenderingContext2D {
+  const context = {
+    font: '10px monospace',
+    textAlign: 'left',
+    textBaseline: 'alphabetic',
+    fillStyle: '#000',
+    strokeStyle: '#000',
+    globalAlpha: 1,
+    lineWidth: 1,
+    imageSmoothingEnabled: false,
+    measureText: (text: string) => ({
+      width: text.length * 10,
+      actualBoundingBoxAscent: 12,
+      actualBoundingBoxDescent: 4,
+    }),
+    clearRect: () => {},
+    fillRect: () => {},
+    strokeRect: () => {},
+    fillText: () => {},
+    strokeText: () => {},
+    beginPath: () => {},
+    closePath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    rect: () => {},
+    arc: () => {},
+    fill: () => {},
+    stroke: () => {},
+    save: () => {},
+    restore: () => {},
+    scale: () => {},
+    translate: () => {},
+    rotate: () => {},
+    drawImage: () => {},
+    getImageData: () => ({
+      width: 1,
+      height: 1,
+      data: new Uint8ClampedArray(4),
+    }),
+    putImageData: () => {},
+    createImageData: () => ({ width: 1, height: 1, data: new Uint8ClampedArray(4) }),
+  };
+  return context as unknown as CanvasRenderingContext2D;
+}
+
 if (typeof HTMLCanvasElement !== 'undefined') {
-  HTMLCanvasElement.prototype.getContext =
-    (() => {}) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = ((contextId: string) =>
+    contextId === '2d'
+      ? createFake2DContext()
+      : null) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+}
+
+if (typeof globalThis !== 'undefined' && !('OffscreenCanvas' in globalThis)) {
+  class FakeOffscreenCanvas {
+    width = 0;
+    height = 0;
+    getContext(contextId: string): CanvasRenderingContext2D | null {
+      return contextId === '2d' ? createFake2DContext() : null;
+    }
+  }
+  Object.assign(globalThis, { OffscreenCanvas: FakeOffscreenCanvas });
 }
 
 // Build meta globals are injected by Vite's define during dev/build but are

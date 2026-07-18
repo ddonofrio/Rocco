@@ -805,7 +805,12 @@ describe('RoccoBaitShopToiletLevel', () => {
     });
     expect(state.playedSoundIds).toContain(PORTAL_LOOP_SOUND_ID);
 
-    // Posicionamiento inicial en zona del portal
+    // El portal solo se activa cuando el jugador NO está sobre su zona.
+    // Salimos de la zona para permitir la activación y luego volvemos a ella.
+    setPlayerVisualOrigin(state, 40, 40);
+    level.update(16);
+
+    // Posicionamiento en zona del portal (tras la activación)
     setPlayerVisualOrigin(state, 381, 302);
 
     // Clic 1 dentro del portal (coordenadas seguras dentro de la zona)
@@ -813,6 +818,7 @@ describe('RoccoBaitShopToiletLevel', () => {
       kind: 'scene-click',
       sceneX: 381,
       sceneY: 302,
+      targetInstanceId: PORTAL_INSTANCE_ID,
     });
     expect(getRegisteredSceneTarget(state, PORTAL_INSTANCE_ID)).toBeDefined();
 
@@ -821,6 +827,7 @@ describe('RoccoBaitShopToiletLevel', () => {
       kind: 'scene-click',
       sceneX: 382,
       sceneY: 302,
+      targetInstanceId: PORTAL_INSTANCE_ID,
     });
     expect(state.playedSoundIds).toContain(PORTAL_LOOP_SOUND_ID);
 

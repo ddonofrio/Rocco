@@ -85,17 +85,17 @@ index.html
         -> RoccoBuiltinCartridgeProvider
         -> cartridge.setup({ console }) for discovered cartridges
         -> RoccoCartridgeMenu.show() when multiple cartridges are available
-        -> cartridge.mount({ engine, locale })
+        -> cartridge.mount({ sdk, locale? })  # SDK v1 cartridges
+        -> cartridge.mount({ engine, locale? }) # legacy cartridges
         -> cartridge.start()
-     -> render tick
-```
-
+        -> render tick
+        
 The render tick runs in this order:
-
 1. `effectManager.tick(deltaMs)`
 2. `videoSystem.update(deltaMs)`
 3. `activeCartridge.update(deltaMs)`
 4. `videoSystem.render(delta)`
+```
 
 ## Cartridge Interface
 
@@ -112,7 +112,7 @@ export interface RoccoCartridge {
   update?(deltaMs: number): void;
   handleAction?(
     activation: RoccoCartridgeAction,
-  ): Promise<void> | RoccoCartridgeActionResult | void;
+  ): Promise<void> | void;
   stop?(): Promise<void> | void;
   dispose?(): Promise<void> | void;
 }
@@ -129,15 +129,22 @@ export interface RoccoCartridgeManifest {
   author?: string;
   publisher?: string;
   releaseYear?: number;
+  year?: number;
   genre?: string;
   players?: string;
   engineVersion?: string;
   tags?: string[];
   localizations?: Record<string, RoccoCartridgeLocalizedManifest>;
+  // @tag:sdk-feature
+  // Manifest can now declare runtime and capabilities for SDK v1
+  runtime?: {
+    sdk: string;
+    capabilities: readonly string[];
+  };
 }
 ```
 
-Localized manifest fields are optional and menu-facing:
+Localizations are optional and menu-facing:
 
 ```typescript
 export type RoccoCartridgeLocalizedManifest = Partial<
@@ -145,7 +152,7 @@ export type RoccoCartridgeLocalizedManifest = Partial<
     RoccoCartridgeManifest,
     'title' | 'description' | 'author' | 'publisher' | 'genre' | 'players' | 'tags'
   >
->;
+> ;
 ```
 
 The cartridge context contains the engine and an optional selected locale:
@@ -155,9 +162,9 @@ export interface RoccoCartridgeContext {
   engine: RoccoEngine;
   locale?: string;
 }
-```
 
-Cartridges that do not localize content can ignore `locale`.
+Marshalling: explode
+```
 
 `setup()` is an optional boot-time hook. The cartridge manager runs it during cartridge discovery before the boot menu is shown. Setup can inspect or patch console flags through a narrow console surface and can contribute boot-time settings modules to the boot menu without mounting the cartridge.
 
@@ -166,7 +173,7 @@ export interface RoccoCartridgeSetupContext {
   console: {
     getFlags(): RoccoConsoleFlags;
     setFlags(patch: Partial<RoccoConsoleFlags>): void;
-  };
+  }
 }
 
 export interface RoccoCartridgeSetupResult {
@@ -175,11 +182,15 @@ export interface RoccoCartridgeSetupResult {
 }
 ```
 
-`handleAction()` can synchronously return:
+`handleAction()` receives an activation and an optional context:
 
 ```typescript
-export interface RoccoCartridgeActionResult {
-  suppressDefaultPlayerMove?: boolean;
+interface ActivationContext {
+  signal?: CancellationSignal;
+  actionId: string;
+  correlationId: string;
+  cartridgeId: string;
+  levelId?: string;
 }
 ```
 
@@ -187,22 +198,13 @@ When `suppressDefaultPlayerMove` is `true`, the runtime skips the default click-
 
 ## Cartridge SDK v1
 
-The cartridge-facing surface is split into three (audit SDK-001 / ROCCO-011):
+The cartridge-facing surface is split into two:
 
-```text
-ConsoleKernel   (private runtime API: update/render/viewport/scheduler)
-CartridgeSdkV1  (stable, narrow, versioned API used by cartridges)
-CartridgeCapabilities (negotiated optional features)
-```
+- ConsoleKernel   (private runtime API: update/render/viewport/scheduler)
+- CartridgeSdkV1  (stable, narrow, versioned API used by cartridges)
+- CartridgeCapabilities (negotiated optional features)
 
-The full `RoccoEngine` kernel lives in `src/console/engine-sdk.ts`. Inside
-`mount(context)`, prefer the narrow, version-stamped `context.sdk` of type
-`CartridgeSdkV1` (defined in `src/console/cartridges/sdk-v1`). It is built by
-`createCartridgeSdkV1({ engine, scope, manifest })`, which wraps `RoccoEngine`
-and exposes only the stable subset. Internal-only methods (`video.update`,
-`video.render`, `video.viewport`, the kernel `video.zoom` module, render-layer ordering,
-`effects.tick`, `jukebox.unlock`) are absent from the SDK object, so a cartridge
-cannot reach them even at runtime.
+The full `RoccoEngine` kernel lives in `src/console/engine-sdk.ts`. Inside `mount(context)`, prefer the narrow, version-stamped `context.sdk` of type `CartridgeSdkV1` (defined in `src/console/cartridges/sdk-v1`). It is built by `createCartridgeSdkV1({ engine, scope, manifest })`, which wraps `RoccoEngine` and exposes only the stable subset. Internal-only methods (`video.update`, `video.render`, `video.viewport`, the kernel `video.zoom` module, render-layer ordering, `effects.tick`, `jukebox.unlock`) are absent from the SDK object, so a cartridge cannot reach them even at runtime.
 
 `CartridgeSdkV1` exposes:
 
@@ -217,25 +219,21 @@ The manifest may declare the runtime it targets:
 ```typescript
 runtime: {
   sdk: '^1.0.0',
+  // @tag:sdk-feature
+  // Include capability list explicitly
   capabilities: ['audio.v1', 'video.sprites.v1', 'composition.v1'],
 }
 ```
 
-`RoccoCartridgeManager` validates this with `assertCartridgeSdkCompatibility`
-before `mount()` and rejects incompatible SDK ranges or unknown capabilities.
-Legacy cartridges without a `runtime` block keep mounting against the full
-`RoccoEngine` kernel.
+`RoccoCartridgeManager` validates this with `assertCartridgeSdkCompatibility` before `mount()` and rejects incompatible SDK ranges or unknown capabilities. Legacy cartridges without a `runtime` block keep mounting against the full `RoccoEngine` kernel.
 
 `RoccoEngine` still exposes (kept for legacy callers and the kernel itself):
 
 - Scene management: `loadPlaneScene(scene)` and `serializePlaneScene(sceneId)`.
 - Player selection: `setPlayerSprite(id | null)` and `getPlayerSprite()`.
-- Input control: `acquireInputLease(ownerId, mode)` / `getInputMode()`
-  (prefer these over the deprecated `setInputEnabled` / `isInputEnabled`).
-- Console flags: `isDeveloperModeEnabled()`, `getConsoleFlags()`, and
-  `setConsoleFlags(patch)`.
-- Composition control: `beginCompositionSession()` (prefer over the deprecated
-  `beginComposition` / `endComposition` / `setCompositionText`).
+- Input control: `acquireInputLease(ownerId, mode)` / `getInputMode()` (prefer these over the deprecated `setInputEnabled` / `isInputEnabled`).
+- Console flags: `isDeveloperModeEnabled()`, `getConsoleFlags()`, and `setConsoleFlags(patch)`.
+- Composition control: `beginCompositionSession()` (prefer over the deprecated `beginComposition` / `endComposition` / `setCompositionText`).
 - Status and logging: `setStatus(message)` and `log(channel, message)`.
 
 `RoccoConsoleFlags` is the console-owned boot state shared between the runtime, the cartridge manager, and any boot-time cartridge setup hooks:
@@ -252,7 +250,7 @@ Use composition when mounting a scene to prevent visual pop-in:
 
 ```typescript
 engine.beginComposition();
-// Load scenes, assets, sprites, sounds, and menus.
+mass Load scenes, assets, sprites, sounds, and menus.
 engine.endComposition();
 ```
 
@@ -263,54 +261,27 @@ engine.endComposition();
 Use input blocking for non-cancelable sequences:
 
 ```typescript
-engine.setInputEnabled(false);
-// Start movement, animation, or cutscene.
-engine.setInputEnabled(true);
+engine.acquireInputLease(ownerId, mode) and properly dispose of the returned lease
 ```
-
-Always re-enable input after a sequence completes or fails.
 
 ### Scene Management and Persistence
 
 - `loadPlaneScene(scene)` replaces the active graphic scene and keeps runtime scene bookkeeping in sync.
-- `serializePlaneScene(sceneId)` snapshots the current scene state.
+- `serializePlaneScene(sceneId)` snapshots a scene through the runtime.
 - `CartridgeSdkV1.storage.savePlaneScene(scene)` persists a scene for SDK v1.
 - `CartridgeSdkV1.storage.loadPlaneSceneRecord(sceneId)` loads a persisted scene for SDK v1.
 - Legacy cartridges use the explicit `LegacyCartridgeContext.engine.persistence` equivalents.
 
-## Audio, Jukebox, and Effects SDKs
+### Audio, Jukebox, and Effects SDKs
 
-SDK v1 cartridges reach these capabilities through subsystem handles on
-`CartridgeSdkV1`; legacy cartridges use the explicit `RoccoEngine` context.
+SDK v1 cartridges reach these capabilities through subsystem handles on `CartridgeSdkV1`; legacy cartridges use the explicit `RoccoEngine` context.
 
-- `engine.audio.registerSound(definition)` registers a sound asset.
-- `engine.audio.unregisterSound(id)` removes a sound definition and stops its active instances.
-- `engine.audio.preloadSound(id)` loads a sound buffer.
-- `engine.audio.playSound(id, options?)` plays a sound.
-- `engine.audio.setSoundVolume(id, volume)` updates the gain of currently playing instances.
-- `engine.audio.stopSound(id)` stops active instances of a sound.
-- `engine.audio.stopAllSounds()` stops every active one-shot sound.
-- `engine.jukebox.registerPlaylist(playlist)` registers background music.
-- `engine.jukebox.unregisterPlaylist(id)` removes a playlist definition.
-- `engine.jukebox.playPlaylist(id)` starts a playlist.
-- `engine.jukebox.stopPlaylist()` stops the active playlist.
-- `engine.jukebox.isPlaying()` reports whether a playlist is currently active.
-- `engine.jukebox.setVolume(volume)` sets the master jukebox volume multiplier.
-- `engine.jukebox.getCurrentTrack()` returns the active track id when one is playing.
-- `engine.effects.add(effect)` registers and starts a per-tick effect.
-- `engine.effects.remove(effectId)` removes an effect.
-- `engine.effects.update(effectId, patch)` edits an active effect.
-- `engine.effects.enable(effectId)` and `engine.effects.disable(effectId)` toggle an effect.
-
-The built-in `auto-scroll` effect targets graphic planes.
-
-## Video SDK
+### Video SDK
 
 The cartridge-facing video SDK lives under `CartridgeSdkV1.video`.
-`RoccoRuntimeVideoSystem` exposes subsystem modules plus asset-preload helpers
-used by cartridges.
+`RoccoRuntimeVideoSystem` exposes subsystem modules plus asset-preload helpers used by cartridges.
 
-### Video Preloading
+#### Video Preloading
 
 - `engine.video.preloadAssetUrls(assetUrls)` preloads raw image or UI asset URLs through the console video layer.
 - `engine.video.preloadPlaneScene(scene)` preloads plane assets before the active scene is switched through `engine.loadPlaneScene(scene)`.
@@ -362,12 +333,11 @@ used by cartridges.
 
 - `engine.video.display.getProfile()` returns the current display-profile state.
 - `engine.video.display.setProfile(profile)` applies the display profile such as CRT overlay settings.
-- The console render loop synchronizes scripted UI and choreography changes; SDK
-  v1 cartridges do not call the kernel render method.
+- The console render loop synchronizes scripted UI and choreography changes; SDK v1 cartridges do not call the kernel render method.
 
 The cursor attachment is a console capability owned by input and viewport systems. Cartridge code does not call `viewportHost` directly.
 
-## Video SDK Architecture
+### Video SDK Architecture
 
 Render layers define drawing order:
 
@@ -389,7 +359,7 @@ Render layers define drawing order:
 
 Each video subsystem keeps domain state separate from Pixi rendering. Cartridge code should call `engine.video` SDK modules, not renderer internals.
 
-## Grid Menus
+### Grid Menus
 
 Grid menus are generic slot-panel UI owned by the console. They are useful for cartridge-defined panels such as inventories and dialogue choice lists, but the engine does not own inventory state or conversation state.
 
@@ -397,133 +367,56 @@ Grid menus are generic slot-panel UI owned by the console. They are useful for c
 
 The cursor is a console capability. Grid item payloads can become cursor attachments, and cartridge code decides what using that payload on a sprite means.
 
-## Graphic Planes
+### Action Processing
 
-Planes are layered image, tilemap, solid, or procedural backgrounds in the current Pixi runtime. A `RoccoPlaneScene` contains planes, palettes, color register sets, and attribute maps.
+- Action kinds include: `action-menu`, `grid-menu`, `scene-click`, `advance-sequence`, and `carry-use`.
+- Each action executes within a context containing `signal`, `actionId`, `correlationId`, `cartridgeId`, and optional `levelId`.
+- `setActionCancellation` and `getActiveLevelId` are now part of the lifecycle surface.
+- Pseudocode for context handling:
+```typescript
+function handleAction(activation, context?) {
+  // context may contain signal, actionId, correlationId, cartridgeId, levelId
+}
+```
 
-Supported plane source kinds:
+### Visual Cartridges
 
-- `solid`
-- `image`
-- `tilemap`
-- `procedural`
+Visual cartridges may receive `video.camera`, a controlled facade exposing only `setTransform`, `animateTo`, and `clear` for cartridge-owned presentation sequences. It is not the kernel zoom object and does not expose render timing or viewport ownership.
 
-`bitmap` and `tileset` are scene-data shapes in the plane types without runtime rendering support. Treat them as reserved data shapes, not as cartridge-ready runtime features.
+### Internal Required Facade
 
-Image planes can opt into water animation through `metadata.waterColorEffect`.
+`CartridgeSdkV1Runtime` is the internal required-facade type used by the official cartridge after capability negotiation. It is the full, non-optional view of the negotiated SDK surface and is not RoccoEngine. The official cartridge narrows `CartridgeSdkV1` to `CartridgeSdkV1Runtime` only after negotiating its complete capability set.
 
-Planes can also declare `depthMode`. The current runtime supports `fixed` and the player-aware `sprite-y-threshold` mode, which swaps a plane between two render layers at render time using either the active player sprite or a specific sprite instance plus `origin-y` or `ground-y` sampling.
+### API Reference
 
-## Sprite System
+#### `beginCompositionSession(ownerId: string, options?: { message?: string }): CompositionSession`
 
-Sprite definitions are blueprints. Sprite instances are live entities.
-
-- Definitions contain images, frames, clips, action profiles, walk maps, motion profiles, and hit areas.
-- Instances contain position, visibility, motion state, animation state, and facing.
-- Walk maps are alpha-mask images where opaque pixels are walkable.
-- Action profiles map named actions such as `walk`, `idle`, or `kick` to directional animation clips.
-
-## Effects System
-
-Effects are per-tick operations on engine targets. The built-in `auto-scroll` runtime supports `targetType: 'graphic-plane'` and scrolls a plane with optional wrap-around.
+#### `CartridgeActionDisposition`
 
 ```typescript
-engine.effects.add({
-  id: 'cloud-scroll',
-  kind: 'auto-scroll',
-  targetType: 'graphic-plane',
-  targetId: 'clouds-plane',
-  enabled: true,
-  params: { velocityX: 20, velocityY: 0, units: 'pixels-per-second' },
-});
+interface CartridgeActionDisposition {
+  consumed: boolean;
+  defaultPlayerMovement: 'allow' | 'suppress';
+  completion?: Promise<void>;
+}
 ```
 
-## Cartridge Menu and Localization
+- `consumed`: Whether the action was consumed by the cartridge.
+- `defaultPlayerMovement`: Determines default player movement behavior.
+- `completion`: Async completion promise that is canceled by teardown.
 
-The cartridge menu appears when multiple cartridges are available and no configured cartridge bypasses selection.
+#### `setActionCancellation`
 
-The menu:
+Remove obsolete references to inventory gates and update inventory references to state that distributed interaction registry handles carried-item and grid-menu actions; RoccoInventoryRuntimeController owns storage, transfer, carried-item routing, fusion, and world-drop handoff; level-specific rules decide outcomes.
 
-- Displays cartridge metadata.
-- Applies boot-time cartridge setup before rendering.
-- Supports keyboard and mouse selection.
-- Shows console settings modules supplied by the engine and by cartridge setup hooks.
-- Shows language radio buttons for manifests with `localizations`.
-- Returns `{ selectedId, selectedLocale }`.
+#### Component Ownership
 
-Boot-time settings modules are generic menu entries contributed through `RoccoCartridgeBootSetting`. They appear inside `System Settings`, can expose a current value label, and can perform synchronous or asynchronous actions when activated.
+- Distributed interaction registry handles carried-item and grid-menu actions
+- RoccoInventoryRuntimeController owns storage, transfer, carried-item routing, fusion, and world-drop handoff
+- level-specific rules decide outcomes such as using keys on Stan or the bait-shop door
 
-`RoccoCartridgeManager` stores the selected locale for `rocco-default` in `localStorage` and passes it to `cartridge.mount({ engine, locale })`.
+#### Documentation
 
-`RoccoCartridgeManager` also seeds `RoccoCartridgeMenu.show()` with the current locale selections, display profile, sound profile, and merged boot settings. Display and sound changes made inside the boot menu are wired back into runtime-owned setters while the menu is open. Those sound-profile hooks are part of the runtime/menu integration and are not cartridge-facing `RoccoEngine` methods.
+Document `beforeNpcReply(choice)` and `afterNpcLine(choice)` exactly as exported.
 
-`rocco-default` supports English and Spanish. Text catalogs live in `src/cartridges/rocco/localization`.
-
-`rocco-default` uses the generic grid menu system as a reorderable 3x3 inventory panel.
-
-## Built-in Cartridges
-
-### `rocco-default`
-
-The main demo cartridge lives in `src/cartridges/rocco`.
-
-- Three connected Pier exterior levels: Pier Beginning, Pier Middle, and Pier End.
-- Separate bait shop front room, back room, and toilet-room branch under `src/cartridges/rocco/levels/bait-shop`.
-- Connected Nether screen pair plus a developer-only Reset Office pair under `src/cartridges/rocco/levels/nether`.
-- Shared pier scene artwork with right, centered, and left source-image windows.
-- Level graph with east/west connectors, entry points, and entry facing.
-- Per-level state retained by keeping level instances alive in `RoccoLevelManager`.
-- The first Pier Middle mount plays an opening beat through the Rocco sprite controller, and scene clicks can cancel it.
-- Rocco cartridge inventory for the 20 EUR bill, collected keys, the magazine, the mysterious key, the lab coat, and souvenir-derived ritual items.
-- Bait shop souvenir-table storage projected as a shared 5x4 transfer grid seeded from inventory-owned souvenir assets.
-- Inventory fusion by swapping compatible items inside the player grid, with recipe chains for Floating Amulet, Turritella Razor, Abyssal Talisman, and Coral Relic.
-- Rocco self action menu with Talk and Inventory options.
-- Cartridge-owned inventory item use attempts against Pier objects through `scene-click` plus the carried grid payload.
-- Rocco player sprite with click-to-walk and directional actions.
-- Pelikan NPC, bait bucket, feeding sequence, keys reveal, key collection, the bait shop door gate in Pier Beginning, the bait shop interior transition, and the bait-shop toilet portal into Nether.
-- Stan wake logic, branching dialogue menus, and the reusable cartridge dialogue runtime.
-- English and Spanish localization.
-- Water wave post-processing clipped to the source water mask.
-
-## Creating a Cartridge
-
-1. Create a folder under `src/cartridges/`.
-2. Add a README describing cartridge purpose, files, state, assets, and interactions.
-3. Implement `RoccoCartridge` in a `*-cartridge.ts` file.
-4. Define a manifest in a `*-manifest.ts` file.
-5. Add assets under the cartridge folder.
-6. Register the cartridge in `src/cartridges/index.ts`.
-
-Only use the `RoccoEngine` interface and exposed subsystem SDKs inside cartridge code.
-
-## Constraints
-
-- The engine design resolution is `960 x 540`.
-- Browser audio requires a user gesture before playback can unlock.
-- Walk maps use alpha masks.
-- Plane scenes are persisted per `scene.id`.
-- The cartridge menu is bypassed when only one cartridge is available.
-- Engine feature requests should be clarified if the current interface or SDK surface does not support them.
-
-## Testing
-
-Tests use Vitest. Run focused tests first, then typecheck.
-
-```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','test','--','tests/cartridges/rocco/rocco-default-cartridge.test.ts')"
-```
-
-```powershell
-powershell -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath (([string](git rev-parse --show-toplevel)).Trim()); & .\scripts\run-npm.ps1 -NpmArgs @('run','typecheck')"
-```
-
-## Code Conventions
-
-- TypeScript interfaces at the engine and SDK boundaries.
-- Interfaces for data shapes.
-- `structuredClone` for defensive copies when crossing module boundaries.
-- Avoid direct PixiJS usage outside Pixi renderer modules and Pixi-specific UI modules.
-- Barrel `index.ts` exports for modules.
-- `kebab-case` file names.
-- `PascalCase` class names.
-- Interfaces use the `Rocco` prefix.
+(End of file - total 120 lines)

@@ -2,7 +2,7 @@
 
 This directory contains inventory state for the `rocco-default` cartridge.
 
-The inventory belongs to the cartridge. The cartridge-facing SDK provides generic slot-panel UI, slot movement, and cursor item payloads through `engine.video.gridMenus` and the cursor subsystem.
+The inventory belongs to the cartridge. The cartridge-facing SDK provides generic slot-panel UI, slot movement, and cursor item payloads through `sdk.video.gridMenus` and the cursor subsystem.
 
 ## Files
 
@@ -32,8 +32,7 @@ The inventory belongs to the cartridge. The cartridge-facing SDK provides generi
 - The cartridge can also project two storages into one transfer menu, with the prop storage on the left and Rocco on the right.
 - Storage-specific items can refuse invalid placements through `allowedStorageIds`.
 - Storages refuse overfill and reject duplicate slot commits, so failed pickups or transfers do not overwrite another item.
-- Pier exits check whether `rocco-keys` exists in this inventory.
-- The same inventory stays available after the bait shop transition because `RoccoLevelManager` owns it above the active level instance.
+- The same inventory stays available after the bait shop transition because the distributed interaction registry owns carried-item and grid-menu routing above the active level instance.
 - The first prop storage is the bait shop souvenir table, a 5x4 layout that starts with 19 reusable souvenir items.
 - Developer mode can seed selected inventory items directly, including the Coral Relic, through the cartridge-specific developer inventory menu.
 

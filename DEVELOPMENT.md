@@ -4,7 +4,7 @@ This document covers local setup, command usage, validation, and recurring workf
 
 ## Prerequisites
 
-- Node.js compatible with the version range in `package.json`.
+- Node.js >=24.0.0.
 - npm.
 - PowerShell on Windows.
 
@@ -165,10 +165,10 @@ Do not run `npm run format` for a narrow task unless the user asks for whole-rep
 - Current Pier implementation code lives in `src/cartridges/rocco/games/rocco-default/maps/pier`.
 - `src/cartridges/rocco/levels/pier` remains the compatibility path for older imports.
 - The Pier map has three levels: `pier-start`, `pier-middle`, and `pier-end`.
-- `RoccoLevelManager` owns level registration, transitions, entry placement, status text, and per-level state retention across Rocco screens.
+- `RoccoLevelManager` owns active-level lifecycle and high-level delegation; levels/runtime/rocco-level-transition-controller.ts resolves connector intent and rocco-level-transition-service.ts performs transactional switches.
 - Pier Middle east and west exits are available without an inventory gate.
 - `rocco-default` supports English and Spanish localization through `src/cartridges/rocco/localization`.
-- Rocco inventory is cartridge state. The engine provides generic reorderable slot-panel UI and generic cursor item payloads through `engine.video.gridMenus` and the cursor subsystem.
+- Rocco inventory is cartridge state. The engine provides generic reorderable slot-panel UI and generic cursor item payloads through `sdk.video.gridMenus` and the cursor subsystem.
 
 ## Water Rendering Notes
 

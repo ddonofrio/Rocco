@@ -77,10 +77,10 @@ Avoid direct `.\scripts\run-npm.ps1` calls without `-ExecutionPolicy Bypass`, an
 
 - The default cartridge is the Pier map.
 - Current Pier implementation code lives in `src/cartridges/rocco/games/rocco-default/maps/pier`. `src/cartridges/rocco/levels/pier` remains the compatibility path.
-- `RoccoLevelManager` lives in `src/cartridges/rocco/levels/rocco-level-manager.ts` and owns map transitions, per-level state retention, and inventory-based exit gates across Rocco screens.
+- `RoccoLevelManager` lives in `src/cartridges/rocco/levels/rocco-level-manager.ts` and owns active-level lifecycle and delegates transitions to runtime transition helpers; Pier Middle east/west connectors have no inventory gate.
 - Pier Middle east and west exits are available without an inventory gate.
 - `rocco-default` is localized in English and Spanish through `src/cartridges/rocco/localization`.
-- `rocco-default` uses `engine.video.gridMenus` as generic console UI for its cartridge inventory.
+- `rocco-default` uses `sdk.video.gridMenus` as generic console UI for its cartridge inventory; the official cartridge narrows `CartridgeSdkV1` to `CartridgeSdkV1Runtime` internally.
 - The console owns cursor rendering. Cartridges pass generic grid item payloads; cartridge folders decide what item use means.
 - The boot menu language radio buttons are only shown for manifests with `localizations`.
 - The water animation is clipped to its original alpha mask to avoid sliding over pier posts. Read `src/console/video/post-processing/README.md` before changing water constants or plane composition.

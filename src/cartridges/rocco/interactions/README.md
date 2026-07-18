@@ -3,11 +3,7 @@
 This directory contains the distributed interaction rules for the `rocco-default`
 cartridge.
 
-The interaction registry replaces the old feature-heavy router branches with
-rule modules that register their own priorities, ownership, and matching logic.
-`RoccoSceneActionRouter` still builds the runtime context and keeps transition
-flow concerns such as blocking-sequence guards and exit-intent timing, but the
-feature rules themselves now live here.
+RoccoSceneActionRouter builds immutable interaction context, applies blocking and exit-intent sequencing, and delegates feature behavior to staged registry rules.
 
 ## Files
 
@@ -32,17 +28,14 @@ feature rules themselves now live here.
 
 The registry evaluates rules by:
 
-1. action kind: `scene-click`, `action-menu`, or `grid-menu`
+1. action kind: `scene-click`, `action-menu`, `grid-menu`, `advance-sequence`, and `carry-use`
 2. optional stage: currently `before-exit-intent` or `default`
 3. descending priority within that bucket
 
-`matches()` stays side-effect-free. `execute()` performs the actual behavior.
+`matches()` stays side-effect-free. `execute()` performs the actual behavior and returns or normalizes to `CartridgeActionDisposition`; synchronous movement suppression is decided immediately, optional completion is monitored asynchronously, and cancellation uses the action context signal.
 
 Scene clicks currently use two passes:
 
 1. `before-exit-intent` rules for developer overrides and dropped-item pickup
 2. exit-intent update in `RoccoSceneActionRouter`
 3. default scene-click rules for carried inventory use and level-local handling
-
-This keeps the old gameplay order while moving concrete feature ownership out of
-the central router.

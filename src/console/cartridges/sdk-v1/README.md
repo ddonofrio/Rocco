@@ -1,9 +1,8 @@
 # Cartridge SDK v1
 
-This directory holds the version-stamped, cartridge-facing SDK surface (audit
-SDK-001 / ROCCO-011). It is the stable contract a cartridge receives at
-`mount` via `context.sdk`, kept intentionally narrow so host-only runtime
-methods never leak.
+This directory holds the version-stamped, cartridge-facing SDK surface. It is
+the stable contract a cartridge receives at `mount` via `context.sdk`, kept
+intentionally narrow so host-only runtime methods never leak.
 
 ## Files
 
@@ -36,23 +35,59 @@ negotiated `capabilities` plus `sdkVersion`.
 
 ```typescript
 interface CartridgeSdkV1 {
-  readonly video: CartridgeVideoApi;
-  readonly audio: CartridgeAudioApi;
-  readonly jukebox: CartridgeJukeboxApi;
-  readonly effects: CartridgeEffectsApi;
-  readonly input: CartridgeInputApi;
-  readonly storage: CartridgeStorageApi;
-  readonly logger: CartridgeLoggerApi;
-  readonly scope: ResourceScope;
+  readonly video?: CartridgeVideoApi;
+  readonly audio?: CartridgeAudioApi;
+  readonly jukebox?: CartridgeJukeboxApi;
+  readonly effects?: CartridgeEffectsApi;
+  readonly input?: CartridgeInputApi;
+  readonly storage?: CartridgeStorageApi;
+  readonly logger?: CartridgeLoggerApi;
+
+  readonly log?: CartridgeLoggerApi['log'];
+  readonly setStatus?: CartridgeLoggerApi['setStatus'];
+  readonly scope?: ResourceScope;
+
   readonly sdkVersion: string;
   readonly capabilities: readonly CartridgeCapability[];
-  beginCompositionSession(ownerId: string, options?: { message?: string }): CompositionSession;
+
+  acquireInputLease?: CartridgeInputApi['acquireInputLease'];
+  getInputMode?: CartridgeInputApi['getInputMode'];
+
+  loadPlaneScene?: (scene: RoccoPlaneScene) => void;
+  serializePlaneScene?: (sceneId: string) => RoccoPlaneScene;
+
+  setPlayerSprite?: (instanceId: string | undefined) => void;
+  getPlayerSprite?: () => string | undefined;
+
+  isDeveloperModeEnabled?: () => boolean;
+  getConsoleFlags?: () => RoccoConsoleFlags | undefined;
+  setConsoleFlags?: (patch: Partial<RoccoConsoleFlags>) => void;
+
+  beginCompositionSession?: (
+    ownerId: string,
+    options?: { message?: string },
+  ) => CompositionSession;
 }
 ```
+
+- `sdkVersion` and `capabilities` are always present.
+- All other public members are optional.
+- The adapter filters subsystem availability from the negotiated capability list.
+- Callers using the public type must narrow or use optional access.
+- A manifest that omits `runtime.capabilities` receives the complete SDK v1 capability set.
 
 `beginCompositionSession` is exposed flat as part of the SDK v1 contract.
 Legacy cartridges remain on the explicit `LegacyCartridgeContext` path and do
 not receive an SDK v1 fallback.
+
+## Video capability structure
+
+- `video` exists when at least one video capability is negotiated.
+- `video.planes`, plane preloading, and plane/display operations require `video.planes.v1`.
+- `video.sprites`, sprite preloading, and scene-target operations require `video.sprites.v1`.
+- action menus, grid menus, messages, primitives, titles, and display menu operations require `video.menus.v1`.
+- `video.camera` is a controlled facade backed by the runtime zoom controller and is exposed when the video facade exists.
+- `video.camera` exposes only `setTransform`, `animateTo`, and `clear`.
 
 ## Capability negotiation
 
@@ -69,16 +104,49 @@ runtime: {
 `RoccoCartridgeManager` validates this with
 `assertCartridgeSdkCompatibility` before `mount()` and rejects incompatible
 SDK ranges or unknown capabilities. Legacy cartridges without a `runtime`
-block keep mounting against the full `RoccoEngine` kernel. See
-`docs/adr/ADR-002-cartridge-sdk-versioning.md`.
+block keep mounting against the full `RoccoEngine` kernel.
 
-## Future: extraction to `src/contracts/`
+## Capabilities
 
-The `Cartridge*Api` types are written as neutral, self-contained interfaces so
-they can later be lifted into a top-level `src/contracts/` directory (the
-broader dependency-inversion effort, TYP-001 / ROCCO-027, Phase 5) without
-touching call sites. The adapter and validator stay console-owned; only the
-interface declarations move.
+The supported capability identifiers are:
+
+- `video.sprites.v1`
+- `video.planes.v1`
+- `video.menus.v1`
+- `audio.v1`
+- `jukebox.v1`
+- `effects.v1`
+- `input.v1`
+- `storage.v1`
+- `composition.v1`
+- `logger.v1`
+- `scope.v1`
+
+Unknown capability identifiers are rejected before mount.
+
+## Internal required facade
+
+`CartridgeSdkV1Runtime` is an internal type used by the official cartridge after its manifest has negotiated every capability required by that cartridge.
+
+It converts the negotiated public facade into the required view expected by the official runtime. It still contains only cartridge-facing facades and must not be described as `RoccoEngine` or as direct kernel access.
+
+General cartridge documentation and third-party cartridge examples must use `CartridgeSdkV1`, not `CartridgeSdkV1Runtime`.
+
+## Camera facade
+
+Visual SDK v1 cartridges may use `sdk.video?.camera` for cartridge-owned presentation transforms.
+
+The facade exposes only:
+
+- `setTransform`
+- `animateTo`
+- `clear`
+
+It does not expose the kernel zoom controller, transform inspection, animation-state inspection, `update`, stage application, rendering, or viewport ownership.
+
+## Legacy boundary
+
+Legacy cartridges do not receive an SDK v1 fallback. They mount through `LegacyCartridgeContext` and use `context.engine`.
 
 ## Contract tests
 

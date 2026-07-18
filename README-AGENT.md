@@ -9,7 +9,7 @@ This document is written for AI coding agents. It explains the ROCCO console arc
 - If the context window is large, read all project-owned README files before touching code.
 - Keep documentation as present-tense reference material. Do not write dated notes, historical edit logs, or edit narratives.
 - Treat README files as live contracts for current shipped behavior and architecture. When cartridge scope, asset ownership, or engine-cartridge boundaries change, update the root overview and the nearest leaf README in the same change.
-- Use the `RoccoEngine` SDK surface and exposed subsystem SDKs from cartridge code. Avoid importing PixiJS rendering classes or internal engine renderers into cartridges. Use engine-owned preload helpers such as `engine.video.preloadAssetUrls(...)`, `engine.video.preloadPlaneScene(...)`, and `engine.video.preloadSpriteDefinition(...)` instead.
+- SDK v1 cartridges use the capability-filtered `CartridgeSdkV1` surface received through `context.sdk`. Legacy cartridges use the explicit `RoccoEngine` context received through `context.engine`. Cartridge code must not import PixiJS rendering classes, renderer implementations, or other console-kernel internals.
 - Remove dead code. Do not leave unused imports, variables, or functions.
 - Match nearby naming, file layout, and test style before introducing new patterns.
 
@@ -38,11 +38,12 @@ After reading, inspect the closest existing implementation and tests. If a seman
 
 ROCCO is a browser-based retro console runtime built with TypeScript, PixiJS, and Vite. It runs cartridges: self-contained cartridge modules that plug into a stable console SDK surface and subsystem SDKs.
 
-The key metaphor is:
+The key boundary is:
 
-- The console is the generic host runtime.
-- Cartridges are the software cartridges that plug into the runtime.
-- The `RoccoEngine` SDK surface and subsystem SDKs are the slot between them. The type name still says `Engine`, but it is the console-facing SDK.
+- The console kernel owns runtime initialization, rendering, viewport integration, scheduling, input routing, resource teardown, and cartridge lifecycle.
+- SDK v1 cartridges receive the stable, capability-filtered `CartridgeSdkV1` contract through `context.sdk`.
+- Legacy cartridges receive the broader `RoccoEngine` runtime surface through `context.engine`.
+- `CartridgeSdkV1Runtime` is an internal required-facade type used by the official cartridge only after its complete capability set has been negotiated. It is not the console kernel and it is not `RoccoEngine`.
 
 The console provides capabilities such as rendering, audio, input, effects, persistence, and lifecycle management. Cartridges provide content and cartridge logic.
 
@@ -53,13 +54,14 @@ src/
   main.ts                         Entry point
   style.css                       Global page style
   console/                        Console runtime implementation and SDK surface
-    engine-sdk.ts                 RoccoEngine SDK surface
+    engine-sdk.ts                 Console kernel and legacy runtime infrastructure
     runtime.ts                    GameRuntime implementation
     input-handler.ts              Input routing and blocking
     cartridge-manager.ts          Cartridge selection and lifecycle
     persistence-adapter.ts        Console-facing persistence adapter
     audio/                        Web Audio and jukebox systems
     cartridges/                   Cartridge interfaces, loader, providers
+      sdk-v1/                     Public SDK v1 contract, capability validation, and adapter
     cartridge-menu/               Boot-time cartridge selection UI
     effects/                      Per-tick effects
     persistence/                  Dexie and IndexedDB records
@@ -85,7 +87,8 @@ index.html
         -> RoccoBuiltinCartridgeProvider
         -> cartridge.setup({ console }) for discovered cartridges
         -> RoccoCartridgeMenu.show() when multiple cartridges are available
-        -> cartridge.mount({ engine, locale })
+        -> cartridge.mount({ sdk, locale })       // manifest declares runtime: SDK v1
+        -> cartridge.mount({ engine, locale })    // manifest omits runtime: legacy
         -> cartridge.start()
      -> render tick
 ```
@@ -104,6 +107,7 @@ A cartridge implements `RoccoCartridge`:
 ```typescript
 export interface RoccoCartridge {
   manifest: RoccoCartridgeManifest;
+  setActionCancellation?(cancelActiveActions: (reason: string) => void): void;
   setup?(
     context: RoccoCartridgeSetupContext,
   ): Promise<RoccoCartridgeSetupResult | void> | RoccoCartridgeSetupResult | void;
@@ -111,12 +115,19 @@ export interface RoccoCartridge {
   start?(): Promise<void> | void;
   update?(deltaMs: number): void;
   handleAction?(
-    activation: RoccoCartridgeAction,
-  ): Promise<void> | RoccoCartridgeActionResult | void;
+    action: RoccoCartridgeAction,
+    context?: CartridgeActionContext,
+  ): CartridgeActionDisposition | void;
+  getActiveLevelId?(): string | null;
   stop?(): Promise<void> | void;
   dispose?(): Promise<void> | void;
 }
 ```
+
+- `setActionCancellation` receives the host-owned function used to cancel active actions before cartridge teardown or restart.
+- `handleAction` must make its movement decision synchronously.
+- Asynchronous follow-up work is returned through `CartridgeActionDisposition.completion`.
+- `getActiveLevelId` lets the host associate action context with the current cartridge level.
 
 The manifest identifies the cartridge and provides boot-menu metadata:
 
@@ -134,8 +145,17 @@ export interface RoccoCartridgeManifest {
   engineVersion?: string;
   tags?: string[];
   localizations?: Record<string, RoccoCartridgeLocalizedManifest>;
+  runtime?: {
+    sdk: string;
+    capabilities?: readonly string[];
+  };
 }
 ```
+
+- A manifest with `runtime` uses SDK v1.
+- A manifest without `runtime` uses the legacy mount path.
+- `runtime.sdk` is the required semver range.
+- `runtime.capabilities` is optional. When omitted, the adapter uses the complete SDK v1 capability set.
 
 Localized manifest fields are optional and menu-facing:
 
@@ -148,14 +168,25 @@ export type RoccoCartridgeLocalizedManifest = Partial<
 >;
 ```
 
-The cartridge context contains the engine and an optional selected locale:
+The cartridge context is a discriminated union of the legacy and SDK v1 mount contexts:
 
 ```typescript
-export interface RoccoCartridgeContext {
+export interface LegacyCartridgeContext {
   engine: RoccoEngine;
   locale?: string;
 }
+
+export interface CartridgeContextV1 {
+  sdk: CartridgeSdkV1;
+  locale?: string;
+}
+
+export type RoccoCartridgeContext =
+  | LegacyCartridgeContext
+  | CartridgeContextV1;
 ```
+
+Cartridge code discriminates the union with `'sdk' in context` or `'engine' in context`.
 
 Cartridges that do not localize content can ignore `locale`.
 
@@ -175,42 +206,71 @@ export interface RoccoCartridgeSetupResult {
 }
 ```
 
-`handleAction()` can synchronously return:
+### Action Contract
+
+`RoccoCartridgeAction` is the complete union of host-routed actions a cartridge can handle:
+
+- action-menu activation
+- `scene-click`
+- `grid-menu`
+- `advance-sequence`
+- `carry-use`
+
+`handleAction` receives an optional `CartridgeActionContext` and returns a synchronous `CartridgeActionDisposition`:
 
 ```typescript
-export interface RoccoCartridgeActionResult {
-  suppressDefaultPlayerMove?: boolean;
+export interface CartridgeActionContext {
+  readonly signal: AbortSignal;
+  readonly actionId: string;
+  readonly correlationId: string;
+  readonly cartridgeId: string;
+  readonly levelId: string | undefined;
+}
+
+export interface CartridgeActionDisposition {
+  consumed: boolean;
+  defaultPlayerMovement: 'allow' | 'suppress';
+  completion?: Promise<void>;
 }
 ```
 
-When `suppressDefaultPlayerMove` is `true`, the runtime skips the default click-to-walk that would otherwise follow a `scene-click`. This check is synchronous: the runtime only inspects the direct return value, not a later async resolution. Scene targets can request the same behavior through `RoccoSceneTargetDefinition.suppressDefaultPlayerMove`.
+- `consumed` reports whether the cartridge handled the action.
+- `defaultPlayerMovement` is inspected synchronously in the current action frame.
+- `completion` contains optional asynchronous work monitored by the dispatcher.
+- `context.signal` is aborted when the action is cancelled during teardown, restart, replacement, or other host cancellation.
+- `RoccoCartridgeActionResult` remains only as a deprecated internal normalization helper and must not be presented as the public cartridge contract.
 
 ## Cartridge SDK v1
 
-The cartridge-facing surface is split into three (audit SDK-001 / ROCCO-011):
+The cartridge-facing surface separates these distinct concepts:
 
 ```text
-ConsoleKernel   (private runtime API: update/render/viewport/scheduler)
-CartridgeSdkV1  (stable, narrow, versioned API used by cartridges)
-CartridgeCapabilities (negotiated optional features)
+Console kernel
+  Private host infrastructure. Owns update, render, viewport, scheduling,
+  input routing, lifecycle, and resource teardown.
+
+CartridgeSdkV1
+  Public capability-filtered cartridge contract. Most members are optional
+  because the adapter exposes only negotiated capabilities.
+
+CartridgeSdkV1Runtime
+  Internal required view used by the official cartridge after negotiating
+  every capability it requires. It remains a facade and is not RoccoEngine.
+
+CartridgeCapability
+  Stable capability identifiers declared by a cartridge manifest.
 ```
 
+Only `sdkVersion` and `capabilities` are unconditionally required on the public `CartridgeSdkV1` interface. Every other public member is optional and exposed only when the negotiated capability list includes it.
+
 The full `RoccoEngine` kernel lives in `src/console/engine-sdk.ts`. Inside
-`mount(context)`, prefer the narrow, version-stamped `context.sdk` of type
+`mount(context)`, SDK v1 cartridges use the narrow, version-stamped `context.sdk` of type
 `CartridgeSdkV1` (defined in `src/console/cartridges/sdk-v1`). It is built by
 `createCartridgeSdkV1({ engine, scope, manifest })`, which wraps `RoccoEngine`
 and exposes only the stable subset. Internal-only methods (`video.update`,
 `video.render`, `video.viewport`, the kernel `video.zoom` module, render-layer ordering,
 `effects.tick`, `jukebox.unlock`) are absent from the SDK object, so a cartridge
 cannot reach them even at runtime.
-
-`CartridgeSdkV1` exposes:
-
-- Subsystem handles: `video`, `audio`, `jukebox`, `effects`, `input`, `storage`.
-- `beginCompositionSession(ownerId, options?)` for the owned loading overlay.
-- `setStatus(message)` and `log(channel, message)` via `logger`.
-- `scope`: the cartridge's own `ResourceScope` for registering disposers.
-- `sdkVersion` (`'1.0.0'`) and `capabilities` (the negotiated capability ids).
 
 The manifest may declare the runtime it targets:
 
@@ -248,27 +308,43 @@ export interface RoccoConsoleFlags {
 
 ### Composition
 
-Use composition when mounting a scene to prevent visual pop-in:
+Use a composition session when mounting a scene to prevent visual pop-in:
 
 ```typescript
-engine.beginComposition();
-// Load scenes, assets, sprites, sounds, and menus.
-engine.endComposition();
+const composition = sdk.beginCompositionSession?.('cartridge-mount', {
+  message: 'LOADING',
+});
+
+try {
+  // Preload and mount cartridge resources.
+} catch (error) {
+  composition?.fail(error);
+  throw error;
+} finally {
+  composition?.dispose();
+}
 ```
 
-`setCompositionText(text)` optionally writes a single line of text inside the composition overlay while it is active. Pass `null` to clear it.
+A composition session owns its own progress, failure state, and disposal. A cartridge must dispose the session it opens.
 
 ### Input Blocking
 
-Use input blocking for non-cancelable sequences:
+Use an input lease for non-cancelable sequences:
 
 ```typescript
-engine.setInputEnabled(false);
-// Start movement, animation, or cutscene.
-engine.setInputEnabled(true);
+const inputLease = sdk.acquireInputLease?.(
+  'scripted-sequence',
+  'blocked',
+);
+
+try {
+  // Run the sequence.
+} finally {
+  inputLease?.dispose();
+}
 ```
 
-Always re-enable input after a sequence completes or fails.
+Input policy is lease-owned. A cartridge releases only the lease it acquired and does not globally re-enable input.
 
 ### Scene Management and Persistence
 
@@ -283,24 +359,24 @@ Always re-enable input after a sequence completes or fails.
 SDK v1 cartridges reach these capabilities through subsystem handles on
 `CartridgeSdkV1`; legacy cartridges use the explicit `RoccoEngine` context.
 
-- `engine.audio.registerSound(definition)` registers a sound asset.
-- `engine.audio.unregisterSound(id)` removes a sound definition and stops its active instances.
-- `engine.audio.preloadSound(id)` loads a sound buffer.
-- `engine.audio.playSound(id, options?)` plays a sound.
-- `engine.audio.setSoundVolume(id, volume)` updates the gain of currently playing instances.
-- `engine.audio.stopSound(id)` stops active instances of a sound.
-- `engine.audio.stopAllSounds()` stops every active one-shot sound.
-- `engine.jukebox.registerPlaylist(playlist)` registers background music.
-- `engine.jukebox.unregisterPlaylist(id)` removes a playlist definition.
-- `engine.jukebox.playPlaylist(id)` starts a playlist.
-- `engine.jukebox.stopPlaylist()` stops the active playlist.
-- `engine.jukebox.isPlaying()` reports whether a playlist is currently active.
-- `engine.jukebox.setVolume(volume)` sets the master jukebox volume multiplier.
-- `engine.jukebox.getCurrentTrack()` returns the active track id when one is playing.
-- `engine.effects.add(effect)` registers and starts a per-tick effect.
-- `engine.effects.remove(effectId)` removes an effect.
-- `engine.effects.update(effectId, patch)` edits an active effect.
-- `engine.effects.enable(effectId)` and `engine.effects.disable(effectId)` toggle an effect.
+- `sdk.audio?.registerSound(definition)` registers a sound asset.
+- `sdk.audio?.unregisterSound(id)` removes a sound definition and stops its active instances.
+- `sdk.audio?.preloadSound(id)` loads a sound buffer.
+- `sdk.audio?.playSound(id, options?)` plays a sound.
+- `sdk.audio?.setSoundVolume(id, volume)` updates the gain of currently playing instances.
+- `sdk.audio?.stopSound(id)` stops active instances of a sound.
+- `sdk.audio?.stopAllSounds()` stops every active one-shot sound.
+- `sdk.jukebox?.registerPlaylist(playlist)` registers background music.
+- `sdk.jukebox?.unregisterPlaylist(id)` removes a playlist definition.
+- `sdk.jukebox?.playPlaylist(id)` starts a playlist.
+- `sdk.jukebox?.stopPlaylist()` stops the active playlist.
+- `sdk.jukebox?.isPlaying()` reports whether a playlist is currently active.
+- `sdk.jukebox?.setVolume(volume)` sets the master jukebox volume multiplier.
+- `sdk.jukebox?.getCurrentTrack()` returns the active track id when one is playing.
+- `sdk.effects?.add(effect)` registers and starts a per-tick effect.
+- `sdk.effects?.remove(effectId)` removes an effect.
+- `sdk.effects?.update(effectId, patch)` edits an active effect.
+- `sdk.effects?.enable(effectId)` and `sdk.effects?.disable(effectId)` toggle an effect.
 
 The built-in `auto-scroll` effect targets graphic planes.
 
@@ -312,60 +388,81 @@ used by cartridges.
 
 ### Video Preloading
 
-- `engine.video.preloadAssetUrls(assetUrls)` preloads raw image or UI asset URLs through the console video layer.
-- `engine.video.preloadPlaneScene(scene)` preloads plane assets before the active scene is switched through `engine.loadPlaneScene(scene)`.
-- `engine.video.preloadSpriteDefinition(definition)` preloads a single sprite definition and its assets.
-- `engine.video.preloadSpriteDefinitions(definitions)` preloads multiple sprite definitions.
+- `sdk.video?.preloadAssetUrls(assetUrls)` preloads raw image or UI asset URLs through the console video layer.
+- `sdk.video?.preloadPlaneScene?.(scene)` preloads plane assets before the active scene is switched through `sdk.loadPlaneScene?.(scene)`.
+- `sdk.video?.preloadSpriteDefinition?.(definition)` preloads a single sprite definition and its assets.
+- `sdk.video?.preloadSpriteDefinitions?.(definitions)` preloads multiple sprite definitions.
 
 ### Graphic Planes
 
-- Use `engine.loadPlaneScene(scene)` to replace the active scene.
-- Use `engine.serializePlaneScene(sceneId)` to snapshot a scene through the runtime.
-- Use `engine.video.planes.updatePlane(sceneId, planeId, patch)` for plane-level mutations.
-- Use `engine.video.planes.resolvePlane(sceneId, planeId)` to inspect a live plane definition.
+- Use `sdk.video?.planes?.loadScene(scene)` to replace the active scene through the planes module.
+- Use `sdk.video?.planes?.serializeScene(sceneId)` to snapshot a scene.
+- Use `sdk.video?.planes?.updatePlane(sceneId, planeId, patch)` for plane-level mutations.
+- Use `sdk.video?.planes?.resolvePlane(sceneId, planeId)` to inspect a live plane definition.
 
 ### Sprites
 
-- `engine.video.sprites.loadSpriteDefinition(definition)` registers a sprite blueprint.
-- `engine.video.sprites.createSpriteFromDefinition(definitionId, options?)` creates an instance.
-- `engine.video.sprites.setPosition(id, x, y)` teleports an instance.
-- `engine.video.sprites.moveTo(id, x, y, options?)` moves directly.
-- `engine.video.sprites.goTo(id, x, y, options?)` moves through the bound walk map.
-- `engine.video.sprites.playAction(id, actionId, options?)` plays a directional action profile.
-- `engine.video.sprites.playAnimation(id, animationId, options?)` plays an animation clip.
-- `engine.video.sprites.registerWalkMap(walkMap)` registers a walk map.
-- `engine.video.sprites.bindToWalkMap(id, binding)` binds a walk map to an instance.
-- `setPlayerSprite(id | null)` selects the click-to-walk player sprite through the engine SDK surface and feeds player-aware plane depth modes.
+- `sdk.video?.sprites?.registerSpriteDefinition(definition)` registers a sprite blueprint.
+- `sdk.video?.sprites?.createSpriteFromDefinition(definitionId, options?)` creates an instance.
+- `sdk.video?.sprites?.setPosition(id, x, y)` teleports an instance.
+- `sdk.video?.sprites?.moveTo(id, x, y, options?)` moves directly.
+- `sdk.video?.sprites?.goTo(id, x, y, options?)` moves through the bound walk map.
+- `sdk.video?.sprites?.playAction(id, actionId, options?)` plays a directional action profile.
+- `sdk.video?.sprites?.playAnimation(id, animationId, options?)` plays an animation clip.
+- `sdk.video?.sprites?.registerWalkMap(walkMap)` registers a walk map.
+- `sdk.video?.sprites?.bindToWalkMap(id, binding)` binds a walk map to an instance.
+- `sdk.setPlayerSprite?.(id)` selects the click-to-walk player sprite through the SDK surface and feeds player-aware plane depth modes.
 
 ### UI and Feedback
 
-- `engine.video.actionMenus.registerMenu(definition)` registers a radial action menu.
-- `engine.video.actionMenus.unregisterMenu(id)` removes a radial action menu.
-- `engine.video.actionMenus.closeMenu()` closes the active radial action menu.
-- `engine.video.gridMenus.openMenu(definition)` opens a generic slot grid panel or text choice list.
-- `engine.video.gridMenus.toggleMenu(definition)` toggles a generic slot grid panel.
-- `engine.video.gridMenus.closeMenu()` closes the active generic slot grid panel.
-- `engine.video.gridMenus.getCarriedItem()` returns the source menu id and generic grid item currently attached to the cursor.
-- `engine.video.gridMenus.clearCarriedItem()` clears the carried grid item payload.
-- `engine.video.messages.showMessage(message)` shows a fully specified sprite-anchored message.
-- `engine.video.messages.say(id, text, options?)` shows speech.
-- `engine.video.messages.think(id, text, options?)` shows thought text.
-- `engine.video.messages.clearMessages()` clears active sprite messages.
-- `engine.video.titles.addTitle(message)` shows a title overlay.
-- `engine.video.titles.removeTitle(id)` removes a title overlay.
-- `engine.video.primitives.addPrimitive(primitive)` draws debug geometry.
-- `engine.video.primitives.removePrimitive(id)` removes debug geometry.
-- `engine.setStatus(message)` writes the status line.
-- `engine.log(channel, message)` writes a debug log entry.
+- `sdk.video?.actionMenus?.registerMenu(definition)` registers a radial action menu.
+- `sdk.video?.actionMenus?.closeMenu()` closes the active radial action menu.
+- `sdk.video?.gridMenus?.openMenu(definition)` opens a generic slot grid panel or text choice list.
+- `sdk.video?.gridMenus?.toggleMenu(definition)` toggles a generic slot grid panel.
+- `sdk.video?.gridMenus?.closeMenu()` closes the active generic slot grid panel.
+- `sdk.video?.gridMenus?.getCarriedItem()` returns the source menu id and generic grid item currently attached to the cursor.
+- `sdk.video?.gridMenus?.clearCarriedItem()` clears the carried grid item payload.
+- `sdk.video?.messages?.showMessage(message)` shows a fully specified sprite-anchored message.
+- `sdk.video?.messages?.say(id, text, options?)` shows speech.
+- `sdk.video?.messages?.think(id, text, options?)` shows thought text.
+- `sdk.video?.messages?.clearMessages()` clears active sprite messages.
+- `sdk.video?.titles?.addTitle(message)` shows a title overlay.
+- `sdk.video?.titles?.removeTitle(id)` removes a title overlay.
+- `sdk.video?.primitives?.addPrimitive(primitive)` draws debug geometry.
+- `sdk.video?.primitives?.removePrimitive(id)` removes debug geometry.
+- `sdk.setStatus?.(message)` writes the status line.
+- `sdk.log?.(channel, message)` writes a debug log entry.
 
 ### Display and Immediate Sync
 
-- `engine.video.display.getProfile()` returns the current display-profile state.
-- `engine.video.display.setProfile(profile)` applies the display profile such as CRT overlay settings.
+- `sdk.video?.display?.getProfile()` returns the current display-profile state.
+- `sdk.video?.display?.setProfile(profile)` applies the display profile such as CRT overlay settings.
 - The console render loop synchronizes scripted UI and choreography changes; SDK
   v1 cartridges do not call the kernel render method.
 
 The cursor attachment is a console capability owned by input and viewport systems. Cartridge code does not call `viewportHost` directly.
+
+### Camera
+
+The cartridge-facing camera facade lives under `sdk.video.camera`:
+
+```typescript
+sdk.video?.camera?.setTransform(transform);
+sdk.video?.camera?.animateTo(transform, durationMs, options);
+sdk.video?.camera?.clear();
+```
+
+`sdk.video.camera` is the complete cartridge-facing camera facade.
+
+A cartridge cannot access:
+
+- the kernel zoom controller;
+- zoom state inspection;
+- `update`;
+- stage application;
+- render timing;
+- viewport scaling;
+- direct rendering.
 
 ## Video SDK Architecture
 
@@ -387,13 +484,13 @@ Render layers define drawing order:
 | `ui`                 | ui         | 80      | none          |
 | `display.profile`    | display    | 90      | none          |
 
-Each video subsystem keeps domain state separate from Pixi rendering. Cartridge code should call `engine.video` SDK modules, not renderer internals.
+Each video subsystem keeps domain state separate from Pixi rendering. Cartridge code should call `sdk.video` SDK modules, not renderer internals.
 
 ## Grid Menus
 
 Grid menus are generic slot-panel UI owned by the console. They are useful for cartridge-defined panels such as inventories and dialogue choice lists, but the engine does not own inventory state or conversation state.
 
-`engine.video.gridMenus` opens, closes, toggles, hovers, activates, reorders slots, and carries a generic item payload. The active cartridge receives `RoccoGridMenuActivation` through `handleAction()`. When the cartridge wants to interpret a carried payload on a scene target, it combines the next `scene-click` with `engine.video.gridMenus.getCarriedItem()`.
+`sdk.video?.gridMenus` opens, closes, toggles, hovers, activates, reorders slots, and carries a generic item payload. The active cartridge receives `RoccoGridMenuActivation` through `handleAction()`. When the cartridge wants to interpret a carried payload on a scene target, it combines the next `scene-click` with `sdk.video?.gridMenus?.getCarriedItem()`.
 
 The cursor is a console capability. Grid item payloads can become cursor attachments, and cartridge code decides what using that payload on a sprite means.
 
@@ -428,7 +525,7 @@ Sprite definitions are blueprints. Sprite instances are live entities.
 Effects are per-tick operations on engine targets. The built-in `auto-scroll` runtime supports `targetType: 'graphic-plane'` and scrolls a plane with optional wrap-around.
 
 ```typescript
-engine.effects.add({
+sdk.effects?.add({
   id: 'cloud-scroll',
   kind: 'auto-scroll',
   targetType: 'graphic-plane',
@@ -453,7 +550,7 @@ The menu:
 
 Boot-time settings modules are generic menu entries contributed through `RoccoCartridgeBootSetting`. They appear inside `System Settings`, can expose a current value label, and can perform synchronous or asynchronous actions when activated.
 
-`RoccoCartridgeManager` stores the selected locale for `rocco-default` in `localStorage` and passes it to `cartridge.mount({ engine, locale })`.
+`RoccoCartridgeManager` stores the selected locale for `rocco-default` in `localStorage` and passes it through the mount context, using `cartridge.mount({ sdk, locale })` for SDK v1 manifests and `cartridge.mount({ engine, locale })` for legacy manifests.
 
 `RoccoCartridgeManager` also seeds `RoccoCartridgeMenu.show()` with the current locale selections, display profile, sound profile, and merged boot settings. Display and sound changes made inside the boot menu are wired back into runtime-owned setters while the menu is open. Those sound-profile hooks are part of the runtime/menu integration and are not cartridge-facing `RoccoEngine` methods.
 
@@ -494,7 +591,7 @@ The main demo cartridge lives in `src/cartridges/rocco`.
 5. Add assets under the cartridge folder.
 6. Register the cartridge in `src/cartridges/index.ts`.
 
-Only use the `RoccoEngine` interface and exposed subsystem SDKs inside cartridge code.
+SDK v1 cartridges use the `CartridgeSdkV1` surface received through `context.sdk`; legacy cartridges use the explicit `RoccoEngine` context received through `context.engine`.
 
 ## Constraints
 

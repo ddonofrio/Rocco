@@ -15,33 +15,59 @@ Actual cartridge implementations live in `src/cartridges`.
 | Directory    | Contents                                                             |
 | ------------ | -------------------------------------------------------------------- |
 | `providers/` | Built-in console-side cartridge providers; see `providers/README.md` |
+| `sdk-v1/`    | Public SDK v1 contract, capability validation, and kernel adapter; see `sdk-v1/README.md` |
 
 ## Cartridge Lifecycle
 
 ```text
 CartridgeManager selection
-  -> cartridge.setup({ console })
+  -> cartridge.setActionCancellation(cancelActiveActions)  // optional
+  -> cartridge.setup({ console })                          // optional
   -> CartridgeLoader.loadById() or loadDefault()
   -> cartridge.mount({ sdk, locale })       // SDK v1
   -> cartridge.mount({ engine, locale })    // legacy
-  -> cartridge.start()
-  -> cartridge.update(deltaMs)
-  -> cartridge.handleAction(action)
-  -> cartridge.stop()
-  -> cartridge.dispose()
+  -> cartridge.start()                                     // optional
+  -> cartridge.update(deltaMs)                             // optional
+  -> cartridge.handleAction(action, context?)             // optional
+  -> cartridge.getActiveLevelId()                         // optional
+  -> cartridge.stop()                                     // optional
+  -> cartridge.dispose()                                  // optional
 ```
 
-Only `mount()` is required. All other lifecycle methods are optional.
+Only `mount()` is required. All other lifecycle members are optional:
+
+- `setActionCancellation` receives the host-owned function used to cancel active actions before cartridge teardown or restart.
+- `setup` is the boot-time hook run during discovery.
+- `mount` receives the mount context and is the only required member.
+- `start` runs after mount.
+- `update` runs each render tick.
+- `handleAction(action, context?)` handles host-routed actions.
+- `getActiveLevelId` associates action context with the current cartridge level.
+- `stop` and `dispose` tear the cartridge down.
 
 `setup()` is the boot-time lifecycle hook. The cartridge manager runs it during cartridge discovery before the boot menu is shown. Setup does not mount the cartridge. It is intended for generic boot extensions such as contributing settings modules or patching console-owned flags through the restricted setup console surface.
 
 ## Cartridge Context
 
 ```typescript
+interface LegacyCartridgeContext {
+  engine: RoccoEngine;
+  locale?: string;
+}
+
+interface CartridgeContextV1 {
+  sdk: CartridgeSdkV1;
+  locale?: string;
+}
+
 type RoccoCartridgeContext =
-  | { sdk: CartridgeSdkV1; locale?: string }
-  | { engine: RoccoEngine; locale?: string };
+  | LegacyCartridgeContext
+  | CartridgeContextV1;
 ```
+
+- SDK v1 manifests receive `CartridgeContextV1`.
+- Manifests without `runtime` receive `LegacyCartridgeContext`.
+- There is no automatic SDK fallback inside a legacy context.
 
 SDK v1 cartridges receive the narrow, version-stamped `context.sdk`, which
 hides internal runtime methods (`render`, `viewport`, `effects.tick`,
@@ -53,10 +79,16 @@ The manifest may declare a `runtime` block:
 
 ```typescript
 runtime: {
-  sdk: '^1.0.0',            // semver range the cartridge requires
-  capabilities: ['audio.v1', 'video.sprites.v1'],
+  sdk: '^1.0.0',
+  capabilities: [
+    'video.sprites.v1',
+    'video.planes.v1',
+    'video.menus.v1',
+  ],
 }
 ```
+
+`capabilities` may be omitted. When omitted, the adapter uses the complete SDK v1 capability set.
 
 `RoccoCartridgeManager` validates this with `assertCartridgeSdkCompatibility`
 before mounting and rejects incompatible SDK ranges or unknown capabilities.
@@ -92,17 +124,27 @@ interface RoccoCartridgeBootSetting {
 
 ## Cartridge Actions
 
-`RoccoCartridgeAction` is the union of engine-routed UI activations that cartridges can handle. It includes radial action menu activations, generic grid menu activations, and generic grid item use activations against sprite targets.
+`RoccoCartridgeAction` contains action-menu activations, `scene-click`, `grid-menu`, `advance-sequence`, and `carry-use` actions.
 
-`handleAction()` can also synchronously return:
+`handleAction` receives an optional action context and returns a synchronous disposition:
 
 ```typescript
-interface RoccoCartridgeActionResult {
-  suppressDefaultPlayerMove?: boolean;
+interface CartridgeActionContext {
+  readonly signal: AbortSignal;
+  readonly actionId: string;
+  readonly correlationId: string;
+  readonly cartridgeId: string;
+  readonly levelId: string | undefined;
+}
+
+interface CartridgeActionDisposition {
+  consumed: boolean;
+  defaultPlayerMovement: 'allow' | 'suppress';
+  completion?: Promise<void>;
 }
 ```
 
-When `suppressDefaultPlayerMove` is `true`, the runtime skips the default player `goTo()` that normally follows a `scene-click`. Promise-returning handlers do not participate in this suppression check, so use a direct return value or scene-target metadata when the decision must happen before movement.
+`handleAction` returns its disposition synchronously. The host uses `defaultPlayerMovement` immediately and does not await a movement decision. Optional asynchronous work belongs in `completion`. The host monitors that promise separately and aborts `context.signal` when the action is cancelled.
 
 ## Manifest
 
@@ -120,6 +162,10 @@ interface RoccoCartridgeManifest {
   engineVersion?: string;
   tags?: string[];
   localizations?: Record<string, RoccoCartridgeLocalizedManifest>;
+  runtime?: {
+    sdk: string;
+    capabilities?: readonly string[];
+  };
 }
 ```
 
@@ -136,7 +182,7 @@ type RoccoCartridgeLocalizedManifest = Partial<
 >;
 ```
 
-`localizations` is keyed by locale code. The base manifest is treated as English by convention. Localized manifests only include menu-facing text fields.
+`localizations` is keyed by locale code and contains menu-facing overrides. Locale selection and fallback behavior belong to the cartridge localization implementation; the console passes the selected locale through the mount context.
 
 When a localized cartridge is selected, `RoccoCartridgeMenu` returns
 `selectedLocale`; `RoccoCartridgeManager` passes it to either
@@ -158,3 +204,4 @@ preloading and scene work; legacy cartridges use their explicit engine context.
 ## Reading Next
 
 - `src/console/cartridges/providers/README.md` for the console-side provider layer used by the default cartridge loader.
+- `src/console/cartridges/sdk-v1/README.md` for the public SDK contract and capability model.

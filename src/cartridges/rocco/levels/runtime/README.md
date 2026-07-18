@@ -1,40 +1,146 @@
 # Rocco Level Runtime
 
-This directory contains cartridge-specific runtime helpers that sit between `RoccoLevelManager` and the concrete level classes.
+This directory contains the cartridge-runtime coordination layer used by `RoccoLevelManager`.
 
-These files are not generic console systems. They are the legacy compatibility path over the newer `rpce/` plus `games/rocco-default/` split. They still coordinate the `rocco-default` runtime graph, but level registration and connection ownership now originate from the game map definitions under `src/cartridges/rocco/games/rocco-default/maps/*`.
+`RoccoLevelManager` owns the active cartridge-level runtime state and delegates focused responsibilities to the controllers, coordinators, services, registries, and state objects in this directory.
+
+The runtime layer connects:
+
+- the compiled RPCE game graph;
+- `rocco-default` map implementations;
+- active-level lifecycle;
+- transitions;
+- interaction dispatch;
+- inventory;
+- dropped items;
+- scripted sequences;
+- checkpoints;
+- developer tools;
+- status presentation;
+- shared world state.
+
+## Responsibility split
+
+- `RoccoLevelManager` is the cartridge-level facade. It retains the active SDK, active level, selected localization, player appearance, transition task, and high-level delegates.
+- `rocco-game-composition-root.ts` builds the compiled game and wires the runtime controllers used by the manager.
+- RPCE compiles maps and cross-map connections into the game graph.
+- `games/rocco-default/maps/*` owns concrete map definitions, screen behavior, and map presentation.
+- `interactions/` owns feature rule registration and interaction priority.
+- `inventory/` owns inventory-domain models, storages, recipes, and menu definitions.
+- Runtime controllers in this directory coordinate those domains with the mounted cartridge.
+- `levels/pier`, `levels/bait-shop`, and `levels/nether` provide re-export paths to the map implementations.
+
+`RoccoLevelManager` does not directly implement each lower-level concern. It delegates to the components below.
 
 ## Files
 
-- `rocco-level-registry.ts` - Creates and stores the level instances used by the cartridge from the compiled game graph (`CompiledGame`). It instantiates levels from `compiledGame.levelsById` and re-creates a map on `resetMap(mapId)` (used for Nether re-creation during checkpoint restores). It no longer owns any game-specific map concept.
-- `rocco-level-transition-controller.ts` - Wraps the generic `RpceTransitionController` and resolves connector endpoints through the compiled graph's indexed `transitionsByEndpoint`. It keeps pending exit intent, connector hit resolution, scripted connector resolution, and transition cooldown state in one compatibility controller. It does not import a flat global connection list.
-- `rocco-level-transition-service.ts` - Runs prepared level switches under a transition lease and composition overlay. It separates prepare, commit, and rollback so restart flows can rebuild target maps transactionally and remount the previous level if the target publish fails.
-- `rocco-scene-action-router.ts` - Builds the interaction context, runs the staged interaction registry dispatch, keeps the blocking-sequence guard, and updates exit intent at the correct point in the scene-click pipeline.
-- `rocco-inventory-runtime-controller.ts` - Owns player inventory storage, storage-transfer sessions, carried-item routing, item fusion coordination, and world-drop handoff.
-- `rocco-dropped-inventory-controller.ts` - Owns per-level dropped-item state, dropped-item presentation, and pickup flow.
-- `rocco-scripted-sequence-controller.ts` - Owns blocking scripted sequences such as the Stan police defeat, Stan money exchange, and bait-shop door entry choreography, including the sequence-owned blocking input lease that is released when the sequence completes, cancels, or resets.
-- `rocco-developer-runtime-controller.ts` - Owns developer-only menus, jump placement state, runtime event overrides, and sprite-cycle preview mode.
+- `rocco-game-composition-root.ts` — compiles the `rocco-default` game graph and constructs the transition, inventory, dropped-item, scripted-sequence, developer, interaction, and level-runtime services used by `RoccoLevelManager`.
+- `rocco-level-registry.ts` — stores level instances created from the compiled game graph and prepares map-level resets.
+- `rocco-level-transition-controller.ts` — resolves compiled connector endpoints, tracks pending exit intent, handles scripted connector resolution, and owns transition cooldown state.
+- `rocco-level-transition-service.ts` — executes prepared transitions through prepare, commit, publish, rollback, remount, and completion handling.
+- `rocco-transition-plan-factory.ts` — constructs transition plans for direct level switches, connector traversal, and bait-shop entry.
+- `rocco-checkpoint-coordinator.ts` — constructs and runs checkpoint restart plans, including transactional Nether map reset and rollback.
+- `rocco-world-state.ts` — owns runtime mount state, player and transition snapshots, Nether entry snapshots, rollback restoration, and remount support.
+- `rocco-runtime-lifecycle-coordinator.ts` — coordinates mount, unmount, shared asset and sound setup, per-frame runtime updates, transition polling, and top-level action delegation.
+- `rocco-scene-action-router.ts` — builds interaction context, enforces blocking-sequence behavior, places exit-intent updates between registry stages, and delegates actions to the interaction registry.
+- `rocco-game-interaction-coordinator.ts` — coordinates collected-item effects, restart requests, scripted connector transitions, Stan state queries, bait-shop door overlap, and bait-shop entry.
+- `rocco-inventory-runtime-controller.ts` — owns the live inventory runtime, registered storages, transfer sessions, grid-menu routing, fusion coordination, carried-item routing, snapshots, and world-drop handoff.
+- `rocco-inventory-scene-coordinator.ts` — coordinates inventory-dependent scene presentation and active-level dropped-item synchronization.
+- `rocco-dropped-inventory-controller.ts` — owns per-level dropped-item state, presentation, pending pickup, collection, and runtime reset.
+- `rocco-scripted-sequence-controller.ts` — owns blocking game sequences and their input lease, cancellation, progression, and reset.
+- `rocco-developer-runtime-controller.ts` — owns developer menus, jump state, runtime event overrides, inventory seeding, and sprite preview state.
+- `rocco-status-presenter.ts` — builds localized status text and the mount callbacks supplied to concrete levels.
+- `rocco-level-capabilities.ts` — defines and narrows optional capabilities implemented by specific Rocco levels.
+- `rocco-level-transition-run.ts` — transition run helpers: active-run tracking, cancellation, abort-reason normalization, and shared transition types.
+- `rocco-level-transition-preloader.ts` — abort-aware asset, plane-scene, sprite, sound, and walk-map preloader used during transitions.
+- `rocco-level-transition-presentation.ts` — owns the transition input lease and loading-composition presentation.
+- `rocco-level-transition-rollback.ts` — coordinates transition rollback, previous-level remount, and fatal-transition escalation.
 
-## Responsibility Split
+## Runtime composition
 
-- `RoccoLevelManager` owns active-level lifecycle, shared cartridge state, high-level delegation, and interaction-registry assembly.
-- `runtime/` helpers own reusable cartridge runtime concerns that do not belong inside one concrete level class.
-- `src/cartridges/rocco/interactions/` owns feature-level interaction rules and their priorities.
-- `games/rocco-default/maps/*` owns the concrete screen-local behavior and presentation.
-- `levels/pier`, `levels/bait-shop`, and `levels/nether` remain compatibility wrappers over those map folders.
+`createRoccoGameCompositionRoot()`:
 
-## Current Scope
+1. creates the runtime controller bundle;
+2. builds and compiles the `rocco-default` maps and cross-map connections;
+3. creates the level registry and transition controller;
+4. creates the interaction registry and scene-action router;
+5. wires callbacks between inventory, maps, transitions, developer state, and active-level ownership;
+6. returns the runtime services and compiled game consumed by `RoccoLevelManager`.
+
+The composition root creates object relationships. It does not replace `RoccoLevelManager` as the owner of the active runtime.
+
+## Lifecycle coordination
+
+`RoccoRuntimeLifecycleCoordinator` coordinates:
+
+### Mount
+
+- retaining the SDK facade;
+- preloading shared UI and inventory assets;
+- registering and preloading shared sounds;
+- resetting transient runtime state;
+- selecting the compiled initial level;
+- mounting the initial level;
+- installing the player action menu;
+- synchronizing dropped-item presentation;
+- publishing status.
+
+### Update
+
+- blocking scripted-sequence progression;
+- active-level update;
+- pending dropped-item pickup;
+- pending bait-shop door choreography;
+- connector transition polling;
+- transition dispatch.
+
+### Unmount
+
+- resetting developer state;
+- unmounting the active level;
+- uninstalling the player action menu;
+- invalidating transition state;
+- clearing runtime controllers;
+- clearing menus and carried payloads;
+- unregistering shared sound;
+- releasing active SDK and level references.
+
+## Transition model
+
+Transition responsibilities are separated:
+
+- `RoccoLevelTransitionController` resolves connector intent and cooldown.
+- `RoccoTransitionPlanFactory` creates prepared transition plans.
+- `RoccoLevelTransitionService` executes plans and owns the transition transaction.
+- `RoccoWorldState` captures and restores the state required for rollback or remount.
+- `RoccoCheckpointCoordinator` builds restart plans and coordinates map reset when required.
+
+A transition may prepare a target, commit runtime cleanup, publish the target state, roll back on failure, and remount the prior level when recovery is possible.
+
+## Interaction and inventory boundaries
+
+`RoccoSceneActionRouter` does not contain all game feature logic. Feature behavior belongs to the interaction registry and active map implementations.
+
+`RoccoInventoryRuntimeController` does not define every game-specific item result. It owns storage mechanics and delegates special carried-item target behavior through the interaction router.
+
+`RoccoLevelManager` exposes high-level inventory and interaction operations by delegating to these runtime components.
+
+## Current scope
 
 The current runtime layer covers:
 
-- Level registration and lookup.
-- Connector-to-connector graph traversal.
-- Exit-intent tracking from scene clicks.
-- Transition cooldown enforcement.
-- Transactional level switching with rollback and fatal-transition escalation.
-- Interaction-context assembly plus staged dispatch into the distributed interaction registry.
-- Inventory storage and transfer orchestration.
-- Carried-item scene-click handling and world drops.
-- Dropped-item persistence, presentation, and pickup.
-- Blocking scripted cartridge sequences.
-- Developer-only jump, event override, and sprite-cycle runtime state.
+- compiled game composition;
+- active-level lifecycle;
+- connector resolution and cooldown;
+- transactional transitions;
+- checkpoint restart and rollback;
+- mount-state and player snapshots;
+- Nether entry snapshots and map resets;
+- interaction-context assembly and staged dispatch;
+- player inventory and storage transfer;
+- item fusion and world drops;
+- dropped-item presentation and pickup;
+- blocking sequences;
+- developer runtime state;
+- status presentation;
+- shared asset and sound lifecycle.

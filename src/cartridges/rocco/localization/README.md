@@ -2,11 +2,30 @@
 
 This directory contains localized text for the `rocco-default` cartridge.
 
+## Ownership
+
+This directory contains the canonical Rocco localization catalogs and locale-resolution implementation.
+
+`src/cartridges/rocco/games/rocco-default/localization` re-exports this directory for game-local imports. New catalog content and locale-resolution work belong here.
+
 ## Files
 
-- `types.ts` - Locale, localization, and text catalog types.
-- `index.ts` - Locale resolution, catalog lookup helpers, and public catalog exports.
-- `dialogue-helpers.ts` - Shared helpers for building localized dialogue choice trees.
+- `types.ts` — defines the supported locales, default locale, catalog structure, localization result, and localized manifest fields.
+- `index.ts` — assembles locale-to-catalog lookup and exports `resolveRoccoLocale()` and `createRoccoLocalization()`.
+- `dialogue-helpers.ts` — helps authored catalogs construct typed dialogue choice trees.
+- `en/` — English catalog assembled from domain files into a complete `RoccoTextCatalog`.
+- `es/` — Spanish catalog assembled from domain files into a complete `RoccoTextCatalog`.
+
+## Supported locales
+
+- `en` — English.
+- `es` — Spanish and the default locale.
+
+`ROCCO_SUPPORTED_LOCALES` is `['en', 'es']`.
+
+`ROCCO_DEFAULT_LOCALE` is `es`.
+
+`resolveRoccoLocale()` returns the requested supported locale or falls back to `es`.
 
 ## Locale Directories
 
@@ -23,33 +42,44 @@ Each locale has its own directory. The directory `index.ts` assembles a complete
 | `en/bait-shop.ts`, `es/bait-shop.ts`   | Bait shop interior text                                                                     |
 | `en/stan/`, `es/stan/`                 | Stan branching dialogue, split by top-level dialogue route                                  |
 
-## Supported Locales
-
-- `es` - Spanish, default.
-- `es` - Spanish.
-
 ## Coverage
 
 Catalogs cover:
 
-- Cartridge manifest metadata shown in the boot menu.
-- Action menu labels.
-- Speech and thought lines.
-- Stan branching dialogue tree and action-menu reaction lines.
-- Rocco self-talk lines.
-- Inventory title, base-item labels, crafted-item labels, failed-use lines, and Stan's police trap line.
-- Visible object descriptions, including the bait shop door.
-- Pier level titles and status labels, including the bait shop title.
-- Keys defeat title.
+- manifest metadata;
+- action labels;
+- descriptions;
+- level and status labels;
+- inventory and fusion labels;
+- developer UI;
+- Rocco lines;
+- Pelikan lines;
+- Stan dialogue;
+- Pier interactions;
+- bait-shop interactions and toilet sequences;
+- Nether interactions and intercom dialogue;
+- defeat and restart text.
+
+## Dialogue ownership
+
+Dialogue text and choice trees remain in the localization catalogs.
+
+The canonical dialogue runtime lives in [`../rpce/dialogue`](../rpce/dialogue/README.md). It owns menu projection, timed conversation flow, input leases, sequence advancement, line selection, and reusable message helpers.
+
+The directory `../dialogue` is only a compatibility re-export path.
+
+Authored localized text must remain separate from reusable runtime sequencing.
 
 ## Usage
 
-Use `createRoccoLocalization(locale)` to resolve a `RoccoLocalization` object. Unknown locales fall back to English.
+```ts
+const localization = createRoccoLocalization(selectedLocale);
+```
 
-Pass the localization object to Pier-level controllers, sprite definitions, action menu definitions, and status rendering so the cartridge uses one consistent catalog for the whole boot.
+The result contains the resolved `locale` and complete `text` catalog.
 
-Cartridge code should import localization helpers from `./localization`. Locale internals should stay inside the locale directory unless a manifest or localization assembly needs direct catalog access.
+The same localization object is passed throughout one cartridge run.
 
-When the cartridge restarts itself after an in-game defeat, reuse the same selected locale instead of resolving a fresh default locale.
+A cartridge restart reuses the selected locale.
 
-Stan conversation content stays localized here as nested dialogue trees. The reusable sequencing logic lives in `../dialogue`, so new NPCs can reuse the same runtime while keeping their authored text inside the localization catalogs.
+Callers should consume `RoccoLocalization` instead of independently resolving locale fragments.

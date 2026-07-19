@@ -49,7 +49,10 @@ import {
   type RoccoLevelMountOptions,
   type RoccoLevelRestartRequest,
 } from '../../../../levels/rocco-level-types';
-import { type RoccoAppearanceCapability } from '../../../../levels/runtime/rocco-level-capabilities';
+import {
+  type RoccoAppearanceCapability,
+  type RoccoNetherSecurityCameraCapability,
+} from '../../../../levels/runtime/rocco-level-capabilities';
 import { createRoccoBataInventoryItem } from '../../inventory';
 import {
   netherAmbientSteamMachineAssetUrl,
@@ -167,6 +170,9 @@ const NETHER_SECURITY_CAMERA_SWEEP_ANIMATION_ID = 'nether-security-camera-sweep'
 const NETHER_SECURITY_CAMERA_DISABLED_ANIMATION_ID = 'nether-security-camera-disabled';
 const NETHER_SECURITY_CAMERA_ACTION_MENU_ID =
   'rocco-nether-console-hardware-spawn-security-camera-action-menu';
+const NETHER_SECURITY_CAMERA_BRIBE_DIALOGUE_ID = 'rocco-nether-security-camera-bribe-dialogue';
+const NETHER_SECURITY_CAMERA_BRIBE_CAMERA_TTL_MS = 3000;
+const NETHER_SECURITY_CAMERA_BRIBE_PLAYER_TTL_MS = 3600;
 const NETHER_SECURITY_CAMERA_SOURCE_WIDTH = 330;
 const NETHER_SECURITY_CAMERA_SOURCE_HEIGHT = 220;
 const NETHER_SECURITY_CAMERA_TARGET_WIDTH = 125;
@@ -932,7 +938,9 @@ const NETHER_SCENE_DEFINITION: RoccoNetherSceneDefinition = {
 type NetherConsoleHardwareSceneClickResult = { suppressDefaultPlayerMove: true } | undefined;
 const NETHER_BLOCKING_INPUT_OWNER_ID = 'nether-console-hardware-sequence';
 
-class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppearanceCapability {
+class RoccoNetherConsoleHardwareSpawnController
+  implements RoccoLevel, RoccoAppearanceCapability, RoccoNetherSecurityCameraCapability
+{
   private readonly localization: RoccoLocalization;
   private engine: CartridgeSdkV1Runtime | undefined = undefined;
   private options: RoccoLevelMountOptions = {};
@@ -940,6 +948,7 @@ class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppe
   private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined =
     undefined;
   private intercomDialogue: RoccoDialogueSession | undefined = undefined;
+  private securityCameraBribeDialogue: RoccoDialogueSession | undefined = undefined;
   private onRestartRequested: ((request?: RoccoLevelRestartRequest) => void) | undefined =
     undefined;
   private arrivalSequence: NetherArrivalSequence | undefined = undefined;
@@ -1275,6 +1284,15 @@ class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppe
     this.resetIntercomConversationState();
   }
 
+  private advanceSecurityCameraBribeSequence(): boolean {
+    if (!this.securityCameraBribeDialogue?.isActive()) {
+      return false;
+    }
+
+    this.securityCameraBribeDialogue.advance();
+    return true;
+  }
+
   private advanceIntercomConversation(): boolean {
     if (
       !this.intercomDialogue ||
@@ -1588,6 +1606,7 @@ class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppe
     messageText?: string;
     messageSide?: 'auto' | 'left' | 'right' | 'above';
     messageOffset?: RoccoPoint;
+    skipWarningMessage?: boolean;
   }): void {
     if (!this.engine || this.securityDefeatSequence) {
       return;
@@ -1595,12 +1614,27 @@ class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppe
 
     this.leftSideExposureElapsedMs = NETHER_SECURITY_LEFT_SIDE_TRIGGER_DELAY_MS;
     this.resetIntercomConversationState();
+    this.securityCameraBribeDialogue?.cancel();
     this.engine.video.actionMenus.closeMenu();
     this.engine.video.gridMenus.closeMenu();
     this.engine.video.gridMenus.clearCarriedItem();
     this.engine.video.messages.clearMessages();
     this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
     this.acquireBlockingInputLease(this.engine);
+
+    if (options?.skipWarningMessage) {
+      this.securityDefeatSequence = {
+        phase: 'fading',
+        elapsedMs: 0,
+      };
+      this.addSecurityDefeatFadePrimitive(0);
+      this.engine.audio.playSound(NETHER_SECURITY_ALERT_SOUND_ID, {
+        restart: true,
+        volume: NETHER_SECURITY_ALERT_SOUND_VOLUME,
+      });
+      return;
+    }
+
     this.securityDefeatSequence = {
       phase: 'warning',
       elapsedMs: 0,
@@ -2182,6 +2216,14 @@ class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppe
       playerLineTtlMs: NETHER_INTERCOMUNICADOR_PLAYER_TTL_MS,
       npcLineTtlMs: NETHER_INTERCOMUNICADOR_REPLY_TTL_MS,
     });
+    this.securityCameraBribeDialogue = new RoccoDialogueSession({
+      id: NETHER_SECURITY_CAMERA_BRIBE_DIALOGUE_ID,
+      engine,
+      playerSpriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
+      npcSpriteInstanceId: NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID,
+      playerLineTtlMs: NETHER_SECURITY_CAMERA_BRIBE_PLAYER_TTL_MS,
+      npcLineTtlMs: NETHER_SECURITY_CAMERA_BRIBE_CAMERA_TTL_MS,
+    });
     this.leftSideExposureElapsedMs = 0;
     this.perspectiveFarY = 0;
     this.smokeScale = 1;
@@ -2434,6 +2476,7 @@ class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppe
     this.intercomPhase = 'idle';
     this.intercomCurrentChoices = [];
     this.intercomDialogue = undefined;
+    this.securityCameraBribeDialogue = undefined;
     this.leftSideExposureElapsedMs = 0;
     this.perspectiveFarY = 0;
     this.smokeScale = 1;
@@ -2479,6 +2522,10 @@ class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppe
     this.spriteController?.update(deltaMs);
     this.scriptedInteractionController?.update();
     this.intercomDialogue?.update(deltaMs);
+    if (this.securityCameraBribeDialogue?.isActive()) {
+      this.securityCameraBribeDialogue.update(deltaMs);
+      return;
+    }
     this.updateLeftSideSecurityWatch(deltaMs);
   }
 
@@ -2546,8 +2593,67 @@ class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppe
     this.startIntercomChoice(choice);
   }
 
+  isSecurityCameraTarget(targetInstanceId: string | undefined): boolean {
+    return (
+      targetInstanceId === NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID ||
+      targetInstanceId === NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID
+    );
+  }
+
+  beginSecurityCameraBribeSequence(): boolean {
+    if (
+      !this.engine ||
+      this.zoomIntroPhase !== undefined ||
+      this.arrivalSequence ||
+      this.securityDefeatSequence ||
+      this.securityCameraBribeDialogue?.isActive()
+    ) {
+      return false;
+    }
+
+    this.scriptedInteractionController?.cancel();
+    this.resetIntercomConversationState();
+    this.engine.video.actionMenus.closeMenu();
+    this.engine.video.gridMenus.closeMenu();
+    this.engine.video.gridMenus.clearCarriedItem();
+    this.engine.video.messages.clearMessages();
+    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+
+    const text = this.localization.text.nether.securityCameraBribe;
+    this.securityCameraBribeDialogue?.beginLinearSequence({
+      speaker: 'npc',
+      lines: [text.thanksLine, text.securityLine],
+      lineTtlMs: NETHER_SECURITY_CAMERA_BRIBE_CAMERA_TTL_MS,
+      messageOptions: {
+        side: 'left',
+        offset: NETHER_SECURITY_ALERT_MESSAGE_OFFSET,
+        maxWidth: NETHER_SECURITY_ALERT_MESSAGE_MAX_WIDTH,
+        style: NETHER_SECURITY_SPEECH_STYLE,
+      },
+      onComplete: () => {
+        this.securityCameraBribeDialogue?.beginLinearSequence({
+          speaker: 'player',
+          lines: [text.roccoReactionLine],
+          lineTtlMs: NETHER_SECURITY_CAMERA_BRIBE_PLAYER_TTL_MS,
+          onComplete: () => {
+            this.securityCameraBribeDialogue?.cancel();
+            this.startSecurityDefeatSequence({
+              skipWarningMessage: true,
+            });
+          },
+        });
+      },
+    });
+
+    return true;
+  }
+
   handleSceneClick(activation: RoccoSceneClickAction): NetherConsoleHardwareSceneClickResult {
     if (this.securityDefeatSequence) {
+      return { suppressDefaultPlayerMove: true };
+    }
+
+    if (this.advanceSecurityCameraBribeSequence()) {
       return { suppressDefaultPlayerMove: true };
     }
 
@@ -2580,7 +2686,9 @@ class RoccoNetherConsoleHardwareSpawnController implements RoccoLevel, RoccoAppe
   }
 }
 
-export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAppearanceCapability {
+export class RoccoNetherConsoleHardwareSpawnLevel
+  implements RoccoLevel, RoccoAppearanceCapability, RoccoNetherSecurityCameraCapability
+{
   private readonly controller: RoccoNetherConsoleHardwareSpawnController;
 
   readonly id = ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID;
@@ -2621,6 +2729,14 @@ export class RoccoNetherConsoleHardwareSpawnLevel implements RoccoLevel, RoccoAp
 
   applyRoccoAppearance(appearance: RoccoPlayerAppearance): void {
     this.controller.applyRoccoAppearance(appearance);
+  }
+
+  isSecurityCameraTarget(targetInstanceId: string | undefined): boolean {
+    return this.controller.isSecurityCameraTarget(targetInstanceId);
+  }
+
+  beginSecurityCameraBribeSequence(): boolean {
+    return this.controller.beginSecurityCameraBribeSequence();
   }
 
   startArrivalZoomIntro(engine: CartridgeSdkV1Runtime): void {

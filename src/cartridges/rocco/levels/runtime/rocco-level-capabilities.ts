@@ -49,3 +49,25 @@ export function isRoccoAppearanceCapability(
 ): level is RoccoLevel & RoccoAppearanceCapability {
   return typeof (level as Partial<RoccoAppearanceCapability>).applyRoccoAppearance === 'function';
 }
+
+/**
+ * Optional capability of Nether 1, declared separately from the base level type
+ * so the interaction registry and the registration router do not import the
+ * internal security-camera scene target ids. The camera bribe rule detects this
+ * capability via {@link isRoccoNetherSecurityCameraCapability} instead of casts.
+ */
+export interface RoccoNetherSecurityCameraCapability {
+  isSecurityCameraTarget(targetInstanceId: string | undefined): boolean;
+  beginSecurityCameraBribeSequence(): boolean;
+}
+
+export function isRoccoNetherSecurityCameraCapability(
+  level: RoccoLevel,
+): level is RoccoLevel & RoccoNetherSecurityCameraCapability {
+  return (
+    typeof (level as Partial<RoccoNetherSecurityCameraCapability>).isSecurityCameraTarget ===
+      'function' &&
+    typeof (level as Partial<RoccoNetherSecurityCameraCapability>)
+      .beginSecurityCameraBribeSequence === 'function'
+  );
+}

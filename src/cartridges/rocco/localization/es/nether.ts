@@ -2,6 +2,11 @@ import type { RoccoTextCatalog } from '../types';
 
 export const spanishNetherText: RoccoTextCatalog['nether'] = {
   arrivalThoughtLine: '\u{BF}qu\u{E9} es este lugar?',
+  securityCameraBribe: {
+    thanksLine: '\u{A1}Gracias!',
+    securityLine: '\u{A1}Seguridad!',
+    roccoReactionLine: '\u{BF}En serio?',
+  },
   intercom: {
     lookLines: [
       'Es un interfono industrial.',

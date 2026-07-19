@@ -7,6 +7,7 @@ import {
 import { createInventoryInteractionRules } from './register-inventory-interactions';
 import { createDroppedInventoryInteractionRules } from './register-dropped-inventory-interactions';
 import { createLevelInteractionRules } from './register-level-interactions';
+import { createNetherSpecialSceneClickRules } from './register-nether-interactions';
 
 export * from './interaction-types';
 export * from './interaction-registry';
@@ -15,6 +16,7 @@ export * from './register-pier-interactions';
 export * from './register-inventory-interactions';
 export * from './register-dropped-inventory-interactions';
 export * from './register-level-interactions';
+export * from './register-nether-interactions';
 
 /**
  * Builds the default ROCCO interaction registry, registering every feature's
@@ -29,6 +31,7 @@ export function createRoccoInteractionRegistry(): InteractionRegistry {
   registry.registerMany(createDroppedInventoryInteractionRules());
   registry.registerMany(createLevelInteractionRules());
   registry.registerManySpecial(createPierSpecialSceneClickRules());
+  registry.registerManySpecial(createNetherSpecialSceneClickRules());
   validateInteractionRules(registry.getRules(), registry.getSpecialRules());
   return registry;
 }

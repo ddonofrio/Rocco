@@ -246,6 +246,11 @@ export interface RoccoTextCatalog {
   };
   nether: {
     arrivalThoughtLine: string;
+    securityCameraBribe: {
+      thanksLine: string;
+      securityLine: string;
+      roccoReactionLine: string;
+    };
     intercom: {
       lookLines: string[];
       firstChoices: {

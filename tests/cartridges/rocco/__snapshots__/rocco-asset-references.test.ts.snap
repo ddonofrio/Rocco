@@ -443,6 +443,66 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
   },
   {
+    "assetPath": "./assets/characters/guysprite/run-left-1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/run-left-2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/run-right-1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/run-right-2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/stand-down-letf.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/stand-down-right.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/stand-down.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/stand-left.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/stand-right.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/stand-up-left.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/stand-up-right.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
+    "assetPath": "./assets/characters/guysprite/stand-up.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",
+  },
+  {
     "assetPath": "./assets/characters/pelikan/feeding.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/rocco-default-assets.ts",

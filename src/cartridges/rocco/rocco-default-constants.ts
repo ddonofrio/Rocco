@@ -185,7 +185,6 @@ export const DEFAULT_GUYSPRITE_SPRITE_DEFINITION_ID = 'guysprite-threepwood-spri
 export const DEFAULT_GUYSPRITE_SPRITE_INSTANCE_ID = 'guysprite-threepwood-main';
 export const DEFAULT_GUYSPRITE_IDLE_ACTION_ID = 'idle';
 export const DEFAULT_GUYSPRITE_RUN_ACTION_ID = 'run';
-export const DEFAULT_GUYSPRITE_PICK_UP_ACTION_ID = 'pick-up';
 export const DEFAULT_GUYSPRITE_STANDING_SEQUENCE_ANIMATION_ID = 'stand-sequence';
 export const DEFAULT_GUYSPRITE_STANDING_SEQUENCE_RIGHT_ANIMATION_ID = 'stand-sequence-right';
 export const DEFAULT_GUYSPRITE_FRAME_WIDTH = DEFAULT_SPRITE_FRAME_WIDTH;

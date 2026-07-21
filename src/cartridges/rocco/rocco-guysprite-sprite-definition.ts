@@ -1,5 +1,5 @@
+import type { RoccoCollisionShape, RoccoSpriteDefinition } from '../../console/video/sprites';
 import type { RoccoLocalization } from './localization';
-import type { RoccoSpriteDefinition } from '../../console/video/sprites';
 import {
   DEFAULT_GUYSPRITE_BASELINE,
   DEFAULT_GUYSPRITE_FRAME_HEIGHT,
@@ -7,7 +7,6 @@ import {
   DEFAULT_GUYSPRITE_GROUND_ANCHOR_X,
   DEFAULT_GUYSPRITE_GROUND_ANCHOR_Y,
   DEFAULT_GUYSPRITE_IDLE_ACTION_ID,
-  DEFAULT_GUYSPRITE_PICK_UP_ACTION_ID,
   DEFAULT_GUYSPRITE_PIXELS_PER_FRAME,
   DEFAULT_GUYSPRITE_RUN_ACTION_ID,
   DEFAULT_GUYSPRITE_RUN_SPEED,
@@ -17,14 +16,15 @@ import {
   DEFAULT_GUYSPRITE_STANDING_SEQUENCE_RIGHT_ANIMATION_ID,
 } from './rocco-default-constants';
 import {
-  roccoDefaultGuyspritePickUpAssetUrl,
   roccoDefaultGuyspriteRunLeftAssetUrls,
   roccoDefaultGuyspriteRunRightAssetUrls,
   roccoDefaultGuyspriteStandingAssetUrls,
 } from './rocco-default-assets';
 import { createRoccoLocalization } from './localization';
 
-const STANDING_DIRECTIONS = [
+type StandingDirection = 'down' | 'down-left' | 'left' | 'up-left' | 'up' | 'up-right' | 'right' | 'down-right';
+
+const STANDING_DIRECTIONS: readonly StandingDirection[] = [
   'down',
   'down-left',
   'left',
@@ -33,9 +33,9 @@ const STANDING_DIRECTIONS = [
   'up-right',
   'right',
   'down-right',
-] as const;
+];
 
-const STANDING_SEQUENCE_LEFT_DIRECTIONS = [
+const STANDING_SEQUENCE_LEFT_DIRECTIONS: readonly StandingDirection[] = [
   'left',
   'up-left',
   'up',
@@ -45,9 +45,9 @@ const STANDING_SEQUENCE_LEFT_DIRECTIONS = [
   'down',
   'down-left',
   'left',
-] as const;
+];
 
-const STANDING_SEQUENCE_RIGHT_DIRECTIONS = [
+const STANDING_SEQUENCE_RIGHT_DIRECTIONS: readonly StandingDirection[] = [
   'right',
   'down-right',
   'down',
@@ -57,41 +57,34 @@ const STANDING_SEQUENCE_RIGHT_DIRECTIONS = [
   'up',
   'up-right',
   'right',
-] as const;
+];
 
-function makeGuyspriteStandingAnimationId(direction: string): string {
+function makeGuyspriteStandingAnimationId(direction: StandingDirection): string {
   return `guysprite-stand-${direction}`;
 }
 
-function createGuyspriteImages() {
+function createGuyspriteImages(): RoccoSpriteDefinition['images'] {
   const assets = {
     runLeft: roccoDefaultGuyspriteRunLeftAssetUrls,
     runRight: roccoDefaultGuyspriteRunRightAssetUrls,
     standing: roccoDefaultGuyspriteStandingAssetUrls,
-    pickUp: roccoDefaultGuyspritePickUpAssetUrl,
   };
 
   return [
     ...assets.runLeft.map((uri, index) => ({
-      id: `guysprite-run-left-${index + 1}` as const,
+      id: `guysprite-run-left-${index + 1}`,
       uri,
       width: DEFAULT_GUYSPRITE_FRAME_WIDTH,
       height: DEFAULT_GUYSPRITE_FRAME_HEIGHT,
     })),
     ...assets.runRight.map((uri, index) => ({
-      id: `guysprite-run-right-${index + 1}` as const,
+      id: `guysprite-run-right-${index + 1}`,
       uri,
       width: DEFAULT_GUYSPRITE_FRAME_WIDTH,
       height: DEFAULT_GUYSPRITE_FRAME_HEIGHT,
     })),
-    {
-      id: DEFAULT_GUYSPRITE_PICK_UP_ACTION_ID,
-      uri: assets.pickUp,
-      width: DEFAULT_GUYSPRITE_FRAME_WIDTH,
-      height: DEFAULT_GUYSPRITE_FRAME_HEIGHT,
-    },
     ...STANDING_DIRECTIONS.map((direction) => ({
-      id: `guysprite-stand-${direction}` as const,
+      id: `guysprite-stand-${direction}`,
       uri: assets.standing[direction],
       width: DEFAULT_GUYSPRITE_FRAME_WIDTH,
       height: DEFAULT_GUYSPRITE_FRAME_HEIGHT,
@@ -99,7 +92,7 @@ function createGuyspriteImages() {
   ];
 }
 
-function createGuyspriteFrames() {
+function createGuyspriteFrames(): RoccoSpriteDefinition['frames'] {
   return [
     { id: 'guysprite-run-left-a', imageId: 'guysprite-run-left-1', durationMs: 120, hitbox: makeDefaultHitbox() },
     { id: 'guysprite-run-left-b', imageId: 'guysprite-run-left-2', durationMs: 120 },
@@ -110,22 +103,16 @@ function createGuyspriteFrames() {
       hitbox: makeDefaultHitbox(),
     },
     { id: 'guysprite-run-right-b', imageId: 'guysprite-run-right-2', durationMs: 120 },
-    {
-      id: 'guysprite-pick-up',
-      imageId: DEFAULT_GUYSPRITE_PICK_UP_ACTION_ID,
-      durationMs: 420,
-      hitbox: makeDefaultHitbox(),
-    },
     ...STANDING_DIRECTIONS.map((direction) => ({
-      id: `guysprite-stand-${direction}` as const,
-      imageId: `guysprite-stand-${direction}` as const,
+      id: `guysprite-stand-${direction}`,
+      imageId: `guysprite-stand-${direction}`,
       durationMs: DEFAULT_GUYSPRITE_STANDING_POSE_DURATION_MS,
       hitbox: makeDefaultHitbox(),
     })),
   ];
 }
 
-function createGuyspriteStandingAnimations() {
+function createGuyspriteStandingAnimations(): RoccoSpriteDefinition['animations'] {
   return Object.fromEntries(
     STANDING_DIRECTIONS.map((direction) => [
       makeGuyspriteStandingAnimationId(direction),
@@ -144,7 +131,7 @@ function createGuyspriteStandingAnimations() {
   );
 }
 
-function createGuyspriteSequenceAnimations() {
+function createGuyspriteSequenceAnimations(): RoccoSpriteDefinition['animations'] {
   return {
     [DEFAULT_GUYSPRITE_STANDING_SEQUENCE_ANIMATION_ID]: {
       id: DEFAULT_GUYSPRITE_STANDING_SEQUENCE_ANIMATION_ID,
@@ -167,7 +154,7 @@ function createGuyspriteSequenceAnimations() {
   };
 }
 
-function createGuyspriteMovementAnimations() {
+function createGuyspriteMovementAnimations(): RoccoSpriteDefinition['animations'] {
   return {
     'guysprite-run-left': {
       id: 'guysprite-run-left',
@@ -195,16 +182,10 @@ function createGuyspriteMovementAnimations() {
         { frameId: 'guysprite-run-right-b', durationMs: 120 },
       ],
     },
-    [DEFAULT_GUYSPRITE_PICK_UP_ACTION_ID]: {
-      id: DEFAULT_GUYSPRITE_PICK_UP_ACTION_ID,
-      loop: false,
-      playbackRate: 1,
-      frames: [{ frameId: 'guysprite-pick-up', durationMs: 420 }],
-    },
   };
 }
 
-function createGuyspriteAnimations() {
+function createGuyspriteAnimations(): RoccoSpriteDefinition['animations'] {
   return {
     ...createGuyspriteStandingAnimations(),
     ...createGuyspriteSequenceAnimations(),
@@ -212,7 +193,7 @@ function createGuyspriteAnimations() {
   };
 }
 
-function createGuyspriteActions() {
+function createGuyspriteActions(): RoccoSpriteDefinition['actions'] {
   return {
     [DEFAULT_GUYSPRITE_IDLE_ACTION_ID]: {
       id: DEFAULT_GUYSPRITE_IDLE_ACTION_ID,
@@ -243,20 +224,12 @@ function createGuyspriteActions() {
         pixelsPerFrame: DEFAULT_GUYSPRITE_PIXELS_PER_FRAME,
       },
     },
-    [DEFAULT_GUYSPRITE_PICK_UP_ACTION_ID]: {
-      id: DEFAULT_GUYSPRITE_PICK_UP_ACTION_ID,
-      directionalAnimations: {
-        default: DEFAULT_GUYSPRITE_PICK_UP_ACTION_ID,
-        down: DEFAULT_GUYSPRITE_PICK_UP_ACTION_ID,
-      },
-      playbackRate: 1,
-    },
   };
 }
 
-function makeDefaultHitbox() {
+function makeDefaultHitbox(): RoccoCollisionShape {
   return {
-    kind: 'rect' as const,
+    kind: 'rect',
     x: 54,
     y: 26,
     width: 190,

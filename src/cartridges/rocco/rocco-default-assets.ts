@@ -180,8 +180,3 @@ export const roccoDefaultGuyspriteStandingAssetUrls = {
   'down-right': new URL('assets/characters/guysprite/stand-down-right.png', import.meta.url)
     .href,
 } as const;
-
-export const roccoDefaultGuyspritePickUpAssetUrl = new URL(
-  'assets/characters/guysprite/pick-up.png',
-  import.meta.url,
-).href;

@@ -8,7 +8,8 @@ import {
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { ROCCO_PLAYER_CONFIG } from '../../player';
 import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT, ROCCO_BACKGROUND_COLOR } from '../../game-design';
-import { PIER_WALK_MAP_ID, PIER_WALK_MAP_ALPHA_THRESHOLD } from '../pier/pier-layout';
+import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../levels/rocco-level-runtime-ids';
+import { PIER_WALK_MAP_ALPHA_THRESHOLD } from '../pier/pier-layout';
 
 export interface RoccoNetherSceneDefinition {
   sceneId: string;
@@ -197,7 +198,7 @@ export async function createNetherWalkMapProfile(
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
   const walkMap = createRoccoSpriteWalkMapFromImageData({
-    id: PIER_WALK_MAP_ID,
+    id: ROCCO_ACTIVE_WALK_MAP_ID,
     width: imageData.width,
     height: imageData.height,
     data: imageData.data,

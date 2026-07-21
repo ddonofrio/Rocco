@@ -40,10 +40,4 @@ export const ROCCO_PLAYER_CONFIG = {
     walkBottomY: 175,
     yValues: [150, 165, 135, 175],
   },
-  pier: {
-    entryMarginX: 24,
-    leftEntryX: 24,
-    rightEntryX: 822,
-    exitTriggerWidth: 81,
-  },
 } as const;

@@ -3,7 +3,7 @@ import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { ROCCO_PLAYER_CONFIG } from '../../player';
 import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT } from '../../game-design';
-import { PIER_WALK_MAP_ID } from '../pier/pier-layout';
+import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../levels/rocco-level-runtime-ids';
 import {
   installRoccoPlayerSprite,
   uninstallRoccoPlayerSprite,
@@ -143,7 +143,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     uninstallRoccoPlayerSprite(engine);
-    engine.video.sprites.unregisterWalkMap(PIER_WALK_MAP_ID);
+    engine.video.sprites.unregisterWalkMap(ROCCO_ACTIVE_WALK_MAP_ID);
     this.spriteController = undefined;
   }
 

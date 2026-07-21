@@ -2,11 +2,11 @@ import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges
 import { loadRoccoSpriteWalkMapFromImage } from '../../../../../../console/video/sprites';
 import { pierWalkMapAssetUrl } from './pier-assets';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
+import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../levels/rocco-level-runtime-ids';
 import {
   PIER_CENTERED_BACKGROUND_SCROLL_X,
   PIER_CENTERED_BACKGROUND_SCROLL_Y,
   PIER_WALK_MAP_ALPHA_THRESHOLD,
-  PIER_WALK_MAP_ID,
 } from './pier-layout';
 
 export interface RoccoPierWalkMapOptions {
@@ -21,7 +21,7 @@ export async function installDefaultWalkMap(
 ): Promise<void> {
   preloader?.addWalkMap();
   const walkMap = await loadRoccoSpriteWalkMapFromImage({
-    id: PIER_WALK_MAP_ID,
+    id: ROCCO_ACTIVE_WALK_MAP_ID,
     uri: pierWalkMapAssetUrl,
     origin: {
       x: -(options.backgroundScrollX ?? PIER_CENTERED_BACKGROUND_SCROLL_X),
@@ -34,5 +34,5 @@ export async function installDefaultWalkMap(
 }
 
 export function uninstallDefaultWalkMap(engine: CartridgeSdkV1Runtime): void {
-  engine.video.sprites.unregisterWalkMap(PIER_WALK_MAP_ID);
+  engine.video.sprites.unregisterWalkMap(ROCCO_ACTIVE_WALK_MAP_ID);
 }

@@ -7,11 +7,22 @@ import { pierPoliceWhistleSoundUrl } from '../maps/pier/pier-stan-assets';
 export const ROCCO_STAN_POLICE_DEFEAT_SOUND_ID = 'rocco-stan-police-whistle-sound';
 
 export const ROCCO_DEFAULT_SHARED_ASSET_MANIFEST: RoccoSharedAssetManifest = {
-  imageUrls: [
-    ...ROCCO_ACTION_MENU_PRELOAD_URLS,
-    ROCCO_DEV_SPRITE_CYCLE_CURSOR_URL,
-    ...ROCCO_INVENTORY_ITEM_IMAGE_URLS,
-    ...ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS,
+  imageGroups: [
+    {
+      name: 'action-menu-icons',
+      urls: [...ROCCO_ACTION_MENU_PRELOAD_URLS, ROCCO_DEV_SPRITE_CYCLE_CURSOR_URL],
+      preloadFailureMessage: 'Some Rocco action-menu icons could not be preloaded.',
+    },
+    {
+      name: 'inventory-items',
+      urls: [...ROCCO_INVENTORY_ITEM_IMAGE_URLS],
+      preloadFailureMessage: 'Some Rocco inventory item images could not be preloaded.',
+    },
+    {
+      name: 'souvenir-items',
+      urls: [...ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS],
+      preloadFailureMessage: 'Some Rocco souvenir item images could not be preloaded.',
+    },
   ],
   sounds: [
     {

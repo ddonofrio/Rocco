@@ -15,4 +15,4 @@ export const baitShopSecondScreenToiletDoorOpenAssetUrl = new URL(
   import.meta.url,
 ).href;
 
-export const baitShopDoorClosingSoundUrl = new URL('assets/door-closing.mp3', import.meta.url).href;
+export { pierDoorClosingSoundUrl as baitShopDoorClosingSoundUrl } from '../pier/pier-bait-shop-door-assets';

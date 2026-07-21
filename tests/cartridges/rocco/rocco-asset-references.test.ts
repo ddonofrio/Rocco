@@ -1,5 +1,6 @@
 /// <reference types="node" />
 
+import { createHash, type BinaryLike } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,6 +29,8 @@ const TRACKED_ASSET_EXTENSIONS = new Set([
   '.wav',
   '.webp',
 ]);
+const APPROVED_DECLARATION_FILES = new Set(['-assets.ts', 'rocco-game-music.ts']);
+
 // eslint-disable-next-line sonarjs/super-linear-regex -- The bounded asset literal and URL syntax keep this scan local to one declaration.
 const NEW_URL_ASSET_PATTERN = /new URL\(\s*(['"`])([^'"`]+)\1\s*,\s*import\.meta\.url\s*,?\s*\)/g;
 const BASE_URL_ASSET_PATTERN = /`\$\{import\.meta\.env\.BASE_URL\}([^`]+)`/g;
@@ -51,6 +54,29 @@ function listTypeScriptFiles(directory: string): string[] {
   return files;
 }
 
+function listAssetFiles(directory: string): string[] {
+  const entries = readdirSync(directory, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...listAssetFiles(entryPath));
+      continue;
+    }
+
+    if (entry.isFile() && isTrackedAssetExtension(entry.name)) {
+      files.push(entryPath);
+    }
+  }
+
+  return files;
+}
+
+function isTrackedAssetExtension(fileName: string): boolean {
+  return TRACKED_ASSET_EXTENSIONS.has(path.extname(fileName).toLowerCase());
+}
+
 function isTrackedAssetPath(assetPath: string): boolean {
   return TRACKED_ASSET_EXTENSIONS.has(path.extname(assetPath).toLowerCase());
 }
@@ -65,6 +91,15 @@ function toPosixPath(filePath: string): string {
 
 function toRepoRelativePath(filePath: string): string {
   return toPosixPath(path.relative(REPO_ROOT, filePath));
+}
+
+function isApprovedDeclarationFile(filePath: string): boolean {
+  const fileName = path.basename(filePath);
+  return APPROVED_DECLARATION_FILES.has(fileName) || fileName.endsWith('-assets.ts');
+}
+
+function sha256(content: BinaryLike): string {
+  return createHash('sha256').update(content).digest('hex');
 }
 
 function collectDeclaredAssetReferences(): DeclaredAssetReference[] {
@@ -125,9 +160,74 @@ function collectDeclaredAssetReferences(): DeclaredAssetReference[] {
   return sortedReferences;
 }
 
+function collectDeclarationLocationViolations(): string[] {
+  const violations: string[] = [];
+
+  for (const filePath of listTypeScriptFiles(ROCCO_SOURCE_ROOT)) {
+    if (isApprovedDeclarationFile(filePath)) {
+      continue;
+    }
+
+    const source = readFileSync(filePath, 'utf8');
+    NEW_URL_ASSET_PATTERN.lastIndex = 0;
+    for (const match of source.matchAll(NEW_URL_ASSET_PATTERN)) {
+      const assetPath = match[2];
+      if (assetPath && isTrackedAssetPath(assetPath)) {
+        violations.push(
+          `${toRepoRelativePath(filePath)} declares asset URL '${assetPath}' outside an approved module`,
+        );
+      }
+    }
+  }
+
+  return violations.toSorted((left, right) => left.localeCompare(right));
+}
+
+function collectDuplicatePhysicalAssets(): string[] {
+  const hashToPaths = new Map<string, string[]>();
+
+  for (const filePath of listAssetFiles(ROCCO_SOURCE_ROOT)) {
+    const content = readFileSync(filePath);
+    const hash = sha256(content);
+    const existing = hashToPaths.get(hash);
+    if (existing) {
+      existing.push(toRepoRelativePath(filePath));
+    } else {
+      hashToPaths.set(hash, [toRepoRelativePath(filePath)]);
+    }
+  }
+
+  const duplicates: string[] = [];
+  for (const paths of hashToPaths.values()) {
+    if (paths.length > 1) {
+      duplicates.push(`DUP: ${paths.map((pathItem) => pathItem).join(' | ')}`);
+    }
+  }
+
+  return duplicates.toSorted((left, right) => left.localeCompare(right));
+}
+
+function collectOrphanPhysicalAssets(
+  declaredReferences: readonly DeclaredAssetReference[],
+): string[] {
+  const declaredPaths = new Set(
+    declaredReferences.map((reference) => toPosixPath(reference.resolvedPath)),
+  );
+  const orphans: string[] = [];
+
+  for (const filePath of listAssetFiles(ROCCO_SOURCE_ROOT)) {
+    if (!declaredPaths.has(toPosixPath(filePath))) {
+      orphans.push(toRepoRelativePath(filePath));
+    }
+  }
+
+  return orphans.toSorted((left, right) => left.localeCompare(right));
+}
+
 describe('Rocco asset references', () => {
+  const references = collectDeclaredAssetReferences();
+
   it('resolve every declared cartridge asset path to a real file', () => {
-    const references = collectDeclaredAssetReferences();
     expect(references.length).toBeGreaterThan(0);
 
     const missing = references.filter((reference) => !existsSync(reference.resolvedPath));
@@ -143,12 +243,27 @@ describe('Rocco asset references', () => {
   });
 
   it('keeps an explicit snapshot of the declared cartridge asset paths', () => {
-    const references = collectDeclaredAssetReferences().map((reference) => ({
-      sourceFile: reference.sourceFile,
-      assetPath: reference.assetPath,
-      resolutionKind: reference.resolutionKind,
-    }));
+    expect(
+      references.map((reference) => ({
+        sourceFile: reference.sourceFile,
+        assetPath: reference.assetPath,
+        resolutionKind: reference.resolutionKind,
+      })),
+    ).toMatchSnapshot();
+  });
 
-    expect(references).toMatchSnapshot();
+  it('only declares asset URLs in approved modules', () => {
+    const violations = collectDeclarationLocationViolations();
+    expect(violations).toEqual([]);
+  });
+
+  it('has no duplicate physical assets', () => {
+    const duplicates = collectDuplicatePhysicalAssets();
+    expect(duplicates).toEqual([]);
+  });
+
+  it('has no orphan physical assets without a URL declaration', () => {
+    const orphans = collectOrphanPhysicalAssets(references);
+    expect(orphans).toEqual([]);
   });
 });

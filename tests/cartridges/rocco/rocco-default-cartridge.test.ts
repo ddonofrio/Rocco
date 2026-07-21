@@ -60,8 +60,8 @@ import {
   PIER_BACKGROUND_IMAGE_HEIGHT,
   PIER_PLAYER_LEFT_ENTRY_X,
   PIER_PLAYER_RIGHT_ENTRY_X,
-  PIER_WALK_MAP_ID,
 } from '../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-layout';
+import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../src/cartridges/rocco/levels/rocco-level-runtime-ids';
 import {
   ROCCO_DESIGN_WIDTH,
   ROCCO_DESIGN_HEIGHT,
@@ -1424,7 +1424,7 @@ describe('RoccoDefaultCartridge', () => {
     expect(state.loadedScene?.planes[3]?.renderLayer).toBe('world.mid');
     expect(state.addedEffectIds).toEqual([]);
     expect(state.removedEffectIds).toEqual([]);
-    expect(state.registeredWalkMapIds).toContain(PIER_WALK_MAP_ID);
+    expect(state.registeredWalkMapIds).toContain(ROCCO_ACTIVE_WALK_MAP_ID);
     expect(state.preloadedSpriteDefinitionIds).toContain(ROCCO_PLAYER_CONFIG.ids.definition);
     expect(state.loadedSpriteDefinitionIds).toContain(ROCCO_PLAYER_CONFIG.ids.definition);
     expect(state.removedSpriteIds).toContain(ROCCO_PLAYER_CONFIG.ids.instance);
@@ -1444,7 +1444,7 @@ describe('RoccoDefaultCartridge', () => {
     expect(state.createdSprites).toContain(PIER_PELIKAN_CONFIG.spriteInstanceId);
     expect(state.createdSprites).toContain(ROCCO_PLAYER_CONFIG.ids.instance);
     expect(state.walkMapBindings).toContain(
-      `${ROCCO_PLAYER_CONFIG.ids.instance}:${PIER_WALK_MAP_ID}`,
+      `${ROCCO_PLAYER_CONFIG.ids.instance}:${ROCCO_ACTIVE_WALK_MAP_ID}`,
     );
     expect(state.playerSpriteId).toBe(ROCCO_PLAYER_CONFIG.ids.instance);
     expect(state.unregisteredActionMenus).toContain(DEFAULT_ACTION_MENU_ID);
@@ -1667,9 +1667,9 @@ describe('RoccoDefaultCartridge', () => {
 
     await cartridge.mount({ sdk: engine });
 
-    expect(state.registeredWalkMapIds).toContain(PIER_WALK_MAP_ID);
+    expect(state.registeredWalkMapIds).toContain(ROCCO_ACTIVE_WALK_MAP_ID);
     expect(state.walkMapBindings).toContain(
-      `${ROCCO_PLAYER_CONFIG.ids.instance}:${PIER_WALK_MAP_ID}`,
+      `${ROCCO_PLAYER_CONFIG.ids.instance}:${ROCCO_ACTIVE_WALK_MAP_ID}`,
     );
     expect(state.playerSpriteId).toBe(ROCCO_PLAYER_CONFIG.ids.instance);
     expect(state.movedSprites).toEqual([
@@ -1680,7 +1680,7 @@ describe('RoccoDefaultCartridge', () => {
       (sprite) => sprite.id === ROCCO_PLAYER_CONFIG.ids.instance,
     );
     expect(rocco?.navigation).toMatchObject({
-      walkMapId: PIER_WALK_MAP_ID,
+      walkMapId: ROCCO_ACTIVE_WALK_MAP_ID,
       groundAnchor: {
         x: ROCCO_PLAYER_CONFIG.frame.groundAnchor.x,
         y: ROCCO_PLAYER_CONFIG.frame.groundAnchor.y,

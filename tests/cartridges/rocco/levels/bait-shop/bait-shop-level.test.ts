@@ -20,7 +20,7 @@ import type {
 import { BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID } from '../../../../../src/cartridges/rocco/inventory';
 import { createRoccoLocalization } from '../../../../../src/cartridges/rocco/localization';
 import { ROCCO_PLAYER_CONFIG } from '../../../../../src/cartridges/rocco/games/rocco-default/player';
-import { PIER_WALK_MAP_ID } from '../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-layout';
+import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../../src/cartridges/rocco/levels/rocco-level-runtime-ids';
 import {
   BAIT_SHOP_SCENE_ID,
   RoccoBaitShopLevel,
@@ -382,7 +382,7 @@ describe('RoccoBaitShopLevel', () => {
         frontWhen: 'less-than-or-equal',
       },
     });
-    expect(state.registeredWalkMapIds).toContain(PIER_WALK_MAP_ID);
+    expect(state.registeredWalkMapIds).toContain(ROCCO_ACTIVE_WALK_MAP_ID);
     expect(state.preloadedSpriteDefinitionIds).toContain(ROCCO_PLAYER_CONFIG.ids.definition);
     expect(state.loadedSpriteDefinitionIds).toContain(ROCCO_PLAYER_CONFIG.ids.definition);
     expect(state.removedSpriteIds).toContain(ROCCO_PLAYER_CONFIG.ids.instance);
@@ -399,7 +399,7 @@ describe('RoccoBaitShopLevel', () => {
       scaleY: ROCCO_PLAYER_CONFIG.motion.scale * 1.2,
     });
     expect(rocco?.navigation).toMatchObject({
-      walkMapId: PIER_WALK_MAP_ID,
+      walkMapId: ROCCO_ACTIVE_WALK_MAP_ID,
       groundAnchor: {
         x: ROCCO_PLAYER_CONFIG.frame.groundAnchor.x,
         y: ROCCO_PLAYER_CONFIG.frame.groundAnchor.y,
@@ -632,7 +632,7 @@ describe('RoccoBaitShopLevel', () => {
 
     const rocco = findCreatedSprite(state, ROCCO_PLAYER_CONFIG.ids.instance);
     expect(rocco?.navigation).toMatchObject({
-      walkMapId: PIER_WALK_MAP_ID,
+      walkMapId: ROCCO_ACTIVE_WALK_MAP_ID,
       constrainMovement: true,
       followSurface: true,
     });

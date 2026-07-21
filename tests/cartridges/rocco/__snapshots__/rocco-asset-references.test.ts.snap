@@ -193,11 +193,6 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-bait-shop-door-assets.ts",
   },
   {
-    "assetPath": "./assets/bait-shop-door/door-closing.mp3",
-    "resolutionKind": "module-relative",
-    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-bait-shop-door-assets.ts",
-  },
-  {
     "assetPath": "./assets/bait-shop-door/open.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-bait-shop-door-assets.ts",
@@ -208,22 +203,17 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-bait-shop-door-assets.ts",
   },
   {
+    "assetPath": "./assets/door-closing.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-bait-shop-door-assets.ts",
+  },
+  {
     "assetPath": "./assets/cloud/cloud.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-cloud-assets.ts",
   },
   {
     "assetPath": "./assets/keys/keys.mp3",
-    "resolutionKind": "module-relative",
-    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-keys-assets.ts",
-  },
-  {
-    "assetPath": "./assets/keys/keys.png",
-    "resolutionKind": "module-relative",
-    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-keys-assets.ts",
-  },
-  {
-    "assetPath": "./assets/keys/mysterious-key.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-keys-assets.ts",
   },
@@ -308,11 +298,6 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
   },
   {
-    "assetPath": "./assets/door-closing.mp3",
-    "resolutionKind": "module-relative",
-    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-assets.ts",
-  },
-  {
     "assetPath": "./assets/bait-shop-toilet-background.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-toilet-assets.ts",
@@ -329,11 +314,6 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
   },
   {
     "assetPath": "./assets/bait-shop-toilet-walkmap.png",
-    "resolutionKind": "module-relative",
-    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-toilet-assets.ts",
-  },
-  {
-    "assetPath": "./assets/door-closing.mp3",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/shop/bait-shop-toilet-assets.ts",
   },
@@ -591,11 +571,6 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "assetPath": "./assets/actions/use-wc.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/ui/rocco-action-menu-assets.ts",
-  },
-  {
-    "assetPath": "./assets/items/keys/keys.mp3",
-    "resolutionKind": "module-relative",
-    "sourceFile": "src/cartridges/rocco/inventory/rocco-inventory-assets.ts",
   },
   {
     "assetPath": "./assets/items/keys/keys.png",

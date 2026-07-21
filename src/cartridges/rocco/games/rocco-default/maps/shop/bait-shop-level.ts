@@ -21,7 +21,8 @@ import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { ROCCO_PLAYER_CONFIG } from '../../player';
 import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT, ROCCO_BACKGROUND_COLOR } from '../../game-design';
-import { PIER_WALK_MAP_ID, PIER_WALK_MAP_ALPHA_THRESHOLD } from '../pier/pier-layout';
+import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../levels/rocco-level-runtime-ids';
+import { PIER_WALK_MAP_ALPHA_THRESHOLD } from '../pier/pier-layout';
 import {
   installRoccoPlayerSprite,
   uninstallRoccoPlayerSprite,
@@ -526,7 +527,7 @@ export async function installBaitShopWalkMap(
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
   engine.video.sprites.registerWalkMap(
     createRoccoSpriteWalkMapFromImageData({
-      id: PIER_WALK_MAP_ID,
+      id: ROCCO_ACTIVE_WALK_MAP_ID,
       width: imageData.width,
       height: imageData.height,
       data: imageData.data,
@@ -536,7 +537,7 @@ export async function installBaitShopWalkMap(
 }
 
 export function uninstallBaitShopWalkMap(engine: CartridgeSdkV1Runtime): void {
-  engine.video.sprites.unregisterWalkMap(PIER_WALK_MAP_ID);
+  engine.video.sprites.unregisterWalkMap(ROCCO_ACTIVE_WALK_MAP_ID);
 }
 
 function installBaitShopSceneTargets(
@@ -860,7 +861,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     }
 
     this.engine.video.sprites.bindToWalkMap(ROCCO_PLAYER_CONFIG.ids.instance, {
-      walkMapId: PIER_WALK_MAP_ID,
+      walkMapId: ROCCO_ACTIVE_WALK_MAP_ID,
       groundAnchor: {
         x: ROCCO_PLAYER_CONFIG.frame.groundAnchor.x,
         y: ROCCO_PLAYER_CONFIG.frame.groundAnchor.y,

@@ -8,7 +8,4 @@ export const pierDoorOpeningSoundUrl = new URL(
   import.meta.url,
 ).href;
 
-export const pierDoorClosingSoundUrl = new URL(
-  'assets/bait-shop-door/door-closing.mp3',
-  import.meta.url,
-).href;
+export const pierDoorClosingSoundUrl = new URL('assets/door-closing.mp3', import.meta.url).href;

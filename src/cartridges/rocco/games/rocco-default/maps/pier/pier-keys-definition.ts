@@ -1,7 +1,7 @@
 import type { RoccoActionMenuDefinition } from '../../../../../../console/video/action-menu';
 import type { RoccoSpriteDefinition } from '../../../../../../console/video/sprites';
 import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
-import { pierKeysAssetUrl } from './pier-keys-assets';
+import { ROCCO_INVENTORY_KEYS_ASSET_URL } from '../../../../inventory/rocco-inventory-assets';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import { PIER_KEYS_CONFIG } from './pier-keys-config';
 
@@ -82,7 +82,7 @@ function createKeysImages(): RoccoSpriteDefinition['images'] {
   return [
     {
       id: 'rocco-keys',
-      uri: pierKeysAssetUrl,
+      uri: ROCCO_INVENTORY_KEYS_ASSET_URL,
       width: PIER_KEYS_CONFIG.spriteWidth,
       height: PIER_KEYS_CONFIG.spriteHeight,
     },

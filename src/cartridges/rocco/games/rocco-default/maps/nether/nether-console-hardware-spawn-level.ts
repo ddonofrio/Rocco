@@ -23,7 +23,7 @@ import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { ROCCO_PLAYER_CONFIG } from '../../player';
 import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT, ROCCO_BACKGROUND_COLOR } from '../../game-design';
-import { PIER_WALK_MAP_ID } from '../pier/pier-layout';
+import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../levels/rocco-level-runtime-ids';
 import {
   installRoccoPlayerSprite,
   uninstallRoccoPlayerSprite,
@@ -1002,7 +1002,7 @@ class RoccoNetherConsoleHardwareSpawnController
       renderLayer: 'world.behind',
       zIndex: 12,
       depthMode: 'fixed',
-      interactive: true,
+      interactive: false,
       collisionEnabled: false,
       tint: NETHER_SECURITY_CAMERA_TINT,
       ignoreMessages: true,
@@ -1011,6 +1011,7 @@ class RoccoNetherConsoleHardwareSpawnController
       instanceId: NETHER_SECURITY_CAMERA_TARGET_INSTANCE_ID,
       definitionId: 'rocco-nether-console-hardware-spawn-security-camera',
       shape: NETHER_SECURITY_CAMERA_SHAPE,
+      renderLayer: 'ui.action-menu',
       priority: 22,
       suppressDefaultPlayerMove: true,
       visibleDescription: {
@@ -1046,7 +1047,7 @@ class RoccoNetherConsoleHardwareSpawnController
         renderLayer: 'world.behind',
         zIndex: 11,
         depthMode: 'fixed',
-        interactive: false,
+        interactive: true,
         collisionEnabled: false,
         opacity: 0,
       },
@@ -2467,7 +2468,7 @@ class RoccoNetherConsoleHardwareSpawnController
     engine.video.sceneTargets?.unregisterTarget(NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_SHELF_TARGET_INSTANCE_ID);
     uninstallRoccoPlayerSprite(engine);
-    engine.video.sprites.unregisterWalkMap(PIER_WALK_MAP_ID);
+    engine.video.sprites.unregisterWalkMap(ROCCO_ACTIVE_WALK_MAP_ID);
     this.engine = undefined;
     this.spriteController = undefined;
     this.scriptedInteractionController = undefined;

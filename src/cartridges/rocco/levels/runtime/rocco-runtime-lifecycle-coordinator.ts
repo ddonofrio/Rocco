@@ -56,13 +56,13 @@ export class RoccoRuntimeLifecycleCoordinator {
     engine: CartridgeSdkV1Runtime,
     preloader?: RoccoAssetPreloader,
   ): Promise<void> {
-    if (!preloader) {
-      return;
-    }
-    try {
-      await preloader.preloadAssetUrls(engine, this.options.sharedAssets.imageUrls);
-    } catch {
-      engine.log('Assets', 'Some shared Rocco UI assets could not be preloaded.');
+    if (!preloader) return;
+    for (const group of this.options.sharedAssets.imageGroups) {
+      try {
+        await preloader.preloadAssetUrls(engine, group.urls);
+      } catch {
+        engine.log('Assets', group.preloadFailureMessage);
+      }
     }
   }
 
@@ -141,6 +141,7 @@ export class RoccoRuntimeLifecycleCoordinator {
     this.options.clearActiveLevelDroppedInventoryPresentation();
     this.options.worldState.clearSavedNetherEntrySnapshot();
     for (const sound of this.options.sharedAssets.sounds) {
+      engine.audio.stopSound(sound.id);
       engine.audio.unregisterSound(sound.id);
     }
     engine.video.gridMenus.closeMenu();

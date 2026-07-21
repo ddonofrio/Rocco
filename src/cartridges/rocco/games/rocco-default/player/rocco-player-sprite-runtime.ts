@@ -12,11 +12,12 @@ import {
   DEFAULT_ROCCO_PLAYER_APPEARANCE,
   type RoccoPlayerAppearance,
 } from './rocco-player-appearance';
+import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../levels/rocco-level-runtime-ids';
 
 const POSITION_EPSILON = 1;
 const INTRO_THOUGHT_DURATION_MS = 6400;
 const INTRO_HELP_DURATION_MS = 5400;
-const DEFAULT_WALK_MAP_ID = 'rocco-pier-walking-path';
+const DEFAULT_WALK_MAP_ID = ROCCO_ACTIVE_WALK_MAP_ID;
 
 export interface RoccoPlayerSpriteController {
   update(deltaMs: number): void;

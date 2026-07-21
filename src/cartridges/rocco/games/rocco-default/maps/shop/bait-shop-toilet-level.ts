@@ -62,7 +62,10 @@ import {
   type RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
 import { type RoccoToiletLevelCapability } from '../../../../levels/runtime/rocco-level-capabilities';
-import { baitShopToiletAssetUrls } from './bait-shop-toilet-assets';
+import {
+  baitShopToiletAssetUrls,
+  baitShopToiletDoorClosingSoundUrl,
+} from './bait-shop-toilet-assets';
 import {
   installBaitShopWalkMap,
   loadOrCreateBaitShopScene,
@@ -3027,7 +3030,7 @@ class RoccoBaitShopToiletController
     });
     engine.audio.registerSound({
       id: DOOR_CLOSING_SOUND_ID,
-      uri: baitShopToiletAssetUrls.doorClosingSound,
+      uri: baitShopToiletDoorClosingSoundUrl,
       volume: DOOR_CLOSING_SOUND_VOLUME,
       loop: false,
     });

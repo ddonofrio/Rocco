@@ -26,5 +26,6 @@ export const baitShopToiletAssetUrls = {
   medallionStepSound: new URL('assets/medallion-step.mp3', import.meta.url).href,
   portalLoopSound: new URL('assets/portal-loop-sound.mp3', import.meta.url).href,
   spellSound: new URL('assets/spell-sound.mp3', import.meta.url).href,
-  doorClosingSound: new URL('assets/door-closing.mp3', import.meta.url).href,
 } as const;
+
+export { pierDoorClosingSoundUrl as baitShopToiletDoorClosingSoundUrl } from '../pier/pier-bait-shop-door-assets';

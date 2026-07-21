@@ -1,3 +1,9 @@
+export interface RoccoSharedImageAssetGroup {
+  name: string;
+  urls: readonly string[];
+  preloadFailureMessage: string;
+}
+
 export interface RoccoSharedSoundAsset {
   id: string;
   uri: string;
@@ -7,6 +13,6 @@ export interface RoccoSharedSoundAsset {
 }
 
 export interface RoccoSharedAssetManifest {
-  imageUrls: readonly string[];
+  imageGroups: readonly RoccoSharedImageAssetGroup[];
   sounds: readonly RoccoSharedSoundAsset[];
 }

@@ -27,7 +27,7 @@ import {
   ROCCO_PLAYER_CONFIG,
   ROCCO_PLAYER_ACTION_MENU_ID,
 } from '../../../../../src/cartridges/rocco/games/rocco-default/player';
-import { PIER_WALK_MAP_ID } from '../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-layout';
+import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../../src/cartridges/rocco/levels/rocco-level-runtime-ids';
 import { createRoccoCoralRelicInventoryItem } from '../../../../../src/cartridges/rocco/inventory';
 import {
   BAIT_SHOP_TOILET_SCENE_ID,
@@ -599,7 +599,7 @@ describe('RoccoBaitShopToiletLevel', () => {
     });
 
     expect(state.loadedScene?.id).toBe(BAIT_SHOP_TOILET_SCENE_ID);
-    expect(state.registeredWalkMapIds).toContain(PIER_WALK_MAP_ID);
+    expect(state.registeredWalkMapIds).toContain(ROCCO_ACTIVE_WALK_MAP_ID);
 
     finishSitSequence(level, state);
     expect(state.inputEnabled).toBe(true);

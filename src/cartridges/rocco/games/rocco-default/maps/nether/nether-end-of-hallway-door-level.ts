@@ -11,7 +11,7 @@ import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { ROCCO_PLAYER_CONFIG } from '../../player';
 import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT } from '../../game-design';
-import { PIER_WALK_MAP_ID } from '../pier/pier-layout';
+import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../levels/rocco-level-runtime-ids';
 import {
   installRoccoPlayerSprite,
   uninstallRoccoPlayerSprite,
@@ -370,6 +370,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       instanceId: NETHER_END_OF_HALLWAY_WHEEL_VALVE_TARGET_INSTANCE_ID,
       definitionId: NETHER_END_OF_HALLWAY_WHEEL_VALVE_DEFINITION_ID,
       shape: NETHER_END_OF_HALLWAY_WHEEL_VALVE_SHAPE,
+      renderLayer: 'ui.action-menu',
       priority: 23,
       suppressDefaultPlayerMove: true,
       visibleDescription: {
@@ -603,7 +604,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     engine.audio.stopSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
     engine.audio.unregisterSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
     uninstallRoccoPlayerSprite(engine);
-    engine.video.sprites.unregisterWalkMap(PIER_WALK_MAP_ID);
+    engine.video.sprites.unregisterWalkMap(ROCCO_ACTIVE_WALK_MAP_ID);
     this.engine = undefined;
     this.spriteController = undefined;
     this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;

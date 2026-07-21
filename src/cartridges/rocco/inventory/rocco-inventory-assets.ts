@@ -1,9 +1,6 @@
 export const ROCCO_INVENTORY_KEYS_ASSET_URL = new URL('assets/items/keys/keys.png', import.meta.url)
   .href;
 
-export const ROCCO_INVENTORY_KEYS_SOUND_URL = new URL('assets/items/keys/keys.mp3', import.meta.url)
-  .href;
-
 export const ROCCO_INVENTORY_MYSTERIOUS_KEY_ASSET_URL = new URL(
   'assets/items/keys/mysterious-key.png',
   import.meta.url,

@@ -157,3 +157,31 @@ export function resolveRoccoPlayerAppearanceAssetUrls(
     pickUp: roccoDefaultPickUpAssetUrl,
   };
 }
+
+export const roccoDefaultGuyspriteRunLeftAssetUrls = [
+  new URL('assets/characters/guysprite/run-left-1.png', import.meta.url).href,
+  new URL('assets/characters/guysprite/run-left-2.png', import.meta.url).href,
+] as const;
+
+export const roccoDefaultGuyspriteRunRightAssetUrls = [
+  new URL('assets/characters/guysprite/run-right-1.png', import.meta.url).href,
+  new URL('assets/characters/guysprite/run-right-2.png', import.meta.url).href,
+] as const;
+
+export const roccoDefaultGuyspriteStandingAssetUrls = {
+  down: new URL('assets/characters/guysprite/stand-down.png', import.meta.url).href,
+  'down-left': new URL('assets/characters/guysprite/stand-down-letf.png', import.meta.url)
+    .href,
+  left: new URL('assets/characters/guysprite/stand-left.png', import.meta.url).href,
+  'up-left': new URL('assets/characters/guysprite/stand-up-left.png', import.meta.url).href,
+  up: new URL('assets/characters/guysprite/stand-up.png', import.meta.url).href,
+  'up-right': new URL('assets/characters/guysprite/stand-up-right.png', import.meta.url).href,
+  right: new URL('assets/characters/guysprite/stand-right.png', import.meta.url).href,
+  'down-right': new URL('assets/characters/guysprite/stand-down-right.png', import.meta.url)
+    .href,
+} as const;
+
+export const roccoDefaultGuyspritePickUpAssetUrl = new URL(
+  'assets/characters/guysprite/pick-up.png',
+  import.meta.url,
+).href;

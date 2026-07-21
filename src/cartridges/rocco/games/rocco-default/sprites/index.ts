@@ -1,3 +1,5 @@
-export * from '../../../rocco-default-assets';
-export * from '../../../rocco-default-sprite-definition';
-export * from '../../../rocco-default-sprites';
+export {
+  createDirectionalCharacterSpriteDefinition,
+  type DirectionalCharacterSpriteAssets,
+  type DirectionalCharacterSpriteSpec,
+} from './directional-character-sprite-definition';

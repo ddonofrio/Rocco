@@ -3,11 +3,11 @@ import { loadRoccoSpriteWalkMapFromImage } from '../../../../../../console/video
 import { pierWalkMapAssetUrl } from './pier-assets';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import {
-  DEFAULT_CENTERED_BACKGROUND_SCROLL_X,
-  DEFAULT_CENTERED_BACKGROUND_SCROLL_Y,
-  DEFAULT_WALK_MAP_ALPHA_THRESHOLD,
-  DEFAULT_WALK_MAP_ID,
-} from '../../constants';
+  PIER_CENTERED_BACKGROUND_SCROLL_X,
+  PIER_CENTERED_BACKGROUND_SCROLL_Y,
+  PIER_WALK_MAP_ALPHA_THRESHOLD,
+  PIER_WALK_MAP_ID,
+} from './pier-layout';
 
 export interface RoccoPierWalkMapOptions {
   backgroundScrollX?: number;
@@ -21,18 +21,18 @@ export async function installDefaultWalkMap(
 ): Promise<void> {
   preloader?.addWalkMap();
   const walkMap = await loadRoccoSpriteWalkMapFromImage({
-    id: DEFAULT_WALK_MAP_ID,
+    id: PIER_WALK_MAP_ID,
     uri: pierWalkMapAssetUrl,
     origin: {
-      x: -(options.backgroundScrollX ?? DEFAULT_CENTERED_BACKGROUND_SCROLL_X),
-      y: -(options.backgroundScrollY ?? DEFAULT_CENTERED_BACKGROUND_SCROLL_Y),
+      x: -(options.backgroundScrollX ?? PIER_CENTERED_BACKGROUND_SCROLL_X),
+      y: -(options.backgroundScrollY ?? PIER_CENTERED_BACKGROUND_SCROLL_Y),
     },
-    alphaThreshold: DEFAULT_WALK_MAP_ALPHA_THRESHOLD,
+    alphaThreshold: PIER_WALK_MAP_ALPHA_THRESHOLD,
   });
 
   engine.video.sprites.registerWalkMap(walkMap);
 }
 
 export function uninstallDefaultWalkMap(engine: CartridgeSdkV1Runtime): void {
-  engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
+  engine.video.sprites.unregisterWalkMap(PIER_WALK_MAP_ID);
 }

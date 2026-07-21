@@ -1,6 +1,8 @@
-import { DEFAULT_SPRITE_SCALE } from '../rocco-default-constants';
+import { ROCCO_PLAYER_CONFIG } from '../games/rocco-default/player/rocco-player-config';
 import type { RoccoLocalization } from '../localization';
 import type { RoccoInventoryGroundSpriteDefinition, RoccoInventoryItem } from './types';
+import { SOUVENIR_TABLE_ASSET_URLS } from './souvenir-assets';
+export { ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS } from './souvenir-assets';
 
 interface RoccoLocalizedSouvenirTableItemDefinition {
   id: string;
@@ -20,28 +22,6 @@ export const BAIT_SHOP_SOUVENIR_JAPANESE_FLOAT_ITEM_ID = 'souvenir-japanese-floa
 export const BAIT_SHOP_SOUVENIR_RAZOR_SHELL_ITEM_ID = 'souvenir-razor-shell';
 export const BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID = 'souvenir-red-coral';
 
-const souvenirTableAssetUrls = {
-  amberSpiral: new URL('assets/souvenirs/amber-spiral.png', import.meta.url).href,
-  amberStar: new URL('assets/souvenirs/amber-star.png', import.meta.url).href,
-  amberTurritella: new URL('assets/souvenirs/amber-turritella.png', import.meta.url).href,
-  beachNecklace: new URL('assets/souvenirs/beach-necklace.png', import.meta.url).href,
-  copperFan: new URL('assets/souvenirs/copper-fan.png', import.meta.url).href,
-  goldenNautilus: new URL('assets/souvenirs/golden-nautilus.png', import.meta.url).href,
-  goldenScallop: new URL('assets/souvenirs/golden-scallop.png', import.meta.url).href,
-  hollowUrchin: new URL('assets/souvenirs/hollow-urchin.png', import.meta.url).href,
-  horseshoeCrab: new URL('assets/souvenirs/horseshoe-crab.png', import.meta.url).href,
-  japaneseFloat: new URL('assets/souvenirs/japanese-float.png', import.meta.url).href,
-  razorShell: new URL('assets/souvenirs/razor-shell.png', import.meta.url).href,
-  redCoral: new URL('assets/souvenirs/red-coral.png', import.meta.url).href,
-  seaDollar: new URL('assets/souvenirs/sea-dollar.png', import.meta.url).href,
-  speckledCowrie: new URL('assets/souvenirs/speckled-cowrie.png', import.meta.url).href,
-  spinyMurex: new URL('assets/souvenirs/spiny-murex.png', import.meta.url).href,
-  stripedClam: new URL('assets/souvenirs/striped-clam.png', import.meta.url).href,
-  stripedUrchin: new URL('assets/souvenirs/striped-urchin.png', import.meta.url).href,
-  tigerCone: new URL('assets/souvenirs/tiger-cone.png', import.meta.url).href,
-  towerShell: new URL('assets/souvenirs/tower-shell.png', import.meta.url).href,
-} as const;
-
 const SOUVENIR_REFERENCE_HEIGHT_AT_DEFAULT_ROCCO_SCALE = 24;
 
 function createSouvenirGroundSpriteDefinition(
@@ -55,7 +35,7 @@ function createSouvenirGroundSpriteDefinition(
     imageUri,
     width,
     height,
-    scaleRelativeToRoccoBase: spriteScaleAtDefaultRoccoScale / DEFAULT_SPRITE_SCALE,
+    scaleRelativeToRoccoBase: spriteScaleAtDefaultRoccoScale / ROCCO_PLAYER_CONFIG.motion.scale,
     renderLayer: 'world.behind',
     zIndex: 12,
     clickTargetPadding: {
@@ -70,7 +50,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
   [
     {
       id: 'souvenir-sea-dollar',
-      imageUri: souvenirTableAssetUrls.seaDollar,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.seaDollar,
       slotIndex: 0,
       width: 300,
       height: 300,
@@ -81,7 +61,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-horseshoe-crab',
-      imageUri: souvenirTableAssetUrls.horseshoeCrab,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.horseshoeCrab,
       slotIndex: 1,
       width: 300,
       height: 300,
@@ -92,7 +72,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-striped-clam',
-      imageUri: souvenirTableAssetUrls.stripedClam,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.stripedClam,
       slotIndex: 2,
       width: 300,
       height: 300,
@@ -103,7 +83,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: BAIT_SHOP_SOUVENIR_BEACH_NECKLACE_ITEM_ID,
-      imageUri: souvenirTableAssetUrls.beachNecklace,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.beachNecklace,
       slotIndex: 3,
       width: 300,
       height: 300,
@@ -114,7 +94,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-golden-nautilus',
-      imageUri: souvenirTableAssetUrls.goldenNautilus,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.goldenNautilus,
       slotIndex: 4,
       width: 300,
       height: 300,
@@ -125,7 +105,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-hollow-urchin',
-      imageUri: souvenirTableAssetUrls.hollowUrchin,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.hollowUrchin,
       slotIndex: 5,
       width: 300,
       height: 300,
@@ -136,7 +116,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-spiny-murex',
-      imageUri: souvenirTableAssetUrls.spinyMurex,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.spinyMurex,
       slotIndex: 6,
       width: 300,
       height: 300,
@@ -147,7 +127,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-tower-shell',
-      imageUri: souvenirTableAssetUrls.towerShell,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.towerShell,
       slotIndex: 7,
       width: 300,
       height: 300,
@@ -158,7 +138,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: BAIT_SHOP_SOUVENIR_RAZOR_SHELL_ITEM_ID,
-      imageUri: souvenirTableAssetUrls.razorShell,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.razorShell,
       slotIndex: 8,
       width: 300,
       height: 300,
@@ -169,7 +149,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: BAIT_SHOP_SOUVENIR_RED_CORAL_ITEM_ID,
-      imageUri: souvenirTableAssetUrls.redCoral,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.redCoral,
       slotIndex: 9,
       width: 300,
       height: 300,
@@ -180,7 +160,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-amber-star',
-      imageUri: souvenirTableAssetUrls.amberStar,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.amberStar,
       slotIndex: 10,
       width: 300,
       height: 300,
@@ -191,7 +171,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-copper-fan',
-      imageUri: souvenirTableAssetUrls.copperFan,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.copperFan,
       slotIndex: 11,
       width: 300,
       height: 300,
@@ -202,7 +182,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: BAIT_SHOP_SOUVENIR_JAPANESE_FLOAT_ITEM_ID,
-      imageUri: souvenirTableAssetUrls.japaneseFloat,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.japaneseFloat,
       slotIndex: 12,
       width: 300,
       height: 300,
@@ -213,7 +193,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-speckled-cowrie',
-      imageUri: souvenirTableAssetUrls.speckledCowrie,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.speckledCowrie,
       slotIndex: 13,
       width: 266,
       height: 265,
@@ -224,7 +204,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: BAIT_SHOP_SOUVENIR_AMBER_TURRITELLA_ITEM_ID,
-      imageUri: souvenirTableAssetUrls.amberTurritella,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.amberTurritella,
       slotIndex: 14,
       width: 300,
       height: 300,
@@ -235,7 +215,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-striped-urchin',
-      imageUri: souvenirTableAssetUrls.stripedUrchin,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.stripedUrchin,
       slotIndex: 15,
       width: 266,
       height: 265,
@@ -246,7 +226,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-amber-spiral',
-      imageUri: souvenirTableAssetUrls.amberSpiral,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.amberSpiral,
       slotIndex: 17,
       width: 266,
       height: 265,
@@ -257,7 +237,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-tiger-cone',
-      imageUri: souvenirTableAssetUrls.tigerCone,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.tigerCone,
       slotIndex: 18,
       width: 300,
       height: 300,
@@ -268,7 +248,7 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
     },
     {
       id: 'souvenir-golden-scallop',
-      imageUri: souvenirTableAssetUrls.goldenScallop,
+      imageUri: SOUVENIR_TABLE_ASSET_URLS.goldenScallop,
       slotIndex: 19,
       width: 300,
       height: 300,
@@ -278,8 +258,6 @@ const BAIT_SHOP_SOUVENIR_TABLE_ITEM_DEFINITIONS: readonly RoccoLocalizedSouvenir
       },
     },
   ];
-
-export const ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS = Object.values(souvenirTableAssetUrls);
 
 export function createBaitShopSouvenirTableItems(
   localization: RoccoLocalization,

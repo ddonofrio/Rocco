@@ -4,20 +4,22 @@ import type {
   SpecialInventorySceneClickRule,
 } from './interaction-types';
 import { isActionMenuAction, isSceneClickAction, normalizeDisposition } from './interaction-types';
-import {
-  DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_STAN_SPRITE_INSTANCE_ID,
-  ROCCO_PIER_START_LEVEL_ID,
-} from '../rocco-default-constants';
+import { ROCCO_PLAYER_CONFIG } from '../games/rocco-default/player/rocco-player-config';
+import { PIER_BAIT_SHOP_DOOR_CONFIG } from '../games/rocco-default/maps/pier/pier-bait-shop-door-config';
+import { PIER_STAN_CONFIG } from '../games/rocco-default/maps/pier/pier-stan-config';
+import { ROCCO_PIER_START_LEVEL_ID } from '../games/rocco-default/maps/pier/pier-level-ids';
+const DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID = PIER_BAIT_SHOP_DOOR_CONFIG.spriteInstanceId;
+const DEFAULT_STAN_SPRITE_INSTANCE_ID = PIER_STAN_CONFIG.spriteInstanceId;
 import {
   ROCCO_INVENTORY_BATA_ITEM_ID,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MENU_ID,
   ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
 } from '../inventory';
-import { applyDefaultSpriteAppearance } from '../rocco-default-sprites';
-import { ROCCO_LAB_COAT_PLAYER_APPEARANCE } from '../rocco-player-appearance';
+import {
+  applyRoccoPlayerAppearance,
+  ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+} from '../games/rocco-default/player';
 import { resolveKeyLockedDoorLines } from '../levels/key-locked-door-lines';
 import { roccoCartridgeMessageRuntime } from '../rpce/dialogue';
 
@@ -41,7 +43,7 @@ function showRoccoThoughtVariant(
 
   roccoCartridgeMessageRuntime.think(
     engine,
-    DEFAULT_SPRITE_INSTANCE_ID,
+    ROCCO_PLAYER_CONFIG.ids.instance,
     [...lines],
     {
       ttlMs: PIER_DOOR_VARIANT_MESSAGE_TTL_MS,
@@ -237,7 +239,7 @@ function createLabCoatEquipRule(): SpecialInventorySceneClickRule {
     matches: (context, carriedItem) =>
       isSceneClickAction(context.action) &&
       carriedItem.item.id === ROCCO_INVENTORY_BATA_ITEM_ID &&
-      context.action.targetInstanceId === DEFAULT_SPRITE_INSTANCE_ID,
+      context.action.targetInstanceId === ROCCO_PLAYER_CONFIG.ids.instance,
     execute: (context) => {
       const engine = context.sdk;
       if (!engine) {
@@ -249,7 +251,7 @@ function createLabCoatEquipRule(): SpecialInventorySceneClickRule {
         if (context.getRoccoAppearance() === ROCCO_LAB_COAT_PLAYER_APPEARANCE) {
           roccoCartridgeMessageRuntime.think(
             engine,
-            DEFAULT_SPRITE_INSTANCE_ID,
+            ROCCO_PLAYER_CONFIG.ids.instance,
             [context.localization.text.inventory.bataAlreadyOnSelfLine],
             { ttlMs: 3200 },
             {
@@ -262,11 +264,7 @@ function createLabCoatEquipRule(): SpecialInventorySceneClickRule {
           return { handled: true, actionResult: { suppressDefaultPlayerMove: true } };
         }
 
-        applyDefaultSpriteAppearance(
-          engine,
-          ROCCO_LAB_COAT_PLAYER_APPEARANCE,
-          context.localization,
-        );
+        applyRoccoPlayerAppearance(engine, ROCCO_LAB_COAT_PLAYER_APPEARANCE, context.localization);
         context.setRoccoAppearance(ROCCO_LAB_COAT_PLAYER_APPEARANCE);
         context.inventory.removeItem(ROCCO_INVENTORY_BATA_ITEM_ID);
         if (engine.video.gridMenus.isOpen(ROCCO_INVENTORY_MENU_ID)) {
@@ -276,7 +274,7 @@ function createLabCoatEquipRule(): SpecialInventorySceneClickRule {
         }
         roccoCartridgeMessageRuntime.think(
           engine,
-          DEFAULT_SPRITE_INSTANCE_ID,
+          ROCCO_PLAYER_CONFIG.ids.instance,
           [context.localization.text.inventory.bataOnSelfLine],
           { ttlMs: 3200 },
           { count: 1, historyKey: 'inventory-bata-self-equip', isAvoidImmediateRepeat: true },

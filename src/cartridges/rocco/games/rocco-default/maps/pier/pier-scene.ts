@@ -1,13 +1,11 @@
 import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoGraphicPlane, RoccoPlaneScene } from '../../../../../../console/video/planes';
 import {
-  DEFAULT_CENTERED_BACKGROUND_SCROLL_X,
-  DEFAULT_CENTERED_BACKGROUND_SCROLL_Y,
-  DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_ROCCO_GREEN_BLACK,
-  DEFAULT_SCENE_ID,
-} from '../../constants';
+  PIER_CENTERED_BACKGROUND_SCROLL_X,
+  PIER_CENTERED_BACKGROUND_SCROLL_Y,
+} from './pier-layout';
+import { DEFAULT_SCENE_ID } from './pier-level-ids';
+import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT, ROCCO_BACKGROUND_COLOR } from '../../game-design';
 import { pierBackgroundAssetUrls } from './pier-assets';
 import { makeDefaultWaterColorEffect } from './pier-video-effects';
 
@@ -38,8 +36,8 @@ function makeFullscreenPlaneBase(): Pick<
     viewport: {
       x: 0,
       y: 0,
-      width: DEFAULT_DESIGN_WIDTH,
-      height: DEFAULT_DESIGN_HEIGHT,
+      width: ROCCO_DESIGN_WIDTH,
+      height: ROCCO_DESIGN_HEIGHT,
     },
     opacity: 1,
     visible: true,
@@ -49,7 +47,7 @@ function makeFullscreenPlaneBase(): Pick<
 function makePierBackgroundScroll(options: RoccoPierSceneOptions) {
   return {
     x: options.backgroundScrollX,
-    y: options.backgroundScrollY ?? DEFAULT_CENTERED_BACKGROUND_SCROLL_Y,
+    y: options.backgroundScrollY ?? PIER_CENTERED_BACKGROUND_SCROLL_Y,
   };
 }
 
@@ -91,7 +89,7 @@ function createDefaultRoccoPlanes(options: RoccoPierSceneOptions): RoccoGraphicP
       name: 'Rocco Green Black Backplate',
       source: {
         kind: 'solid',
-        color: DEFAULT_ROCCO_GREEN_BLACK,
+        color: ROCCO_BACKGROUND_COLOR,
       },
       priority: 0,
       renderLayer: 'background.back',
@@ -136,7 +134,7 @@ function createDefaultRoccoScene(options: RoccoPierSceneOptions): RoccoPlaneScen
   return {
     id: options.sceneId,
     planes: createDefaultRoccoPlanes(options),
-    clearColor: DEFAULT_ROCCO_GREEN_BLACK,
+    clearColor: ROCCO_BACKGROUND_COLOR,
     palettes: [],
     colorRegisterSets: [],
     attributeMaps: [],
@@ -173,7 +171,7 @@ function normalizeDefaultRoccoScene(
     ...scene,
     id: options.sceneId,
     planes: nextPlanes,
-    clearColor: DEFAULT_ROCCO_GREEN_BLACK,
+    clearColor: ROCCO_BACKGROUND_COLOR,
     palettes: scene.palettes ?? [],
     colorRegisterSets: scene.colorRegisterSets ?? [],
     attributeMaps: scene.attributeMaps ?? [],
@@ -214,6 +212,6 @@ export async function loadOrCreateDefaultScene(
 ): Promise<RoccoPlaneScene> {
   return loadOrCreatePierScene(engine, {
     sceneId: DEFAULT_SCENE_ID,
-    backgroundScrollX: DEFAULT_CENTERED_BACKGROUND_SCROLL_X,
+    backgroundScrollX: PIER_CENTERED_BACKGROUND_SCROLL_X,
   });
 }

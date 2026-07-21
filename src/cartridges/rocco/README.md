@@ -6,16 +6,17 @@
 
 - `rocco-default-cartridge.ts` — `RoccoDefaultCartridge`, which mounts the RPCE runtime and delegates gameplay actions into the current game.
 - `rocco-default-manifest.ts` — Cartridge identity and localized menu metadata.
-- `rocco-default-constants.ts` — Shared design, scene, level, scroll, color, and sprite IDs.
-- `rocco-default-assets.ts` — Shared cartridge asset URIs.
-- `rocco-default-sprite-definition.ts` — Rocco player sprite definition.
-- `rocco-default-sprites.ts` — Rocco player sprite installation.
-- `rocco-player-appearance.ts` — Player appearance IDs and the default versus lab-coat appearance contract.
-- `rocco-player-action-menu.ts` — Rocco self action menu with Talk and Inventory actions.
 - `rocco-developer-mode.ts` — Developer-mode menu definitions, inventory seeding, and event-toggle helpers.
 - `scripted-scene-interaction-controller.ts` — Shared walk-then-react controller for scene-target choreography.
-- `rpce/` — Cartridge-local point-and-click runtime, reusable dialogue helpers, and generic inventory primitives.
 - `games/rocco-default/` — Current game definition and map-first ownership for Pier, Shop, and Nether.
+  - `game-design.ts` — Shared design dimensions and background color.
+  - `player/` — Player sprite definition, asset resolution, config, action menu, and runtime installation.
+  - `sprites/` — Directional character sprite definition builder.
+  - `ui/` — Shared action menu asset URLs.
+  - `maps/pier/` — Pier outdoor levels, characters, items, and video effects.
+  - `maps/shop/` — Bait shop interior and toilet levels.
+  - `maps/nether/` — Nether path levels including console hardware and reset office.
+  - `preload/` — Shared asset manifest for preloading.
 
 ## Subdirectories
 
@@ -39,9 +40,9 @@ The cartridge supports `en` (English source) and `es` (Spanish). The boot menu s
 
 ## Conventions
 
-- Instance IDs for interactive sprites are defined in `rocco-default-constants.ts`.
-- Asset URIs use Vite-compatible `import ... as string` patterns.
-- Shared Rocco sprite logic lives in `rocco-default-sprites.ts` and `rocco-default-sprite-definition.ts`.
+- Instance IDs for interactive sprites are defined in per-character config files under `games/rocco-default/maps/pier/`.
+- Asset URIs use Vite-compatible `new URL(..., import.meta.url).href` patterns.
+- Player sprite configuration lives in `games/rocco-default/player/rocco-player-config.ts`.
 - Map definitions live under `games/rocco-default/maps/*`.
 - Localized dialogue trees stay in `localization/`; reusable turn sequencing lives under `rpce/dialogue` and is re-exported from `dialogue/`.
 

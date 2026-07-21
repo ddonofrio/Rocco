@@ -1,7 +1,7 @@
 import type { SpecialInventorySceneClickRule } from './interaction-types';
 import { isSceneClickAction } from './interaction-types';
 import { ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID } from '../inventory';
-import { ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID } from '../rocco-default-constants';
+import { ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID } from '../games/rocco-default/maps/nether/levels';
 import { isRoccoNetherSecurityCameraCapability } from '../levels/runtime/rocco-level-capabilities';
 
 const NETHER_SPECIAL_SCENE_CLICK_PRIORITY = 300;

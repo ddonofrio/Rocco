@@ -20,12 +20,12 @@ import type { RoccoPierBeginningAmbientPersistentState } from './pier-beginning-
 import type { RoccoLocalization } from '../../localization';
 import { installDefaultWalkMap, uninstallDefaultWalkMap } from './pier-walkmap';
 import {
-  installDefaultSprite,
-  uninstallDefaultSprite,
-  type RoccoDefaultSpriteController,
-} from '../../sprites';
-import { pierDoorClosingSoundUrl } from './pier-assets';
-import { ROCCO_PIER_START_LEVEL_ID } from '../../constants';
+  installRoccoPlayerSprite,
+  uninstallRoccoPlayerSprite,
+  type RoccoPlayerSpriteController,
+} from '../../player';
+import { pierDoorClosingSoundUrl } from './pier-bait-shop-door-assets';
+import { ROCCO_PIER_START_LEVEL_ID } from './pier-level-ids';
 
 type RoccoSceneClickResult = {
   suppressDefaultPlayerMove?: boolean;
@@ -63,7 +63,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
   private readonly backgroundScrollX: number;
   private readonly localization: RoccoLocalization;
   private readonly mountAmbient?: RoccoPierSideLevelDefinition['mountAmbient'];
-  private spriteController: RoccoDefaultSpriteController | undefined;
+  private spriteController: RoccoPlayerSpriteController | undefined;
   private cloudController: RoccoDefaultCloudController | undefined;
   private ambientController: RoccoPierSideAmbientController | undefined;
   readonly id: string;
@@ -89,7 +89,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
       findRoccoLevelConnector(this.connectors, options.entryConnectorId) ?? this.connectors[0];
     return Promise.all([
       installDefaultCloud(engine, preloader),
-      installDefaultSprite(
+      installRoccoPlayerSprite(
         engine,
         {
           appearance: options.roccoAppearance,
@@ -162,7 +162,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
     engine.video.messages.clearMessages();
     this.ambientController?.unmount(engine);
     uninstallDefaultCloud(engine);
-    uninstallDefaultSprite(engine);
+    uninstallRoccoPlayerSprite(engine);
     uninstallDefaultWalkMap(engine);
     if (this.id === ROCCO_PIER_START_LEVEL_ID) {
       engine.audio.stopSound('rocco-bait-shop-door-closing-sound');

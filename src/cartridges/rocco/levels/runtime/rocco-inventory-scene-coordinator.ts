@@ -1,10 +1,7 @@
 import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoPoint } from '../../../../console/video/sprites';
-import {
-  DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_SPRITE_INSTANCE_ID,
-} from '../../games/rocco-default/constants';
+import { ROCCO_DESIGN_HEIGHT, ROCCO_DESIGN_WIDTH } from '../../games/rocco-default/game-design';
+import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
 import {
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
   type RoccoInventoryItem,
@@ -51,7 +48,9 @@ export class RoccoInventorySceneCoordinator {
   }
 
   resolveDroppedInventoryGroundPoint(): RoccoPoint | undefined {
-    const player = this.options.getEngine()?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const player = this.options
+      .getEngine()
+      ?.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     const baseGroundPoint = this.options.resolvePlayerGroundPoint();
     if (!player || !baseGroundPoint) {
       return undefined;
@@ -69,14 +68,8 @@ export class RoccoInventorySceneCoordinator {
     };
     const offset = offsetByDirection[direction] ?? offsetByDirection.down;
     return {
-      x: Math.max(
-        18,
-        Math.min(DEFAULT_DESIGN_WIDTH - 18, Math.round(baseGroundPoint.x + offset.x)),
-      ),
-      y: Math.max(
-        18,
-        Math.min(DEFAULT_DESIGN_HEIGHT - 18, Math.round(baseGroundPoint.y + offset.y)),
-      ),
+      x: Math.max(18, Math.min(ROCCO_DESIGN_WIDTH - 18, Math.round(baseGroundPoint.x + offset.x))),
+      y: Math.max(18, Math.min(ROCCO_DESIGN_HEIGHT - 18, Math.round(baseGroundPoint.y + offset.y))),
     };
   }
 

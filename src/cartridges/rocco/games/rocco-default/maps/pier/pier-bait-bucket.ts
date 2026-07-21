@@ -6,33 +6,12 @@ import type {
 } from '../../../../../../console/video/action-menu';
 import type { RoccoSpriteDefinition } from '../../../../../../console/video/sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
-import { roccoDefaultActionMenuAssetUrls, roccoDefaultBaitBucketAssetUrls } from '../../sprites';
-import { pierBaitBucketKickSoundUrl } from './pier-assets';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
+import { pierBaitBucketAssetUrls, pierBaitBucketKickSoundUrl } from './pier-bait-bucket-assets';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import {
-  DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID,
-  DEFAULT_BAIT_BUCKET_DROPPED_PIVOT_X,
-  DEFAULT_BAIT_BUCKET_DROPPED_PIVOT_Y,
-  DEFAULT_BAIT_BUCKET_NORMAL_ANIMATION_ID,
-  DEFAULT_BAIT_BUCKET_NORMAL_PIVOT_X,
-  DEFAULT_BAIT_BUCKET_NORMAL_PIVOT_Y,
-  DEFAULT_BAIT_BUCKET_RENDER_LAYER,
-  DEFAULT_BAIT_BUCKET_SCALE,
-  DEFAULT_BAIT_BUCKET_SPRITE_DEFINITION_ID,
-  DEFAULT_BAIT_BUCKET_SPRITE_HEIGHT,
-  DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
-  DEFAULT_BAIT_BUCKET_SPRITE_WIDTH,
-  DEFAULT_BAIT_BUCKET_X,
-  DEFAULT_BAIT_BUCKET_Y,
-  DEFAULT_BAIT_BUCKET_Z_INDEX,
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_RUN_ACTION_ID,
-  DEFAULT_SPRITE_SCALE,
-} from '../../constants';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { PIER_BAIT_BUCKET_CONFIG } from './pier-bait-bucket-config';
 
 const NORMAL_FRAME_ID = 'bait-bucket-normal-frame';
 const DROPPED_FRAME_ID = 'bait-bucket-dropped-frame';
@@ -54,7 +33,7 @@ type BaitBucketControllerState = 'normal' | 'approaching-kick' | 'kicking' | 'dr
 function makeActionMenuBase(id: string): Omit<RoccoActionMenuDefinition, 'items'> {
   return {
     id,
-    targetInstanceIds: [DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID],
+    targetInstanceIds: [PIER_BAIT_BUCKET_CONFIG.spriteInstanceId],
     renderLayer: 'ui.action-menu',
     itemSize: ACTION_MENU_ITEM_SIZE,
     orbitRadius: ACTION_MENU_ORBIT_RADIUS,
@@ -76,19 +55,19 @@ function createNormalBaitBucketActionMenu(
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
       {
         id: 'kick',
         actionId: KICK_ACTION_ID,
         label: localization.text.actions.kick,
-        imageUri: roccoDefaultActionMenuAssetUrls.kick,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
       },
     ],
   };
@@ -104,13 +83,13 @@ function createDroppedBaitBucketActionMenu(
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
     ],
   };
@@ -120,15 +99,15 @@ export function createDefaultBaitBucketSpriteDefinition(
   localization: RoccoLocalization = createRoccoLocalization(),
 ): RoccoSpriteDefinition {
   return {
-    id: DEFAULT_BAIT_BUCKET_SPRITE_DEFINITION_ID,
+    id: PIER_BAIT_BUCKET_CONFIG.spriteDefinitionId,
     name: 'Rocco Demo Bait Bucket',
     images: createBaitBucketImages(),
     frames: createBaitBucketFrames(),
     animations: createBaitBucketAnimations(),
-    defaultAnimation: DEFAULT_BAIT_BUCKET_NORMAL_ANIMATION_ID,
+    defaultAnimation: PIER_BAIT_BUCKET_CONFIG.normalAnimationId,
     render: {
-      renderLayer: DEFAULT_BAIT_BUCKET_RENDER_LAYER,
-      zIndex: DEFAULT_BAIT_BUCKET_Z_INDEX,
+      renderLayer: PIER_BAIT_BUCKET_CONFIG.renderLayer,
+      zIndex: PIER_BAIT_BUCKET_CONFIG.zIndex,
       depthMode: 'baseline-sort',
       opacity: 1,
     },
@@ -146,15 +125,15 @@ function createBaitBucketImages(): RoccoSpriteDefinition['images'] {
   return [
     {
       id: 'bait-bucket-normal',
-      uri: roccoDefaultBaitBucketAssetUrls.normal,
-      width: DEFAULT_BAIT_BUCKET_SPRITE_WIDTH,
-      height: DEFAULT_BAIT_BUCKET_SPRITE_HEIGHT,
+      uri: pierBaitBucketAssetUrls.normal,
+      width: PIER_BAIT_BUCKET_CONFIG.spriteWidth,
+      height: PIER_BAIT_BUCKET_CONFIG.spriteHeight,
     },
     {
       id: 'bait-bucket-dropped',
-      uri: roccoDefaultBaitBucketAssetUrls.dropped,
-      width: DEFAULT_BAIT_BUCKET_SPRITE_WIDTH,
-      height: DEFAULT_BAIT_BUCKET_SPRITE_HEIGHT,
+      uri: pierBaitBucketAssetUrls.dropped,
+      width: PIER_BAIT_BUCKET_CONFIG.spriteWidth,
+      height: PIER_BAIT_BUCKET_CONFIG.spriteHeight,
     },
   ];
 }
@@ -166,8 +145,8 @@ function createBaitBucketFrames(): RoccoSpriteDefinition['frames'] {
       imageId: 'bait-bucket-normal',
       durationMs: 1000,
       pivot: {
-        x: DEFAULT_BAIT_BUCKET_NORMAL_PIVOT_X,
-        y: DEFAULT_BAIT_BUCKET_NORMAL_PIVOT_Y,
+        x: PIER_BAIT_BUCKET_CONFIG.normalPivotX,
+        y: PIER_BAIT_BUCKET_CONFIG.normalPivotY,
       },
       hitbox: {
         kind: 'rect',
@@ -182,8 +161,8 @@ function createBaitBucketFrames(): RoccoSpriteDefinition['frames'] {
       imageId: 'bait-bucket-dropped',
       durationMs: 1000,
       pivot: {
-        x: DEFAULT_BAIT_BUCKET_DROPPED_PIVOT_X,
-        y: DEFAULT_BAIT_BUCKET_DROPPED_PIVOT_Y,
+        x: PIER_BAIT_BUCKET_CONFIG.droppedPivotX,
+        y: PIER_BAIT_BUCKET_CONFIG.droppedPivotY,
       },
       hitbox: {
         kind: 'rect',
@@ -198,14 +177,14 @@ function createBaitBucketFrames(): RoccoSpriteDefinition['frames'] {
 
 function createBaitBucketAnimations(): RoccoSpriteDefinition['animations'] {
   return {
-    [DEFAULT_BAIT_BUCKET_NORMAL_ANIMATION_ID]: {
-      id: DEFAULT_BAIT_BUCKET_NORMAL_ANIMATION_ID,
+    [PIER_BAIT_BUCKET_CONFIG.normalAnimationId]: {
+      id: PIER_BAIT_BUCKET_CONFIG.normalAnimationId,
       loop: false,
       playbackRate: 1,
       frames: [{ frameId: NORMAL_FRAME_ID, durationMs: 1000 }],
     },
-    [DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID]: {
-      id: DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID,
+    [PIER_BAIT_BUCKET_CONFIG.droppedAnimationId]: {
+      id: PIER_BAIT_BUCKET_CONFIG.droppedAnimationId,
       loop: false,
       playbackRate: 1,
       frames: [{ frameId: DROPPED_FRAME_ID, durationMs: 1000 }],
@@ -251,14 +230,15 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
   private startKickApproach(): void {
     this.kickInputLease ??= this.engine.acquireInputLease('pier-bait-bucket-kick', 'blocked');
     this.engine.video.sprites.moveTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      DEFAULT_BAIT_BUCKET_X +
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      PIER_BAIT_BUCKET_CONFIG.x +
         KICK_APPROACH_DISTANCE -
-        DEFAULT_SPRITE_GROUND_ANCHOR_X * DEFAULT_SPRITE_SCALE,
-      DEFAULT_BAIT_BUCKET_Y - DEFAULT_SPRITE_GROUND_ANCHOR_Y * DEFAULT_SPRITE_SCALE,
+        ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * ROCCO_PLAYER_CONFIG.motion.scale,
+      PIER_BAIT_BUCKET_CONFIG.y -
+        ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * ROCCO_PLAYER_CONFIG.motion.scale,
       {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        onCompleteAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        action: ROCCO_PLAYER_CONFIG.ids.runAction,
+        onCompleteAction: ROCCO_PLAYER_CONFIG.ids.idleAction,
         stopDistance: 1,
       },
     );
@@ -304,7 +284,7 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
   private showRoccoThought(lines: readonly string[], historyKey: string): void {
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: ACTION_MESSAGE_TTL_MS,
@@ -318,15 +298,19 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
   }
 
   private updateApproach(): void {
-    if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+    if (this.engine.video.sprites.isMoving(ROCCO_PLAYER_CONFIG.ids.instance)) {
       return;
     }
 
-    this.engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_RUN_ACTION_ID, {
-      direction: 'left',
-      restart: true,
-      playbackRate: 0,
-    });
+    this.engine.video.sprites.playAction(
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      ROCCO_PLAYER_CONFIG.ids.runAction,
+      {
+        direction: 'left',
+        restart: true,
+        playbackRate: 0,
+      },
+    );
     this.state = 'kicking';
     this.kickElapsedMs = 0;
     this.droppedPoseApplied = false;
@@ -341,15 +325,15 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
     const progress = this.kickElapsedMs / KICK_DURATION_MS;
     const lift = Math.sin(progress * Math.PI) * KICK_LIFT_HEIGHT;
     this.engine.video.sprites.setPosition(
-      DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
-      DEFAULT_BAIT_BUCKET_X,
-      DEFAULT_BAIT_BUCKET_Y - lift,
+      PIER_BAIT_BUCKET_CONFIG.spriteInstanceId,
+      PIER_BAIT_BUCKET_CONFIG.x,
+      PIER_BAIT_BUCKET_CONFIG.y - lift,
     );
 
     if (progress >= 0.5 && !this.droppedPoseApplied) {
       this.engine.video.sprites.playAnimation(
-        DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
-        DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID,
+        PIER_BAIT_BUCKET_CONFIG.spriteInstanceId,
+        PIER_BAIT_BUCKET_CONFIG.droppedAnimationId,
         {
           restart: false,
         },
@@ -365,8 +349,8 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
   private finishKick(): void {
     this.applyDroppedPose();
     this.engine.video.sprites.playAction(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      ROCCO_PLAYER_CONFIG.ids.idleAction,
       {
         direction: 'left',
         restart: true,
@@ -389,13 +373,13 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
 
   private applyDroppedPose(): void {
     this.engine.video.sprites.setPosition(
-      DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
-      DEFAULT_BAIT_BUCKET_X,
-      DEFAULT_BAIT_BUCKET_Y,
+      PIER_BAIT_BUCKET_CONFIG.spriteInstanceId,
+      PIER_BAIT_BUCKET_CONFIG.x,
+      PIER_BAIT_BUCKET_CONFIG.y,
     );
     this.engine.video.sprites.playAnimation(
-      DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
-      DEFAULT_BAIT_BUCKET_DROPPED_ANIMATION_ID,
+      PIER_BAIT_BUCKET_CONFIG.spriteInstanceId,
+      PIER_BAIT_BUCKET_CONFIG.droppedAnimationId,
       {
         restart: false,
       },
@@ -442,7 +426,7 @@ class RoccoBaitBucketController implements RoccoDefaultBaitBucketController {
   }
 
   handleAction(activation: RoccoActionMenuActivation): void {
-    if (activation.targetInstanceId !== DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID) {
+    if (activation.targetInstanceId !== PIER_BAIT_BUCKET_CONFIG.spriteInstanceId) {
       return;
     }
 
@@ -477,7 +461,7 @@ export async function installDefaultBaitBucket(
   await (preloader?.preloadSpriteDefinition(engine, definition) ??
     engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
-  engine.video.sprites.removeSprite(DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID);
+  engine.video.sprites.removeSprite(PIER_BAIT_BUCKET_CONFIG.spriteInstanceId);
 
   engine.audio.registerSound({
     id: KICK_SOUND_ID,
@@ -492,17 +476,17 @@ export async function installDefaultBaitBucket(
   }
   engine.audio.stopSound(KICK_SOUND_ID);
 
-  engine.video.sprites.createSpriteFromDefinition(DEFAULT_BAIT_BUCKET_SPRITE_DEFINITION_ID, {
-    id: DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
+  engine.video.sprites.createSpriteFromDefinition(PIER_BAIT_BUCKET_CONFIG.spriteDefinitionId, {
+    id: PIER_BAIT_BUCKET_CONFIG.spriteInstanceId,
     transform: {
-      x: DEFAULT_BAIT_BUCKET_X,
-      y: DEFAULT_BAIT_BUCKET_Y,
-      scaleX: DEFAULT_BAIT_BUCKET_SCALE,
-      scaleY: DEFAULT_BAIT_BUCKET_SCALE,
+      x: PIER_BAIT_BUCKET_CONFIG.x,
+      y: PIER_BAIT_BUCKET_CONFIG.y,
+      scaleX: PIER_BAIT_BUCKET_CONFIG.scale,
+      scaleY: PIER_BAIT_BUCKET_CONFIG.scale,
       rotation: 0,
     },
-    renderLayer: DEFAULT_BAIT_BUCKET_RENDER_LAYER,
-    zIndex: DEFAULT_BAIT_BUCKET_Z_INDEX,
+    renderLayer: PIER_BAIT_BUCKET_CONFIG.renderLayer,
+    zIndex: PIER_BAIT_BUCKET_CONFIG.zIndex,
     depthMode: 'baseline-sort',
     opacity: 1,
     interactive: true,
@@ -520,7 +504,7 @@ export async function installDefaultBaitBucket(
 export function uninstallDefaultBaitBucket(engine: CartridgeSdkV1Runtime): void {
   engine.video.actionMenus.unregisterMenu(NORMAL_MENU_ID);
   engine.video.actionMenus.unregisterMenu(DROPPED_MENU_ID);
-  engine.video.sprites.removeSprite(DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID);
+  engine.video.sprites.removeSprite(PIER_BAIT_BUCKET_CONFIG.spriteInstanceId);
   engine.audio.stopSound(KICK_SOUND_ID);
   engine.audio.unregisterSound(KICK_SOUND_ID);
 }

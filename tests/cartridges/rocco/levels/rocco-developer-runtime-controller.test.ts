@@ -12,7 +12,7 @@ import {
 import {
   ROCCO_PLAYER_ACTION_MENU_ID,
   ROCCO_PLAYER_DEVELOPER_ACTION_ID,
-} from '../../../../src/cartridges/rocco/rocco-player-action-menu';
+} from '../../../../src/cartridges/rocco/games/rocco-default/player';
 import {
   ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
   ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
@@ -21,7 +21,7 @@ import {
 } from '../../../../src/cartridges/rocco/games/rocco-default/maps/nether';
 import { ROCCO_BAIT_SHOP_LEVEL_ID } from '../../../../src/cartridges/rocco/games/rocco-default/maps/shop';
 import { RoccoDeveloperRuntimeController } from '../../../../src/cartridges/rocco/levels/runtime/rocco-developer-runtime-controller';
-import { DEFAULT_SPRITE_INSTANCE_ID } from '../../../../src/cartridges/rocco/rocco-default-constants';
+import { ROCCO_PLAYER_CONFIG } from '../../../../src/cartridges/rocco/games/rocco-default/player';
 import type { ConsoleKernel } from '../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
@@ -94,7 +94,7 @@ function createSpriteDefinition(definitionId = 'test-sprite-definition'): RoccoS
 
 function createSprite(
   definitionId = 'test-sprite-definition',
-  instanceId = DEFAULT_SPRITE_INSTANCE_ID,
+  instanceId = ROCCO_PLAYER_CONFIG.ids.instance,
 ): RoccoSpriteInstance {
   return {
     id: instanceId,
@@ -297,7 +297,7 @@ describe('RoccoDeveloperRuntimeController', () => {
 
     const isHandled = controller.handlePlayerAction(engine, {
       definitionId: ROCCO_PLAYER_ACTION_MENU_ID,
-      targetInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
+      targetInstanceId: ROCCO_PLAYER_CONFIG.ids.instance,
       targetDefinitionId: 'rocco-player',
       itemId: 'developer-mode',
       actionId: ROCCO_PLAYER_DEVELOPER_ACTION_ID,
@@ -378,7 +378,7 @@ describe('RoccoDeveloperRuntimeController', () => {
 
   it('restores the original sprite animation state when cycle-sprite mode is cancelled', () => {
     const controller = createController();
-    const sprite = createSprite('cycle-target-definition', 'cycle-target');
+    const sprite = createSprite('cycle-target-definition', ROCCO_PLAYER_CONFIG.ids.instance);
     const definition = createSpriteDefinition(sprite.definitionId);
     const { engine, state } = createDeveloperEngine(sprite, definition);
 

@@ -7,7 +7,7 @@ import type { RoccoGridMenuCarriedItem } from '../../../../src/console/video/gri
 import type { InteractionContext } from '../../../../src/cartridges/rocco/interactions/interaction-types';
 import { createNetherSpecialSceneClickRules } from '../../../../src/cartridges/rocco/interactions/register-nether-interactions';
 import { ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID } from '../../../../src/cartridges/rocco/inventory/rocco-inventory';
-import { ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID } from '../../../../src/cartridges/rocco/rocco-default-constants';
+import { ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID } from '../../../../src/cartridges/rocco/games/rocco-default/maps/nether/levels';
 import { RoccoInventory } from '../../../../src/cartridges/rocco/inventory/rocco-inventory';
 import { createRoccoTwentyEurosInventoryItem } from '../../../../src/cartridges/rocco/inventory/rocco-inventory';
 import { createRoccoLocalization } from '../../../../src/cartridges/rocco/localization';

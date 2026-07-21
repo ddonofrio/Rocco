@@ -1,17 +1,10 @@
 import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
-import {
-  DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
-  DEFAULT_BAIT_SHOP_DOOR_PIVOT_X,
-  DEFAULT_BAIT_SHOP_DOOR_PIVOT_Y,
-  DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
-  DEFAULT_BAIT_SHOP_DOOR_WIDTH,
-  DEFAULT_SPRITE_FRAME_HEIGHT,
-  DEFAULT_SPRITE_FRAME_WIDTH,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_STAN_SLEEPING_ANIMATION_ID,
-  DEFAULT_STAN_SPRITE_INSTANCE_ID,
-} from '../../games/rocco-default/constants';
-import { createRoccoAppearanceSpriteDefinition } from '../../games/rocco-default/sprites';
+import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
+import { PIER_BAIT_SHOP_DOOR_CONFIG } from '../../games/rocco-default/maps/pier/pier-bait-shop-door-config';
+import { PIER_STAN_CONFIG } from '../../games/rocco-default/maps/pier/pier-stan-config';
+const DEFAULT_STAN_SPRITE_INSTANCE_ID = PIER_STAN_CONFIG.spriteInstanceId;
+const DEFAULT_STAN_SLEEPING_ANIMATION_ID = PIER_STAN_CONFIG.sleepingAnimationId;
+import { createRoccoAppearanceSpriteDefinition } from '../../games/rocco-default/player';
 import {
   createRoccoKeysInventoryItem,
   ROCCO_INVENTORY_BATA_ITEM_ID,
@@ -75,7 +68,7 @@ export class RoccoGameInteractionCoordinator {
     }
     roccoCartridgeMessageRuntime.think(
       engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       this.options.localization.text.keys.collectedLines,
       { ttlMs: 5600 },
       { count: 1, historyKey: 'keys-collected', isAvoidImmediateRepeat: true },
@@ -100,7 +93,7 @@ export class RoccoGameInteractionCoordinator {
     }
     roccoCartridgeMessageRuntime.think(
       engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       this.options.localization.text.inventory.pickupLine,
       { ttlMs: 3200 },
       { count: 1, historyKey: `pickup-${item.id}`, isAvoidImmediateRepeat: true },
@@ -135,8 +128,8 @@ export class RoccoGameInteractionCoordinator {
 
   doesPlayerOverlapBaitShopDoor(): boolean {
     const engine = this.options.getEngine();
-    const player = engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
-    const door = engine?.video.sprites.getSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
+    const player = engine?.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
+    const door = engine?.video.sprites.getSprite(PIER_BAIT_SHOP_DOOR_CONFIG.spriteInstanceId);
     if (!player || !door) {
       return false;
     }
@@ -146,12 +139,12 @@ export class RoccoGameInteractionCoordinator {
     const doorScaleY = door.transform.scaleY || 1;
     const playerLeft = player.transform.x;
     const playerTop = player.transform.y;
-    const playerRight = playerLeft + DEFAULT_SPRITE_FRAME_WIDTH * playerScaleX;
-    const playerBottom = playerTop + DEFAULT_SPRITE_FRAME_HEIGHT * playerScaleY;
-    const doorLeft = door.transform.x - DEFAULT_BAIT_SHOP_DOOR_PIVOT_X * doorScaleX;
-    const doorTop = door.transform.y - DEFAULT_BAIT_SHOP_DOOR_PIVOT_Y * doorScaleY;
-    const doorRight = doorLeft + DEFAULT_BAIT_SHOP_DOOR_WIDTH * doorScaleX;
-    const doorBottom = doorTop + DEFAULT_BAIT_SHOP_DOOR_HEIGHT * doorScaleY;
+    const playerRight = playerLeft + ROCCO_PLAYER_CONFIG.frame.width * playerScaleX;
+    const playerBottom = playerTop + ROCCO_PLAYER_CONFIG.frame.height * playerScaleY;
+    const doorLeft = door.transform.x - PIER_BAIT_SHOP_DOOR_CONFIG.pivotX * doorScaleX;
+    const doorTop = door.transform.y - PIER_BAIT_SHOP_DOOR_CONFIG.pivotY * doorScaleY;
+    const doorRight = doorLeft + PIER_BAIT_SHOP_DOOR_CONFIG.width * doorScaleX;
+    const doorBottom = doorTop + PIER_BAIT_SHOP_DOOR_CONFIG.height * doorScaleY;
     const overlapWidth = Math.min(playerRight, doorRight) - Math.max(playerLeft, doorLeft);
     const overlapHeight = Math.min(playerBottom, doorBottom) - Math.max(playerTop, doorTop);
     return overlapWidth >= 1 && overlapHeight >= 1;

@@ -2,7 +2,7 @@ import {
   ROCCO_PIER_END_LEVEL_ID,
   ROCCO_PIER_MIDDLE_LEVEL_ID,
   ROCCO_PIER_START_LEVEL_ID,
-} from '../../constants';
+} from './pier-level-ids';
 import type { RoccoLocalization } from '../../localization';
 import type { RoccoLevel } from '../../../../levels/rocco-level-types';
 import type { RpceMapDefinition, RpceLevelConnection } from '../../../../rpce/core';

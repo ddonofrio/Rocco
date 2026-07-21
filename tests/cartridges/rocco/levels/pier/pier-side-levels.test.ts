@@ -9,13 +9,11 @@ import type {
   RoccoSpriteWalkMap,
 } from '../../../../../src/console/video/sprites';
 import { createRoccoLocalization } from '../../../../../src/cartridges/rocco/localization';
+import { ROCCO_PLAYER_CONFIG } from '../../../../../src/cartridges/rocco/games/rocco-default/player';
 import {
   PIER_PLAYER_LEFT_ENTRY_X,
   PIER_PLAYER_RIGHT_ENTRY_X,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_SCALE,
-  DEFAULT_SPRITE_Y_VALUES,
-} from '../../../../../src/cartridges/rocco/rocco-default-constants';
+} from '../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-layout';
 import { RoccoPierEndLevel } from '../../../../../src/cartridges/rocco/levels/pier/pier-end-level';
 import { RoccoPierStartLevel } from '../../../../../src/cartridges/rocco/levels/pier/pier-start-level';
 
@@ -101,8 +99,8 @@ function createEngineMock(state: TestState): CartridgeSdkV1Runtime {
             transform: {
               x: options?.transform?.x ?? 0,
               y: options?.transform?.y ?? 0,
-              scaleX: options?.transform?.scaleX ?? DEFAULT_SPRITE_SCALE,
-              scaleY: options?.transform?.scaleY ?? DEFAULT_SPRITE_SCALE,
+              scaleX: options?.transform?.scaleX ?? ROCCO_PLAYER_CONFIG.motion.scale,
+              scaleY: options?.transform?.scaleY ?? ROCCO_PLAYER_CONFIG.motion.scale,
             },
             animation: {
               animationId: 'idle',
@@ -180,12 +178,15 @@ describe('RoccoPierStartLevel', () => {
     expect(level.connectors).toHaveLength(2);
     expect(level.connectors[0]).toMatchObject({
       id: 'west',
-      entryPoint: { x: PIER_PLAYER_LEFT_ENTRY_X, y: DEFAULT_SPRITE_Y_VALUES[0] ?? 180 },
+      entryPoint: {
+        x: PIER_PLAYER_LEFT_ENTRY_X,
+        y: ROCCO_PLAYER_CONFIG.placement.yValues[0] ?? 180,
+      },
       entryFacing: 'right',
     });
     expect(level.connectors[1]).toMatchObject({
       id: 'shop-exit',
-      entryPoint: { x: 850, y: (DEFAULT_SPRITE_Y_VALUES[0] ?? 180) - 30 },
+      entryPoint: { x: 850, y: (ROCCO_PLAYER_CONFIG.placement.yValues[0] ?? 180) - 30 },
       entryFacing: 'down',
     });
   });
@@ -197,9 +198,9 @@ describe('RoccoPierStartLevel', () => {
 
     await level.mount(engine);
 
-    const rocco = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+    const rocco = findCreatedSprite(state, ROCCO_PLAYER_CONFIG.ids.instance);
     expect(rocco?.transform?.x).toBe(PIER_PLAYER_LEFT_ENTRY_X);
-    expect(rocco?.transform?.y).toBe(DEFAULT_SPRITE_Y_VALUES[0] ?? 180);
+    expect(rocco?.transform?.y).toBe(ROCCO_PLAYER_CONFIG.placement.yValues[0] ?? 180);
   });
 
   it('uses the shop-exit connector when requested', async () => {
@@ -209,9 +210,9 @@ describe('RoccoPierStartLevel', () => {
 
     await level.mount(engine, { entryConnectorId: 'shop-exit' });
 
-    const rocco = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+    const rocco = findCreatedSprite(state, ROCCO_PLAYER_CONFIG.ids.instance);
     expect(rocco?.transform?.x).toBe(850);
-    expect(rocco?.transform?.y).toBe((DEFAULT_SPRITE_Y_VALUES[0] ?? 180) - 30);
+    expect(rocco?.transform?.y).toBe((ROCCO_PLAYER_CONFIG.placement.yValues[0] ?? 180) - 30);
   });
 
   it('registers the bait shop door closing sound at half of the previous volume', async () => {
@@ -238,7 +239,10 @@ describe('RoccoPierEndLevel', () => {
     expect(level.connectors).toHaveLength(1);
     expect(level.connectors[0]).toMatchObject({
       id: 'east',
-      entryPoint: { x: PIER_PLAYER_RIGHT_ENTRY_X, y: DEFAULT_SPRITE_Y_VALUES[0] ?? 180 },
+      entryPoint: {
+        x: PIER_PLAYER_RIGHT_ENTRY_X,
+        y: ROCCO_PLAYER_CONFIG.placement.yValues[0] ?? 180,
+      },
       entryFacing: 'left',
     });
   });
@@ -250,8 +254,8 @@ describe('RoccoPierEndLevel', () => {
 
     await level.mount(engine);
 
-    const rocco = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+    const rocco = findCreatedSprite(state, ROCCO_PLAYER_CONFIG.ids.instance);
     expect(rocco?.transform?.x).toBe(PIER_PLAYER_RIGHT_ENTRY_X);
-    expect(rocco?.transform?.y).toBe(DEFAULT_SPRITE_Y_VALUES[0] ?? 180);
+    expect(rocco?.transform?.y).toBe(ROCCO_PLAYER_CONFIG.placement.yValues[0] ?? 180);
   });
 });

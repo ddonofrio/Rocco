@@ -17,26 +17,16 @@ import {
 import { BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID } from '../../inventory';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT, ROCCO_BACKGROUND_COLOR } from '../../game-design';
+import { PIER_WALK_MAP_ID, PIER_WALK_MAP_ALPHA_THRESHOLD } from '../pier/pier-layout';
 import {
-  DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_ROCCO_GREEN_BLACK,
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_RUN_ACTION_ID,
-  DEFAULT_SPRITE_SCALE,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_WALK_MAP_ALPHA_THRESHOLD,
-  DEFAULT_WALK_MAP_ID,
-} from '../../constants';
-import {
-  installDefaultSprite,
-  uninstallDefaultSprite,
-  type RoccoDefaultSpriteController,
-} from '../../sprites';
+  installRoccoPlayerSprite,
+  uninstallRoccoPlayerSprite,
+  type RoccoPlayerSpriteController,
+} from '../../player';
 import {
   RoccoScriptedSceneInteractionController,
   type RoccoScriptedSceneInteractionDefinition,
@@ -142,7 +132,7 @@ const BAIT_SHOP_CASH_REGISTER_GRAB_HISTORY_KEY = 'bait-shop-cash-register-grab';
 const BAIT_SHOP_CASH_REGISTER_KICK_HISTORY_KEY = 'bait-shop-cash-register-kick';
 const BAIT_SHOP_WINDOW_HISTORY_KEY = 'bait-shop-window';
 const BAIT_SHOP_LEFT_BARREL_HISTORY_KEY = 'bait-shop-left-barrel';
-const BAIT_SHOP_ROCCO_SCALE = DEFAULT_SPRITE_SCALE * 1.2;
+const BAIT_SHOP_ROCCO_SCALE = ROCCO_PLAYER_CONFIG.motion.scale * 1.2;
 const BAIT_SHOP_ROCCO_TINT = '#cccccc';
 const BAIT_SHOP_COUNTER_OCCLUSION_THRESHOLD_Y = 338;
 const BAIT_SHOP_ACTION_MENU_ITEM_SIZE = 92;
@@ -190,8 +180,8 @@ const BAIT_SHOP_CONNECTORS: readonly RoccoLevelConnector[] = [
     id: BAIT_SHOP_SECOND_SCREEN_CONNECTOR_ID,
     exitArea: {
       x: 0,
-      y: DEFAULT_DESIGN_HEIGHT - BAIT_SHOP_SECOND_SCREEN_EXIT_TRIGGER_HEIGHT,
-      width: DEFAULT_DESIGN_WIDTH,
+      y: ROCCO_DESIGN_HEIGHT - BAIT_SHOP_SECOND_SCREEN_EXIT_TRIGGER_HEIGHT,
+      width: ROCCO_DESIGN_WIDTH,
       height: BAIT_SHOP_SECOND_SCREEN_EXIT_TRIGGER_HEIGHT,
     },
     entryPoint: {
@@ -209,8 +199,8 @@ const BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE: RoccoGraphicPlane = {
   source: {
     kind: 'image',
     uri: BAIT_SHOP_SOUVENIR_CLOSEUP_IMAGE_URL,
-    width: DEFAULT_DESIGN_WIDTH,
-    height: DEFAULT_DESIGN_HEIGHT,
+    width: ROCCO_DESIGN_WIDTH,
+    height: ROCCO_DESIGN_HEIGHT,
   },
   colorModel: { kind: 'native' },
   transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
@@ -219,8 +209,8 @@ const BAIT_SHOP_SOUVENIR_CLOSEUP_PLANE: RoccoGraphicPlane = {
   viewport: {
     x: 0,
     y: 0,
-    width: DEFAULT_DESIGN_WIDTH,
-    height: DEFAULT_DESIGN_HEIGHT,
+    width: ROCCO_DESIGN_WIDTH,
+    height: ROCCO_DESIGN_HEIGHT,
   },
   opacity: 1,
   priority: 120,
@@ -274,8 +264,8 @@ function toOriginFromGroundPoint(
   scaleY: number,
 ): RoccoPoint {
   return {
-    x: groundPoint.x - DEFAULT_SPRITE_GROUND_ANCHOR_X * scaleX,
-    y: groundPoint.y - DEFAULT_SPRITE_GROUND_ANCHOR_Y * scaleY,
+    x: groundPoint.x - ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * scaleX,
+    y: groundPoint.y - ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * scaleY,
   };
 }
 
@@ -374,8 +364,8 @@ function makeFullscreenPlaneBase(): Pick<
     viewport: {
       x: 0,
       y: 0,
-      width: DEFAULT_DESIGN_WIDTH,
-      height: DEFAULT_DESIGN_HEIGHT,
+      width: ROCCO_DESIGN_WIDTH,
+      height: ROCCO_DESIGN_HEIGHT,
     },
     opacity: 1,
     visible: true,
@@ -394,7 +384,7 @@ function createDefaultBaitShopPlanes(
       name: 'Bait Shop Backplate',
       source: {
         kind: 'solid',
-        color: DEFAULT_ROCCO_GREEN_BLACK,
+        color: ROCCO_BACKGROUND_COLOR,
       },
       priority: 0,
       renderLayer: 'background.back',
@@ -406,8 +396,8 @@ function createDefaultBaitShopPlanes(
       source: {
         kind: 'image',
         uri: definition.backgroundUri,
-        width: DEFAULT_DESIGN_WIDTH,
-        height: DEFAULT_DESIGN_HEIGHT,
+        width: ROCCO_DESIGN_WIDTH,
+        height: ROCCO_DESIGN_HEIGHT,
       },
       priority: 0,
       renderLayer: 'background.main',
@@ -422,8 +412,8 @@ function createDefaultBaitShopPlanes(
       source: {
         kind: 'image',
         uri: definition.foregroundUri,
-        width: DEFAULT_DESIGN_WIDTH,
-        height: DEFAULT_DESIGN_HEIGHT,
+        width: ROCCO_DESIGN_WIDTH,
+        height: ROCCO_DESIGN_HEIGHT,
       },
       depthMode: definition.foregroundDepthMode,
       priority: 0,
@@ -442,7 +432,7 @@ function createDefaultBaitShopScene(definition: RoccoBaitShopSceneDefinition): R
   return {
     id: definition.sceneId,
     planes: createDefaultBaitShopPlanes(definition),
-    clearColor: DEFAULT_ROCCO_GREEN_BLACK,
+    clearColor: ROCCO_BACKGROUND_COLOR,
     palettes: [],
     colorRegisterSets: [],
     attributeMaps: [],
@@ -480,7 +470,7 @@ function normalizeBaitShopScene(
     ...scene,
     id: definition.sceneId,
     planes: nextPlanes,
-    clearColor: DEFAULT_ROCCO_GREEN_BLACK,
+    clearColor: ROCCO_BACKGROUND_COLOR,
     palettes: scene.palettes ?? [],
     colorRegisterSets: scene.colorRegisterSets ?? [],
     attributeMaps: scene.attributeMaps ?? [],
@@ -523,8 +513,8 @@ export async function installBaitShopWalkMap(
   preloader?.addWalkMap();
   const image = await loadImage(walkMapImageUrl);
   const canvas = document.createElement('canvas');
-  canvas.width = DEFAULT_DESIGN_WIDTH;
-  canvas.height = DEFAULT_DESIGN_HEIGHT;
+  canvas.width = ROCCO_DESIGN_WIDTH;
+  canvas.height = ROCCO_DESIGN_HEIGHT;
   const context = canvas.getContext('2d');
   if (!context) {
     throw new Error('Could not read bait shop walk map image.');
@@ -536,17 +526,17 @@ export async function installBaitShopWalkMap(
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
   engine.video.sprites.registerWalkMap(
     createRoccoSpriteWalkMapFromImageData({
-      id: DEFAULT_WALK_MAP_ID,
+      id: PIER_WALK_MAP_ID,
       width: imageData.width,
       height: imageData.height,
       data: imageData.data,
-      alphaThreshold: DEFAULT_WALK_MAP_ALPHA_THRESHOLD,
+      alphaThreshold: PIER_WALK_MAP_ALPHA_THRESHOLD,
     }),
   );
 }
 
 export function uninstallBaitShopWalkMap(engine: CartridgeSdkV1Runtime): void {
-  engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
+  engine.video.sprites.unregisterWalkMap(PIER_WALK_MAP_ID);
 }
 
 function installBaitShopSceneTargets(
@@ -624,7 +614,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
   private readonly benchJumpController: BaitShopBenchJumpController;
   private benchJumpInputLease: InputPolicyLease | undefined;
   private engine: CartridgeSdkV1Runtime | undefined;
-  private spriteController: RoccoDefaultSpriteController | undefined;
+  private spriteController: RoccoPlayerSpriteController | undefined;
   private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined;
   private souvenirCloseupVisible = false;
   private hiddenKeysRevealed = false;
@@ -650,7 +640,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
   resolveJumpOrigins(
     direction: 'up' | 'down',
   ): { startOrigin: RoccoPoint; endOrigin: RoccoPoint } | undefined {
-    const sprite = this.engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const sprite = this.engine?.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     if (!sprite) {
       return undefined;
     }
@@ -681,19 +671,19 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
   }
 
   stopPlayerMovement(): void {
-    this.engine?.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    this.engine?.video.sprites.stopMovement(ROCCO_PLAYER_CONFIG.ids.instance);
   }
 
   setPlayerPosition(origin: RoccoPoint): void {
-    this.engine?.video.sprites.setPosition(DEFAULT_SPRITE_INSTANCE_ID, origin.x, origin.y, {
+    this.engine?.video.sprites.setPosition(ROCCO_PLAYER_CONFIG.ids.instance, origin.x, origin.y, {
       constrainToWalkMap: false,
     });
   }
 
   playRunAction(direction: RoccoFacingDirection): void {
     this.engine?.video.sprites.playAction(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      DEFAULT_SPRITE_RUN_ACTION_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      ROCCO_PLAYER_CONFIG.ids.runAction,
       {
         direction,
         restart: true,
@@ -704,8 +694,8 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
 
   playIdleAction(direction: RoccoFacingDirection): void {
     this.engine?.video.sprites.playAction(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      ROCCO_PLAYER_CONFIG.ids.idleAction,
       {
         direction,
         restart: true,
@@ -721,7 +711,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
 
   onJumpUpFinished(): void {
     this.engine?.video.messages.think(
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       this.localization.text.baitShop.benchJumpUpLine,
       {
         ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
@@ -739,7 +729,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     }
     if (options.walkTo) {
       this.engine.video.sprites.goTo(
-        DEFAULT_SPRITE_INSTANCE_ID,
+        ROCCO_PLAYER_CONFIG.ids.instance,
         options.walkTo.x,
         options.walkTo.y,
         {
@@ -869,11 +859,11 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
       return;
     }
 
-    this.engine.video.sprites.bindToWalkMap(DEFAULT_SPRITE_INSTANCE_ID, {
-      walkMapId: DEFAULT_WALK_MAP_ID,
+    this.engine.video.sprites.bindToWalkMap(ROCCO_PLAYER_CONFIG.ids.instance, {
+      walkMapId: PIER_WALK_MAP_ID,
       groundAnchor: {
-        x: DEFAULT_SPRITE_GROUND_ANCHOR_X,
-        y: DEFAULT_SPRITE_GROUND_ANCHOR_Y,
+        x: ROCCO_PLAYER_CONFIG.frame.groundAnchor.x,
+        y: ROCCO_PLAYER_CONFIG.frame.groundAnchor.y,
       },
       constrainMovement: isMovementConstrained,
       followSurface: true,
@@ -948,19 +938,19 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
           id: 'kick',
           actionId: 'kick',
           label: this.localization.text.actions.kick,
-          imageUri: roccoDefaultActionMenuAssetUrls.kick,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
         },
         {
           id: 'grab',
           actionId: 'grab',
           label: this.localization.text.actions.grab,
-          imageUri: roccoDefaultActionMenuAssetUrls.grab,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
         },
         {
           id: 'look',
           actionId: 'look',
           label: this.localization.text.actions.look,
-          imageUri: roccoDefaultActionMenuAssetUrls.look,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.look,
         },
       ],
     };
@@ -977,19 +967,19 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
           id: 'kick',
           actionId: 'kick',
           label: this.localization.text.actions.kick,
-          imageUri: roccoDefaultActionMenuAssetUrls.kick,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
         },
         {
           id: 'grab',
           actionId: 'grab',
           label: this.localization.text.actions.grab,
-          imageUri: roccoDefaultActionMenuAssetUrls.grab,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
         },
         {
           id: 'look',
           actionId: 'look',
           label: this.localization.text.actions.look,
-          imageUri: roccoDefaultActionMenuAssetUrls.look,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.look,
         },
       ],
     };
@@ -1006,19 +996,19 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
           id: 'look',
           actionId: 'look',
           label: this.localization.text.actions.look,
-          imageUri: roccoDefaultActionMenuAssetUrls.look,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.look,
         },
         {
           id: 'grab',
           actionId: 'grab',
           label: this.localization.text.actions.grab,
-          imageUri: roccoDefaultActionMenuAssetUrls.grab,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
         },
         {
           id: 'kick',
           actionId: 'kick',
           label: this.localization.text.actions.kick,
-          imageUri: roccoDefaultActionMenuAssetUrls.kick,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
         },
       ],
     };
@@ -1035,19 +1025,19 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
           id: 'look',
           actionId: 'look',
           label: this.localization.text.actions.look,
-          imageUri: roccoDefaultActionMenuAssetUrls.look,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.look,
         },
         {
           id: 'kick',
           actionId: 'kick',
           label: this.localization.text.actions.kick,
-          imageUri: roccoDefaultActionMenuAssetUrls.kick,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
         },
         {
           id: 'grab',
           actionId: 'grab',
           label: this.localization.text.actions.grab,
-          imageUri: roccoDefaultActionMenuAssetUrls.grab,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
         },
       ],
     };
@@ -1064,13 +1054,13 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
           id: 'look',
           actionId: 'look',
           label: this.localization.text.actions.look,
-          imageUri: roccoDefaultActionMenuAssetUrls.look,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.look,
         },
         {
           id: 'open',
           actionId: 'open',
           label: this.localization.text.baitShop.toiletDoorOpenLabel,
-          imageUri: roccoDefaultActionMenuAssetUrls.grab,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
         },
       ],
     };
@@ -1100,7 +1090,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       lines,
       {
         ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
@@ -1118,7 +1108,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
       return;
     }
 
-    this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, line, {
+    this.engine.video.messages.think(ROCCO_PLAYER_CONFIG.ids.instance, line, {
       ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
     });
   }
@@ -1182,7 +1172,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
       this.engine.video.sceneTargets?.registerTarget({
         instanceId: BAIT_SHOP_SOUVENIR_CLOSEUP_TARGET_INSTANCE_ID,
         definitionId: 'rocco-bait-shop-souvenir-closeup',
-        shape: rect(0, 0, DEFAULT_DESIGN_WIDTH, DEFAULT_DESIGN_HEIGHT),
+        shape: rect(0, 0, ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT),
         priority: 999,
         suppressDefaultPlayerMove: true,
       });
@@ -1194,19 +1184,21 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
       return;
     }
 
-    const sprite = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const sprite = this.engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     if (!sprite) {
       return;
     }
 
     const groundX =
-      sprite.transform.x + DEFAULT_SPRITE_GROUND_ANCHOR_X * (sprite.transform.scaleX || 1);
+      sprite.transform.x +
+      ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * (sprite.transform.scaleX || 1);
     const groundY =
-      sprite.transform.y + DEFAULT_SPRITE_GROUND_ANCHOR_Y * (sprite.transform.scaleY || 1);
+      sprite.transform.y +
+      ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * (sprite.transform.scaleY || 1);
     const facing = resolveBaitShopFacing(focusX, groundX, groundY);
     this.engine.video.sprites.playAction(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      ROCCO_PLAYER_CONFIG.ids.idleAction,
       {
         direction: facing,
         restart: true,
@@ -1359,7 +1351,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     this.syncSouvenirCloseupPresentation();
     this.syncHiddenKeysTarget();
     this.installActionMenus(engine);
-    this.spriteController = await installDefaultSprite(
+    this.spriteController = await installRoccoPlayerSprite(
       engine,
       {
         appearance: options.roccoAppearance,
@@ -1417,7 +1409,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
       onReached: () => {
         roccoCartridgeMessageRuntime.think(
           engine,
-          DEFAULT_SPRITE_INSTANCE_ID,
+          ROCCO_PLAYER_CONFIG.ids.instance,
           this.resolveShellCityLookLines(),
           {
             ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
@@ -1438,7 +1430,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
       onReached: () => {
         roccoCartridgeMessageRuntime.think(
           engine,
-          DEFAULT_SPRITE_INSTANCE_ID,
+          ROCCO_PLAYER_CONFIG.ids.instance,
           this.resolveWindowLookLines(),
           {
             ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
@@ -1459,7 +1451,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
       onReached: () => {
         roccoCartridgeMessageRuntime.think(
           engine,
-          DEFAULT_SPRITE_INSTANCE_ID,
+          ROCCO_PLAYER_CONFIG.ids.instance,
           this.localization.text.baitShop.leftBarrelLookLines,
           { ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS },
           { count: 1, historyKey: BAIT_SHOP_LEFT_BARREL_HISTORY_KEY },
@@ -1476,7 +1468,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     this.souvenirCloseupVisible = false;
     this.syncSouvenirCloseupPresentation();
     uninstallBaitShopSceneTargets(engine);
-    uninstallDefaultSprite(engine);
+    uninstallRoccoPlayerSprite(engine);
     uninstallBaitShopWalkMap(engine);
     engine.audio.stopSound(DOOR_CLOSING_SOUND_ID);
     engine.audio.unregisterSound(DOOR_CLOSING_SOUND_ID);

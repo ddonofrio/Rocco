@@ -7,6 +7,11 @@ import type {
 } from '../../console/cartridges/types';
 import type { CartridgeSdkV1Runtime } from '../../console/cartridges/sdk-v1';
 import { createRoccoDefaultGameDefinition, createRoccoLocalization } from './games/rocco-default';
+import {
+  playRoccoGameMusic,
+  registerRoccoGameMusic,
+  unregisterRoccoGameMusic,
+} from './games/rocco-default/audio';
 import type {
   RoccoLevelManagerMountResult,
   RoccoLevelManagerOptions,
@@ -15,40 +20,9 @@ import { RpceAssetPreloader, RpceGameRuntime } from './rpce/core';
 import type { RpceAssetPreloaderProgress } from './rpce/core/rpce-asset-preloader';
 import { roccoDefaultCartridgeManifest } from './rocco-default-manifest';
 
-const roccoDefaultGameMusicTrackUrls = [
-  `${import.meta.env.BASE_URL}cartridges/rocco/music/game-music-1.mp3`,
-  `${import.meta.env.BASE_URL}cartridges/rocco/music/game-music-2.mp3`,
-] as const;
-
 type RoccoCartridgeSdk = CartridgeSdkV1Runtime;
 
-function registerGameMusicPlaylist(sdk: RoccoCartridgeSdk, playlistId: string): void {
-  sdk.jukebox.registerPlaylist({
-    id: playlistId,
-    tracks: [
-      {
-        id: 'game-music-1',
-        uri: roccoDefaultGameMusicTrackUrls[0],
-        volume: 0.5,
-      },
-      {
-        id: 'game-music-2',
-        uri: roccoDefaultGameMusicTrackUrls[1],
-        volume: 0.5,
-      },
-    ],
-    mixMode: {
-      type: 'auto-mix',
-      fadeDurationMs: 1500,
-      silenceThreshold: 0.01,
-      minSegmentDurationMs: 3000,
-    },
-    globalVolume: 0.2,
-  });
-}
-
 export class RoccoDefaultCartridge implements RoccoCartridge {
-  private static readonly GAME_MUSIC_PLAYLIST_ID = 'rocco-game-music';
   private gameRuntime:
     | RpceGameRuntime<RoccoLevelManagerOptions, RoccoLevelManagerMountResult>
     | undefined = undefined;
@@ -74,7 +48,7 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     this.gameRuntime?.unmount();
     this.gameRuntime = undefined;
     const sdk = mountContext.sdk as RoccoCartridgeSdk;
-    sdk.jukebox.unregisterPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
+    unregisterRoccoGameMusic(sdk);
     void this.remountDefaultDemo(mountContext);
   }
 
@@ -101,7 +75,7 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
     });
 
     try {
-      registerGameMusicPlaylist(sdk, RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
+      registerRoccoGameMusic(sdk);
 
       const gameRuntime = new RpceGameRuntime<
         RoccoLevelManagerOptions,
@@ -120,7 +94,7 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
       this.gameRuntime = gameRuntime;
       await gameRuntime.mount(sdk, preloader);
       try {
-        await sdk.jukebox.playPlaylist(RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID);
+        await playRoccoGameMusic(sdk);
       } catch {
         sdk.log('System', 'Background music could not start.');
       }
@@ -147,9 +121,9 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
   }
 
   stop(): void {
-    this.mountContext?.sdk.jukebox?.unregisterPlaylist(
-      RoccoDefaultCartridge.GAME_MUSIC_PLAYLIST_ID,
-    );
+    if (this.mountContext?.sdk) {
+      unregisterRoccoGameMusic(this.mountContext.sdk);
+    }
     this.gameRuntime?.unmount();
     this.gameRuntime = undefined;
     this.mountContext = undefined;

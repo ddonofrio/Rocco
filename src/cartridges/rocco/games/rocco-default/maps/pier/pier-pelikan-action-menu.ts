@@ -1,9 +1,10 @@
 import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuDefinition } from '../../../../../../console/video/action-menu';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
-import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import { DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_INSTANCE_ID } from '../../constants';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { PIER_PELIKAN_CONFIG } from './pier-pelikan-config';
 
 export const DEFAULT_ACTION_MENU_ID = 'rocco-default-action-menu';
 
@@ -23,7 +24,7 @@ export function createDefaultActionMenuDefinition(
 ): RoccoActionMenuDefinition {
   return {
     id: DEFAULT_ACTION_MENU_ID,
-    targetInstanceIds: [DEFAULT_PELIKAN_SPRITE_INSTANCE_ID],
+    targetInstanceIds: [PIER_PELIKAN_CONFIG.spriteInstanceId],
     renderLayer: 'ui.action-menu',
     itemSize: DEFAULT_ACTION_MENU_ITEM_SIZE,
     orbitRadius: DEFAULT_ACTION_MENU_ORBIT_RADIUS,
@@ -37,25 +38,25 @@ export function createDefaultActionMenuDefinition(
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
       {
         id: 'talk',
         actionId: 'talk',
         label: localization.text.actions.talk,
-        imageUri: roccoDefaultActionMenuAssetUrls.talk,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.talk,
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
       {
         id: 'kick',
         actionId: 'kick',
         label: localization.text.actions.kick,
-        imageUri: roccoDefaultActionMenuAssetUrls.kick,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
       },
     ],
   };
@@ -75,7 +76,7 @@ export function showDefaultPelikanTalkReaction(
 ): void {
   roccoCartridgeMessageRuntime.say(
     engine,
-    DEFAULT_SPRITE_INSTANCE_ID,
+    ROCCO_PLAYER_CONFIG.ids.instance,
     localization.text.pelikan.talkLines,
     {
       ttlMs: DEFAULT_PELIKAN_MESSAGE_TTL_MS,
@@ -130,7 +131,7 @@ export function showDefaultPelikanSimpleReaction(
 
   roccoCartridgeMessageRuntime.think(
     engine,
-    DEFAULT_SPRITE_INSTANCE_ID,
+    ROCCO_PLAYER_CONFIG.ids.instance,
     [...selection.lines],
     {
       ttlMs: DEFAULT_PELIKAN_MESSAGE_TTL_MS,

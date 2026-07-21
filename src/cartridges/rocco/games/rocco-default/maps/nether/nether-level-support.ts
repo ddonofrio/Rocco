@@ -6,15 +6,9 @@ import {
   type RoccoSpriteWalkMap,
 } from '../../../../../../console/video/sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
-import {
-  DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_ROCCO_GREEN_BLACK,
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
-  DEFAULT_WALK_MAP_ALPHA_THRESHOLD,
-  DEFAULT_WALK_MAP_ID,
-} from '../../constants';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT, ROCCO_BACKGROUND_COLOR } from '../../game-design';
+import { PIER_WALK_MAP_ID, PIER_WALK_MAP_ALPHA_THRESHOLD } from '../pier/pier-layout';
 
 export interface RoccoNetherSceneDefinition {
   sceneId: string;
@@ -44,7 +38,7 @@ function hasSameJsonShape(left: unknown, right: unknown): boolean {
 function buildNetherScene(definition: RoccoNetherSceneDefinition): RoccoPlaneScene {
   return {
     id: definition.sceneId,
-    clearColor: DEFAULT_ROCCO_GREEN_BLACK,
+    clearColor: ROCCO_BACKGROUND_COLOR,
     palettes: [],
     colorRegisterSets: [],
     attributeMaps: [],
@@ -56,7 +50,7 @@ function buildNetherScene(definition: RoccoNetherSceneDefinition): RoccoPlaneSce
         visible: true,
         source: {
           kind: 'solid',
-          color: DEFAULT_ROCCO_GREEN_BLACK,
+          color: ROCCO_BACKGROUND_COLOR,
         },
         colorModel: { kind: 'native' },
         transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
@@ -65,8 +59,8 @@ function buildNetherScene(definition: RoccoNetherSceneDefinition): RoccoPlaneSce
         viewport: {
           x: 0,
           y: 0,
-          width: DEFAULT_DESIGN_WIDTH,
-          height: DEFAULT_DESIGN_HEIGHT,
+          width: ROCCO_DESIGN_WIDTH,
+          height: ROCCO_DESIGN_HEIGHT,
         },
         opacity: 1,
         priority: 0,
@@ -80,8 +74,8 @@ function buildNetherScene(definition: RoccoNetherSceneDefinition): RoccoPlaneSce
         source: {
           kind: 'image',
           uri: definition.backgroundUri,
-          width: DEFAULT_DESIGN_WIDTH,
-          height: DEFAULT_DESIGN_HEIGHT,
+          width: ROCCO_DESIGN_WIDTH,
+          height: ROCCO_DESIGN_HEIGHT,
         },
         colorModel: { kind: 'native' },
         transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
@@ -90,8 +84,8 @@ function buildNetherScene(definition: RoccoNetherSceneDefinition): RoccoPlaneSce
         viewport: {
           x: 0,
           y: 0,
-          width: DEFAULT_DESIGN_WIDTH,
-          height: DEFAULT_DESIGN_HEIGHT,
+          width: ROCCO_DESIGN_WIDTH,
+          height: ROCCO_DESIGN_HEIGHT,
         },
         opacity: 1,
         priority: 0,
@@ -110,7 +104,7 @@ function normalizeNetherScene(
   const nextScene: RoccoPlaneScene = {
     ...scene,
     id: definition.sceneId,
-    clearColor: DEFAULT_ROCCO_GREEN_BLACK,
+    clearColor: ROCCO_BACKGROUND_COLOR,
     palettes: scene.palettes ?? [],
     colorRegisterSets: scene.colorRegisterSets ?? [],
     attributeMaps: scene.attributeMaps ?? [],
@@ -177,7 +171,7 @@ export function resolveNetherWalkMapDepthRange(walkMap: RoccoSpriteWalkMap): {
   if (!Number.isFinite(farY) || !Number.isFinite(nearY)) {
     return {
       farY: 0,
-      nearY: DEFAULT_DESIGN_HEIGHT,
+      nearY: ROCCO_DESIGN_HEIGHT,
     };
   }
 
@@ -191,8 +185,8 @@ export async function createNetherWalkMapProfile(
   preloader?.addWalkMap();
   const image = await loadImage(walkPathUri);
   const canvas = document.createElement('canvas');
-  canvas.width = DEFAULT_DESIGN_WIDTH;
-  canvas.height = DEFAULT_DESIGN_HEIGHT;
+  canvas.width = ROCCO_DESIGN_WIDTH;
+  canvas.height = ROCCO_DESIGN_HEIGHT;
   const context = canvas.getContext('2d');
   if (!context) {
     throw new Error('Could not read Nether walk path image.');
@@ -203,11 +197,11 @@ export async function createNetherWalkMapProfile(
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
   const walkMap = createRoccoSpriteWalkMapFromImageData({
-    id: DEFAULT_WALK_MAP_ID,
+    id: PIER_WALK_MAP_ID,
     width: imageData.width,
     height: imageData.height,
     data: imageData.data,
-    alphaThreshold: DEFAULT_WALK_MAP_ALPHA_THRESHOLD,
+    alphaThreshold: PIER_WALK_MAP_ALPHA_THRESHOLD,
   });
   const depthRange = resolveNetherWalkMapDepthRange(walkMap);
 
@@ -276,8 +270,8 @@ export function projectGroundPointToWalkMap(
 
 export function toOriginFromGroundPoint(groundPoint: RoccoPoint, scale: number): RoccoPoint {
   return {
-    x: groundPoint.x - DEFAULT_SPRITE_GROUND_ANCHOR_X * scale,
-    y: groundPoint.y - DEFAULT_SPRITE_GROUND_ANCHOR_Y * scale,
+    x: groundPoint.x - ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * scale,
+    y: groundPoint.y - ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * scale,
   };
 }
 
@@ -287,8 +281,8 @@ export function projectOriginToWalkMap(
   scale: number,
 ): RoccoPoint {
   const groundPoint = {
-    x: origin.x + DEFAULT_SPRITE_GROUND_ANCHOR_X * scale,
-    y: origin.y + DEFAULT_SPRITE_GROUND_ANCHOR_Y * scale,
+    x: origin.x + ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * scale,
+    y: origin.y + ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * scale,
   };
 
   return toOriginFromGroundPoint(projectGroundPointToWalkMap(walkMap, groundPoint), scale);

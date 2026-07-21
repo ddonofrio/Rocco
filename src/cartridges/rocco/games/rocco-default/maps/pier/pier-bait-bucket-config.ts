@@ -1,0 +1,17 @@
+export const PIER_BAIT_BUCKET_CONFIG = {
+  spriteDefinitionId: 'rocco-bait-bucket-sprite',
+  spriteInstanceId: 'rocco-bait-bucket-main',
+  normalAnimationId: 'bait-bucket-normal',
+  droppedAnimationId: 'bait-bucket-dropped',
+  spriteWidth: 1254,
+  spriteHeight: 1254,
+  scale: 0.068,
+  x: 295,
+  y: 318,
+  normalPivotX: 621,
+  normalPivotY: 999,
+  droppedPivotX: 602,
+  droppedPivotY: 968,
+  renderLayer: 'world.actors',
+  zIndex: 20,
+} as const;

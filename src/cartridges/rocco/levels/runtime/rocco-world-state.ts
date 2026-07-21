@@ -1,13 +1,8 @@
 import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoPlaneScene } from '../../../../console/video/planes';
 import type { RoccoFacingDirection, RoccoPoint } from '../../../../console/video/sprites';
-import {
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_SCALE,
-} from '../../games/rocco-default/constants';
+import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
+import { ROCCO_DESIGN_WIDTH } from '../../games/rocco-default/game-design';
 import type { RoccoInventoryItem } from '../../games/rocco-default/inventory';
 import type { RoccoPlayerAppearance } from '../../games/rocco-default/player';
 import type { RoccoLevel, RoccoLevelMountOptions } from '../rocco-level-types';
@@ -256,46 +251,57 @@ export class RoccoWorldState {
     if (!engine) {
       return undefined;
     }
-    const player = engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const player = engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     if (!player) {
       return undefined;
     }
     return {
-      x: player.transform.x + DEFAULT_SPRITE_GROUND_ANCHOR_X * (player.transform.scaleX || 1),
-      y: player.transform.y + DEFAULT_SPRITE_GROUND_ANCHOR_Y * (player.transform.scaleY || 1),
+      x:
+        player.transform.x +
+        ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * (player.transform.scaleX || 1),
+      y:
+        player.transform.y +
+        ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * (player.transform.scaleY || 1),
     };
   }
 
   resolvePlayerBaseScale(): number {
     const engine = this.options.getEngine();
     if (!engine) {
-      return DEFAULT_SPRITE_SCALE;
+      return ROCCO_PLAYER_CONFIG.motion.scale;
     }
-    const player = engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
-    const scale = player?.transform.scaleY ?? player?.transform.scaleX ?? DEFAULT_SPRITE_SCALE;
-    return Number.isFinite(scale) && scale > 0 ? scale : DEFAULT_SPRITE_SCALE;
+    const player = engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
+    const scale =
+      player?.transform.scaleY ?? player?.transform.scaleX ?? ROCCO_PLAYER_CONFIG.motion.scale;
+    return Number.isFinite(scale) && scale > 0 ? scale : ROCCO_PLAYER_CONFIG.motion.scale;
   }
 
   resolvePlayerPosition(): RoccoPoint | undefined {
-    const player = this.options.getEngine()?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const player = this.options
+      .getEngine()
+      ?.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     return player ? { x: player.transform.x, y: player.transform.y } : undefined;
   }
 
   resolveMirroredPlayerPosition(): RoccoPoint | undefined {
     const playerPosition = this.resolvePlayerPosition();
-    const player = this.options.getEngine()?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const player = this.options
+      .getEngine()
+      ?.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     if (!playerPosition || !player) {
       return undefined;
     }
-    const groundOffsetX = DEFAULT_SPRITE_GROUND_ANCHOR_X * (player.transform.scaleX || 1);
+    const groundOffsetX = ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * (player.transform.scaleX || 1);
     return {
-      x: DEFAULT_DESIGN_WIDTH - (playerPosition.x + groundOffsetX) - groundOffsetX,
+      x: ROCCO_DESIGN_WIDTH - (playerPosition.x + groundOffsetX) - groundOffsetX,
       y: playerPosition.y,
     };
   }
 
   capturePlayerSnapshot(): RoccoLevelManagerPlayerSnapshot | null {
-    const player = this.options.getEngine()?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const player = this.options
+      .getEngine()
+      ?.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     if (!player) {
       return null;
     }
@@ -328,15 +334,15 @@ export class RoccoWorldState {
       this.buildRuntimeMountOptions(mountState),
       new RoccoAssetPreloader(),
     );
-    if (playerSnapshot && engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
-      engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    if (playerSnapshot && engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance)) {
+      engine.video.sprites.stopMovement(ROCCO_PLAYER_CONFIG.ids.instance);
       engine.video.sprites.setPosition(
-        DEFAULT_SPRITE_INSTANCE_ID,
+        ROCCO_PLAYER_CONFIG.ids.instance,
         playerSnapshot.position.x,
         playerSnapshot.position.y,
         { constrainToWalkMap: false },
       );
-      engine.video.sprites.setFacing(DEFAULT_SPRITE_INSTANCE_ID, playerSnapshot.facing);
+      engine.video.sprites.setFacing(ROCCO_PLAYER_CONFIG.ids.instance, playerSnapshot.facing);
     }
     return scene;
   }

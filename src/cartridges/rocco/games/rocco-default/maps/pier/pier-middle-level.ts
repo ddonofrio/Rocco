@@ -49,30 +49,25 @@ import type {
   RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
 import { findRoccoLevelConnector } from '../../../../levels/rocco-level-types';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { ROCCO_DESIGN_HEIGHT, ROCCO_DESIGN_WIDTH } from '../../game-design';
 import {
-  DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_KEYS_X,
-  DEFAULT_KEYS_Y,
-  DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_Y_VALUES,
   PIER_BACKGROUND_SCROLL_CENTER_X,
   PIER_LEVEL_EXIT_TRIGGER_WIDTH,
-  PIER_MIDDLE_SCENE_ID,
   PIER_PLAYER_LEFT_ENTRY_X,
   PIER_PLAYER_RIGHT_ENTRY_X,
-  ROCCO_PIER_MIDDLE_LEVEL_ID,
-} from '../../constants';
+} from './pier-layout';
+import { PIER_MIDDLE_SCENE_ID, ROCCO_PIER_MIDDLE_LEVEL_ID } from './pier-level-ids';
+import { PIER_PELIKAN_CONFIG } from './pier-pelikan-config';
+import { PIER_KEYS_CONFIG } from './pier-keys-config';
 import {
-  installDefaultSprite,
-  uninstallDefaultSprite,
-  type RoccoDefaultSpriteController,
-} from '../../sprites';
-import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
+  installRoccoPlayerSprite,
+  uninstallRoccoPlayerSprite,
+  type RoccoPlayerSpriteController,
+} from '../../player';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 
-const DEFAULT_ENTRY_Y = DEFAULT_SPRITE_Y_VALUES[0] ?? 180;
+const DEFAULT_ENTRY_Y = ROCCO_PLAYER_CONFIG.placement.yValues[0] ?? 180;
 export const DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS = 2200;
 
 interface RoccoPierMiddleLevelState {
@@ -88,8 +83,8 @@ function createInitialMiddleLevelState(): RoccoPierMiddleLevelState {
     baitBucketDropped: false,
     pelikanState: 'idle',
     keysStatus: 'hidden',
-    keysX: DEFAULT_KEYS_X,
-    keysY: DEFAULT_KEYS_Y,
+    keysX: PIER_KEYS_CONFIG.x,
+    keysY: PIER_KEYS_CONFIG.y,
   };
 }
 
@@ -100,7 +95,7 @@ export const ROCCO_PIER_MIDDLE_CONNECTORS: readonly RoccoLevelConnector[] = [
       x: 0,
       y: 0,
       width: PIER_LEVEL_EXIT_TRIGGER_WIDTH,
-      height: DEFAULT_DESIGN_HEIGHT,
+      height: ROCCO_DESIGN_HEIGHT,
     },
     entryPoint: {
       x: PIER_PLAYER_LEFT_ENTRY_X,
@@ -111,10 +106,10 @@ export const ROCCO_PIER_MIDDLE_CONNECTORS: readonly RoccoLevelConnector[] = [
   {
     id: 'east',
     exitArea: {
-      x: DEFAULT_DESIGN_WIDTH - PIER_LEVEL_EXIT_TRIGGER_WIDTH,
+      x: ROCCO_DESIGN_WIDTH - PIER_LEVEL_EXIT_TRIGGER_WIDTH,
       y: 0,
       width: PIER_LEVEL_EXIT_TRIGGER_WIDTH,
-      height: DEFAULT_DESIGN_HEIGHT,
+      height: ROCCO_DESIGN_HEIGHT,
     },
     entryPoint: {
       x: PIER_PLAYER_RIGHT_ENTRY_X,
@@ -126,7 +121,7 @@ export const ROCCO_PIER_MIDDLE_CONNECTORS: readonly RoccoLevelConnector[] = [
 
 export class RoccoPierMiddleLevel implements RoccoLevel {
   private readonly localization: RoccoLocalization;
-  private spriteController: RoccoDefaultSpriteController | undefined;
+  private spriteController: RoccoPlayerSpriteController | undefined;
   private cloudController: RoccoDefaultCloudController | undefined;
   private keysController: RoccoDefaultKeysController | undefined;
   private pelikanController: RoccoDefaultPelikanController | undefined;
@@ -154,9 +149,9 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     this.levelState.pelikanState = 'feeding';
     if (this.levelState.keysStatus === 'hidden') {
       this.levelState.keysStatus = 'revealed';
-      this.levelState.keysX = DEFAULT_KEYS_X;
-      this.levelState.keysY = DEFAULT_KEYS_Y;
-      this.keysController?.revealAt(DEFAULT_KEYS_X, DEFAULT_KEYS_Y);
+      this.levelState.keysX = PIER_KEYS_CONFIG.x;
+      this.levelState.keysY = PIER_KEYS_CONFIG.y;
+      this.keysController?.revealAt(PIER_KEYS_CONFIG.x, PIER_KEYS_CONFIG.y);
     }
 
     this.engine.video.actionMenus.unregisterMenu(DEFAULT_ACTION_MENU_ID);
@@ -176,16 +171,16 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
 
     if (this.keysController?.isRevealed()) {
       this.levelState.keysStatus = 'revealed';
-      this.levelState.keysX = DEFAULT_KEYS_X;
-      this.levelState.keysY = DEFAULT_KEYS_Y;
+      this.levelState.keysX = PIER_KEYS_CONFIG.x;
+      this.levelState.keysY = PIER_KEYS_CONFIG.y;
     }
   }
 
   private resolveInitialKeysState(): RoccoDefaultKeysState {
     if (this.levelState.pelikanState === 'feeding' && this.levelState.keysStatus === 'hidden') {
       this.levelState.keysStatus = 'revealed';
-      this.levelState.keysX = DEFAULT_KEYS_X;
-      this.levelState.keysY = DEFAULT_KEYS_Y;
+      this.levelState.keysX = PIER_KEYS_CONFIG.x;
+      this.levelState.keysY = PIER_KEYS_CONFIG.y;
     }
 
     return {
@@ -211,14 +206,14 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
       this.localization.text.feeding.lookLines,
     );
     this.feedingLookSelectionState = selection.state;
-    this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, selection.line, {
+    this.engine.video.messages.think(ROCCO_PLAYER_CONFIG.ids.instance, selection.line, {
       ttlMs: DEFAULT_FEEDING_LOOK_MESSAGE_TTL_MS,
     });
 
     if (selection.line === this.localization.text.feeding.turnAwayLine) {
       this.engine.video.sprites.playAction(
-        DEFAULT_SPRITE_INSTANCE_ID,
-        DEFAULT_SPRITE_IDLE_ACTION_ID,
+        ROCCO_PLAYER_CONFIG.ids.instance,
+        ROCCO_PLAYER_CONFIG.ids.idleAction,
         {
           direction: 'right',
           restart: true,
@@ -284,10 +279,10 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
   ): Promise<void> {
     try {
       await preloader?.preloadAssetUrls(engine, [
-        roccoDefaultActionMenuAssetUrls.grab,
-        roccoDefaultActionMenuAssetUrls.kick,
-        roccoDefaultActionMenuAssetUrls.look,
-        roccoDefaultActionMenuAssetUrls.talk,
+        ROCCO_ACTION_MENU_ASSETS.grab,
+        ROCCO_ACTION_MENU_ASSETS.kick,
+        ROCCO_ACTION_MENU_ASSETS.look,
+        ROCCO_ACTION_MENU_ASSETS.talk,
       ]);
     } catch {
       engine.log('Assets', 'Some action menu icons could not be preloaded.');
@@ -341,9 +336,9 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
         initialState: this.levelState.pelikanState,
         onTakeoff: () => {
           this.levelState.keysStatus = 'revealed';
-          this.levelState.keysX = DEFAULT_KEYS_X;
-          this.levelState.keysY = DEFAULT_KEYS_Y;
-          this.keysController?.revealAt(DEFAULT_KEYS_X, DEFAULT_KEYS_Y);
+          this.levelState.keysX = PIER_KEYS_CONFIG.x;
+          this.levelState.keysY = PIER_KEYS_CONFIG.y;
+          this.keysController?.revealAt(PIER_KEYS_CONFIG.x, PIER_KEYS_CONFIG.y);
         },
       },
       preloader,
@@ -354,9 +349,9 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     engine: CartridgeSdkV1Runtime,
     options: RoccoLevelMountOptions,
     preloader?: RoccoAssetPreloader,
-  ): Promise<RoccoDefaultSpriteController> {
+  ): Promise<RoccoPlayerSpriteController> {
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
-    return installDefaultSprite(
+    return installRoccoPlayerSprite(
       engine,
       {
         ...(entryConnector && {
@@ -418,7 +413,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     uninstallDefaultKeys(engine);
     uninstallDefaultPelikan(engine);
     uninstallDefaultCloud(engine);
-    uninstallDefaultSprite(engine);
+    uninstallRoccoPlayerSprite(engine);
     uninstallDefaultWalkMap(engine);
     this.spriteController = undefined;
     this.cloudController = undefined;
@@ -447,7 +442,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
       return;
     }
 
-    if (activation.targetInstanceId !== DEFAULT_PELIKAN_SPRITE_INSTANCE_ID || !this.engine) {
+    if (activation.targetInstanceId !== PIER_PELIKAN_CONFIG.spriteInstanceId || !this.engine) {
       return;
     }
 
@@ -465,7 +460,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
       }
 
       this.engine.video.messages.say(
-        DEFAULT_SPRITE_INSTANCE_ID,
+        ROCCO_PLAYER_CONFIG.ids.instance,
         this.localization.text.middleLevel.pelikanFeedingLine,
         {
           ttlMs: DEFAULT_PELIKAN_FEEDING_LINE_TTL_MS,

@@ -4,12 +4,10 @@ import {
   selectNonRepeatingLines,
   type RoccoNonRepeatingLineSelectionState,
 } from '../../../../rpce/dialogue';
-import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import {
-  DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
-  DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-} from '../../constants';
+import { PIER_PELIKAN_CONFIG } from './pier-pelikan-config';
+import { PIER_BAIT_BUCKET_CONFIG } from './pier-bait-bucket-config';
 
 export const DEFAULT_FEEDING_LOOK_ACTION_MENU_ID = 'rocco-feeding-look-action-menu';
 export const DEFAULT_FEEDING_LOOK_ACTION_ID = 'look';
@@ -25,7 +23,10 @@ export function createDefaultFeedingLookActionMenu(
 ): RoccoActionMenuDefinition {
   return {
     id: DEFAULT_FEEDING_LOOK_ACTION_MENU_ID,
-    targetInstanceIds: [DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID],
+    targetInstanceIds: [
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_BAIT_BUCKET_CONFIG.spriteInstanceId,
+    ],
     renderLayer: 'ui.action-menu',
     itemSize: 92,
     orbitRadius: 58,
@@ -39,7 +40,7 @@ export function createDefaultFeedingLookActionMenu(
         id: DEFAULT_FEEDING_LOOK_ACTION_ID,
         actionId: DEFAULT_FEEDING_LOOK_ACTION_ID,
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
     ],
   };
@@ -59,8 +60,8 @@ export function uninstallDefaultFeedingLookActionMenu(engine: CartridgeSdkV1Runt
 
 export function isDefaultFeedingLookTarget(instanceId: string): boolean {
   return (
-    instanceId === DEFAULT_PELIKAN_SPRITE_INSTANCE_ID ||
-    instanceId === DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID
+    instanceId === PIER_PELIKAN_CONFIG.spriteInstanceId ||
+    instanceId === PIER_BAIT_BUCKET_CONFIG.spriteInstanceId
   );
 }
 

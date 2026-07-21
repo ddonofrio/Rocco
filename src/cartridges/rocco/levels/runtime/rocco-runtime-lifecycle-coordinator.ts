@@ -18,6 +18,8 @@ import type { RoccoSceneActionRouter } from './rocco-scene-action-router';
 import type { RoccoLevelRegistry } from './rocco-level-registry';
 import type { RoccoWorldState } from './rocco-world-state';
 
+import type { RoccoSharedAssetManifest } from './rocco-shared-asset-manifest';
+
 export interface RoccoRuntimeLifecycleCoordinatorOptions {
   getEngine: () => CartridgeSdkV1Runtime | null;
   setEngine: (engine: CartridgeSdkV1Runtime | null) => void;
@@ -33,11 +35,7 @@ export interface RoccoRuntimeLifecycleCoordinatorOptions {
   developerRuntime: RoccoDeveloperRuntimeController;
   actionRouter: RoccoSceneActionRouter;
   worldState: RoccoWorldState;
-  sharedAssetUrls: readonly string[];
-  inventoryItemImageUrls: readonly string[];
-  souvenirItemImageUrls: readonly string[];
-  policeDefeatSoundId: string;
-  policeDefeatSoundUrl: string;
+  sharedAssets: RoccoSharedAssetManifest;
   syncActiveLevelDroppedInventoryPresentation: () => void;
   clearActiveLevelDroppedInventoryPresentation: () => void;
   updateStatus: (scene: RoccoPlaneScene) => void;
@@ -62,34 +60,32 @@ export class RoccoRuntimeLifecycleCoordinator {
       return;
     }
     try {
-      await preloader.preloadAssetUrls(engine, [
-        ...this.options.sharedAssetUrls,
-        ...this.options.inventoryItemImageUrls,
-        ...this.options.souvenirItemImageUrls,
-      ]);
+      await preloader.preloadAssetUrls(engine, this.options.sharedAssets.imageUrls);
     } catch {
       engine.log('Assets', 'Some shared Rocco UI assets could not be preloaded.');
     }
   }
 
-  private async registerPoliceDefeatSound(
+  private async registerSharedSounds(
     engine: CartridgeSdkV1Runtime,
     preloader?: RoccoAssetPreloader,
   ): Promise<void> {
-    engine.audio.registerSound({
-      id: this.options.policeDefeatSoundId,
-      uri: this.options.policeDefeatSoundUrl,
-      volume: 0.45,
-      loop: false,
-    });
-    if (preloader) {
-      try {
-        await preloader.preloadSound(engine, this.options.policeDefeatSoundId);
-      } catch {
-        engine.log('Audio', 'Stan police whistle sound could not be preloaded.');
+    for (const sound of this.options.sharedAssets.sounds) {
+      engine.audio.registerSound({
+        id: sound.id,
+        uri: sound.uri,
+        volume: sound.volume,
+        loop: sound.loop,
+      });
+      if (preloader) {
+        try {
+          await preloader.preloadSound(engine, sound.id);
+        } catch {
+          engine.log('Audio', sound.preloadFailureMessage);
+        }
       }
+      engine.audio.stopSound(sound.id);
     }
-    engine.audio.stopSound(this.options.policeDefeatSoundId);
   }
 
   private resetRuntimeState(engine: CartridgeSdkV1Runtime): void {
@@ -108,7 +104,7 @@ export class RoccoRuntimeLifecycleCoordinator {
   ): Promise<{ level: RoccoLevel; scene: RoccoPlaneScene }> {
     this.options.setEngine(engine);
     await this.preloadSharedAssets(engine, preloader);
-    await this.registerPoliceDefeatSound(engine, preloader);
+    await this.registerSharedSounds(engine, preloader);
     this.resetRuntimeState(engine);
     const level = this.options.levelRegistry.requireLevel(
       this.options.compiledInitialLevelId ?? 'pier',
@@ -144,7 +140,9 @@ export class RoccoRuntimeLifecycleCoordinator {
     this.options.inventoryRuntime.resetRuntimeState();
     this.options.clearActiveLevelDroppedInventoryPresentation();
     this.options.worldState.clearSavedNetherEntrySnapshot();
-    engine.audio.unregisterSound(this.options.policeDefeatSoundId);
+    for (const sound of this.options.sharedAssets.sounds) {
+      engine.audio.unregisterSound(sound.id);
+    }
     engine.video.gridMenus.closeMenu();
     engine.video.gridMenus.clearCarriedItem();
     this.options.setActiveLevel(null);

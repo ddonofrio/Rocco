@@ -7,7 +7,7 @@ import {
 } from '../../../../src/cartridges/rocco/inventory';
 import { RoccoSceneActionRouter } from '../../../../src/cartridges/rocco/levels/runtime/rocco-scene-action-router';
 import type { RoccoLevel } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
-import { DEFAULT_ROCCO_PLAYER_APPEARANCE } from '../../../../src/cartridges/rocco/rocco-player-appearance';
+import { DEFAULT_ROCCO_PLAYER_APPEARANCE } from '../../../../src/cartridges/rocco/games/rocco-default/player';
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 
 function createLevel(overrides: Partial<RoccoLevel> = {}): RoccoLevel {

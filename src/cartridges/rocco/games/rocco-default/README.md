@@ -13,13 +13,16 @@ Current map model:
 Reset Office is modeled as part of the Nether map. It remains a separate branch in current
 behavior, but it is not treated as a separate map in the structural model.
 
-Shared game-owned barrels:
+Shared game-owned modules:
 
-- `constants/` owns shared level ids, scene ids, design values, and sprite constants.
-- `inventory/` owns the shipped inventory surface used by the game runtime.
-- `localization/` owns the game-localized text surface.
-- `player/` owns player appearance ids and the self action-menu surface.
-- `sprites/` owns default player sprite installation and shared sprite-facing asset exports.
+- `audio/` owns game music playlist registration, playback, and unregistration.
+- `game-design.ts` owns shared design dimensions and background color.
+- `player/` owns the player domain: appearance, config, asset URLs, sprite definition, runtime installation, and self action-menu.
+- `characters/` owns non-player characters with their own assets, config, and sprite definitions.
+- `sprites/` owns the reusable directional character sprite definition builder.
+- `ui/` owns shared action-menu icon asset URLs.
+- `preload/` owns the shared asset manifest that aggregates preloadable image and sound assets from their domain owners.
+- `inventory/` and `localization/` re-export the cartridge-owned inventory and localization domains.
 
 Map folders are the structural ownership point:
 

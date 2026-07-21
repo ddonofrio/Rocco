@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { createRoccoLocalization } from '../../../../src/cartridges/rocco/localization';
-import {
-  DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
-  DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-} from '../../../../src/cartridges/rocco/rocco-default-constants';
+import { PIER_BAIT_BUCKET_CONFIG } from '../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-bait-bucket-config';
+import { PIER_PELIKAN_CONFIG } from '../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-pelikan-config';
 import {
   createRoccoBataInventoryItem,
   createRoccoKeysInventoryItem,
@@ -82,7 +80,7 @@ describe('RoccoInventory', () => {
     expect(
       resolveRoccoInventoryUseLines({
         itemId: ROCCO_INVENTORY_KEYS_ITEM_ID,
-        targetInstanceId: DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
+        targetInstanceId: PIER_BAIT_BUCKET_CONFIG.spriteInstanceId,
         localization,
       }),
     ).toEqual(localization.text.inventory.keysOnBaitBucketLines);
@@ -90,7 +88,7 @@ describe('RoccoInventory', () => {
     expect(
       resolveRoccoInventoryUseLines({
         itemId: ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
-        targetInstanceId: DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
+        targetInstanceId: PIER_PELIKAN_CONFIG.spriteInstanceId,
         localization,
       }),
     ).toEqual(localization.text.inventory.moneyOnPelikanLines);

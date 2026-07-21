@@ -15,7 +15,7 @@ import {
   ROCCO_DEVELOPER_EVENTS_CHOICE_ID,
   ROCCO_PLAYER_DEVELOPER_ACTION_ID,
 } from '../../../src/cartridges/rocco/rocco-developer-mode';
-import { createRoccoPlayerActionMenuDefinition } from '../../../src/cartridges/rocco/rocco-player-action-menu';
+import { createRoccoPlayerActionMenuDefinition } from '../../../src/cartridges/rocco/games/rocco-default/player';
 
 describe('Rocco developer mode', () => {
   it('defaults to disabled when no engine flag is available', () => {

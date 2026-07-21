@@ -15,8 +15,8 @@ import {
   createRoccoDefaultGameMaps,
   ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS,
   ROCCO_DEFAULT_GAME_ID,
-  ROCCO_PIER_START_LEVEL_ID,
 } from '../../games/rocco-default';
+import { ROCCO_PIER_START_LEVEL_ID } from '../../games/rocco-default/maps/pier/pier-level-ids';
 import {
   installPierBeginningAmbient,
   type RoccoPierBeginningAmbientPersistentState,
@@ -37,19 +37,17 @@ import type { RoccoPlayerAppearance } from '../../games/rocco-default/player';
 import type { RoccoPoint } from '../../../../console/video/sprites';
 import type { RoccoInventoryItem } from '../../games/rocco-default/inventory';
 
-import {
-  DEFAULT_BAIT_SHOP_DOOR_WIDTH,
-  DEFAULT_BAIT_SHOP_DOOR_X,
-  DEFAULT_SPRITE_FRAME_WIDTH,
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_SCALE,
-} from '../../games/rocco-default/constants';
+import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
+import { PIER_BAIT_SHOP_DOOR_CONFIG } from '../../games/rocco-default/maps/pier/pier-bait-shop-door-config';
 
 const BAIT_SHOP_DOOR_PLAYER_RIGHT_EDGE_OFFSET = Math.round(
-  (DEFAULT_SPRITE_FRAME_WIDTH - DEFAULT_SPRITE_GROUND_ANCHOR_X) * DEFAULT_SPRITE_SCALE,
+  (ROCCO_PLAYER_CONFIG.frame.width - ROCCO_PLAYER_CONFIG.frame.groundAnchor.x) *
+    ROCCO_PLAYER_CONFIG.motion.scale,
 );
 const BAIT_SHOP_DOOR_END_GROUND_X =
-  DEFAULT_BAIT_SHOP_DOOR_X + DEFAULT_BAIT_SHOP_DOOR_WIDTH - BAIT_SHOP_DOOR_PLAYER_RIGHT_EDGE_OFFSET;
+  PIER_BAIT_SHOP_DOOR_CONFIG.x +
+  PIER_BAIT_SHOP_DOOR_CONFIG.width -
+  BAIT_SHOP_DOOR_PLAYER_RIGHT_EDGE_OFFSET;
 
 export interface RoccoGameCompositionRootCallbacks {
   getEngine: () => CartridgeSdkV1Runtime | null;

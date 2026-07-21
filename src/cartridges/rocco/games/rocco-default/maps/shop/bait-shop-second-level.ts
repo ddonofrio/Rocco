@@ -16,25 +16,15 @@ import {
 } from '../../inventory';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import {
-  roccoDefaultActionMenuAssetUrls,
-  roccoDefaultMicromaniaClosedAssetUrl,
-} from '../../sprites';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT } from '../../game-design';
 import {
-  DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_SCALE,
-} from '../../constants';
-import {
-  installDefaultSprite,
-  uninstallDefaultSprite,
-  type RoccoDefaultSpriteController,
-} from '../../sprites';
+  installRoccoPlayerSprite,
+  uninstallRoccoPlayerSprite,
+  type RoccoPlayerSpriteController,
+} from '../../player';
 import { RoccoScriptedSceneInteractionController } from '../../../../scripted-scene-interaction-controller';
 import { resolveKeyLockedDoorLines } from '../../../../levels/key-locked-door-lines';
 import {
@@ -54,7 +44,8 @@ import {
   uninstallBaitShopWalkMap,
   type RoccoBaitShopSceneDefinition,
 } from './bait-shop-level';
-import { pierDoorOpeningSoundUrl } from '../../../../levels/pier/pier-assets';
+import { ROCCO_INVENTORY_MICROMANIA_CLOSED_ASSET_URL } from '../../../../inventory/rocco-inventory-assets';
+import { pierDoorOpeningSoundUrl } from '../pier/pier-bait-shop-door-assets';
 import { BAIT_SHOP_DOOR_OPENING_SOUND_ID } from '../../../../levels/pier/pier-bait-shop-door';
 
 export const ROCCO_BAIT_SHOP_SECOND_LEVEL_ID = 'bait-shop-second';
@@ -93,7 +84,7 @@ const BAIT_SHOP_MAGAZINE_TARGET_WIDTH =
   (BAIT_SHOP_MAGAZINE_WIDTH * BAIT_SHOP_MAGAZINE_TARGET_HEIGHT) / BAIT_SHOP_MAGAZINE_HEIGHT;
 const BAIT_SHOP_MAGAZINE_SCALE_X = BAIT_SHOP_MAGAZINE_TARGET_WIDTH / BAIT_SHOP_MAGAZINE_WIDTH;
 const BAIT_SHOP_MAGAZINE_SCALE_Y = BAIT_SHOP_MAGAZINE_TARGET_HEIGHT / BAIT_SHOP_MAGAZINE_HEIGHT;
-const BAIT_SHOP_ROCCO_SCALE = DEFAULT_SPRITE_SCALE * 1.2;
+const BAIT_SHOP_ROCCO_SCALE = ROCCO_PLAYER_CONFIG.motion.scale * 1.2;
 const BAIT_SHOP_ROCCO_TINT = '#cccccc';
 const BAIT_SHOP_PERSPECTIVE_AUTO_ADJUST = {
   farY: 280,
@@ -107,10 +98,12 @@ const BAIT_SHOP_TOILET_DOOR_GROUND_POINT = {
 } as const;
 const BAIT_SHOP_TOILET_RETURN_ENTRY_POSITION = {
   x: Math.round(
-    BAIT_SHOP_TOILET_DOOR_GROUND_POINT.x - DEFAULT_SPRITE_GROUND_ANCHOR_X * BAIT_SHOP_ROCCO_SCALE,
+    BAIT_SHOP_TOILET_DOOR_GROUND_POINT.x -
+      ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * BAIT_SHOP_ROCCO_SCALE,
   ),
   y: Math.round(
-    BAIT_SHOP_TOILET_DOOR_GROUND_POINT.y - DEFAULT_SPRITE_GROUND_ANCHOR_Y * BAIT_SHOP_ROCCO_SCALE,
+    BAIT_SHOP_TOILET_DOOR_GROUND_POINT.y -
+      ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * BAIT_SHOP_ROCCO_SCALE,
   ),
 } as const;
 const BAIT_SHOP_LOOK_MESSAGE_TTL_MS = 10_400;
@@ -126,8 +119,8 @@ const BAIT_SHOP_SECOND_CONNECTORS: readonly RoccoLevelConnector[] = [
     id: BAIT_SHOP_RETURN_CONNECTOR_ID,
     exitArea: {
       x: 0,
-      y: DEFAULT_DESIGN_HEIGHT - BAIT_SHOP_SECOND_RETURN_EXIT_TRIGGER_HEIGHT,
-      width: DEFAULT_DESIGN_WIDTH,
+      y: ROCCO_DESIGN_HEIGHT - BAIT_SHOP_SECOND_RETURN_EXIT_TRIGGER_HEIGHT,
+      width: ROCCO_DESIGN_WIDTH,
       height: BAIT_SHOP_SECOND_RETURN_EXIT_TRIGGER_HEIGHT,
     },
     entryPoint: {
@@ -168,8 +161,8 @@ const BAIT_SHOP_SECOND_TOILET_DOOR_OPEN_PLANE: RoccoGraphicPlane = {
   viewport: {
     x: 0,
     y: 0,
-    width: DEFAULT_DESIGN_WIDTH,
-    height: DEFAULT_DESIGN_HEIGHT,
+    width: ROCCO_DESIGN_WIDTH,
+    height: ROCCO_DESIGN_HEIGHT,
   },
   opacity: 1,
   priority: 1,
@@ -215,7 +208,7 @@ function createBaitShopMagazineSpriteDefinition(
     images: [
       {
         id: BAIT_SHOP_MAGAZINE_IMAGE_ID,
-        uri: roccoDefaultMicromaniaClosedAssetUrl,
+        uri: ROCCO_INVENTORY_MICROMANIA_CLOSED_ASSET_URL,
         width: BAIT_SHOP_MAGAZINE_WIDTH,
         height: BAIT_SHOP_MAGAZINE_HEIGHT,
       },
@@ -267,7 +260,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
   private readonly localization: RoccoLocalization;
   private readonly options: RoccoBaitShopSecondLevelOptions;
   private engine: CartridgeSdkV1Runtime | undefined = undefined;
-  private spriteController: RoccoDefaultSpriteController | undefined = undefined;
+  private spriteController: RoccoPlayerSpriteController | undefined = undefined;
   private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined =
     undefined;
   private onConnectorTransitionRequested: ((connectorId: string) => boolean) | undefined =
@@ -513,13 +506,13 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
             id: 'close',
             actionId: 'close',
             label: this.localization.text.baitShop.toiletDoorCloseLabel,
-            imageUri: roccoDefaultActionMenuAssetUrls.grab,
+            imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
           },
           {
             id: 'walk',
             actionId: 'walk',
             label: this.localization.text.baitShop.toiletDoorWalkLabel,
-            imageUri: roccoDefaultActionMenuAssetUrls.kick,
+            imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
           },
         ],
       };
@@ -535,19 +528,19 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
           id: 'look',
           actionId: 'look',
           label: this.localization.text.actions.look,
-          imageUri: roccoDefaultActionMenuAssetUrls.look,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.look,
         },
         {
           id: 'open',
           actionId: 'open',
           label: this.localization.text.baitShop.toiletDoorOpenLabel,
-          imageUri: roccoDefaultActionMenuAssetUrls.grab,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
         },
         {
           id: 'kick',
           actionId: 'kick',
           label: this.localization.text.actions.kick,
-          imageUri: roccoDefaultActionMenuAssetUrls.kick,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
         },
       ],
     };
@@ -564,13 +557,13 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
           id: 'look',
           actionId: 'look',
           label: this.localization.text.actions.look,
-          imageUri: roccoDefaultActionMenuAssetUrls.look,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.look,
         },
         {
           id: 'grab',
           actionId: 'grab',
           label: this.localization.text.actions.grab,
-          imageUri: roccoDefaultActionMenuAssetUrls.grab,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
         },
       ],
     };
@@ -592,7 +585,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       return;
     }
 
-    this.engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, line, {
+    this.engine.video.messages.think(ROCCO_PLAYER_CONFIG.ids.instance, line, {
       ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
     });
   }
@@ -604,7 +597,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: BAIT_SHOP_LOOK_MESSAGE_TTL_MS,
@@ -626,21 +619,22 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
       return;
     }
 
-    const sprite = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const sprite = this.engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     if (!sprite) {
       return;
     }
 
     const groundX =
-      sprite.transform.x + DEFAULT_SPRITE_GROUND_ANCHOR_X * (sprite.transform.scaleX || 1);
+      sprite.transform.x +
+      ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * (sprite.transform.scaleX || 1);
     const deltaX = BAIT_SHOP_TOILET_DOOR_GROUND_POINT.x - groundX;
     let facing: RoccoFacingDirection = 'up';
     if (Math.abs(deltaX) > 18) {
       facing = deltaX < 0 ? 'up-left' : 'up-right';
     }
     this.engine.video.sprites.playAction(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      ROCCO_PLAYER_CONFIG.ids.idleAction,
       {
         direction: facing,
         restart: true,
@@ -693,7 +687,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     engine.loadPlaneScene(scene);
     await installBaitShopWalkMap(engine, baitShopSecondScreenAssetUrls.walkMap, preloader);
     engine.video.sprites.loadSpriteDefinition(magazineDefinition);
-    this.spriteController = await installDefaultSprite(
+    this.spriteController = await installRoccoPlayerSprite(
       engine,
       {
         appearance: options.roccoAppearance,
@@ -726,7 +720,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     engine.audio.stopSound(DOOR_CLOSING_SOUND_ID);
     engine.audio.unregisterSound(DOOR_CLOSING_SOUND_ID);
     this.shouldPlayDoorClosingSound = false;
-    uninstallDefaultSprite(engine);
+    uninstallRoccoPlayerSprite(engine);
     uninstallBaitShopWalkMap(engine);
     this.engine = undefined;
     this.spriteController = undefined;

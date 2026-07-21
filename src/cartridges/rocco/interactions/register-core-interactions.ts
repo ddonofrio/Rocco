@@ -5,11 +5,11 @@ import {
   isSceneClickAction,
   normalizeDisposition,
 } from './interaction-types';
-import { DEFAULT_SPRITE_INSTANCE_ID } from '../rocco-default-constants';
+import { ROCCO_PLAYER_CONFIG } from '../games/rocco-default/player/rocco-player-config';
 import {
   isRoccoPlayerInventoryAction,
   ROCCO_PLAYER_TALK_ACTION_ID,
-} from '../rocco-player-action-menu';
+} from '../games/rocco-default/player';
 import { roccoCartridgeMessageRuntime } from '../rpce/dialogue';
 
 const DEVELOPER_PRIORITY = 600;
@@ -112,7 +112,7 @@ function createSelfTalkRule(): InteractionRule {
         return false;
       }
       return (
-        context.action.targetInstanceId === DEFAULT_SPRITE_INSTANCE_ID &&
+        context.action.targetInstanceId === ROCCO_PLAYER_CONFIG.ids.instance &&
         context.action.actionId === ROCCO_PLAYER_TALK_ACTION_ID
       );
     },
@@ -123,7 +123,7 @@ function createSelfTalkRule(): InteractionRule {
       }
       roccoCartridgeMessageRuntime.think(
         engine,
-        DEFAULT_SPRITE_INSTANCE_ID,
+        ROCCO_PLAYER_CONFIG.ids.instance,
         context.localization.text.rocco.selfTalkLines,
         { ttlMs: 5200 },
         { count: 1, historyKey: 'rocco-self-talk', isAvoidImmediateRepeat: true },

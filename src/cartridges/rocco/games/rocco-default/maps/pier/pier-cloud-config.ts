@@ -1,0 +1,16 @@
+export const PIER_CLOUD_CONFIG = {
+  definitionId: 'rocco-cloud-sprite',
+  instanceId: 'rocco-cloud-main',
+  animationId: 'cloud-idle',
+  spriteWidth: 372,
+  spriteHeight: 171,
+  scale: 0.5,
+  opacity: 0.9,
+  scaleGrowthFactor: 0.3,
+  startX: 140,
+  wrapRightX: 980,
+  baseY: -8,
+  verticalAmplitude: 1,
+  verticalPeriodMs: 12_800,
+  speedX: 0.7,
+} as const;

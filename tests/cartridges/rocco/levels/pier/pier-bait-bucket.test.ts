@@ -12,7 +12,7 @@ import type {
   RoccoActionMenuDefinition,
 } from '../../../../../src/console/video/action-menu';
 import type { RoccoSpriteInstance } from '../../../../../src/console/video/sprites';
-import { DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID } from '../../../../../src/cartridges/rocco/rocco-default-constants';
+import { PIER_BAIT_BUCKET_CONFIG } from '../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-bait-bucket-config';
 import { installDefaultBaitBucket } from '../../../../../src/cartridges/rocco/levels/pier/pier-bait-bucket';
 
 interface TestState {
@@ -32,7 +32,7 @@ function createState(): TestState {
 function makeKickActivation(): RoccoActionMenuActivation {
   return {
     definitionId: 'test-bait-bucket-menu',
-    targetInstanceId: DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
+    targetInstanceId: PIER_BAIT_BUCKET_CONFIG.spriteInstanceId,
     targetDefinitionId: 'rocco-bait-bucket',
     itemId: 'kick',
     actionId: 'kick',

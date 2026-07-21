@@ -4,7 +4,7 @@ import type { ConsoleKernel } from '../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 import { RoccoDialogueSession } from '../../../../src/cartridges/rocco/rpce/dialogue/runtime';
-import { DEFAULT_SPRITE_INSTANCE_ID } from '../../../../src/cartridges/rocco/rocco-default-constants';
+import { ROCCO_PLAYER_CONFIG } from '../../../../src/cartridges/rocco/games/rocco-default/player';
 import { spanishNetherText } from '../../../../src/cartridges/rocco/localization/es/nether';
 
 const NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID =
@@ -111,7 +111,7 @@ function runBribeSequence(advanceMode: 'manual' | 'auto'): NetherBribeEngineStat
   const session = new RoccoDialogueSession({
     id: NETHER_SECURITY_CAMERA_BRIBE_DIALOGUE_ID,
     engine,
-    playerSpriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
+    playerSpriteInstanceId: ROCCO_PLAYER_CONFIG.ids.instance,
     npcSpriteInstanceId: NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID,
     playerLineTtlMs: NETHER_SECURITY_CAMERA_BRIBE_PLAYER_TTL_MS,
     npcLineTtlMs: NETHER_SECURITY_CAMERA_BRIBE_CAMERA_TTL_MS,
@@ -187,7 +187,7 @@ describe('Nether security camera bribe dialogue sequence', () => {
       text: spanishNetherText.securityCameraBribe.securityLine,
     });
     expect(lines[2]).toEqual({
-      speakerId: DEFAULT_SPRITE_INSTANCE_ID,
+      speakerId: ROCCO_PLAYER_CONFIG.ids.instance,
       mode: 'say',
       text: spanishNetherText.securityCameraBribe.roccoReactionLine,
     });
@@ -211,7 +211,7 @@ describe('Nether security camera bribe dialogue sequence', () => {
       spanishNetherText.securityCameraBribe.securityLine,
       spanishNetherText.securityCameraBribe.roccoReactionLine,
     ]);
-    expect(lines[2].speakerId).toBe(DEFAULT_SPRITE_INSTANCE_ID);
+    expect(lines[2].speakerId).toBe(ROCCO_PLAYER_CONFIG.ids.instance);
     expect(lines[2].mode).toBe('say');
   });
 });

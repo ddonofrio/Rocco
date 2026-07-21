@@ -1,6 +1,6 @@
 import type { RoccoPoint } from '../../../../console/video/sprites';
 import type { RoccoInventoryItem } from '../../inventory';
-import type { RoccoPlayerAppearance } from '../../rocco-player-appearance';
+import type { RoccoPlayerAppearance } from '../../games/rocco-default/player';
 import type { RoccoLevel } from '../rocco-level-types';
 
 /**

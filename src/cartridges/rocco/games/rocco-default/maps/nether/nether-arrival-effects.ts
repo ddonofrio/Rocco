@@ -1,6 +1,6 @@
 import type { RoccoSpriteDefinition } from '../../../../../../console/video/sprites';
 import { createRoccoSpriteAutoCroppedFrames } from '../../../../../../console/video/sprites';
-import { baitShopToiletAssetUrls } from '../../../../levels/bait-shop/bait-shop-assets';
+import { baitShopToiletAssetUrls } from '../shop/bait-shop-toilet-assets';
 
 export const NETHER_ARRIVAL_SMOKE_DEFINITION_ID = 'rocco-nether-arrival-smoke';
 export const NETHER_ARRIVAL_SMOKE_INSTANCE_ID = 'rocco-nether-arrival-smoke-instance';

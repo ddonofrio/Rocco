@@ -1,8 +1,8 @@
 import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoActionMenuDefinition } from '../../../../../../console/video/action-menu';
-import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import { DEFAULT_STAN_SPRITE_INSTANCE_ID } from '../../constants';
+import { PIER_STAN_CONFIG } from './pier-stan-config';
 
 export const DEFAULT_STAN_ACTION_MENU_ID = 'rocco-stan-action-menu';
 
@@ -16,7 +16,7 @@ export function createDefaultStanActionMenuDefinition(
 ): RoccoActionMenuDefinition {
   return {
     id: DEFAULT_STAN_ACTION_MENU_ID,
-    targetInstanceIds: [DEFAULT_STAN_SPRITE_INSTANCE_ID],
+    targetInstanceIds: [PIER_STAN_CONFIG.spriteInstanceId],
     renderLayer: 'ui.action-menu',
     itemSize: DEFAULT_STAN_ACTION_MENU_ITEM_SIZE,
     orbitRadius: DEFAULT_STAN_ACTION_MENU_ORBIT_RADIUS,
@@ -30,25 +30,25 @@ export function createDefaultStanActionMenuDefinition(
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
       {
         id: 'talk',
         actionId: 'talk',
         label: localization.text.actions.talk,
-        imageUri: roccoDefaultActionMenuAssetUrls.talk,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.talk,
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
       {
         id: 'kick',
         actionId: 'kick',
         label: localization.text.actions.kick,
-        imageUri: roccoDefaultActionMenuAssetUrls.kick,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
       },
     ],
   };

@@ -24,13 +24,11 @@ import {
   type RoccoLocalization,
 } from '../../../../../src/cartridges/rocco/localization';
 import {
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_PICK_UP_ACTION_ID,
-  DEFAULT_WALK_MAP_ID,
-} from '../../../../../src/cartridges/rocco/rocco-default-constants';
+  ROCCO_PLAYER_CONFIG,
+  ROCCO_PLAYER_ACTION_MENU_ID,
+} from '../../../../../src/cartridges/rocco/games/rocco-default/player';
+import { PIER_WALK_MAP_ID } from '../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-layout';
 import { createRoccoCoralRelicInventoryItem } from '../../../../../src/cartridges/rocco/inventory';
-import { ROCCO_PLAYER_ACTION_MENU_ID } from '../../../../../src/cartridges/rocco/rocco-player-action-menu';
 import {
   BAIT_SHOP_TOILET_SCENE_ID,
   RoccoBaitShopToiletLevel,
@@ -492,7 +490,7 @@ function advanceCoralRelicReadingToStanding(
 }
 
 function setPlayerVisualOrigin(state: TestState, x: number, y: number): void {
-  const player = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+  const player = findCreatedSprite(state, ROCCO_PLAYER_CONFIG.ids.instance);
   if (!player) {
     throw new Error('Expected Rocco to exist.');
   }
@@ -601,7 +599,7 @@ describe('RoccoBaitShopToiletLevel', () => {
     });
 
     expect(state.loadedScene?.id).toBe(BAIT_SHOP_TOILET_SCENE_ID);
-    expect(state.registeredWalkMapIds).toContain(DEFAULT_WALK_MAP_ID);
+    expect(state.registeredWalkMapIds).toContain(PIER_WALK_MAP_ID);
 
     finishSitSequence(level, state);
     expect(state.inputEnabled).toBe(true);
@@ -702,9 +700,9 @@ describe('RoccoBaitShopToiletLevel', () => {
       `${PORTAL_INSTANCE_ID}:bait-shop-toilet-portal-open`,
     );
     expect(state.inputEnabled).toBe(true);
-    expect(state.playerSpriteId).toBe(DEFAULT_SPRITE_INSTANCE_ID);
+    expect(state.playerSpriteId).toBe(ROCCO_PLAYER_CONFIG.ids.instance);
     expect(state.playedSpriteActions).toContain(
-      `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:down`,
+      `${ROCCO_PLAYER_CONFIG.ids.instance}:${ROCCO_PLAYER_CONFIG.ids.idleAction}:down`,
     );
   });
 
@@ -961,7 +959,7 @@ describe('RoccoBaitShopToiletLevel', () => {
 
     expect(level.isEscapeUrgencyActive()).toBe(true);
 
-    const player = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+    const player = findCreatedSprite(state, ROCCO_PLAYER_CONFIG.ids.instance);
     expect(player).toBeDefined();
     if (player) {
       player.transform.scaleX = 1;
@@ -983,7 +981,7 @@ describe('RoccoBaitShopToiletLevel', () => {
     level.update(16);
 
     expect(state.playedSpriteActions).toContain(
-      `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_PICK_UP_ACTION_ID}:down`,
+      `${ROCCO_PLAYER_CONFIG.ids.instance}:${ROCCO_PLAYER_CONFIG.ids.pickUpAction}:down`,
     );
     expect(
       state.createdSprites.some(
@@ -994,7 +992,7 @@ describe('RoccoBaitShopToiletLevel', () => {
     level.update(250);
 
     expect(state.playedSpriteActions).toContain(
-      `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:down`,
+      `${ROCCO_PLAYER_CONFIG.ids.instance}:${ROCCO_PLAYER_CONFIG.ids.idleAction}:down`,
     );
 
     level.update(300);
@@ -1043,7 +1041,7 @@ describe('RoccoBaitShopToiletLevel', () => {
     finishSitSequence(level, state);
     advanceCoralRelicReadingToStanding(level, state, localization);
 
-    const player = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+    const player = findCreatedSprite(state, ROCCO_PLAYER_CONFIG.ids.instance);
     expect(player).toBeDefined();
     if (player) {
       player.transform.scaleX = 1;

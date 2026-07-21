@@ -1,18 +1,9 @@
 import type { RoccoActionMenuDefinition } from '../../../../../../console/video/action-menu';
 import type { RoccoSpriteDefinition } from '../../../../../../console/video/sprites';
-import { roccoDefaultActionMenuAssetUrls, roccoDefaultKeysAssetUrl } from '../../sprites';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
+import { pierKeysAssetUrl } from './pier-keys-assets';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import {
-  DEFAULT_KEYS_ANIMATION_ID,
-  DEFAULT_KEYS_PIVOT_X,
-  DEFAULT_KEYS_PIVOT_Y,
-  DEFAULT_KEYS_RENDER_LAYER,
-  DEFAULT_KEYS_SPRITE_DEFINITION_ID,
-  DEFAULT_KEYS_SPRITE_HEIGHT,
-  DEFAULT_KEYS_SPRITE_INSTANCE_ID,
-  DEFAULT_KEYS_SPRITE_WIDTH,
-  DEFAULT_KEYS_Z_INDEX,
-} from '../../constants';
+import { PIER_KEYS_CONFIG } from './pier-keys-config';
 
 const KEYS_FRAME_ID = 'keys-idle-frame';
 export const KEYS_ACTION_MESSAGE_TTL_MS = 5200;
@@ -25,7 +16,7 @@ export function createDefaultKeysActionMenu(
 ): RoccoActionMenuDefinition {
   return {
     id: KEYS_ACTION_MENU_ID,
-    targetInstanceIds: [DEFAULT_KEYS_SPRITE_INSTANCE_ID],
+    targetInstanceIds: [PIER_KEYS_CONFIG.spriteInstanceId],
     renderLayer: 'ui.action-menu',
     itemSize: 92,
     orbitRadius: 72,
@@ -39,19 +30,19 @@ export function createDefaultKeysActionMenu(
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
       {
         id: 'grab',
         actionId: KEYS_GRAB_ACTION_ID,
         label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
       {
         id: 'kick',
         actionId: 'kick',
         label: localization.text.actions.kick,
-        imageUri: roccoDefaultActionMenuAssetUrls.kick,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
       },
     ],
   };
@@ -61,19 +52,19 @@ export function createDefaultKeysSpriteDefinition(
   localization: RoccoLocalization = createRoccoLocalization(),
 ): RoccoSpriteDefinition {
   return {
-    id: DEFAULT_KEYS_SPRITE_DEFINITION_ID,
+    id: PIER_KEYS_CONFIG.spriteDefinitionId,
     name: 'Rocco Demo Keys',
     images: createKeysImages(),
     frames: createKeysFrames(),
     animations: createKeysAnimations(),
-    defaultAnimation: DEFAULT_KEYS_ANIMATION_ID,
+    defaultAnimation: PIER_KEYS_CONFIG.animationId,
     pivot: {
-      x: DEFAULT_KEYS_PIVOT_X,
-      y: DEFAULT_KEYS_PIVOT_Y,
+      x: PIER_KEYS_CONFIG.pivotX,
+      y: PIER_KEYS_CONFIG.pivotY,
     },
     render: {
-      renderLayer: DEFAULT_KEYS_RENDER_LAYER,
-      zIndex: DEFAULT_KEYS_Z_INDEX,
+      renderLayer: PIER_KEYS_CONFIG.renderLayer,
+      zIndex: PIER_KEYS_CONFIG.zIndex,
       depthMode: 'fixed',
       opacity: 1,
     },
@@ -91,9 +82,9 @@ function createKeysImages(): RoccoSpriteDefinition['images'] {
   return [
     {
       id: 'rocco-keys',
-      uri: roccoDefaultKeysAssetUrl,
-      width: DEFAULT_KEYS_SPRITE_WIDTH,
-      height: DEFAULT_KEYS_SPRITE_HEIGHT,
+      uri: pierKeysAssetUrl,
+      width: PIER_KEYS_CONFIG.spriteWidth,
+      height: PIER_KEYS_CONFIG.spriteHeight,
     },
   ];
 }
@@ -105,8 +96,8 @@ function createKeysFrames(): RoccoSpriteDefinition['frames'] {
       imageId: 'rocco-keys',
       durationMs: 1000,
       pivot: {
-        x: DEFAULT_KEYS_PIVOT_X,
-        y: DEFAULT_KEYS_PIVOT_Y,
+        x: PIER_KEYS_CONFIG.pivotX,
+        y: PIER_KEYS_CONFIG.pivotY,
       },
       hitbox: {
         kind: 'rect',
@@ -121,8 +112,8 @@ function createKeysFrames(): RoccoSpriteDefinition['frames'] {
 
 function createKeysAnimations(): RoccoSpriteDefinition['animations'] {
   return {
-    [DEFAULT_KEYS_ANIMATION_ID]: {
-      id: DEFAULT_KEYS_ANIMATION_ID,
+    [PIER_KEYS_CONFIG.animationId]: {
+      id: PIER_KEYS_CONFIG.animationId,
       loop: false,
       playbackRate: 1,
       frames: [{ frameId: KEYS_FRAME_ID, durationMs: 1000 }],

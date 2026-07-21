@@ -1,17 +1,14 @@
 import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT } from '../../game-design';
+import { PIER_WALK_MAP_ID } from '../pier/pier-layout';
 import {
-  DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_SPRITE_SCALE,
-  DEFAULT_WALK_MAP_ID,
-} from '../../constants';
-import {
-  installDefaultSprite,
-  uninstallDefaultSprite,
-  type RoccoDefaultSpriteController,
-} from '../../sprites';
+  installRoccoPlayerSprite,
+  uninstallRoccoPlayerSprite,
+  type RoccoPlayerSpriteController,
+} from '../../player';
 import type { RoccoLocalization } from '../../localization';
 import {
   findRoccoLevelConnector,
@@ -37,12 +34,12 @@ const NETHER_RESET_OFFICE_ENTRY_POSITION = {
   x: 371,
   y: 138,
 } as const;
-const NETHER_RESET_OFFICE_ROCCO_SCALE = DEFAULT_SPRITE_SCALE * 1.8;
+const NETHER_RESET_OFFICE_ROCCO_SCALE = ROCCO_PLAYER_CONFIG.motion.scale * 1.8;
 const NETHER_RESET_OFFICE_ROCCO_TINT = '#cccccc';
 const NETHER_RESET_OFFICE_FAR_SCALE = 0.8;
 const NETHER_RESET_OFFICE_CONNECTED_ENTRY_GROUND_POINT = {
   x: 371,
-  y: DEFAULT_DESIGN_HEIGHT - 22,
+  y: ROCCO_DESIGN_HEIGHT - 22,
 } as const;
 const NETHER_RESET_OFFICE_CONNECTED_ENTRY_POSITION = toOriginFromGroundPoint(
   NETHER_RESET_OFFICE_CONNECTED_ENTRY_GROUND_POINT,
@@ -61,8 +58,8 @@ const NETHER_RESET_OFFICE_CONNECTORS: readonly RoccoLevelConnector[] = [
     id: NETHER_RESET_OFFICE_ROOM_CONNECTOR_ID,
     exitArea: {
       x: 0,
-      y: DEFAULT_DESIGN_HEIGHT - NETHER_RESET_OFFICE_EXIT_TRIGGER_HEIGHT,
-      width: DEFAULT_DESIGN_WIDTH,
+      y: ROCCO_DESIGN_HEIGHT - NETHER_RESET_OFFICE_EXIT_TRIGGER_HEIGHT,
+      width: ROCCO_DESIGN_WIDTH,
       height: NETHER_RESET_OFFICE_EXIT_TRIGGER_HEIGHT,
     },
     entryPoint: {
@@ -85,7 +82,7 @@ const NETHER_RESET_OFFICE_SCENE_DEFINITION: RoccoNetherSceneDefinition = {
 
 export class RoccoNetherResetOfficeLevel implements RoccoLevel {
   private readonly localization: RoccoLocalization;
-  private spriteController: RoccoDefaultSpriteController | undefined = undefined;
+  private spriteController: RoccoPlayerSpriteController | undefined = undefined;
   readonly id = ROCCO_NETHER_RESET_OFFICE_LEVEL_ID;
   readonly title: string;
   readonly connectors = NETHER_RESET_OFFICE_CONNECTORS;
@@ -118,7 +115,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
-    this.spriteController = await installDefaultSprite(
+    this.spriteController = await installRoccoPlayerSprite(
       engine,
       {
         appearance: options.roccoAppearance,
@@ -145,8 +142,8 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
   unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
-    uninstallDefaultSprite(engine);
-    engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
+    uninstallRoccoPlayerSprite(engine);
+    engine.video.sprites.unregisterWalkMap(PIER_WALK_MAP_ID);
     this.spriteController = undefined;
   }
 

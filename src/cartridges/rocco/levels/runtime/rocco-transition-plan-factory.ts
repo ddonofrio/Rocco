@@ -1,9 +1,7 @@
 import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoPlaneScene } from '../../../../console/video/planes';
-import {
-  PIER_LEVEL_TRANSITION_COOLDOWN_MS,
-  ROCCO_PIER_START_LEVEL_ID,
-} from '../../games/rocco-default/constants';
+import { PIER_LEVEL_TRANSITION_COOLDOWN_MS } from '../../games/rocco-default/maps/pier/pier-layout';
+import { ROCCO_PIER_START_LEVEL_ID } from '../../games/rocco-default/maps/pier/pier-level-ids';
 import { ROCCO_BAIT_SHOP_LEVEL_ID } from '../../games/rocco-default/maps/shop';
 import type { RoccoLevel } from '../rocco-level-types';
 import { RoccoDeveloperRuntimeController } from './rocco-developer-runtime-controller';

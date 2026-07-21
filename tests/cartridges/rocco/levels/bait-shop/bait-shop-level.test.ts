@@ -19,15 +19,8 @@ import type {
 } from '../../../../../src/console/video/sprites';
 import { BAIT_SHOP_SOUVENIR_TABLE_STORAGE_ID } from '../../../../../src/cartridges/rocco/inventory';
 import { createRoccoLocalization } from '../../../../../src/cartridges/rocco/localization';
-import {
-  DEFAULT_SPRITE_DEFINITION_ID,
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_SCALE,
-  DEFAULT_WALK_MAP_ID,
-} from '../../../../../src/cartridges/rocco/rocco-default-constants';
+import { ROCCO_PLAYER_CONFIG } from '../../../../../src/cartridges/rocco/games/rocco-default/player';
+import { PIER_WALK_MAP_ID } from '../../../../../src/cartridges/rocco/games/rocco-default/maps/pier/pier-layout';
 import {
   BAIT_SHOP_SCENE_ID,
   RoccoBaitShopLevel,
@@ -389,27 +382,27 @@ describe('RoccoBaitShopLevel', () => {
         frontWhen: 'less-than-or-equal',
       },
     });
-    expect(state.registeredWalkMapIds).toContain(DEFAULT_WALK_MAP_ID);
-    expect(state.preloadedSpriteDefinitionIds).toContain(DEFAULT_SPRITE_DEFINITION_ID);
-    expect(state.loadedSpriteDefinitionIds).toContain(DEFAULT_SPRITE_DEFINITION_ID);
-    expect(state.removedSpriteIds).toContain(DEFAULT_SPRITE_INSTANCE_ID);
-    expect(state.playerSpriteId).toBe(DEFAULT_SPRITE_INSTANCE_ID);
+    expect(state.registeredWalkMapIds).toContain(PIER_WALK_MAP_ID);
+    expect(state.preloadedSpriteDefinitionIds).toContain(ROCCO_PLAYER_CONFIG.ids.definition);
+    expect(state.loadedSpriteDefinitionIds).toContain(ROCCO_PLAYER_CONFIG.ids.definition);
+    expect(state.removedSpriteIds).toContain(ROCCO_PLAYER_CONFIG.ids.instance);
+    expect(state.playerSpriteId).toBe(ROCCO_PLAYER_CONFIG.ids.instance);
     expect(state.playedSpriteActionDirections).toContain(
-      `${DEFAULT_SPRITE_INSTANCE_ID}:${DEFAULT_SPRITE_IDLE_ACTION_ID}:down-left`,
+      `${ROCCO_PLAYER_CONFIG.ids.instance}:${ROCCO_PLAYER_CONFIG.ids.idleAction}:down-left`,
     );
 
-    const rocco = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+    const rocco = findCreatedSprite(state, ROCCO_PLAYER_CONFIG.ids.instance);
     expect(rocco?.transform).toMatchObject({
       x: 665,
       y: 110,
-      scaleX: DEFAULT_SPRITE_SCALE * 1.2,
-      scaleY: DEFAULT_SPRITE_SCALE * 1.2,
+      scaleX: ROCCO_PLAYER_CONFIG.motion.scale * 1.2,
+      scaleY: ROCCO_PLAYER_CONFIG.motion.scale * 1.2,
     });
     expect(rocco?.navigation).toMatchObject({
-      walkMapId: DEFAULT_WALK_MAP_ID,
+      walkMapId: PIER_WALK_MAP_ID,
       groundAnchor: {
-        x: DEFAULT_SPRITE_GROUND_ANCHOR_X,
-        y: DEFAULT_SPRITE_GROUND_ANCHOR_Y,
+        x: ROCCO_PLAYER_CONFIG.frame.groundAnchor.x,
+        y: ROCCO_PLAYER_CONFIG.frame.groundAnchor.y,
       },
       constrainMovement: true,
       followSurface: true,
@@ -518,7 +511,7 @@ describe('RoccoBaitShopLevel', () => {
       },
     });
     expect(state.spriteMessages).toContain(
-      `${DEFAULT_SPRITE_INSTANCE_ID}:think:${localization.text.baitShop.postcardRackRevealLine}`,
+      `${ROCCO_PLAYER_CONFIG.ids.instance}:think:${localization.text.baitShop.postcardRackRevealLine}`,
     );
 
     const createdSpriteCount = state.createdSprites.length;
@@ -537,7 +530,7 @@ describe('RoccoBaitShopLevel', () => {
     ).toBeUndefined();
     expect(state.unregisteredSceneTargetIds).toContain(BAIT_SHOP_HIDDEN_KEYS_TARGET_INSTANCE_ID);
     expect(state.spriteMessages).toContain(
-      `${DEFAULT_SPRITE_INSTANCE_ID}:think:${localization.text.baitShop.hiddenKeysCollectedLine}`,
+      `${ROCCO_PLAYER_CONFIG.ids.instance}:think:${localization.text.baitShop.hiddenKeysCollectedLine}`,
     );
   });
 
@@ -634,12 +627,12 @@ describe('RoccoBaitShopLevel', () => {
 
     level.update(520);
 
-    expect(state.goToSprites).toEqual([`${DEFAULT_SPRITE_INSTANCE_ID}:228,365`]);
+    expect(state.goToSprites).toEqual([`${ROCCO_PLAYER_CONFIG.ids.instance}:228,365`]);
     expect(onOpenStorageInventoryRequested).not.toHaveBeenCalled();
 
-    const rocco = findCreatedSprite(state, DEFAULT_SPRITE_INSTANCE_ID);
+    const rocco = findCreatedSprite(state, ROCCO_PLAYER_CONFIG.ids.instance);
     expect(rocco?.navigation).toMatchObject({
-      walkMapId: DEFAULT_WALK_MAP_ID,
+      walkMapId: PIER_WALK_MAP_ID,
       constrainMovement: true,
       followSurface: true,
     });

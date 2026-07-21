@@ -1,12 +1,18 @@
 import type { RoccoGridMenuDefinition } from '../../../console/video/grid-menu';
-import { DEFAULT_SPRITE_SCALE } from '../rocco-default-constants';
+import { ROCCO_PLAYER_CONFIG } from '../games/rocco-default/player/rocco-player-config';
 import {
-  roccoDefaultKeysAssetUrl,
-  roccoDefaultMicromaniaClosedAssetUrl,
-  roccoDefaultMicromaniaInventoryAssetUrl,
-  roccoDefaultMysteriousKeyAssetUrl,
-  roccoDefaultTwentyEurosAssetUrl,
-} from '../rocco-default-assets';
+  ROCCO_INVENTORY_KEYS_ASSET_URL,
+  ROCCO_INVENTORY_MICROMANIA_CLOSED_ASSET_URL,
+  ROCCO_INVENTORY_MICROMANIA_INVENTORY_ASSET_URL,
+  ROCCO_INVENTORY_MYSTERIOUS_KEY_ASSET_URL,
+  ROCCO_INVENTORY_TWENTY_EUROS_ASSET_URL,
+  ROCCO_INVENTORY_BATA_ASSET_URL,
+  ROCCO_INVENTORY_BATA_GROUND_ASSET_URL,
+  ROCCO_ABYSSAL_TALISMAN_ASSET_URL,
+  ROCCO_CORAL_RELIC_ASSET_URL,
+  ROCCO_FLOATING_AMULET_ASSET_URL,
+  ROCCO_SPIRAL_RAZOR_ASSET_URL,
+} from './rocco-inventory-assets';
 import type { RoccoLocalization } from '../localization';
 import { RoccoInventoryStorage } from './inventory-storage';
 import {
@@ -36,30 +42,19 @@ const INVENTORY_BUTTON_HEIGHT = 40;
 const INVENTORY_BUTTON_GAP = 14;
 const INVENTORY_SLOT_SIZE = 106;
 const INVENTORY_SLOT_GAP = 8;
-const roccoAbyssalTalismanAssetUrl = new URL(
-  'assets/souvenirs/abyssal-talisman.png',
-  import.meta.url,
-).href;
-export const roccoCoralRelicAssetUrl = new URL('assets/souvenirs/coral-relic.png', import.meta.url)
-  .href;
-const roccoFloatingAmuletAssetUrl = new URL('assets/souvenirs/floating-amulet.png', import.meta.url)
-  .href;
-const roccoSpiralRazorAssetUrl = new URL('assets/souvenirs/spiral-razor.png', import.meta.url).href;
-const roccoBataAssetUrl = new URL('../assets/props/lab-coat.png', import.meta.url).href;
-const roccoBataGroundAssetUrl = new URL('../assets/props/lab-coat-ground.png', import.meta.url)
-  .href;
-
 export const ROCCO_INVENTORY_ITEM_IMAGE_URLS = [
-  roccoDefaultTwentyEurosAssetUrl,
-  roccoDefaultKeysAssetUrl,
-  roccoDefaultMysteriousKeyAssetUrl,
-  roccoDefaultMicromaniaInventoryAssetUrl,
-  roccoFloatingAmuletAssetUrl,
-  roccoSpiralRazorAssetUrl,
-  roccoAbyssalTalismanAssetUrl,
-  roccoCoralRelicAssetUrl,
-  roccoBataAssetUrl,
+  ROCCO_INVENTORY_TWENTY_EUROS_ASSET_URL,
+  ROCCO_INVENTORY_KEYS_ASSET_URL,
+  ROCCO_INVENTORY_MYSTERIOUS_KEY_ASSET_URL,
+  ROCCO_INVENTORY_MICROMANIA_INVENTORY_ASSET_URL,
+  ROCCO_FLOATING_AMULET_ASSET_URL,
+  ROCCO_SPIRAL_RAZOR_ASSET_URL,
+  ROCCO_ABYSSAL_TALISMAN_ASSET_URL,
+  ROCCO_CORAL_RELIC_ASSET_URL,
+  ROCCO_INVENTORY_BATA_ASSET_URL,
 ] as const;
+
+export { ROCCO_CORAL_RELIC_ASSET_URL as roccoCoralRelicAssetUrl } from './rocco-inventory-assets';
 
 interface RoccoInventoryFusionRecipe {
   resultItemId: string;
@@ -88,7 +83,7 @@ function createGroundSpriteDefinition(
     imageUri,
     width,
     height,
-    scaleRelativeToRoccoBase: spriteScaleAtDefaultRoccoScale / DEFAULT_SPRITE_SCALE,
+    scaleRelativeToRoccoBase: spriteScaleAtDefaultRoccoScale / ROCCO_PLAYER_CONFIG.motion.scale,
     renderLayer: 'world.behind',
     zIndex: 12,
     clickTargetPadding: {
@@ -100,55 +95,55 @@ function createGroundSpriteDefinition(
 }
 
 const DEFAULT_KEYS_GROUND_SPRITE = createGroundSpriteDefinition(
-  roccoDefaultKeysAssetUrl,
+  ROCCO_INVENTORY_KEYS_ASSET_URL,
   300,
   400,
   34,
 );
 const DEFAULT_MYSTERIOUS_KEY_GROUND_SPRITE = createGroundSpriteDefinition(
-  roccoDefaultMysteriousKeyAssetUrl,
+  ROCCO_INVENTORY_MYSTERIOUS_KEY_ASSET_URL,
   1254,
   1254,
   26,
 );
 const DEFAULT_TWENTY_EUROS_GROUND_SPRITE = createGroundSpriteDefinition(
-  roccoDefaultTwentyEurosAssetUrl,
+  ROCCO_INVENTORY_TWENTY_EUROS_ASSET_URL,
   1254,
   1254,
   28,
 );
 const DEFAULT_MAGAZINE_GROUND_SPRITE = createGroundSpriteDefinition(
-  roccoDefaultMicromaniaClosedAssetUrl,
+  ROCCO_INVENTORY_MICROMANIA_CLOSED_ASSET_URL,
   324,
   192,
   24,
 );
 const DEFAULT_FLOATING_AMULET_GROUND_SPRITE = createGroundSpriteDefinition(
-  roccoFloatingAmuletAssetUrl,
+  ROCCO_FLOATING_AMULET_ASSET_URL,
   1254,
   1254,
   24,
 );
 const DEFAULT_SPIRAL_RAZOR_GROUND_SPRITE = createGroundSpriteDefinition(
-  roccoSpiralRazorAssetUrl,
+  ROCCO_SPIRAL_RAZOR_ASSET_URL,
   882,
   1002,
   24,
 );
 const DEFAULT_ABYSSAL_TALISMAN_GROUND_SPRITE = createGroundSpriteDefinition(
-  roccoAbyssalTalismanAssetUrl,
+  ROCCO_ABYSSAL_TALISMAN_ASSET_URL,
   901,
   1172,
   24,
 );
 export const DEFAULT_CORAL_RELIC_GROUND_SPRITE = createGroundSpriteDefinition(
-  roccoCoralRelicAssetUrl,
+  ROCCO_CORAL_RELIC_ASSET_URL,
   909,
   1232,
   24,
 );
 const DEFAULT_BATA_GROUND_SPRITE = createGroundSpriteDefinition(
-  roccoBataGroundAssetUrl,
+  ROCCO_INVENTORY_BATA_GROUND_ASSET_URL,
   300,
   320,
   44,
@@ -378,7 +373,7 @@ export function createRoccoKeysInventoryItem(localization: RoccoLocalization): R
   return {
     id: ROCCO_INVENTORY_KEYS_ITEM_ID,
     label: localization.text.inventory.keysLabel,
-    imageUri: roccoDefaultKeysAssetUrl,
+    imageUri: ROCCO_INVENTORY_KEYS_ASSET_URL,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_KEYS_GROUND_SPRITE,
   };
@@ -390,7 +385,7 @@ export function createRoccoMysteriousKeyInventoryItem(
   return {
     id: ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID,
     label: localization.text.inventory.mysteriousKeyLabel,
-    imageUri: roccoDefaultMysteriousKeyAssetUrl,
+    imageUri: ROCCO_INVENTORY_MYSTERIOUS_KEY_ASSET_URL,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_MYSTERIOUS_KEY_GROUND_SPRITE,
   };
@@ -402,7 +397,7 @@ export function createRoccoTwentyEurosInventoryItem(
   return {
     id: ROCCO_INVENTORY_TWENTY_EUROS_ITEM_ID,
     label: localization.text.inventory.twentyEurosLabel,
-    imageUri: roccoDefaultTwentyEurosAssetUrl,
+    imageUri: ROCCO_INVENTORY_TWENTY_EUROS_ASSET_URL,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_TWENTY_EUROS_GROUND_SPRITE,
   };
@@ -417,7 +412,7 @@ export function createRoccoMagazineInventoryItem(
     label: isKnown
       ? localization.text.inventory.micromaniaLabel
       : localization.text.inventory.magazineLabel,
-    imageUri: roccoDefaultMicromaniaInventoryAssetUrl,
+    imageUri: ROCCO_INVENTORY_MICROMANIA_INVENTORY_ASSET_URL,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_MAGAZINE_GROUND_SPRITE,
   };
@@ -429,7 +424,7 @@ export function createRoccoFloatingAmuletInventoryItem(
   return {
     id: ROCCO_INVENTORY_FLOATING_AMULET_ITEM_ID,
     label: localization.text.inventory.floatingAmuletLabel,
-    imageUri: roccoFloatingAmuletAssetUrl,
+    imageUri: ROCCO_FLOATING_AMULET_ASSET_URL,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_FLOATING_AMULET_GROUND_SPRITE,
   };
@@ -441,7 +436,7 @@ export function createRoccoSpiralRazorInventoryItem(
   return {
     id: ROCCO_INVENTORY_SPIRAL_RAZOR_ITEM_ID,
     label: localization.text.inventory.spiralRazorLabel,
-    imageUri: roccoSpiralRazorAssetUrl,
+    imageUri: ROCCO_SPIRAL_RAZOR_ASSET_URL,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_SPIRAL_RAZOR_GROUND_SPRITE,
   };
@@ -453,7 +448,7 @@ export function createRoccoAbyssalTalismanInventoryItem(
   return {
     id: ROCCO_INVENTORY_ABYSSAL_TALISMAN_ITEM_ID,
     label: localization.text.inventory.abyssalTalismanLabel,
-    imageUri: roccoAbyssalTalismanAssetUrl,
+    imageUri: ROCCO_ABYSSAL_TALISMAN_ASSET_URL,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_ABYSSAL_TALISMAN_GROUND_SPRITE,
   };
@@ -465,7 +460,7 @@ export function createRoccoCoralRelicInventoryItem(
   return {
     id: ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
     label: localization.text.inventory.coralRelicLabel,
-    imageUri: roccoCoralRelicAssetUrl,
+    imageUri: ROCCO_CORAL_RELIC_ASSET_URL,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_CORAL_RELIC_GROUND_SPRITE,
   };
@@ -475,7 +470,7 @@ export function createRoccoBataInventoryItem(localization: RoccoLocalization): R
   return {
     id: ROCCO_INVENTORY_BATA_ITEM_ID,
     label: localization.text.inventory.bataLabel,
-    imageUri: roccoBataAssetUrl,
+    imageUri: ROCCO_INVENTORY_BATA_ASSET_URL,
     allowedStorageIds: [ROCCO_PLAYER_INVENTORY_STORAGE_ID],
     groundSprite: DEFAULT_BATA_GROUND_SPRITE,
   };

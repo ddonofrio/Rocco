@@ -16,11 +16,13 @@ The implementation in this directory is the canonical Rocco inventory domain.
 - `inventory-storage.ts` — owns generic cartridge storage placement and slot validation.
 - `inventory-transfer-session.ts` — projects two storages into a transfer menu and commits valid placement changes.
 - `rocco-inventory.ts` — owns the player inventory storage and grid projection.
+- `rocco-inventory-assets.ts` — owns inventory item asset URLs moved out of behavior files.
 - `souvenir-table-items.ts` — owns the reusable souvenir catalog.
+- `souvenir-assets.ts` — owns souvenir table asset URLs.
 - `souvenir-table-storage.ts` — creates the bait-shop souvenir storage.
 - `rocco-inventory-interactions.ts` — resolves item-use text and inventory-domain responses.
+- `assets/items/` — inventory item art owned by the inventory domain.
 - `assets/souvenirs/` — souvenir-table item art plus crafted ritual-item images owned by the inventory domain.
-- `rocco-inventory.test.ts` and `inventory-transfer-session.test.ts` — focused unit tests under `tests/cartridges/rocco/inventory/` for inventory behavior and shared storage transfers.
 - `index.ts` — public barrel.
 
 ## Runtime orchestration

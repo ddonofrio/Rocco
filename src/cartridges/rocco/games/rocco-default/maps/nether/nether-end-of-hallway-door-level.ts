@@ -7,20 +7,16 @@ import type {
 import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
 import type { RoccoLocalization } from '../../localization';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
-import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT } from '../../game-design';
+import { PIER_WALK_MAP_ID } from '../pier/pier-layout';
 import {
-  DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_SCALE,
-  DEFAULT_WALK_MAP_ID,
-} from '../../constants';
-import {
-  installDefaultSprite,
-  uninstallDefaultSprite,
-  type RoccoDefaultSpriteController,
-} from '../../sprites';
+  installRoccoPlayerSprite,
+  uninstallRoccoPlayerSprite,
+  type RoccoPlayerSpriteController,
+} from '../../player';
 import {
   findRoccoLevelConnector,
   type RoccoLevel,
@@ -47,7 +43,8 @@ const NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID = 'rocco-nether-steam-machine-ambie
 const NETHER_END_OF_HALLWAY_AMBIENT_SOUND_VOLUME = 0.1;
 const NETHER_END_OF_HALLWAY_LIGHTS_PLANE_ID = 'rocco-nether-end-of-hallway-door-lights';
 const NETHER_END_OF_HALLWAY_RETURN_EXIT_TRIGGER_HEIGHT = 30;
-const NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE = DEFAULT_SPRITE_SCALE * 1.2 * 1.8 * 0.8 * 1.2;
+const NETHER_END_OF_HALLWAY_DOOR_ROCCO_SCALE =
+  ROCCO_PLAYER_CONFIG.motion.scale * 1.2 * 1.8 * 0.8 * 1.2;
 const NETHER_END_OF_HALLWAY_DOOR_ROCCO_TINT = '#e6e6e6';
 const NETHER_END_OF_HALLWAY_DOOR_FAR_SCALE = 0.8;
 const NETHER_LIGHTS_MIN_OPACITY = 0;
@@ -128,8 +125,8 @@ const NETHER_END_OF_HALLWAY_WHEEL_VALVE_LOOK_HISTORY_KEY =
 const NETHER_END_OF_HALLWAY_WHEEL_VALVE_GRAB_HISTORY_KEY =
   'nether-end-of-hallway-door-wheel-valve-grab';
 const NETHER_END_OF_HALLWAY_ENTRY_GROUND_POINT = {
-  x: Math.round(DEFAULT_DESIGN_WIDTH * 0.5),
-  y: DEFAULT_DESIGN_HEIGHT - 22,
+  x: Math.round(ROCCO_DESIGN_WIDTH * 0.5),
+  y: ROCCO_DESIGN_HEIGHT - 22,
 } as const;
 const NETHER_END_OF_HALLWAY_ENTRY_POSITION = toOriginFromGroundPoint(
   NETHER_END_OF_HALLWAY_ENTRY_GROUND_POINT,
@@ -143,8 +140,8 @@ const NETHER_END_OF_HALLWAY_CONNECTORS: readonly RoccoLevelConnector[] = [
     id: NETHER_END_OF_HALLWAY_RETURN_CONNECTOR_ID,
     exitArea: {
       x: 0,
-      y: DEFAULT_DESIGN_HEIGHT - NETHER_END_OF_HALLWAY_RETURN_EXIT_TRIGGER_HEIGHT,
-      width: DEFAULT_DESIGN_WIDTH,
+      y: ROCCO_DESIGN_HEIGHT - NETHER_END_OF_HALLWAY_RETURN_EXIT_TRIGGER_HEIGHT,
+      width: ROCCO_DESIGN_WIDTH,
       height: NETHER_END_OF_HALLWAY_RETURN_EXIT_TRIGGER_HEIGHT,
     },
     entryPoint: {
@@ -171,8 +168,8 @@ const NETHER_END_OF_HALLWAY_SCENE_DEFINITION: RoccoNetherSceneDefinition = {
       source: {
         kind: 'image',
         uri: netherEndOfHallwayDoorAssetUrls.lights,
-        width: DEFAULT_DESIGN_WIDTH,
-        height: DEFAULT_DESIGN_HEIGHT,
+        width: ROCCO_DESIGN_WIDTH,
+        height: ROCCO_DESIGN_HEIGHT,
       },
       colorModel: { kind: 'native' },
       transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
@@ -181,8 +178,8 @@ const NETHER_END_OF_HALLWAY_SCENE_DEFINITION: RoccoNetherSceneDefinition = {
       viewport: {
         x: 0,
         y: 0,
-        width: DEFAULT_DESIGN_WIDTH,
-        height: DEFAULT_DESIGN_HEIGHT,
+        width: ROCCO_DESIGN_WIDTH,
+        height: ROCCO_DESIGN_HEIGHT,
       },
       opacity: NETHER_LIGHTS_MIN_OPACITY,
       blendMode: 'multiply',
@@ -205,7 +202,7 @@ function randomBetween(min: number, max: number): number {
 export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
   private readonly localization: RoccoLocalization;
   private engine: CartridgeSdkV1Runtime | undefined = undefined;
-  private spriteController: RoccoDefaultSpriteController | undefined = undefined;
+  private spriteController: RoccoPlayerSpriteController | undefined = undefined;
   private lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
   private lightsNoiseOpacity = NETHER_LIGHTS_MIN_OPACITY;
   private lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;
@@ -258,7 +255,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: NETHER_END_OF_HALLWAY_TIMBRE_MESSAGE_TTL_MS,
@@ -314,7 +311,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: NETHER_END_OF_HALLWAY_DOOR_HANDLE_MESSAGE_TTL_MS,
@@ -351,7 +348,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...this.localization.text.nether.ascendingPipes.lookLines],
       {
         ttlMs: NETHER_END_OF_HALLWAY_ASCENDING_PIPES_MESSAGE_TTL_MS,
@@ -411,7 +408,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: NETHER_END_OF_HALLWAY_WHEEL_VALVE_MESSAGE_TTL_MS,
@@ -553,7 +550,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
       : { ...NETHER_END_OF_HALLWAY_ENTRY_POSITION };
     const initialFacing = entryConnector?.entryFacing ?? 'up';
     const { scene, walkMapProfile } = await this.prepareNetherEndScene(engine, preloader);
-    this.spriteController = await installDefaultSprite(
+    this.spriteController = await installRoccoPlayerSprite(
       engine,
       {
         appearance: options.roccoAppearance,
@@ -605,8 +602,8 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     );
     engine.audio.stopSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
     engine.audio.unregisterSound(NETHER_END_OF_HALLWAY_AMBIENT_SOUND_ID);
-    uninstallDefaultSprite(engine);
-    engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
+    uninstallRoccoPlayerSprite(engine);
+    engine.video.sprites.unregisterWalkMap(PIER_WALK_MAP_ID);
     this.engine = undefined;
     this.spriteController = undefined;
     this.lightsOverlayOpacity = NETHER_LIGHTS_MIN_OPACITY;
@@ -686,13 +683,13 @@ function createNetherEndOfHallwayTimbreActionMenuDefinition(
         id: 'see',
         actionId: 'look',
         label: localization.text.actions.see,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
       {
         id: 'press',
         actionId: 'press',
         label: localization.text.actions.press,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
     ],
   };
@@ -717,13 +714,13 @@ function createNetherEndOfHallwayDoorHandleActionMenuDefinition(
         id: 'see',
         actionId: 'look',
         label: localization.text.actions.see,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
     ],
   };
@@ -748,13 +745,13 @@ function createNetherEndOfHallwayWheelValveActionMenuDefinition(
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
     ],
   };

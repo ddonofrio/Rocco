@@ -12,7 +12,7 @@ import type { RoccoLevel } from '../../../../src/cartridges/rocco/levels/rocco-l
 import type { ConsoleKernel } from '../../../../src/console/console-kernel';
 import { asRoccoTestSdk } from '../test-sdk';
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
-import { DEFAULT_SPRITE_INSTANCE_ID } from '../../../../src/cartridges/rocco/rocco-default-constants';
+import { ROCCO_PLAYER_CONFIG } from '../../../../src/cartridges/rocco/games/rocco-default/player';
 
 interface DroppedEngineState {
   thoughtMessages: string[];
@@ -194,7 +194,7 @@ describe('RoccoDroppedInventoryController', () => {
       `rocco-dropped-inventory-target:${level.id}:${keys.id}`,
     );
     expect(state.thoughtMessages).toContain(
-      `${DEFAULT_SPRITE_INSTANCE_ID}:${localization.text.inventory.pickupLine}`,
+      `${ROCCO_PLAYER_CONFIG.ids.instance}:${localization.text.inventory.pickupLine}`,
     );
   });
 

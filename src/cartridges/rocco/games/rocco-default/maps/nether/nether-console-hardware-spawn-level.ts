@@ -19,29 +19,18 @@ import {
   resolveRoccoDialogueChoice,
   type RoccoDialogueLine,
 } from '../../../../rpce/dialogue';
-import { roccoDefaultActionMenuAssetUrls, roccoDefaultYouLoseSoundUrl } from '../../sprites';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT, ROCCO_BACKGROUND_COLOR } from '../../game-design';
+import { PIER_WALK_MAP_ID } from '../pier/pier-layout';
 import {
-  DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_ROCCO_GREEN_BLACK,
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_SCALE,
-  DEFAULT_WALK_MAP_ID,
-} from '../../constants';
-import {
-  installDefaultSprite,
-  uninstallDefaultSprite,
-  type RoccoDefaultSpriteController,
-} from '../../sprites';
+  installRoccoPlayerSprite,
+  uninstallRoccoPlayerSprite,
+  type RoccoPlayerSpriteController,
+} from '../../player';
 import { RoccoScriptedSceneInteractionController } from '../../../../scripted-scene-interaction-controller';
-import {
-  ROCCO_LAB_COAT_PLAYER_APPEARANCE,
-  type RoccoPlayerAppearance,
-} from '../../../../rocco-player-appearance';
+import { ROCCO_LAB_COAT_PLAYER_APPEARANCE, type RoccoPlayerAppearance } from '../../player';
 import {
   findRoccoLevelConnector,
   type RoccoLevel,
@@ -58,6 +47,10 @@ import {
   netherAmbientSteamMachineAssetUrl,
   netherConsoleHardwareSpawnAssetUrls,
 } from './nether-assets';
+import {
+  netherSecurityCameraAssetUrls,
+  netherYouLoseSoundUrl,
+} from './nether-security-camera-assets';
 import {
   createNetherArrivalPortalSpriteDefinition,
   createNetherArrivalSmokeSpriteDefinition,
@@ -93,38 +86,42 @@ const NETHER_AMBIENT_SOUND_VOLUME = 0.2;
 const NETHER_AMBIENT_SOUND_LEFT_BONUS = 0.05;
 const NETHER_AMBIENT_SOUND_VOLUME_UPDATE_EPSILON = 0.001;
 const NETHER_LIGHTS_PLANE_ID = 'rocco-nether-console-hardware-spawn-lights';
-const NETHER_ROCCO_SCALE = ((DEFAULT_SPRITE_SCALE * 1.2 * 1.8) / 2) * 1.2 * 1.1;
+const NETHER_ROCCO_SCALE = ((ROCCO_PLAYER_CONFIG.motion.scale * 1.2 * 1.8) / 2) * 1.2 * 1.1;
 const NETHER_ROCCO_TINT = '#b3b3b3';
 const NETHER_ROCCO_CONTRAST = 1.2;
 const NETHER_ROCCO_CONTRAST_RESPONSE = 0.25;
 const NETHER_RIGHT_FAR_SCALE = 0.1375;
 const NETHER_LEFT_FAR_SCALE = 0.275;
 const NETHER_SCALE_START_HEIGHT_FROM_BOTTOM = 100;
-const NETHER_SCALE_START_Y = DEFAULT_DESIGN_HEIGHT - NETHER_SCALE_START_HEIGHT_FROM_BOTTOM;
-const NETHER_FORWARD_TRIGGER_Y = Math.round(DEFAULT_DESIGN_HEIGHT / 2) + 50;
+const NETHER_SCALE_START_Y = ROCCO_DESIGN_HEIGHT - NETHER_SCALE_START_HEIGHT_FROM_BOTTOM;
+const NETHER_FORWARD_TRIGGER_Y = Math.round(ROCCO_DESIGN_HEIGHT / 2) + 50;
 const NETHER_SCALE_LEFT_REGION = {
   x: 0,
   y: 0,
-  width: DEFAULT_DESIGN_WIDTH / 2,
-  height: DEFAULT_DESIGN_HEIGHT,
+  width: ROCCO_DESIGN_WIDTH / 2,
+  height: ROCCO_DESIGN_HEIGHT,
 } as const;
 const NETHER_SCALE_RIGHT_REGION = {
-  x: DEFAULT_DESIGN_WIDTH / 2,
+  x: ROCCO_DESIGN_WIDTH / 2,
   y: 0,
-  width: DEFAULT_DESIGN_WIDTH / 2,
-  height: DEFAULT_DESIGN_HEIGHT,
+  width: ROCCO_DESIGN_WIDTH / 2,
+  height: ROCCO_DESIGN_HEIGHT,
 } as const;
 const NETHER_ENTRY_GROUND_POINT = {
-  x: Math.round(DEFAULT_DESIGN_WIDTH * 0.5),
-  y: Math.round(DEFAULT_DESIGN_HEIGHT * 0.72),
+  x: Math.round(ROCCO_DESIGN_WIDTH * 0.5),
+  y: Math.round(ROCCO_DESIGN_HEIGHT * 0.72),
 } as const;
 const NETHER_ARRIVAL_ROCCO_GROUND_POINT = {
   x: 851,
   y: 452,
 } as const;
 const NETHER_ENTRY_POSITION = {
-  x: Math.round(NETHER_ENTRY_GROUND_POINT.x - DEFAULT_SPRITE_GROUND_ANCHOR_X * NETHER_ROCCO_SCALE),
-  y: Math.round(NETHER_ENTRY_GROUND_POINT.y - DEFAULT_SPRITE_GROUND_ANCHOR_Y * NETHER_ROCCO_SCALE),
+  x: Math.round(
+    NETHER_ENTRY_GROUND_POINT.x - ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * NETHER_ROCCO_SCALE,
+  ),
+  y: Math.round(
+    NETHER_ENTRY_GROUND_POINT.y - ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * NETHER_ROCCO_SCALE,
+  ),
 } as const;
 const NETHER_ARRIVAL_ROCCO_POSITION = toOriginFromGroundPoint(
   NETHER_ARRIVAL_ROCCO_GROUND_POINT,
@@ -274,7 +271,7 @@ const NETHER_SECURITY_CAMERA_SHAPE = {
   width: NETHER_SECURITY_CAMERA_TARGET_WIDTH,
   height: NETHER_SECURITY_CAMERA_TARGET_HEIGHT,
 };
-const NETHER_SECURITY_LEFT_SIDE_TRIGGER_MAX_X = Math.floor(DEFAULT_DESIGN_WIDTH / 2);
+const NETHER_SECURITY_LEFT_SIDE_TRIGGER_MAX_X = Math.floor(ROCCO_DESIGN_WIDTH / 2);
 const NETHER_SECURITY_LEFT_SIDE_TRIGGER_DELAY_MS = 3000;
 const NETHER_SECURITY_ALERT_MESSAGE_ID = 'rocco-nether-security-alert-message';
 const NETHER_SECURITY_ALERT_SOUND_ID = 'rocco-nether-security-alert-sound';
@@ -323,13 +320,6 @@ const NETHER_PIPE_SMOKE_TINT = '#808080';
 const NETHER_PIPE_SMOKE_SECOND_TINT = '#c89a6a';
 const NETHER_PIPE_SMOKE_RENDER_LAYER = 'world.behind';
 const NETHER_PIPE_SMOKE_Z_INDEX = 18;
-
-const netherSecurityCameraAssetUrls = [
-  new URL('assets/camera/1.png', import.meta.url).href,
-  new URL('assets/camera/2.png', import.meta.url).href,
-  new URL('assets/camera/3.png', import.meta.url).href,
-  new URL('assets/camera/4.png', import.meta.url).href,
-] as const;
 
 interface NetherSecurityCameraText {
   description: string;
@@ -488,19 +478,19 @@ function createNetherSecurityCameraActionMenuDefinition(
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
       {
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
       {
         id: 'kick',
         actionId: 'kick',
         label: localization.text.actions.kick,
-        imageUri: roccoDefaultActionMenuAssetUrls.kick,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
       },
     ],
   };
@@ -525,13 +515,13 @@ function createNetherIntercomunicadorActionMenuDefinition(
         id: 'talk',
         actionId: 'talk',
         label: localization.text.actions.talk,
-        imageUri: roccoDefaultActionMenuAssetUrls.talk,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.talk,
       },
       {
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
     ],
   };
@@ -556,13 +546,13 @@ function createNetherNoisyMachineActionMenuDefinition(
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
       {
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
     ],
   };
@@ -636,13 +626,13 @@ function createNetherShelfActionMenuDefinition(
         id: 'grab',
         actionId: 'grab',
         label: localization.text.actions.grab,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
       {
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
     ],
   };
@@ -888,7 +878,7 @@ const NETHER_CONNECTORS: readonly RoccoLevelConnector[] = [
     exitArea: {
       x: 0,
       y: 0,
-      width: DEFAULT_DESIGN_WIDTH,
+      width: ROCCO_DESIGN_WIDTH,
       height: NETHER_FORWARD_TRIGGER_Y,
     },
     entryPoint: { ...NETHER_FORWARD_RETURN_POSITION },
@@ -913,8 +903,8 @@ const NETHER_SCENE_DEFINITION: RoccoNetherSceneDefinition = {
       source: {
         kind: 'image',
         uri: netherConsoleHardwareSpawnAssetUrls.lights,
-        width: DEFAULT_DESIGN_WIDTH,
-        height: DEFAULT_DESIGN_HEIGHT,
+        width: ROCCO_DESIGN_WIDTH,
+        height: ROCCO_DESIGN_HEIGHT,
       },
       colorModel: { kind: 'native' },
       transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
@@ -923,8 +913,8 @@ const NETHER_SCENE_DEFINITION: RoccoNetherSceneDefinition = {
       viewport: {
         x: 0,
         y: 0,
-        width: DEFAULT_DESIGN_WIDTH,
-        height: DEFAULT_DESIGN_HEIGHT,
+        width: ROCCO_DESIGN_WIDTH,
+        height: ROCCO_DESIGN_HEIGHT,
       },
       opacity: NETHER_LIGHTS_MIN_OPACITY,
       blendMode: 'multiply',
@@ -944,7 +934,7 @@ class RoccoNetherConsoleHardwareSpawnController
   private readonly localization: RoccoLocalization;
   private engine: CartridgeSdkV1Runtime | undefined = undefined;
   private options: RoccoLevelMountOptions = {};
-  private spriteController: RoccoDefaultSpriteController | undefined = undefined;
+  private spriteController: RoccoPlayerSpriteController | undefined = undefined;
   private scriptedInteractionController: RoccoScriptedSceneInteractionController | undefined =
     undefined;
   private intercomDialogue: RoccoDialogueSession | undefined = undefined;
@@ -1109,7 +1099,7 @@ class RoccoNetherConsoleHardwareSpawnController
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: NETHER_INTERCOMUNICADOR_MESSAGE_TTL_MS,
@@ -1367,7 +1357,7 @@ class RoccoNetherConsoleHardwareSpawnController
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: NETHER_NOISY_MACHINE_MESSAGE_TTL_MS,
@@ -1481,7 +1471,7 @@ class RoccoNetherConsoleHardwareSpawnController
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: NETHER_SHELF_MESSAGE_TTL_MS,
@@ -1501,7 +1491,7 @@ class RoccoNetherConsoleHardwareSpawnController
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: NETHER_SECURITY_CAMERA_MESSAGE_TTL_MS,
@@ -1619,7 +1609,7 @@ class RoccoNetherConsoleHardwareSpawnController
     this.engine.video.gridMenus.closeMenu();
     this.engine.video.gridMenus.clearCarriedItem();
     this.engine.video.messages.clearMessages();
-    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.stopMovement(ROCCO_PLAYER_CONFIG.ids.instance);
     this.acquireBlockingInputLease(this.engine);
 
     if (options?.skipWarningMessage) {
@@ -1757,8 +1747,8 @@ class RoccoNetherConsoleHardwareSpawnController
       text: this.localization.text.keys.defeatTitle,
       renderLayer: 'overlay.titles',
       zIndex: 5000,
-      x: DEFAULT_DESIGN_WIDTH / 2,
-      y: DEFAULT_DESIGN_HEIGHT / 2,
+      x: ROCCO_DESIGN_WIDTH / 2,
+      y: ROCCO_DESIGN_HEIGHT / 2,
       anchor: { x: 0.5, y: 0.5 },
       style: {
         fill: '#cbd6c0',
@@ -1805,13 +1795,13 @@ class RoccoNetherConsoleHardwareSpawnController
       kind: 'rect',
       renderLayer: 'overlay.primitives',
       zIndex: 5000,
-      color: DEFAULT_ROCCO_GREEN_BLACK,
+      color: ROCCO_BACKGROUND_COLOR,
       alpha: clampUnit(alpha),
       visible: true,
       x: 0,
       y: 0,
-      width: DEFAULT_DESIGN_WIDTH,
-      height: DEFAULT_DESIGN_HEIGHT,
+      width: ROCCO_DESIGN_WIDTH,
+      height: ROCCO_DESIGN_HEIGHT,
       fill: true,
     });
   }
@@ -1834,10 +1824,10 @@ class RoccoNetherConsoleHardwareSpawnController
       return;
     }
 
-    const sprite = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
-    const x = sprite?.transform.x ?? DEFAULT_DESIGN_WIDTH;
-    const clampedX = Math.min(DEFAULT_DESIGN_WIDTH, Math.max(0, x));
-    const leftness = 1 - clampedX / DEFAULT_DESIGN_WIDTH;
+    const sprite = this.engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
+    const x = sprite?.transform.x ?? ROCCO_DESIGN_WIDTH;
+    const clampedX = Math.min(ROCCO_DESIGN_WIDTH, Math.max(0, x));
+    const leftness = 1 - clampedX / ROCCO_DESIGN_WIDTH;
     const nextVolume = NETHER_AMBIENT_SOUND_VOLUME + leftness * NETHER_AMBIENT_SOUND_LEFT_BONUS;
 
     if (
@@ -1855,7 +1845,7 @@ class RoccoNetherConsoleHardwareSpawnController
       return;
     }
 
-    const sprite = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const sprite = this.engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     if (!sprite) {
       return;
     }
@@ -1865,7 +1855,7 @@ class RoccoNetherConsoleHardwareSpawnController
       return;
     }
 
-    this.engine.video.sprites.setContrast(DEFAULT_SPRITE_INSTANCE_ID, nextContrast);
+    this.engine.video.sprites.setContrast(ROCCO_PLAYER_CONFIG.ids.instance, nextContrast);
   }
 
   private updateLightsOverlay(deltaMs: number): void {
@@ -1927,8 +1917,8 @@ class RoccoNetherConsoleHardwareSpawnController
     engine: CartridgeSdkV1Runtime,
     initialFacing: RoccoFacingDirection,
     initialPosition: RoccoPoint,
-  ): Promise<RoccoDefaultSpriteController> {
-    return installDefaultSprite(engine, {
+  ): Promise<RoccoPlayerSpriteController> {
+    return installRoccoPlayerSprite(engine, {
       appearance: this.options.roccoAppearance,
       initialFacing,
       initialPosition,
@@ -1966,7 +1956,7 @@ class RoccoNetherConsoleHardwareSpawnController
 
     this.zoomIntroPhase = undefined;
     this.zoomIntroElapsedMs = 0;
-    this.engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.removeSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     this.engine.setPlayerSprite(undefined);
     this.engine.video.sprites.removeSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
     this.engine.video.sprites.removeSprite(NETHER_ARRIVAL_PORTAL_INSTANCE_ID);
@@ -2101,20 +2091,28 @@ class RoccoNetherConsoleHardwareSpawnController
         ...NETHER_ARRIVAL_ROCCO_POSITION,
       });
       engine.video.sprites.setPosition(
-        DEFAULT_SPRITE_INSTANCE_ID,
+        ROCCO_PLAYER_CONFIG.ids.instance,
         NETHER_ARRIVAL_ROCCO_POSITION.x,
         NETHER_ARRIVAL_ROCCO_POSITION.y,
         {
           constrainToWalkMap: false,
         },
       );
-      engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-        direction: 'down-left',
-        restart: true,
-      });
-      engine.video.messages.think(DEFAULT_SPRITE_INSTANCE_ID, this.resolveArrivalThoughtLine(), {
-        ttlMs: NETHER_ARRIVAL_THOUGHT_TTL_MS,
-      });
+      engine.video.sprites.playAction(
+        ROCCO_PLAYER_CONFIG.ids.instance,
+        ROCCO_PLAYER_CONFIG.ids.idleAction,
+        {
+          direction: 'down-left',
+          restart: true,
+        },
+      );
+      engine.video.messages.think(
+        ROCCO_PLAYER_CONFIG.ids.instance,
+        this.resolveArrivalThoughtLine(),
+        {
+          ttlMs: NETHER_ARRIVAL_THOUGHT_TTL_MS,
+        },
+      );
       this.arrivalSequencePlayed = true;
     } catch (error) {
       engine.log('System', `Nether arrival sequence failed: ${String(error)}`);
@@ -2125,14 +2123,18 @@ class RoccoNetherConsoleHardwareSpawnController
   }
 
   private resolvePlayerGroundPoint(): RoccoPoint | undefined {
-    const player = this.engine?.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const player = this.engine?.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     if (!player) {
       return undefined;
     }
 
     return {
-      x: player.transform.x + DEFAULT_SPRITE_GROUND_ANCHOR_X * (player.transform.scaleX || 1),
-      y: player.transform.y + DEFAULT_SPRITE_GROUND_ANCHOR_Y * (player.transform.scaleY || 1),
+      x:
+        player.transform.x +
+        ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * (player.transform.scaleX || 1),
+      y:
+        player.transform.y +
+        ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * (player.transform.scaleY || 1),
     };
   }
 
@@ -2143,13 +2145,13 @@ class RoccoNetherConsoleHardwareSpawnController
   startArrivalZoomIntro(engine: CartridgeSdkV1Runtime): void {
     this.engine = engine;
     this.acquireBlockingInputLease(engine);
-    engine.video.sprites.removeSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     engine.setPlayerSprite(undefined);
     engine.video.camera?.setTransform({
       factor: NETHER_ARRIVAL_ZOOM_FACTOR,
-      focusX: DEFAULT_DESIGN_WIDTH,
+      focusX: ROCCO_DESIGN_WIDTH,
       focusY: 0,
-      anchorX: DEFAULT_DESIGN_WIDTH,
+      anchorX: ROCCO_DESIGN_WIDTH,
       anchorY: 0,
     });
     this.zoomIntroPhase = 'hold';
@@ -2174,10 +2176,10 @@ class RoccoNetherConsoleHardwareSpawnController
     this.engine.video.camera?.animateTo(
       {
         factor: 1,
-        focusX: DEFAULT_DESIGN_WIDTH / 2,
-        focusY: DEFAULT_DESIGN_HEIGHT / 2,
-        anchorX: DEFAULT_DESIGN_WIDTH / 2,
-        anchorY: DEFAULT_DESIGN_HEIGHT / 2,
+        focusX: ROCCO_DESIGN_WIDTH / 2,
+        focusY: ROCCO_DESIGN_HEIGHT / 2,
+        anchorX: ROCCO_DESIGN_WIDTH / 2,
+        anchorY: ROCCO_DESIGN_HEIGHT / 2,
       },
       NETHER_ARRIVAL_ZOOM_OUT_MS,
       {
@@ -2211,7 +2213,7 @@ class RoccoNetherConsoleHardwareSpawnController
     this.intercomDialogue = new RoccoDialogueSession({
       id: NETHER_INTERCOMUNICADOR_DIALOGUE_MENU_ID,
       engine,
-      playerSpriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
+      playerSpriteInstanceId: ROCCO_PLAYER_CONFIG.ids.instance,
       npcSpriteInstanceId: NETHER_INTERCOMUNICADOR_MESSAGE_ANCHOR_INSTANCE_ID,
       playerLineTtlMs: NETHER_INTERCOMUNICADOR_PLAYER_TTL_MS,
       npcLineTtlMs: NETHER_INTERCOMUNICADOR_REPLY_TTL_MS,
@@ -2219,7 +2221,7 @@ class RoccoNetherConsoleHardwareSpawnController
     this.securityCameraBribeDialogue = new RoccoDialogueSession({
       id: NETHER_SECURITY_CAMERA_BRIBE_DIALOGUE_ID,
       engine,
-      playerSpriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
+      playerSpriteInstanceId: ROCCO_PLAYER_CONFIG.ids.instance,
       npcSpriteInstanceId: NETHER_SECURITY_CAMERA_SPRITE_INSTANCE_ID,
       playerLineTtlMs: NETHER_SECURITY_CAMERA_BRIBE_PLAYER_TTL_MS,
       npcLineTtlMs: NETHER_SECURITY_CAMERA_BRIBE_CAMERA_TTL_MS,
@@ -2315,7 +2317,7 @@ class RoccoNetherConsoleHardwareSpawnController
     });
     engine.audio.registerSound({
       id: NETHER_SECURITY_ALERT_SOUND_ID,
-      uri: roccoDefaultYouLoseSoundUrl,
+      uri: netherYouLoseSoundUrl,
       volume: NETHER_SECURITY_ALERT_SOUND_VOLUME,
       loop: false,
     });
@@ -2464,8 +2466,8 @@ class RoccoNetherConsoleHardwareSpawnController
     engine.video.sceneTargets?.unregisterTarget(NETHER_INTERCOMUNICADOR_TARGET_INSTANCE_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_NOISY_MACHINE_TARGET_INSTANCE_ID);
     engine.video.sceneTargets?.unregisterTarget(NETHER_SHELF_TARGET_INSTANCE_ID);
-    uninstallDefaultSprite(engine);
-    engine.video.sprites.unregisterWalkMap(DEFAULT_WALK_MAP_ID);
+    uninstallRoccoPlayerSprite(engine);
+    engine.video.sprites.unregisterWalkMap(PIER_WALK_MAP_ID);
     this.engine = undefined;
     this.spriteController = undefined;
     this.scriptedInteractionController = undefined;
@@ -2617,7 +2619,7 @@ class RoccoNetherConsoleHardwareSpawnController
     this.engine.video.gridMenus.closeMenu();
     this.engine.video.gridMenus.clearCarriedItem();
     this.engine.video.messages.clearMessages();
-    this.engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    this.engine.video.sprites.stopMovement(ROCCO_PLAYER_CONFIG.ids.instance);
 
     const text = this.localization.text.nether.securityCameraBribe;
     this.securityCameraBribeDialogue?.beginLinearSequence({

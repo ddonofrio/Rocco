@@ -4,7 +4,7 @@ import {
   DEFAULT_ROCCO_PLAYER_APPEARANCE,
   ROCCO_LAB_COAT_PLAYER_APPEARANCE,
   type RoccoPlayerAppearance,
-} from '../../../src/cartridges/rocco/rocco-player-appearance';
+} from '../../../src/cartridges/rocco/games/rocco-default/player';
 
 describe('RoccoPlayerAppearance', () => {
   it('exposes the default and lab-coat appearance identifiers', () => {

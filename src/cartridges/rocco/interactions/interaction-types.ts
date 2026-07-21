@@ -15,7 +15,7 @@ import type {
 import type { RoccoLevel } from '../levels/rocco-level-types';
 import type { RoccoInventory } from '../inventory';
 import type { RoccoLocalization } from '../localization';
-import type { RoccoPlayerAppearance } from '../rocco-player-appearance';
+import type { RoccoPlayerAppearance } from '../games/rocco-default/player';
 import type { RoccoDeveloperRuntimeController } from '../levels/runtime/rocco-developer-runtime-controller';
 import type { RoccoDroppedInventoryController } from '../levels/runtime/rocco-dropped-inventory-controller';
 import type {

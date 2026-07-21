@@ -7,20 +7,10 @@ import type {
 import type { RoccoPlaneScene } from '../../../console/video/planes';
 import type { RoccoPoint } from '../../../console/video/sprites';
 import {
-  roccoDefaultDeveloperSpriteCycleCursorAssetUrl,
-  roccoDefaultActionMenuAssetUrls,
-  roccoDefaultPoliceWhistleSoundUrl,
-} from '../games/rocco-default/sprites';
-import {
   createRoccoLocalization,
   type RoccoLocalization,
 } from '../games/rocco-default/localization';
-import {
-  ROCCO_INVENTORY_ITEM_IMAGE_URLS,
-  ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS,
-  type RoccoInventory,
-  type RoccoInventoryItem,
-} from '../games/rocco-default/inventory';
+import { type RoccoInventory, type RoccoInventoryItem } from '../games/rocco-default/inventory';
 import {
   installRoccoPlayerActionMenu,
   uninstallRoccoPlayerActionMenu,
@@ -44,7 +34,6 @@ import { RoccoDroppedInventoryController } from './runtime/rocco-dropped-invento
 import { isRoccoToiletLevelCapability } from './runtime/rocco-level-capabilities';
 import { RoccoSceneActionRouter } from './runtime/rocco-scene-action-router';
 import { RoccoAssetPreloader } from './rocco-asset-preloader';
-import { ROCCO_STAN_POLICE_DEFEAT_SOUND_ID } from './runtime/rocco-scripted-sequence-controller';
 import { RoccoDeveloperRuntimeController } from './runtime/rocco-developer-runtime-controller';
 import { RoccoLevelTransitionService } from './runtime/rocco-level-transition-service';
 import { createRoccoGameCompositionRoot } from './runtime/rocco-game-composition-root';
@@ -52,6 +41,7 @@ import { RoccoStatusPresenter } from './runtime/rocco-status-presenter';
 import { RoccoTransitionPlanFactory } from './runtime/rocco-transition-plan-factory';
 import { RoccoCheckpointCoordinator } from './runtime/rocco-checkpoint-coordinator';
 import { RoccoInventorySceneCoordinator } from './runtime/rocco-inventory-scene-coordinator';
+import { ROCCO_DEFAULT_SHARED_ASSET_MANIFEST } from '../games/rocco-default/preload';
 import { RoccoRuntimeLifecycleCoordinator } from './runtime/rocco-runtime-lifecycle-coordinator';
 import { RoccoGameInteractionCoordinator } from './runtime/rocco-game-interaction-coordinator';
 import { RoccoWorldState } from './runtime/rocco-world-state';
@@ -69,17 +59,6 @@ export interface RoccoLevelManagerOptions {
   onRestartRequested?: () => void;
   cancelActiveActions?: (reason: string) => void;
 }
-
-const ROCCO_SHARED_UI_ASSET_URLS = [
-  roccoDefaultActionMenuAssetUrls.developerMode,
-  roccoDefaultActionMenuAssetUrls.grab,
-  roccoDefaultActionMenuAssetUrls.inventory,
-  roccoDefaultActionMenuAssetUrls.kick,
-  roccoDefaultActionMenuAssetUrls.look,
-  roccoDefaultActionMenuAssetUrls.talk,
-  roccoDefaultActionMenuAssetUrls.useWc,
-  roccoDefaultDeveloperSpriteCycleCursorAssetUrl,
-] as const;
 
 export class RoccoLevelManager {
   private readonly levelRegistry: RoccoLevelRegistry;
@@ -272,11 +251,7 @@ export class RoccoLevelManager {
       developerRuntime: this.developerRuntime,
       actionRouter: this.actionRouter,
       worldState: this.worldState,
-      sharedAssetUrls: ROCCO_SHARED_UI_ASSET_URLS,
-      inventoryItemImageUrls: ROCCO_INVENTORY_ITEM_IMAGE_URLS,
-      souvenirItemImageUrls: ROCCO_SOUVENIR_TABLE_ITEM_IMAGE_URLS,
-      policeDefeatSoundId: ROCCO_STAN_POLICE_DEFEAT_SOUND_ID,
-      policeDefeatSoundUrl: roccoDefaultPoliceWhistleSoundUrl,
+      sharedAssets: ROCCO_DEFAULT_SHARED_ASSET_MANIFEST,
       syncActiveLevelDroppedInventoryPresentation: () =>
         this.syncActiveLevelDroppedInventoryPresentation(),
       clearActiveLevelDroppedInventoryPresentation: () =>

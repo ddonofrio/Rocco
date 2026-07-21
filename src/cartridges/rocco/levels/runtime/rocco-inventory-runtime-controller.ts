@@ -23,7 +23,7 @@ import {
   type RoccoInventoryItem,
 } from '../../inventory';
 import type { RoccoLocalization } from '../../localization';
-import { DEFAULT_SPRITE_INSTANCE_ID } from '../../rocco-default-constants';
+import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
 
 export interface RoccoInventoryRuntimeActionResult {
   suppressDefaultPlayerMove?: boolean;
@@ -198,7 +198,7 @@ export class RoccoInventoryRuntimeController {
     }
     roccoCartridgeMessageRuntime.think(
       engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       this.localization.text.inventory.fullLines,
       {
         ttlMs: 3200,
@@ -450,7 +450,7 @@ export class RoccoInventoryRuntimeController {
 
     roccoCartridgeMessageRuntime.think(
       engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       resolveRoccoInventoryUseLines({
         itemId: carriedItem.item.id,
         targetInstanceId: activation.targetInstanceId,

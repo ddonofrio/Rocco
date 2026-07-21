@@ -9,22 +9,9 @@ import {
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { RoccoDialogueSession, roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import { roccoDefaultStanAssetUrl } from '../../sprites';
-import {
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
-  DEFAULT_STAN_RENDER_LAYER,
-  DEFAULT_STAN_SLEEPING_ANIMATION_ID,
-  DEFAULT_STAN_SPRITE_DEFINITION_ID,
-  DEFAULT_STAN_SPRITE_INSTANCE_ID,
-  DEFAULT_STAN_SPRITE_SCALE,
-  DEFAULT_STAN_SHEET_HEIGHT,
-  DEFAULT_STAN_SHEET_WIDTH,
-  DEFAULT_STAN_X,
-  DEFAULT_STAN_Y,
-  DEFAULT_STAN_Z_INDEX,
-  DEFAULT_SPRITE_INSTANCE_ID,
-} from '../../constants';
+import { pierStanAssetUrl } from './pier-stan-assets';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { PIER_STAN_CONFIG } from './pier-stan-config';
 import {
   DEFAULT_STAN_MESSAGE_TTL_MS,
   installDefaultStanActionMenu,
@@ -56,7 +43,7 @@ const STAN_DIALOGUE_MENU_Y = 286;
 const STAN_AWAKE_IDLE_TIMEOUT_MS = 12_000;
 const STAN_SHOP_EXIT_DOOR_REACTION_WINDOW_MS = 5000;
 const STAN_REAR_ALERT_HALF_WIDTH = 92;
-const STAN_REAR_ALERT_MAX_GROUND_Y = DEFAULT_STAN_Y + 28;
+const STAN_REAR_ALERT_MAX_GROUND_Y = PIER_STAN_CONFIG.y + 28;
 const STAN_SLEEP_THOUGHT_MESSAGE_ID = 'rocco-stan-sleep-thought';
 const STAN_SLEEP_THOUGHT_DELAY_MS = 0;
 const STAN_SLEEP_THOUGHT_LINE_TTL_MS = 640;
@@ -102,7 +89,7 @@ function createStanAnimations(
 ): RoccoSpriteDefinition['animations'] {
   return Object.fromEntries(
     [
-      [DEFAULT_STAN_SLEEPING_ANIMATION_ID, sleepingFrameId],
+      [PIER_STAN_CONFIG.sleepingAnimationId, sleepingFrameId],
       [STAN_WAKE_ANIMATION_ID, wakingFrameId],
       [STAN_ATTENTIVE_ANIMATION_ID, attentiveFrameId],
       [STAN_LOOK_LEFT_ANIMATION_ID, lookLeftFrameId],
@@ -128,9 +115,9 @@ async function createDefaultStanSpriteDefinition(
     sources: [
       {
         id: STAN_SHEET_IMAGE_ID,
-        uri: roccoDefaultStanAssetUrl,
-        width: DEFAULT_STAN_SHEET_WIDTH,
-        height: DEFAULT_STAN_SHEET_HEIGHT,
+        uri: pierStanAssetUrl,
+        width: PIER_STAN_CONFIG.sheetWidth,
+        height: PIER_STAN_CONFIG.sheetHeight,
       },
     ],
     frameIdPrefix: 'stan-pose',
@@ -151,7 +138,7 @@ async function createDefaultStanSpriteDefinition(
     crop.frameIds[STAN_SLEEPING_FRAME_INDEX] ?? crop.frameIds.at(-1) ?? attentiveFrameId;
 
   return {
-    id: DEFAULT_STAN_SPRITE_DEFINITION_ID,
+    id: PIER_STAN_CONFIG.spriteDefinitionId,
     name: 'Pier Beginning Stan',
     images: crop.images,
     frames: crop.frames,
@@ -162,10 +149,10 @@ async function createDefaultStanSpriteDefinition(
       lookLeftFrameId,
       lookRightFrameId,
     ),
-    defaultAnimation: DEFAULT_STAN_SLEEPING_ANIMATION_ID,
+    defaultAnimation: PIER_STAN_CONFIG.sleepingAnimationId,
     render: {
-      renderLayer: DEFAULT_STAN_RENDER_LAYER,
-      zIndex: DEFAULT_STAN_Z_INDEX,
+      renderLayer: PIER_STAN_CONFIG.renderLayer,
+      zIndex: PIER_STAN_CONFIG.zIndex,
       depthMode: 'baseline-sort',
       opacity: 1,
     },
@@ -208,8 +195,8 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     this.dialogue = new RoccoDialogueSession({
       id: DEFAULT_STAN_DIALOGUE_MENU_ID,
       engine,
-      playerSpriteInstanceId: DEFAULT_SPRITE_INSTANCE_ID,
-      npcSpriteInstanceId: DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      playerSpriteInstanceId: ROCCO_PLAYER_CONFIG.ids.instance,
+      npcSpriteInstanceId: PIER_STAN_CONFIG.spriteInstanceId,
       menuY: STAN_DIALOGUE_MENU_Y,
       npcMessageStyle: {
         fill: DEFAULT_STAN_DIALOGUE_TEXT_COLOR,
@@ -333,7 +320,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
   private showRoccoThought(lines: readonly string[], historyKey: string): void {
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: DEFAULT_STAN_MESSAGE_TTL_MS,
@@ -401,7 +388,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     }
 
     this.persistentState.isIdentified = true;
-    this.engine.video.sprites.setVisibleDescription(DEFAULT_STAN_SPRITE_INSTANCE_ID, {
+    this.engine.video.sprites.setVisibleDescription(PIER_STAN_CONFIG.spriteInstanceId, {
       enabled: true,
       text: this.localization.text.descriptions.stan,
     });
@@ -416,7 +403,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       remainingMs: this.resolveSequenceStepDurationMs(kind),
       onComplete,
     };
-    this.engine.video.sprites.playAnimation(DEFAULT_STAN_SPRITE_INSTANCE_ID, animationIds[0], {
+    this.engine.video.sprites.playAnimation(PIER_STAN_CONFIG.spriteInstanceId, animationIds[0], {
       restart: true,
     });
   }
@@ -440,7 +427,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       currentSequence.stepIndex = nextStepIndex;
       currentSequence.remainingMs = this.resolveSequenceStepDurationMs(currentSequence.kind);
       this.engine.video.sprites.playAnimation(
-        DEFAULT_STAN_SPRITE_INSTANCE_ID,
+        PIER_STAN_CONFIG.spriteInstanceId,
         animationIds[nextStepIndex],
         {
           restart: true,
@@ -452,7 +439,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     this.sequence = undefined;
     if (currentSequence.kind === 'look-around') {
       this.engine.video.sprites.playAnimation(
-        DEFAULT_STAN_SPRITE_INSTANCE_ID,
+        PIER_STAN_CONFIG.spriteInstanceId,
         this.resolveStanRestingAnimationId(),
         {
           restart: true,
@@ -471,8 +458,8 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     this.state = 'sleeping';
     this.resetSleepThoughtCycle();
     this.engine.video.sprites.playAnimation(
-      DEFAULT_STAN_SPRITE_INSTANCE_ID,
-      DEFAULT_STAN_SLEEPING_ANIMATION_ID,
+      PIER_STAN_CONFIG.spriteInstanceId,
+      PIER_STAN_CONFIG.sleepingAnimationId,
       {
         restart: true,
       },
@@ -497,7 +484,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
 
   private isRoccoBehindStan(): boolean {
     const roccoGroundPoint = this.getRoccoGroundPoint();
-    const stan = this.engine.video.sprites.getSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
+    const stan = this.engine.video.sprites.getSprite(PIER_STAN_CONFIG.spriteInstanceId);
     if (!roccoGroundPoint || !stan) {
       return false;
     }
@@ -510,7 +497,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
 
   private faceRocco(): void {
     this.engine.video.sprites.playAnimation(
-      DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      PIER_STAN_CONFIG.spriteInstanceId,
       this.resolveStanRestingAnimationId(),
       {
         restart: true,
@@ -520,7 +507,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
 
   private resolveStanRestingAnimationId(): string {
     const roccoGroundPoint = this.getRoccoGroundPoint();
-    const stan = this.engine.video.sprites.getSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
+    const stan = this.engine.video.sprites.getSprite(PIER_STAN_CONFIG.spriteInstanceId);
     if (!roccoGroundPoint || !stan) {
       return STAN_ATTENTIVE_ANIMATION_ID;
     }
@@ -533,19 +520,23 @@ class RoccoStanController implements RoccoPierSideAmbientController {
   }
 
   private getRoccoGroundPoint(): { x: number; y: number } | undefined {
-    const rocco = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const rocco = this.engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     if (!rocco) {
       return undefined;
     }
 
     return {
-      x: rocco.transform.x + DEFAULT_SPRITE_GROUND_ANCHOR_X * (rocco.transform.scaleX || 1),
-      y: rocco.transform.y + DEFAULT_SPRITE_GROUND_ANCHOR_Y * (rocco.transform.scaleY || 1),
+      x:
+        rocco.transform.x +
+        ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * (rocco.transform.scaleX || 1),
+      y:
+        rocco.transform.y +
+        ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * (rocco.transform.scaleY || 1),
     };
   }
 
   private syncAwakeFacing(): void {
-    const stan = this.engine.video.sprites.getSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
+    const stan = this.engine.video.sprites.getSprite(PIER_STAN_CONFIG.spriteInstanceId);
     if (!stan) {
       return;
     }
@@ -555,7 +546,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
       return;
     }
 
-    this.engine.video.sprites.playAnimation(DEFAULT_STAN_SPRITE_INSTANCE_ID, animationId, {
+    this.engine.video.sprites.playAnimation(PIER_STAN_CONFIG.spriteInstanceId, animationId, {
       restart: true,
     });
   }
@@ -586,7 +577,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
 
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      PIER_STAN_CONFIG.spriteInstanceId,
       [...lines],
       {
         ttlMs: DEFAULT_STAN_MESSAGE_TTL_MS,
@@ -601,7 +592,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
 
   private showSleepThought(): void {
     this.engine.video.messages.think(
-      DEFAULT_STAN_SPRITE_INSTANCE_ID,
+      PIER_STAN_CONFIG.spriteInstanceId,
       [...STAN_SLEEP_THOUGHT_LINES],
       {
         id: STAN_SLEEP_THOUGHT_MESSAGE_ID,
@@ -655,7 +646,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
   }
 
   handleAction(activation: RoccoActionMenuActivation): void {
-    if (activation.targetInstanceId !== DEFAULT_STAN_SPRITE_INSTANCE_ID) {
+    if (activation.targetInstanceId !== PIER_STAN_CONFIG.spriteInstanceId) {
       return;
     }
 
@@ -702,7 +693,7 @@ class RoccoStanController implements RoccoPierSideAmbientController {
     this.dialogue.cancel();
     this.resetSleepThoughtCycle();
     uninstallDefaultStanActionMenu(engine);
-    engine.video.sprites.removeSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(PIER_STAN_CONFIG.spriteInstanceId);
   }
 }
 
@@ -718,26 +709,26 @@ export async function installDefaultStan(
   await (preloader?.preloadSpriteDefinition(engine, definition) ??
     engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
-  engine.video.sprites.removeSprite(DEFAULT_STAN_SPRITE_INSTANCE_ID);
+  engine.video.sprites.removeSprite(PIER_STAN_CONFIG.spriteInstanceId);
 
-  engine.video.sprites.createSpriteFromDefinition(DEFAULT_STAN_SPRITE_DEFINITION_ID, {
-    id: DEFAULT_STAN_SPRITE_INSTANCE_ID,
+  engine.video.sprites.createSpriteFromDefinition(PIER_STAN_CONFIG.spriteDefinitionId, {
+    id: PIER_STAN_CONFIG.spriteInstanceId,
     transform: {
-      x: DEFAULT_STAN_X,
-      y: DEFAULT_STAN_Y,
-      scaleX: DEFAULT_STAN_SPRITE_SCALE,
-      scaleY: DEFAULT_STAN_SPRITE_SCALE,
+      x: PIER_STAN_CONFIG.x,
+      y: PIER_STAN_CONFIG.y,
+      scaleX: PIER_STAN_CONFIG.spriteScale,
+      scaleY: PIER_STAN_CONFIG.spriteScale,
       rotation: 0,
     },
-    renderLayer: DEFAULT_STAN_RENDER_LAYER,
-    zIndex: DEFAULT_STAN_Z_INDEX,
+    renderLayer: PIER_STAN_CONFIG.renderLayer,
+    zIndex: PIER_STAN_CONFIG.zIndex,
     depthMode: 'baseline-sort',
     interactive: true,
     collisionEnabled: false,
   });
   engine.video.sprites.playAnimation(
-    DEFAULT_STAN_SPRITE_INSTANCE_ID,
-    DEFAULT_STAN_SLEEPING_ANIMATION_ID,
+    PIER_STAN_CONFIG.spriteInstanceId,
+    PIER_STAN_CONFIG.sleepingAnimationId,
     {
       restart: true,
     },

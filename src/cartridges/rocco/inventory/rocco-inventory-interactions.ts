@@ -1,9 +1,7 @@
 import type { RoccoLocalization } from '../localization';
-import {
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID,
-  DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-} from '../rocco-default-constants';
+import { ROCCO_PLAYER_CONFIG } from '../games/rocco-default/player/rocco-player-config';
+import { PIER_BAIT_BUCKET_CONFIG } from '../games/rocco-default/maps/pier/pier-bait-bucket-config';
+import { PIER_PELIKAN_CONFIG } from '../games/rocco-default/maps/pier/pier-pelikan-config';
 import {
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
@@ -23,12 +21,12 @@ export function resolveRoccoInventoryUseLines(
 
   if (
     itemId === ROCCO_INVENTORY_MAGAZINE_ITEM_ID &&
-    targetInstanceId === DEFAULT_SPRITE_INSTANCE_ID
+    targetInstanceId === ROCCO_PLAYER_CONFIG.ids.instance
   ) {
     return [localization.text.inventory.magazineOnSelfLine];
   }
 
-  if (targetInstanceId === DEFAULT_BAIT_BUCKET_SPRITE_INSTANCE_ID) {
+  if (targetInstanceId === PIER_BAIT_BUCKET_CONFIG.spriteInstanceId) {
     if (itemId === ROCCO_INVENTORY_KEYS_ITEM_ID) {
       return localization.text.inventory.keysOnBaitBucketLines;
     }
@@ -37,7 +35,7 @@ export function resolveRoccoInventoryUseLines(
     }
   }
 
-  if (targetInstanceId === DEFAULT_PELIKAN_SPRITE_INSTANCE_ID) {
+  if (targetInstanceId === PIER_PELIKAN_CONFIG.spriteInstanceId) {
     if (itemId === ROCCO_INVENTORY_KEYS_ITEM_ID) {
       return localization.text.inventory.keysOnPelikanLines;
     }

@@ -5,7 +5,7 @@ import type { RoccoGridMenuActivation } from '../../../console/video/grid-menu';
 import type { RoccoPlaneScene } from '../../../console/video/planes';
 import type { RoccoFacingDirection, RoccoPoint } from '../../../console/video/sprites';
 import type { RoccoInventoryItem } from '../inventory';
-import type { RoccoPlayerAppearance } from '../rocco-player-appearance';
+import type { RoccoPlayerAppearance } from '../games/rocco-default/player';
 import { RoccoAssetPreloader } from './rocco-asset-preloader';
 
 export interface RoccoLevelRect {

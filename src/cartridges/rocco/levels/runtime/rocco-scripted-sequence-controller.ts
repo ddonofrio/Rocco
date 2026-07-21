@@ -1,16 +1,16 @@
 import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoPoint } from '../../../../console/video/sprites';
+import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
 import {
-  DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
-  DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
-  DEFAULT_DESIGN_HEIGHT,
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_ROCCO_GREEN_BLACK,
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_RUN_ACTION_ID,
-  DEFAULT_STAN_SPRITE_INSTANCE_ID,
-} from '../../rocco-default-constants';
+  ROCCO_DESIGN_HEIGHT,
+  ROCCO_DESIGN_WIDTH,
+  ROCCO_BACKGROUND_COLOR,
+} from '../../games/rocco-default/game-design';
+import { PIER_BAIT_SHOP_DOOR_CONFIG } from '../../games/rocco-default/maps/pier/pier-bait-shop-door-config';
+import { PIER_STAN_CONFIG } from '../../games/rocco-default/maps/pier/pier-stan-config';
+const DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID = PIER_BAIT_SHOP_DOOR_CONFIG.spriteInstanceId;
+const DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID = PIER_BAIT_SHOP_DOOR_CONFIG.openAnimationId;
+const DEFAULT_STAN_SPRITE_INSTANCE_ID = PIER_STAN_CONFIG.spriteInstanceId;
 import { type RoccoLocalization } from '../../localization';
 import { roccoCartridgeMessageRuntime } from '../../rpce/dialogue';
 import { BAIT_SHOP_DOOR_OPENING_SOUND_ID } from '../pier/pier-bait-shop-door';
@@ -113,10 +113,14 @@ export class RoccoScriptedSequenceController {
       return;
     }
 
-    engine.video.sprites.playAction(DEFAULT_SPRITE_INSTANCE_ID, DEFAULT_SPRITE_IDLE_ACTION_ID, {
-      direction: 'up',
-      restart: true,
-    });
+    engine.video.sprites.playAction(
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      ROCCO_PLAYER_CONFIG.ids.idleAction,
+      {
+        direction: 'up',
+        restart: true,
+      },
+    );
     engine.video.sprites.playAnimation(
       DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
       DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
@@ -136,13 +140,18 @@ export class RoccoScriptedSequenceController {
       phase: 'walking-vertical',
       elapsedMs: 0,
     };
-    const isStarted = engine.video.sprites.goTo(DEFAULT_SPRITE_INSTANCE_ID, groundPoint.x, 0, {
-      action: DEFAULT_SPRITE_RUN_ACTION_ID,
-      idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
-      stopDistance: 1,
-      idleSettleDelayMs: 0,
-      idleSettleFacing: 'diagonal-from-facing',
-    });
+    const isStarted = engine.video.sprites.goTo(
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      groundPoint.x,
+      0,
+      {
+        action: ROCCO_PLAYER_CONFIG.ids.runAction,
+        idleAction: ROCCO_PLAYER_CONFIG.ids.idleAction,
+        stopDistance: 1,
+        idleSettleDelayMs: 0,
+        idleSettleFacing: 'diagonal-from-facing',
+      },
+    );
     if (!isStarted) {
       this.baitShopDoorEntry = {
         phase: 'transitioning',
@@ -204,7 +213,7 @@ export class RoccoScriptedSequenceController {
     }
 
     if (this.baitShopDoorEntry.phase === 'walking-vertical') {
-      if (engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+      if (engine.video.sprites.isMoving(ROCCO_PLAYER_CONFIG.ids.instance)) {
         return;
       }
 
@@ -258,7 +267,7 @@ export class RoccoScriptedSequenceController {
       elapsedMs: 0,
     };
     engine.video.messages.think(
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       this.localization.text.inventory.moneyOnStanReplyLine,
       {
         ttlMs: ROCCO_MONEY_REPLY_TTL_MS,
@@ -293,8 +302,8 @@ export class RoccoScriptedSequenceController {
       text: this.localization.text.keys.defeatTitle,
       renderLayer: 'overlay.titles',
       zIndex: 5000,
-      x: DEFAULT_DESIGN_WIDTH / 2,
-      y: DEFAULT_DESIGN_HEIGHT / 2,
+      x: ROCCO_DESIGN_WIDTH / 2,
+      y: ROCCO_DESIGN_HEIGHT / 2,
       anchor: { x: 0.5, y: 0.5 },
       style: {
         fill: '#cbd6c0',
@@ -334,13 +343,13 @@ export class RoccoScriptedSequenceController {
       kind: 'rect',
       renderLayer: 'overlay.primitives',
       zIndex: 5000,
-      color: DEFAULT_ROCCO_GREEN_BLACK,
+      color: ROCCO_BACKGROUND_COLOR,
       alpha,
       visible: true,
       x: 0,
       y: 0,
-      width: DEFAULT_DESIGN_WIDTH,
-      height: DEFAULT_DESIGN_HEIGHT,
+      width: ROCCO_DESIGN_WIDTH,
+      height: ROCCO_DESIGN_HEIGHT,
       fill: true,
     });
   }
@@ -391,7 +400,7 @@ export class RoccoScriptedSequenceController {
 
   resetRuntimeState(engine?: CartridgeSdkV1Runtime | null): void {
     if (engine && this.pendingBaitShopDoorUse) {
-      engine.video.sprites.cancelMovement(DEFAULT_SPRITE_INSTANCE_ID);
+      engine.video.sprites.cancelMovement(ROCCO_PLAYER_CONFIG.ids.instance);
     }
 
     this.stanPoliceDefeat = undefined;
@@ -482,12 +491,12 @@ export class RoccoScriptedSequenceController {
     }
 
     const isStarted = engine.video.sprites.goTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       this.options.baitShopDoorEndGroundX,
       currentGroundPoint.y,
       {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        action: ROCCO_PLAYER_CONFIG.ids.runAction,
+        idleAction: ROCCO_PLAYER_CONFIG.ids.idleAction,
         stopDistance: 1,
         idleSettleDelayMs: 0,
         idleSettleFacing: 'diagonal-from-facing',
@@ -503,7 +512,7 @@ export class RoccoScriptedSequenceController {
   }
 
   cancelPendingBaitShopDoorUse(engine?: CartridgeSdkV1Runtime | null): void {
-    engine?.video.sprites.cancelMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    engine?.video.sprites.cancelMovement(ROCCO_PLAYER_CONFIG.ids.instance);
     this.pendingBaitShopDoorUse = undefined;
   }
 
@@ -533,12 +542,12 @@ export class RoccoScriptedSequenceController {
       return;
     }
 
-    if (!engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
+    if (!engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance)) {
       this.pendingBaitShopDoorUse = undefined;
       return;
     }
 
-    if (engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+    if (engine.video.sprites.isMoving(ROCCO_PLAYER_CONFIG.ids.instance)) {
       return;
     }
 

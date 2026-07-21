@@ -13,15 +13,12 @@ import type {
 } from '../../../../console/video/sprites';
 import type { RoccoInventory } from '../../inventory';
 import type { RoccoLocalization } from '../../localization';
+import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
 import {
-  DEFAULT_DESIGN_WIDTH,
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
-  DEFAULT_SPRITE_INSTANCE_ID,
   ROCCO_PIER_END_LEVEL_ID,
   ROCCO_PIER_MIDDLE_LEVEL_ID,
   ROCCO_PIER_START_LEVEL_ID,
-} from '../../rocco-default-constants';
+} from '../../games/rocco-default/maps/pier/pier-level-ids';
 import {
   createRoccoDeveloperEventLevelMenuDefinition,
   createRoccoDeveloperEventMenuDefinition,
@@ -46,7 +43,7 @@ import {
   ROCCO_DEVELOPER_ROOT_MENU_ID,
   ROCCO_DEVELOPER_SCREEN_MENU_ID,
 } from '../../rocco-developer-mode';
-import { isRoccoPlayerDeveloperAction } from '../../rocco-player-action-menu';
+import { isRoccoPlayerDeveloperAction } from '../../games/rocco-default/player';
 import { ROCCO_BAIT_SHOP_LEVEL_ID } from '../bait-shop/bait-shop-level';
 import { ROCCO_BAIT_SHOP_SECOND_LEVEL_ID } from '../bait-shop/bait-shop-second-level';
 import { ROCCO_BAIT_SHOP_TOILET_LEVEL_ID } from '../bait-shop/bait-shop-toilet-level';
@@ -471,7 +468,7 @@ export class RoccoDeveloperRuntimeController {
       return false;
     }
 
-    const player = engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const player = engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     this.developerJumpPending = false;
     engine.video.actionMenus.closeMenu();
     engine.video.gridMenus.closeMenu();
@@ -484,11 +481,11 @@ export class RoccoDeveloperRuntimeController {
 
     const scaleX = player.transform.scaleX || 1;
     const scaleY = player.transform.scaleY || 1;
-    engine.video.sprites.stopMovement(DEFAULT_SPRITE_INSTANCE_ID);
+    engine.video.sprites.stopMovement(ROCCO_PLAYER_CONFIG.ids.instance);
     engine.video.sprites.setPosition(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      activation.sceneX - DEFAULT_SPRITE_GROUND_ANCHOR_X * scaleX,
-      activation.sceneY - DEFAULT_SPRITE_GROUND_ANCHOR_Y * scaleY,
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      activation.sceneX - ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * scaleX,
+      activation.sceneY - ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * scaleY,
       {
         constrainToWalkMap: false,
       },
@@ -673,7 +670,7 @@ export class RoccoDeveloperRuntimeController {
       text: indexText,
       renderLayer: 'overlay.titles',
       zIndex: 5000,
-      x: DEFAULT_DESIGN_WIDTH / 2,
+      x: ROCCO_PLAYER_CONFIG.placement.centerGroundX,
       y: 34,
       anchor: { x: 0.5, y: 0.5 },
       style: {

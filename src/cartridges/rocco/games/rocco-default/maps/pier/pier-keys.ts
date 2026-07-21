@@ -2,25 +2,11 @@ import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges
 import type { InputPolicyLease } from '../../../../../../console/input';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
-import { roccoDefaultKeysSoundUrl } from '../../sprites';
+import { pierKeysSoundUrl } from './pier-keys-assets';
 import { roccoCartridgeMessageRuntime } from '../../../../rpce/dialogue';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import {
-  DEFAULT_KEYS_X,
-  DEFAULT_KEYS_Y,
-  DEFAULT_KEYS_PRESENTATION_PITCH_DEGREES,
-  DEFAULT_KEYS_RENDER_LAYER,
-  DEFAULT_KEYS_SPRITE_DEFINITION_ID,
-  DEFAULT_KEYS_SPRITE_INSTANCE_ID,
-  DEFAULT_KEYS_SPRITE_SCALE,
-  DEFAULT_KEYS_Z_INDEX,
-  DEFAULT_SPRITE_GROUND_ANCHOR_X,
-  DEFAULT_SPRITE_GROUND_ANCHOR_Y,
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_PICK_UP_ACTION_ID,
-  DEFAULT_SPRITE_RUN_ACTION_ID,
-} from '../../constants';
+import { ROCCO_PLAYER_CONFIG } from '../../player';
+import { PIER_KEYS_CONFIG } from './pier-keys-config';
 import {
   createDefaultKeysActionMenu,
   createDefaultKeysSpriteDefinition,
@@ -92,14 +78,14 @@ class RoccoKeysController implements RoccoDefaultKeysController {
 
   private restoreState(state: RoccoDefaultKeysState): void {
     if (state.status === 'revealed') {
-      this.revealAt(state.x ?? DEFAULT_KEYS_X, state.y ?? DEFAULT_KEYS_Y);
+      this.revealAt(state.x ?? PIER_KEYS_CONFIG.x, state.y ?? PIER_KEYS_CONFIG.y);
       return;
     }
 
     if (state.status === 'collected') {
       this.state = 'collected';
       this.revealed = false;
-      this.engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
+      this.engine.video.sprites.removeSprite(PIER_KEYS_CONFIG.spriteInstanceId);
       this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
     }
   }
@@ -125,7 +111,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   private showRoccoThought(lines: readonly string[], historyKey: string): void {
     roccoCartridgeMessageRuntime.think(
       this.engine,
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       [...lines],
       {
         ttlMs: KEYS_ACTION_MESSAGE_TTL_MS,
@@ -151,8 +137,8 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   }
 
   private startGrabApproach(): void {
-    const rocco = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
-    const keys = this.engine.video.sprites.getSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
+    const rocco = this.engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
+    const keys = this.engine.video.sprites.getSprite(PIER_KEYS_CONFIG.spriteInstanceId);
     if (!rocco || !keys) {
       this.releaseCollectInputLease();
       return;
@@ -163,14 +149,14 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     this.state = 'approaching-grab';
     this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
     const isStarted = this.engine.video.sprites.goTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       this.keysX,
       this.keysY,
       {
-        targetInstanceId: DEFAULT_KEYS_SPRITE_INSTANCE_ID,
+        targetInstanceId: PIER_KEYS_CONFIG.spriteInstanceId,
         keepDistance: KEYS_APPROACH_KEEP_DISTANCE,
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        action: ROCCO_PLAYER_CONFIG.ids.runAction,
+        idleAction: ROCCO_PLAYER_CONFIG.ids.idleAction,
         stopDistance: 1,
         faceTargetOnComplete: true,
         idleSettleDelayMs: 0,
@@ -185,12 +171,12 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   }
 
   private updateApproach(): void {
-    if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+    if (this.engine.video.sprites.isMoving(ROCCO_PLAYER_CONFIG.ids.instance)) {
       return;
     }
 
-    const rocco = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
-    const keys = this.engine.video.sprites.getSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
+    const rocco = this.engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
+    const keys = this.engine.video.sprites.getSprite(PIER_KEYS_CONFIG.spriteInstanceId);
     if (!rocco || !keys) {
       this.state = 'gone';
       this.releaseCollectInputLease();
@@ -209,21 +195,21 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     this.elapsedMs = 0;
     this.state = 'collecting';
     this.engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
-    this.engine.video.sprites.setPresentationTransform(DEFAULT_KEYS_SPRITE_INSTANCE_ID, {
+    this.engine.video.sprites.setPresentationTransform(PIER_KEYS_CONFIG.spriteInstanceId, {
       pitchDegrees: 0,
       yawDegrees: 0,
     });
     this.engine.video.sprites.playAction(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      DEFAULT_SPRITE_IDLE_ACTION_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      ROCCO_PLAYER_CONFIG.ids.idleAction,
       {
         direction: 'down',
         restart: true,
       },
     );
     this.engine.video.sprites.playAction(
-      DEFAULT_SPRITE_INSTANCE_ID,
-      DEFAULT_SPRITE_PICK_UP_ACTION_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      ROCCO_PLAYER_CONFIG.ids.pickUpAction,
       {
         direction: 'down',
         restart: true,
@@ -233,7 +219,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   }
 
   private updateCollecting(deltaMs: number): void {
-    const rocco = this.engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID);
+    const rocco = this.engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
     if (!rocco) {
       return;
     }
@@ -248,15 +234,15 @@ class RoccoKeysController implements RoccoDefaultKeysController {
       (targetY - this.keysY) * progress -
       Math.sin(progress * Math.PI) * KEYS_COLLECT_ARC_HEIGHT;
     const scale =
-      DEFAULT_KEYS_SPRITE_SCALE * (1 + Math.sin(progress * Math.PI) * KEYS_COLLECT_SCALE_BOOST);
+      PIER_KEYS_CONFIG.spriteScale * (1 + Math.sin(progress * Math.PI) * KEYS_COLLECT_SCALE_BOOST);
 
-    this.engine.video.sprites.setPosition(DEFAULT_KEYS_SPRITE_INSTANCE_ID, x, y);
-    this.engine.video.sprites.setScale(DEFAULT_KEYS_SPRITE_INSTANCE_ID, scale, scale);
+    this.engine.video.sprites.setPosition(PIER_KEYS_CONFIG.spriteInstanceId, x, y);
+    this.engine.video.sprites.setScale(PIER_KEYS_CONFIG.spriteInstanceId, scale, scale);
     if (this.elapsedMs >= KEYS_COLLECT_DURATION_MS) {
-      this.engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
+      this.engine.video.sprites.removeSprite(PIER_KEYS_CONFIG.spriteInstanceId);
       this.engine.video.sprites.playAction(
-        DEFAULT_SPRITE_INSTANCE_ID,
-        DEFAULT_SPRITE_IDLE_ACTION_ID,
+        ROCCO_PLAYER_CONFIG.ids.instance,
+        ROCCO_PLAYER_CONFIG.ids.idleAction,
         {
           direction: 'down',
           restart: true,
@@ -270,10 +256,10 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   }
 
   private snapRoccoToKeysGround(scaleX: number, scaleY: number): void {
-    this.roccoBaseX = this.keysX - DEFAULT_SPRITE_GROUND_ANCHOR_X * scaleX;
-    this.roccoBaseY = this.keysY - DEFAULT_SPRITE_GROUND_ANCHOR_Y * scaleY;
+    this.roccoBaseX = this.keysX - ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * scaleX;
+    this.roccoBaseY = this.keysY - ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * scaleY;
     this.engine.video.sprites.setPosition(
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       this.roccoBaseX,
       this.roccoBaseY,
     );
@@ -302,7 +288,7 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   }
 
   handleAction(activation: RoccoActionMenuActivation): void {
-    if (activation.targetInstanceId !== DEFAULT_KEYS_SPRITE_INSTANCE_ID) {
+    if (activation.targetInstanceId !== PIER_KEYS_CONFIG.spriteInstanceId) {
       return;
     }
 
@@ -320,11 +306,9 @@ class RoccoKeysController implements RoccoDefaultKeysController {
 
     this.acquireCollectInputLease();
 
-    // If Rocco is already moving (from the menu click), wait for him to arrive
-    // Otherwise, start the approach
-    if (this.engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+    if (this.engine.video.sprites.isMoving(ROCCO_PLAYER_CONFIG.ids.instance)) {
       this.state = 'approaching-grab';
-      const keys = this.engine.video.sprites.getSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
+      const keys = this.engine.video.sprites.getSprite(PIER_KEYS_CONFIG.spriteInstanceId);
       if (keys) {
         this.keysX = keys.transform.x;
         this.keysY = keys.transform.y;
@@ -344,21 +328,21 @@ class RoccoKeysController implements RoccoDefaultKeysController {
     this.state = 'revealed';
     this.keysX = x;
     this.keysY = y;
-    this.engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
-    this.engine.video.sprites.createSpriteFromDefinition(DEFAULT_KEYS_SPRITE_DEFINITION_ID, {
-      id: DEFAULT_KEYS_SPRITE_INSTANCE_ID,
+    this.engine.video.sprites.removeSprite(PIER_KEYS_CONFIG.spriteInstanceId);
+    this.engine.video.sprites.createSpriteFromDefinition(PIER_KEYS_CONFIG.spriteDefinitionId, {
+      id: PIER_KEYS_CONFIG.spriteInstanceId,
       transform: {
         x,
         y,
-        scaleX: DEFAULT_KEYS_SPRITE_SCALE,
-        scaleY: DEFAULT_KEYS_SPRITE_SCALE,
+        scaleX: PIER_KEYS_CONFIG.spriteScale,
+        scaleY: PIER_KEYS_CONFIG.spriteScale,
         rotation: 0,
         presentation: {
-          pitchDegrees: DEFAULT_KEYS_PRESENTATION_PITCH_DEGREES,
+          pitchDegrees: PIER_KEYS_CONFIG.presentationPitchDegrees,
         },
       },
-      renderLayer: DEFAULT_KEYS_RENDER_LAYER,
-      zIndex: DEFAULT_KEYS_Z_INDEX,
+      renderLayer: PIER_KEYS_CONFIG.renderLayer,
+      zIndex: PIER_KEYS_CONFIG.zIndex,
       depthMode: 'fixed',
       opacity: 1,
       interactive: true,
@@ -372,7 +356,6 @@ class RoccoKeysController implements RoccoDefaultKeysController {
   }
 
   cancel(): void {
-    // Cancel any non-cancelable sequence and re-enable input
     if (!(this.state === 'approaching-grab' || this.state === 'collecting')) {
       return;
     }
@@ -393,7 +376,7 @@ export async function installDefaultKeys(
   engine.audio.unregisterSound(KEYS_SOUND_ID);
   engine.audio.registerSound({
     id: KEYS_SOUND_ID,
-    uri: roccoDefaultKeysSoundUrl,
+    uri: pierKeysSoundUrl,
     volume: KEYS_SOUND_VOLUME,
     loop: false,
   });
@@ -405,7 +388,7 @@ export async function installDefaultKeys(
   await (preloader?.preloadSpriteDefinition(engine, definition) ??
     engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
-  engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
+  engine.video.sprites.removeSprite(PIER_KEYS_CONFIG.spriteInstanceId);
   engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
   engine.audio.stopSound(KEYS_SOUND_ID);
   return new RoccoKeysController(engine, {
@@ -415,7 +398,7 @@ export async function installDefaultKeys(
 }
 
 export function uninstallDefaultKeys(engine: CartridgeSdkV1Runtime): void {
-  engine.video.sprites.removeSprite(DEFAULT_KEYS_SPRITE_INSTANCE_ID);
+  engine.video.sprites.removeSprite(PIER_KEYS_CONFIG.spriteInstanceId);
   engine.video.actionMenus.unregisterMenu(KEYS_ACTION_MENU_ID);
   engine.audio.stopSound(KEYS_SOUND_ID);
   engine.audio.unregisterSound(KEYS_SOUND_ID);

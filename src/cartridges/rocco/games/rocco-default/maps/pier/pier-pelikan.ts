@@ -5,49 +5,14 @@ import {
 } from '../../../../../../console/video/sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import {
-  roccoDefaultPelikanAssetUrls,
-  roccoDefaultPelikanFeedingAssetUrl,
-  roccoDefaultPelikanFlyingSoundUrl,
-  roccoDefaultPelikanFlightAssetUrl,
-} from '../../sprites';
+  pierPelikanAssetUrls,
+  pierPelikanFeedingAssetUrl,
+  pierPelikanFlyingSoundUrl,
+  pierPelikanFlightAssetUrl,
+} from './pier-pelikan-assets';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
 import { DEFAULT_ACTION_MENU_ID } from './pier-pelikan-action-menu';
-import {
-  DEFAULT_PELIKAN_FEEDING_ANIMATION_ID,
-  DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS,
-  DEFAULT_PELIKAN_FEEDING_RENDER_LAYER,
-  DEFAULT_PELIKAN_FEEDING_WAIT_ANIMATION_ID,
-  DEFAULT_PELIKAN_FEEDING_Z_INDEX,
-  DEFAULT_PELIKAN_FEEDING_X,
-  DEFAULT_PELIKAN_FEEDING_Y,
-  DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID,
-  DEFAULT_PELIKAN_FLIGHT_ARC_HEIGHT,
-  DEFAULT_PELIKAN_FLIGHT_DURATION_MS,
-  DEFAULT_PELIKAN_FLIGHT_FRAME_DURATION_MS,
-  DEFAULT_PELIKAN_FLIGHT_SOUND_ID,
-  DEFAULT_PELIKAN_FLIGHT_SOUND_VOLUME,
-  DEFAULT_PELIKAN_FOOT_PIVOT_X,
-  DEFAULT_PELIKAN_FOOT_PIVOT_Y,
-  DEFAULT_PELIKAN_FRAME_DURATION_MS,
-  DEFAULT_PELIKAN_MAX_FEEDING_WAIT_MS,
-  DEFAULT_PELIKAN_MAX_POSE_DELAY_MS,
-  DEFAULT_PELIKAN_MIN_FEEDING_WAIT_MS,
-  DEFAULT_PELIKAN_MIN_POSE_DELAY_MS,
-  DEFAULT_PELIKAN_PERCH_X,
-  DEFAULT_PELIKAN_PERCH_Y,
-  DEFAULT_PELIKAN_RENDER_LAYER,
-  DEFAULT_PELIKAN_SHEET_HEIGHT,
-  DEFAULT_PELIKAN_SHEET_WIDTH,
-  DEFAULT_PELIKAN_SPRITE_ANIMATION_ID,
-  DEFAULT_PELIKAN_SPRITE_DEFINITION_ID,
-  DEFAULT_PELIKAN_SPRITE_HEIGHT,
-  DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-  DEFAULT_PELIKAN_SPRITE_OPACITY,
-  DEFAULT_PELIKAN_SPRITE_SCALE,
-  DEFAULT_PELIKAN_SPRITE_WIDTH,
-  DEFAULT_PELIKAN_TURN_DURATION_MS,
-  DEFAULT_PELIKAN_Z_INDEX,
-} from '../../constants';
+import { PIER_PELIKAN_CONFIG } from './pier-pelikan-config';
 
 const PELIKAN_FLIGHT_IMAGE_ID = 'rocco-pelikan-flight-sheet';
 const PELIKAN_FEEDING_IMAGE_ID = 'rocco-pelikan-feeding-sheet';
@@ -70,22 +35,22 @@ function smoothStep(value: number): number {
 type PelikanCrop = Awaited<ReturnType<typeof createRoccoSpriteAutoCroppedFrames>>;
 
 function createPelikanIdleImages(): RoccoSpriteDefinition['images'] {
-  return roccoDefaultPelikanAssetUrls.map((uri, index) => ({
+  return pierPelikanAssetUrls.map((uri, index) => ({
     id: `rocco-pelikan-${index + 1}`,
     uri,
-    width: DEFAULT_PELIKAN_SPRITE_WIDTH,
-    height: DEFAULT_PELIKAN_SPRITE_HEIGHT,
+    width: PIER_PELIKAN_CONFIG.spriteWidth,
+    height: PIER_PELIKAN_CONFIG.spriteHeight,
   }));
 }
 
 function createPelikanIdleFrames(): RoccoSpriteDefinition['frames'] {
-  return roccoDefaultPelikanAssetUrls.map((_, index) => ({
+  return pierPelikanAssetUrls.map((_, index) => ({
     id: makePelikanFrameId(index),
     imageId: `rocco-pelikan-${index + 1}`,
-    durationMs: DEFAULT_PELIKAN_FRAME_DURATION_MS,
+    durationMs: PIER_PELIKAN_CONFIG.frameDurationMs,
     pivot: {
-      x: DEFAULT_PELIKAN_FOOT_PIVOT_X,
-      y: DEFAULT_PELIKAN_FOOT_PIVOT_Y,
+      x: PIER_PELIKAN_CONFIG.footPivotX,
+      y: PIER_PELIKAN_CONFIG.footPivotY,
     },
     hitbox: {
       kind: 'rect' as const,
@@ -110,8 +75,8 @@ function createPelikanCrop(
       {
         id,
         uri,
-        width: DEFAULT_PELIKAN_SHEET_WIDTH,
-        height: DEFAULT_PELIKAN_SHEET_HEIGHT,
+        width: PIER_PELIKAN_CONFIG.sheetWidth,
+        height: PIER_PELIKAN_CONFIG.sheetHeight,
       },
     ],
     frameIdPrefix,
@@ -127,16 +92,16 @@ async function createPelikanCrops(): Promise<[PelikanCrop, PelikanCrop]> {
   return Promise.all([
     createPelikanCrop(
       PELIKAN_FLIGHT_IMAGE_ID,
-      roccoDefaultPelikanFlightAssetUrl,
+      pierPelikanFlightAssetUrl,
       'pelikan-flight',
-      DEFAULT_PELIKAN_FLIGHT_FRAME_DURATION_MS,
+      PIER_PELIKAN_CONFIG.flightFrameDurationMs,
       { x: 0.52, y: 0.55 },
     ),
     createPelikanCrop(
       PELIKAN_FEEDING_IMAGE_ID,
-      roccoDefaultPelikanFeedingAssetUrl,
+      pierPelikanFeedingAssetUrl,
       'pelikan-feeding',
-      DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS,
+      PIER_PELIKAN_CONFIG.feedingFrameDurationMs,
       { x: 0.55, y: 0.94 },
     ),
   ]);
@@ -164,14 +129,14 @@ function createPelikanAnimations(
   const feedingWaitFrameId =
     feedingCrop.frameIds.at(-1) ?? feedingCrop.frameIds[0] ?? makePelikanFrameId(0);
   const poseAnimations = Object.fromEntries(
-    roccoDefaultPelikanAssetUrls.map((_, index) => {
+    pierPelikanAssetUrls.map((_, index) => {
       const frameId = makePelikanFrameId(index);
       return [
         makePelikanPoseAnimationId(index),
         createPelikanAnimation(
           makePelikanPoseAnimationId(index),
           [frameId],
-          DEFAULT_PELIKAN_FRAME_DURATION_MS,
+          PIER_PELIKAN_CONFIG.frameDurationMs,
           false,
         ),
       ];
@@ -179,28 +144,28 @@ function createPelikanAnimations(
   );
 
   return {
-    [DEFAULT_PELIKAN_SPRITE_ANIMATION_ID]: createPelikanAnimation(
-      DEFAULT_PELIKAN_SPRITE_ANIMATION_ID,
+    [PIER_PELIKAN_CONFIG.spriteAnimationId]: createPelikanAnimation(
+      PIER_PELIKAN_CONFIG.spriteAnimationId,
       [idleFrames[0]?.id ?? makePelikanFrameId(0)],
-      DEFAULT_PELIKAN_FRAME_DURATION_MS,
+      PIER_PELIKAN_CONFIG.frameDurationMs,
       false,
     ),
-    [DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID]: createPelikanAnimation(
-      DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID,
+    [PIER_PELIKAN_CONFIG.flightAnimationId]: createPelikanAnimation(
+      PIER_PELIKAN_CONFIG.flightAnimationId,
       flightCrop.frameIds,
-      DEFAULT_PELIKAN_FLIGHT_FRAME_DURATION_MS,
+      PIER_PELIKAN_CONFIG.flightFrameDurationMs,
       true,
     ),
-    [DEFAULT_PELIKAN_FEEDING_ANIMATION_ID]: createPelikanAnimation(
-      DEFAULT_PELIKAN_FEEDING_ANIMATION_ID,
+    [PIER_PELIKAN_CONFIG.feedingAnimationId]: createPelikanAnimation(
+      PIER_PELIKAN_CONFIG.feedingAnimationId,
       feedingCrop.frameIds,
-      DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS,
+      PIER_PELIKAN_CONFIG.feedingFrameDurationMs,
       true,
     ),
-    [DEFAULT_PELIKAN_FEEDING_WAIT_ANIMATION_ID]: createPelikanAnimation(
-      DEFAULT_PELIKAN_FEEDING_WAIT_ANIMATION_ID,
+    [PIER_PELIKAN_CONFIG.feedingWaitAnimationId]: createPelikanAnimation(
+      PIER_PELIKAN_CONFIG.feedingWaitAnimationId,
       [feedingWaitFrameId],
-      DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS,
+      PIER_PELIKAN_CONFIG.feedingFrameDurationMs,
       false,
     ),
     ...poseAnimations,
@@ -215,27 +180,27 @@ async function createDefaultPelikanSpriteDefinition(
   const [flightCrop, feedingCrop] = await createPelikanCrops();
 
   return {
-    id: DEFAULT_PELIKAN_SPRITE_DEFINITION_ID,
+    id: PIER_PELIKAN_CONFIG.spriteDefinitionId,
     name: 'Rocco Demo Pelikan',
     images: [...idleImages, ...flightCrop.images, ...feedingCrop.images],
     frames: [...idleFrames, ...flightCrop.frames, ...feedingCrop.frames],
     animations: createPelikanAnimations(idleFrames, flightCrop, feedingCrop),
-    defaultAnimation: DEFAULT_PELIKAN_SPRITE_ANIMATION_ID,
+    defaultAnimation: PIER_PELIKAN_CONFIG.spriteAnimationId,
     pivot: {
-      x: DEFAULT_PELIKAN_FOOT_PIVOT_X,
-      y: DEFAULT_PELIKAN_FOOT_PIVOT_Y,
+      x: PIER_PELIKAN_CONFIG.footPivotX,
+      y: PIER_PELIKAN_CONFIG.footPivotY,
     },
     render: {
-      renderLayer: DEFAULT_PELIKAN_RENDER_LAYER,
-      zIndex: DEFAULT_PELIKAN_Z_INDEX,
+      renderLayer: PIER_PELIKAN_CONFIG.renderLayer,
+      zIndex: PIER_PELIKAN_CONFIG.zIndex,
       depthMode: 'fixed',
-      opacity: DEFAULT_PELIKAN_SPRITE_OPACITY,
+      opacity: PIER_PELIKAN_CONFIG.spriteOpacity,
     },
     bounds: {
       x: 0,
       y: 0,
-      width: DEFAULT_PELIKAN_SPRITE_WIDTH,
-      height: DEFAULT_PELIKAN_SPRITE_HEIGHT,
+      width: PIER_PELIKAN_CONFIG.spriteWidth,
+      height: PIER_PELIKAN_CONFIG.spriteHeight,
     },
     hitbox: {
       kind: 'rect',
@@ -280,10 +245,10 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
   private feedingPhase: PelikanFeedingPhase = 'eating';
   private elapsedMs = 0;
   private nextPoseDelayMs = 0;
-  private nextFeedingWaitMs = DEFAULT_PELIKAN_MIN_FEEDING_WAIT_MS;
+  private nextFeedingWaitMs = PIER_PELIKAN_CONFIG.minFeedingWaitMs;
   private poseIndex = 0;
-  private flightStartX = DEFAULT_PELIKAN_PERCH_X;
-  private flightStartY = DEFAULT_PELIKAN_PERCH_Y;
+  private flightStartX = PIER_PELIKAN_CONFIG.perchX;
+  private flightStartY = PIER_PELIKAN_CONFIG.perchY;
 
   constructor(
     engine: CartridgeSdkV1Runtime,
@@ -294,7 +259,7 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
     this.engine = engine;
     this.options = options;
     this.feedingCycleDurationMs = Math.max(
-      DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS,
+      PIER_PELIKAN_CONFIG.feedingFrameDurationMs,
       feedingCycleDurationMs,
     );
     this.random = random;
@@ -314,33 +279,33 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
 
   private updateTurningToBait(deltaMs: number): void {
     this.elapsedMs += deltaMs;
-    if (this.elapsedMs < DEFAULT_PELIKAN_TURN_DURATION_MS) {
+    if (this.elapsedMs < PIER_PELIKAN_CONFIG.turnDurationMs) {
       return;
     }
 
-    const sprite = this.engine.video.sprites.getSprite(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID);
-    this.flightStartX = sprite?.transform.x ?? DEFAULT_PELIKAN_PERCH_X;
-    this.flightStartY = sprite?.transform.y ?? DEFAULT_PELIKAN_PERCH_Y;
+    const sprite = this.engine.video.sprites.getSprite(PIER_PELIKAN_CONFIG.spriteInstanceId);
+    this.flightStartX = sprite?.transform.x ?? PIER_PELIKAN_CONFIG.perchX;
+    this.flightStartY = sprite?.transform.y ?? PIER_PELIKAN_CONFIG.perchY;
     this.elapsedMs = 0;
     this.state = 'flying-to-bait';
-    this.engine.video.sprites.setFlip(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, false, false);
+    this.engine.video.sprites.setFlip(PIER_PELIKAN_CONFIG.spriteInstanceId, false, false);
     this.engine.video.sprites.setRenderLayer(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-      DEFAULT_PELIKAN_FEEDING_RENDER_LAYER,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_PELIKAN_CONFIG.feedingRenderLayer,
     );
-    this.engine.video.sprites.setDepthMode(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, 'baseline-sort');
+    this.engine.video.sprites.setDepthMode(PIER_PELIKAN_CONFIG.spriteInstanceId, 'baseline-sort');
     this.engine.video.sprites.setZIndex(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-      DEFAULT_PELIKAN_Z_INDEX,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_PELIKAN_CONFIG.zIndex,
     );
     this.options.onTakeoff?.();
-    this.engine.audio.playSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID, {
+    this.engine.audio.playSound(PIER_PELIKAN_CONFIG.flightSoundId, {
       restart: true,
-      volume: DEFAULT_PELIKAN_FLIGHT_SOUND_VOLUME,
+      volume: PIER_PELIKAN_CONFIG.flightSoundVolume,
     });
     this.engine.video.sprites.playAnimation(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-      DEFAULT_PELIKAN_FLIGHT_ANIMATION_ID,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_PELIKAN_CONFIG.flightAnimationId,
       {
         restart: true,
       },
@@ -348,17 +313,18 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
   }
 
   private updateFlyingToBait(deltaMs: number): void {
-    this.elapsedMs = Math.min(DEFAULT_PELIKAN_FLIGHT_DURATION_MS, this.elapsedMs + deltaMs);
-    const progress = this.elapsedMs / DEFAULT_PELIKAN_FLIGHT_DURATION_MS;
+    this.elapsedMs = Math.min(PIER_PELIKAN_CONFIG.flightDurationMs, this.elapsedMs + deltaMs);
+    const progress = this.elapsedMs / PIER_PELIKAN_CONFIG.flightDurationMs;
     const easedProgress = smoothStep(progress);
-    const x = this.flightStartX + (DEFAULT_PELIKAN_FEEDING_X - this.flightStartX) * easedProgress;
+    const x =
+      this.flightStartX + (PIER_PELIKAN_CONFIG.feedingX - this.flightStartX) * easedProgress;
     const y =
       this.flightStartY +
-      (DEFAULT_PELIKAN_FEEDING_Y - this.flightStartY) * easedProgress -
-      Math.sin(progress * Math.PI) * DEFAULT_PELIKAN_FLIGHT_ARC_HEIGHT;
+      (PIER_PELIKAN_CONFIG.feedingY - this.flightStartY) * easedProgress -
+      Math.sin(progress * Math.PI) * PIER_PELIKAN_CONFIG.flightArcHeight;
 
-    this.engine.video.sprites.setPosition(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, x, y);
-    if (this.elapsedMs < DEFAULT_PELIKAN_FLIGHT_DURATION_MS) {
+    this.engine.video.sprites.setPosition(PIER_PELIKAN_CONFIG.spriteInstanceId, x, y);
+    if (this.elapsedMs < PIER_PELIKAN_CONFIG.flightDurationMs) {
       return;
     }
 
@@ -368,16 +334,16 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
   private finishFlightToBait(): void {
     this.state = 'feeding';
     this.elapsedMs = 0;
-    this.engine.audio.stopSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
+    this.engine.audio.stopSound(PIER_PELIKAN_CONFIG.flightSoundId);
     this.engine.video.sprites.setPosition(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-      DEFAULT_PELIKAN_FEEDING_X,
-      DEFAULT_PELIKAN_FEEDING_Y,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_PELIKAN_CONFIG.feedingX,
+      PIER_PELIKAN_CONFIG.feedingY,
     );
-    this.engine.video.sprites.setDepthMode(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, 'manual');
+    this.engine.video.sprites.setDepthMode(PIER_PELIKAN_CONFIG.spriteInstanceId, 'manual');
     this.engine.video.sprites.setZIndex(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-      DEFAULT_PELIKAN_FEEDING_Z_INDEX,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_PELIKAN_CONFIG.feedingZIndex,
     );
     this.startFeedingCycle();
   }
@@ -386,21 +352,21 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
     this.state = 'feeding';
     this.elapsedMs = 0;
     this.feedingPhase = 'eating';
-    this.engine.audio.stopSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
-    this.engine.video.sprites.setFlip(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, false, false);
+    this.engine.audio.stopSound(PIER_PELIKAN_CONFIG.flightSoundId);
+    this.engine.video.sprites.setFlip(PIER_PELIKAN_CONFIG.spriteInstanceId, false, false);
     this.engine.video.sprites.setPosition(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-      DEFAULT_PELIKAN_FEEDING_X,
-      DEFAULT_PELIKAN_FEEDING_Y,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_PELIKAN_CONFIG.feedingX,
+      PIER_PELIKAN_CONFIG.feedingY,
     );
     this.engine.video.sprites.setRenderLayer(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-      DEFAULT_PELIKAN_FEEDING_RENDER_LAYER,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_PELIKAN_CONFIG.feedingRenderLayer,
     );
-    this.engine.video.sprites.setDepthMode(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, 'manual');
+    this.engine.video.sprites.setDepthMode(PIER_PELIKAN_CONFIG.spriteInstanceId, 'manual');
     this.engine.video.sprites.setZIndex(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-      DEFAULT_PELIKAN_FEEDING_Z_INDEX,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_PELIKAN_CONFIG.feedingZIndex,
     );
     this.startFeedingCycle();
   }
@@ -423,8 +389,8 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
     this.feedingPhase = 'eating';
     this.elapsedMs = 0;
     this.engine.video.sprites.playAnimation(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-      DEFAULT_PELIKAN_FEEDING_ANIMATION_ID,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_PELIKAN_CONFIG.feedingAnimationId,
       {
         restart: true,
         playbackRate: 1,
@@ -437,8 +403,8 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
     this.elapsedMs = 0;
     this.nextFeedingWaitMs = this.resolveNextFeedingWaitMs();
     this.engine.video.sprites.playAnimation(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
-      DEFAULT_PELIKAN_FEEDING_WAIT_ANIMATION_ID,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
+      PIER_PELIKAN_CONFIG.feedingWaitAnimationId,
       {
         restart: true,
       },
@@ -446,30 +412,30 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
   }
 
   private resolveNextFeedingWaitMs(): number {
-    const range = DEFAULT_PELIKAN_MAX_FEEDING_WAIT_MS - DEFAULT_PELIKAN_MIN_FEEDING_WAIT_MS;
-    return DEFAULT_PELIKAN_MIN_FEEDING_WAIT_MS + this.random() * Math.max(0, range);
+    const range = PIER_PELIKAN_CONFIG.maxFeedingWaitMs - PIER_PELIKAN_CONFIG.minFeedingWaitMs;
+    return PIER_PELIKAN_CONFIG.minFeedingWaitMs + this.random() * Math.max(0, range);
   }
 
   private resolveNextPoseIndex(): number {
-    if (roccoDefaultPelikanAssetUrls.length <= 1) {
+    if (pierPelikanAssetUrls.length <= 1) {
       return 0;
     }
 
     let nextIndex = this.poseIndex;
     while (nextIndex === this.poseIndex) {
-      nextIndex = Math.floor(this.random() * roccoDefaultPelikanAssetUrls.length);
+      nextIndex = Math.floor(this.random() * pierPelikanAssetUrls.length);
     }
     return nextIndex;
   }
 
   private scheduleNextPose(): void {
-    const range = DEFAULT_PELIKAN_MAX_POSE_DELAY_MS - DEFAULT_PELIKAN_MIN_POSE_DELAY_MS;
-    this.nextPoseDelayMs = DEFAULT_PELIKAN_MIN_POSE_DELAY_MS + this.random() * Math.max(0, range);
+    const range = PIER_PELIKAN_CONFIG.maxPoseDelayMs - PIER_PELIKAN_CONFIG.minPoseDelayMs;
+    this.nextPoseDelayMs = PIER_PELIKAN_CONFIG.minPoseDelayMs + this.random() * Math.max(0, range);
   }
 
   private playCurrentPose(): void {
     this.engine.video.sprites.playAnimation(
-      DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
+      PIER_PELIKAN_CONFIG.spriteInstanceId,
       makePelikanPoseAnimationId(this.poseIndex),
       {
         restart: true,
@@ -520,7 +486,7 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
     this.state = 'turning-to-bait';
     this.elapsedMs = 0;
     this.engine.video.actionMenus.unregisterMenu(DEFAULT_ACTION_MENU_ID);
-    this.engine.video.sprites.setFlip(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID, true, false);
+    this.engine.video.sprites.setFlip(PIER_PELIKAN_CONFIG.spriteInstanceId, true, false);
     this.playCurrentPose();
     return true;
   }
@@ -531,11 +497,11 @@ class RoccoIdlePelikanController implements RoccoDefaultPelikanController {
 }
 
 function registerPelikanFlightSound(engine: CartridgeSdkV1Runtime): void {
-  engine.audio.unregisterSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
+  engine.audio.unregisterSound(PIER_PELIKAN_CONFIG.flightSoundId);
   engine.audio.registerSound({
-    id: DEFAULT_PELIKAN_FLIGHT_SOUND_ID,
-    uri: roccoDefaultPelikanFlyingSoundUrl,
-    volume: DEFAULT_PELIKAN_FLIGHT_SOUND_VOLUME,
+    id: PIER_PELIKAN_CONFIG.flightSoundId,
+    uri: pierPelikanFlyingSoundUrl,
+    volume: PIER_PELIKAN_CONFIG.flightSoundVolume,
     loop: false,
   });
 }
@@ -546,7 +512,7 @@ async function preloadPelikanAssets(
   preloader?: RoccoAssetPreloader,
 ): Promise<void> {
   try {
-    await preloader?.preloadSound(engine, DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
+    await preloader?.preloadSound(engine, PIER_PELIKAN_CONFIG.flightSoundId);
   } catch {
     engine.log('Audio', 'Pelikan flight sound could not be preloaded.');
   }
@@ -555,21 +521,21 @@ async function preloadPelikanAssets(
 }
 
 function createPelikanSprite(engine: CartridgeSdkV1Runtime): void {
-  engine.video.sprites.createSpriteFromDefinition(DEFAULT_PELIKAN_SPRITE_DEFINITION_ID, {
-    id: DEFAULT_PELIKAN_SPRITE_INSTANCE_ID,
+  engine.video.sprites.createSpriteFromDefinition(PIER_PELIKAN_CONFIG.spriteDefinitionId, {
+    id: PIER_PELIKAN_CONFIG.spriteInstanceId,
     transform: {
-      x: DEFAULT_PELIKAN_PERCH_X,
-      y: DEFAULT_PELIKAN_PERCH_Y,
-      scaleX: DEFAULT_PELIKAN_SPRITE_SCALE,
-      scaleY: DEFAULT_PELIKAN_SPRITE_SCALE,
+      x: PIER_PELIKAN_CONFIG.perchX,
+      y: PIER_PELIKAN_CONFIG.perchY,
+      scaleX: PIER_PELIKAN_CONFIG.spriteScale,
+      scaleY: PIER_PELIKAN_CONFIG.spriteScale,
       rotation: 0,
       flipX: false,
       flipY: false,
     },
-    renderLayer: DEFAULT_PELIKAN_RENDER_LAYER,
-    zIndex: DEFAULT_PELIKAN_Z_INDEX,
+    renderLayer: PIER_PELIKAN_CONFIG.renderLayer,
+    zIndex: PIER_PELIKAN_CONFIG.zIndex,
     depthMode: 'fixed',
-    opacity: DEFAULT_PELIKAN_SPRITE_OPACITY,
+    opacity: PIER_PELIKAN_CONFIG.spriteOpacity,
     interactive: true,
     collisionEnabled: true,
   });
@@ -586,15 +552,15 @@ export async function installDefaultPelikan(
   registerPelikanFlightSound(engine);
   await preloadPelikanAssets(engine, definition, preloader);
   engine.video.sprites.loadSpriteDefinition(definition);
-  engine.video.sprites.removeSprite(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID);
-  engine.audio.stopSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
+  engine.video.sprites.removeSprite(PIER_PELIKAN_CONFIG.spriteInstanceId);
+  engine.audio.stopSound(PIER_PELIKAN_CONFIG.flightSoundId);
   createPelikanSprite(engine);
 
   const feedingCycleDurationMs =
-    definition.animations[DEFAULT_PELIKAN_FEEDING_ANIMATION_ID]?.frames.reduce(
+    definition.animations[PIER_PELIKAN_CONFIG.feedingAnimationId]?.frames.reduce(
       (total, frame) => total + frame.durationMs,
       0,
-    ) ?? DEFAULT_PELIKAN_FEEDING_FRAME_DURATION_MS;
+    ) ?? PIER_PELIKAN_CONFIG.feedingFrameDurationMs;
   const controller = new RoccoIdlePelikanController(engine, feedingCycleDurationMs, options);
   controller.start();
   return controller;
@@ -602,7 +568,7 @@ export async function installDefaultPelikan(
 
 export function uninstallDefaultPelikan(engine: CartridgeSdkV1Runtime): void {
   engine.video.actionMenus.unregisterMenu(DEFAULT_ACTION_MENU_ID);
-  engine.video.sprites.removeSprite(DEFAULT_PELIKAN_SPRITE_INSTANCE_ID);
-  engine.audio.stopSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
-  engine.audio.unregisterSound(DEFAULT_PELIKAN_FLIGHT_SOUND_ID);
+  engine.video.sprites.removeSprite(PIER_PELIKAN_CONFIG.spriteInstanceId);
+  engine.audio.stopSound(PIER_PELIKAN_CONFIG.flightSoundId);
+  engine.audio.unregisterSound(PIER_PELIKAN_CONFIG.flightSoundId);
 }

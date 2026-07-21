@@ -7,13 +7,8 @@ import type { RoccoActionMenuActivation } from '../../../../console/video/action
 import type { RoccoPoint } from '../../../../console/video/sprites';
 import { ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID, type RoccoInventoryItem } from '../../inventory';
 import type { RoccoLocalization } from '../../localization';
-import { roccoDefaultActionMenuAssetUrls } from '../../rocco-default-assets';
-import {
-  DEFAULT_SPRITE_IDLE_ACTION_ID,
-  DEFAULT_SPRITE_INSTANCE_ID,
-  DEFAULT_SPRITE_RUN_ACTION_ID,
-  DEFAULT_SPRITE_SCALE,
-} from '../../rocco-default-constants';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../games/rocco-default/ui';
+import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
 import type { RoccoLevel } from '../rocco-level-types';
 import { isRoccoToiletLevelCapability } from './rocco-level-capabilities';
 
@@ -93,7 +88,7 @@ export class RoccoDroppedInventoryController {
 
   private resolvePlayerBaseScale(): number {
     const scale = this.options.resolvePlayerBaseScale();
-    return Number.isFinite(scale) && scale > 0 ? scale : DEFAULT_SPRITE_SCALE;
+    return Number.isFinite(scale) && scale > 0 ? scale : ROCCO_PLAYER_CONFIG.motion.scale;
   }
 
   private startDroppedInventoryPickup(
@@ -118,12 +113,12 @@ export class RoccoDroppedInventoryController {
     engine.video.messages.clearMessages();
     this.acquirePickupInputLease(engine);
     const isStarted = engine.video.sprites.goTo(
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       droppedItem.groundPoint.x,
       droppedItem.groundPoint.y,
       {
-        action: DEFAULT_SPRITE_RUN_ACTION_ID,
-        idleAction: DEFAULT_SPRITE_IDLE_ACTION_ID,
+        action: ROCCO_PLAYER_CONFIG.ids.runAction,
+        idleAction: ROCCO_PLAYER_CONFIG.ids.idleAction,
         stopDistance: DROPPED_INVENTORY_ITEM_STOP_DISTANCE,
         idleSettleDelayMs: 0,
         idleSettleFacing: 'diagonal-from-facing',
@@ -167,7 +162,7 @@ export class RoccoDroppedInventoryController {
     }
     this.releasePickupInputLease();
     engine.video.messages.think(
-      DEFAULT_SPRITE_INSTANCE_ID,
+      ROCCO_PLAYER_CONFIG.ids.instance,
       this.localization.text.inventory.pickupLine,
       {
         ttlMs: 2400,
@@ -389,19 +384,19 @@ export class RoccoDroppedInventoryController {
           id: DROPPED_CORAL_RELIC_LOOK_ACTION_ID,
           actionId: DROPPED_CORAL_RELIC_LOOK_ACTION_ID,
           label: this.localization.text.actions.look,
-          imageUri: roccoDefaultActionMenuAssetUrls.look,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.look,
         },
         {
           id: DROPPED_CORAL_RELIC_STEP_ACTION_ID,
           actionId: DROPPED_CORAL_RELIC_STEP_ACTION_ID,
           label: this.localization.text.baitShop.coralRelicStepLabel,
-          imageUri: roccoDefaultActionMenuAssetUrls.kick,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
         },
         {
           id: 'grab',
           actionId: 'grab',
           label: this.localization.text.actions.grab,
-          imageUri: roccoDefaultActionMenuAssetUrls.grab,
+          imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
         },
       ],
     });
@@ -628,13 +623,13 @@ export class RoccoDroppedInventoryController {
       return;
     }
 
-    if (!engine.video.sprites.getSprite(DEFAULT_SPRITE_INSTANCE_ID)) {
+    if (!engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance)) {
       this.pendingDroppedInventoryPickup = undefined;
       this.releasePickupInputLease();
       return;
     }
 
-    if (engine.video.sprites.isMoving(DEFAULT_SPRITE_INSTANCE_ID)) {
+    if (engine.video.sprites.isMoving(ROCCO_PLAYER_CONFIG.ids.instance)) {
       return;
     }
 

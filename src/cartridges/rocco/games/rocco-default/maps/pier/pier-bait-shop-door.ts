@@ -3,22 +3,9 @@ import type { RoccoActionMenuDefinition } from '../../../../../../console/video/
 import type { RoccoSpriteDefinition } from '../../../../../../console/video/sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { createRoccoLocalization, type RoccoLocalization } from '../../localization';
-import { roccoDefaultActionMenuAssetUrls } from '../../sprites';
-import {
-  DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID,
-  DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
-  DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
-  DEFAULT_BAIT_SHOP_DOOR_PIVOT_X,
-  DEFAULT_BAIT_SHOP_DOOR_PIVOT_Y,
-  DEFAULT_BAIT_SHOP_DOOR_RENDER_LAYER,
-  DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID,
-  DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
-  DEFAULT_BAIT_SHOP_DOOR_WIDTH,
-  DEFAULT_BAIT_SHOP_DOOR_X,
-  DEFAULT_BAIT_SHOP_DOOR_Y,
-  DEFAULT_BAIT_SHOP_DOOR_Z_INDEX,
-} from '../../constants';
-import { pierBaitShopDoorAssetUrls, pierDoorOpeningSoundUrl } from './pier-assets';
+import { ROCCO_ACTION_MENU_ASSETS } from '../../ui';
+import { PIER_BAIT_SHOP_DOOR_CONFIG } from './pier-bait-shop-door-config';
+import { pierBaitShopDoorAssetUrls, pierDoorOpeningSoundUrl } from './pier-bait-shop-door-assets';
 
 const CLOSED_FRAME_ID = 'bait-shop-door-closed-frame';
 const OPEN_FRAME_ID = 'bait-shop-door-open-frame';
@@ -52,15 +39,15 @@ function createDefaultBaitShopDoorSpriteDefinition(
   localization: RoccoLocalization,
 ): RoccoSpriteDefinition {
   return {
-    id: DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID,
+    id: PIER_BAIT_SHOP_DOOR_CONFIG.spriteDefinitionId,
     name: 'Bait Shop Door',
     images: createDoorImages(),
     frames: createDoorFrames(),
     animations: createDoorAnimations(),
-    defaultAnimation: DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID,
+    defaultAnimation: PIER_BAIT_SHOP_DOOR_CONFIG.closedAnimationId,
     render: {
-      renderLayer: DEFAULT_BAIT_SHOP_DOOR_RENDER_LAYER,
-      zIndex: DEFAULT_BAIT_SHOP_DOOR_Z_INDEX,
+      renderLayer: PIER_BAIT_SHOP_DOOR_CONFIG.renderLayer,
+      zIndex: PIER_BAIT_SHOP_DOOR_CONFIG.zIndex,
       depthMode: 'fixed',
       opacity: 1,
     },
@@ -79,14 +66,14 @@ function createDoorImages(): RoccoSpriteDefinition['images'] {
     {
       id: DOOR_IMAGE_CLOSED_ID,
       uri: pierBaitShopDoorAssetUrls.closed,
-      width: DEFAULT_BAIT_SHOP_DOOR_WIDTH,
-      height: DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
+      width: PIER_BAIT_SHOP_DOOR_CONFIG.width,
+      height: PIER_BAIT_SHOP_DOOR_CONFIG.height,
     },
     {
       id: DOOR_IMAGE_OPEN_ID,
       uri: pierBaitShopDoorAssetUrls.open,
-      width: DEFAULT_BAIT_SHOP_DOOR_WIDTH,
-      height: DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
+      width: PIER_BAIT_SHOP_DOOR_CONFIG.width,
+      height: PIER_BAIT_SHOP_DOOR_CONFIG.height,
     },
   ];
 }
@@ -96,12 +83,12 @@ function createDoorFrames(): RoccoSpriteDefinition['frames'] {
     kind: 'rect' as const,
     x: 0,
     y: 0,
-    width: DEFAULT_BAIT_SHOP_DOOR_WIDTH,
-    height: DEFAULT_BAIT_SHOP_DOOR_HEIGHT,
+    width: PIER_BAIT_SHOP_DOOR_CONFIG.width,
+    height: PIER_BAIT_SHOP_DOOR_CONFIG.height,
   };
   const pivot = {
-    x: DEFAULT_BAIT_SHOP_DOOR_PIVOT_X,
-    y: DEFAULT_BAIT_SHOP_DOOR_PIVOT_Y,
+    x: PIER_BAIT_SHOP_DOOR_CONFIG.pivotX,
+    y: PIER_BAIT_SHOP_DOOR_CONFIG.pivotY,
   };
 
   return [
@@ -112,14 +99,14 @@ function createDoorFrames(): RoccoSpriteDefinition['frames'] {
 
 function createDoorAnimations(): RoccoSpriteDefinition['animations'] {
   return {
-    [DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID]: {
-      id: DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID,
+    [PIER_BAIT_SHOP_DOOR_CONFIG.closedAnimationId]: {
+      id: PIER_BAIT_SHOP_DOOR_CONFIG.closedAnimationId,
       loop: false,
       playbackRate: 1,
       frames: [{ frameId: CLOSED_FRAME_ID, durationMs: 1000 }],
     },
-    [DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID]: {
-      id: DEFAULT_BAIT_SHOP_DOOR_OPEN_ANIMATION_ID,
+    [PIER_BAIT_SHOP_DOOR_CONFIG.openAnimationId]: {
+      id: PIER_BAIT_SHOP_DOOR_CONFIG.openAnimationId,
       loop: false,
       playbackRate: 1,
       frames: [{ frameId: OPEN_FRAME_ID, durationMs: 1000 }],
@@ -132,7 +119,7 @@ function createBaitShopDoorActionMenuDefinition(
 ): RoccoActionMenuDefinition {
   return {
     id: BAIT_SHOP_DOOR_ACTION_MENU_ID,
-    targetInstanceIds: [DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID],
+    targetInstanceIds: [PIER_BAIT_SHOP_DOOR_CONFIG.spriteInstanceId],
     renderLayer: 'ui.action-menu',
     itemSize: BAIT_SHOP_DOOR_ACTION_MENU_ITEM_SIZE,
     orbitRadius: BAIT_SHOP_DOOR_ACTION_MENU_ORBIT_RADIUS,
@@ -146,19 +133,19 @@ function createBaitShopDoorActionMenuDefinition(
         id: 'look',
         actionId: 'look',
         label: localization.text.actions.look,
-        imageUri: roccoDefaultActionMenuAssetUrls.look,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.look,
       },
       {
         id: 'open',
         actionId: 'open',
         label: localization.text.baitShop.toiletDoorOpenLabel,
-        imageUri: roccoDefaultActionMenuAssetUrls.grab,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.grab,
       },
       {
         id: 'kick',
         actionId: 'kick',
         label: localization.text.actions.kick,
-        imageUri: roccoDefaultActionMenuAssetUrls.kick,
+        imageUri: ROCCO_ACTION_MENU_ASSETS.kick,
       },
     ],
   };
@@ -187,8 +174,8 @@ class RoccoBaitShopDoorControllerImpl implements RoccoBaitShopDoorController {
     }
 
     this.revealed = true;
-    this.engine.video.sprites.setInteractive(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID, true);
-    this.engine.video.sprites.setVisibleDescription(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID, {
+    this.engine.video.sprites.setInteractive(PIER_BAIT_SHOP_DOOR_CONFIG.spriteInstanceId, true);
+    this.engine.video.sprites.setVisibleDescription(PIER_BAIT_SHOP_DOOR_CONFIG.spriteInstanceId, {
       enabled: true,
       text: this.localization.text.descriptions.baitShopDoor,
     });
@@ -202,7 +189,7 @@ class RoccoBaitShopDoorControllerImpl implements RoccoBaitShopDoorController {
     engine.audio.stopSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
     engine.audio.unregisterSound(BAIT_SHOP_DOOR_OPENING_SOUND_ID);
     engine.video.actionMenus.unregisterMenu(BAIT_SHOP_DOOR_ACTION_MENU_ID);
-    engine.video.sprites.removeSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
+    engine.video.sprites.removeSprite(PIER_BAIT_SHOP_DOOR_CONFIG.spriteInstanceId);
   }
 }
 
@@ -228,17 +215,17 @@ function createBaitShopDoorSprite(
   localization: RoccoLocalization,
   initialState: RoccoBaitShopDoorState,
 ): void {
-  engine.video.sprites.createSpriteFromDefinition(DEFAULT_BAIT_SHOP_DOOR_SPRITE_DEFINITION_ID, {
-    id: DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
+  engine.video.sprites.createSpriteFromDefinition(PIER_BAIT_SHOP_DOOR_CONFIG.spriteDefinitionId, {
+    id: PIER_BAIT_SHOP_DOOR_CONFIG.spriteInstanceId,
     transform: {
-      x: DEFAULT_BAIT_SHOP_DOOR_X,
-      y: DEFAULT_BAIT_SHOP_DOOR_Y,
+      x: PIER_BAIT_SHOP_DOOR_CONFIG.x,
+      y: PIER_BAIT_SHOP_DOOR_CONFIG.y,
       scaleX: 1,
       scaleY: 1,
       rotation: 0,
     },
-    renderLayer: DEFAULT_BAIT_SHOP_DOOR_RENDER_LAYER,
-    zIndex: DEFAULT_BAIT_SHOP_DOOR_Z_INDEX,
+    renderLayer: PIER_BAIT_SHOP_DOOR_CONFIG.renderLayer,
+    zIndex: PIER_BAIT_SHOP_DOOR_CONFIG.zIndex,
     depthMode: 'fixed',
     interactive: initialState.revealed,
     collisionEnabled: false,
@@ -263,14 +250,14 @@ export async function installDefaultBaitShopDoor(
   await (preloader?.preloadSpriteDefinition(engine, definition) ??
     engine.video.preloadSpriteDefinition(definition));
   engine.video.sprites.loadSpriteDefinition(definition);
-  engine.video.sprites.removeSprite(DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID);
+  engine.video.sprites.removeSprite(PIER_BAIT_SHOP_DOOR_CONFIG.spriteInstanceId);
   engine.video.actionMenus.unregisterMenu(BAIT_SHOP_DOOR_ACTION_MENU_ID);
   engine.video.actionMenus.registerMenu(createBaitShopDoorActionMenuDefinition(localization));
   createBaitShopDoorSprite(engine, localization, initialState);
 
   engine.video.sprites.playAnimation(
-    DEFAULT_BAIT_SHOP_DOOR_SPRITE_INSTANCE_ID,
-    DEFAULT_BAIT_SHOP_DOOR_CLOSED_ANIMATION_ID,
+    PIER_BAIT_SHOP_DOOR_CONFIG.spriteInstanceId,
+    PIER_BAIT_SHOP_DOOR_CONFIG.closedAnimationId,
     {
       restart: true,
     },

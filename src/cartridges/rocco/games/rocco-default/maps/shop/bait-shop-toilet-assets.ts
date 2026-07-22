@@ -28,4 +28,4 @@ export const baitShopToiletAssetUrls = {
   spellSound: new URL('assets/spell-sound.mp3', import.meta.url).href,
 } as const;
 
-export { pierDoorClosingSoundUrl as baitShopToiletDoorClosingSoundUrl } from '../pier/pier-bait-shop-door-assets';
+export { ROCCO_DOOR_CLOSING_SOUND_URL as baitShopToiletDoorClosingSoundUrl } from '../../audio';

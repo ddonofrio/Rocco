@@ -29,7 +29,7 @@ const TRACKED_ASSET_EXTENSIONS = new Set([
   '.wav',
   '.webp',
 ]);
-const APPROVED_DECLARATION_FILES = new Set(['-assets.ts', 'rocco-game-music.ts']);
+const APPROVED_MUSIC_MODULE = 'src/cartridges/rocco/games/rocco-default/audio/rocco-game-music.ts';
 
 // eslint-disable-next-line sonarjs/super-linear-regex -- The bounded asset literal and URL syntax keep this scan local to one declaration.
 const NEW_URL_ASSET_PATTERN = /new URL\(\s*(['"`])([^'"`]+)\1\s*,\s*import\.meta\.url\s*,?\s*\)/g;
@@ -94,8 +94,12 @@ function toRepoRelativePath(filePath: string): string {
 }
 
 function isApprovedDeclarationFile(filePath: string): boolean {
+  const relativePath = toRepoRelativePath(filePath);
+  if (relativePath === APPROVED_MUSIC_MODULE) {
+    return true;
+  }
   const fileName = path.basename(filePath);
-  return APPROVED_DECLARATION_FILES.has(fileName) || fileName.endsWith('-assets.ts');
+  return fileName.endsWith('-assets.ts');
 }
 
 function sha256(content: BinaryLike): string {
@@ -174,7 +178,17 @@ function collectDeclarationLocationViolations(): string[] {
       const assetPath = match[2];
       if (assetPath && isTrackedAssetPath(assetPath)) {
         violations.push(
-          `${toRepoRelativePath(filePath)} declares asset URL '${assetPath}' outside an approved module`,
+          `${toRepoRelativePath(filePath)} declares asset URL '${assetPath}' via new URL(..., import.meta.url) outside an approved module`,
+        );
+      }
+    }
+
+    BASE_URL_ASSET_PATTERN.lastIndex = 0;
+    for (const match of source.matchAll(BASE_URL_ASSET_PATTERN)) {
+      const assetPath = match[1];
+      if (assetPath && isTrackedAssetPath(assetPath)) {
+        violations.push(
+          `${toRepoRelativePath(filePath)} declares asset URL '${assetPath}' via \${import.meta.env.BASE_URL} outside an approved module`,
         );
       }
     }

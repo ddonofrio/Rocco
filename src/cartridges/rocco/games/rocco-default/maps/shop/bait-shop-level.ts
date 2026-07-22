@@ -22,7 +22,7 @@ import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { ROCCO_PLAYER_CONFIG } from '../../player';
 import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT, ROCCO_BACKGROUND_COLOR } from '../../game-design';
 import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../levels/rocco-level-runtime-ids';
-import { PIER_WALK_MAP_ALPHA_THRESHOLD } from '../pier/pier-layout';
+const BAIT_SHOP_WALK_MAP_ALPHA_THRESHOLD = 16;
 import {
   installRoccoPlayerSprite,
   uninstallRoccoPlayerSprite,
@@ -531,7 +531,7 @@ export async function installBaitShopWalkMap(
       width: imageData.width,
       height: imageData.height,
       data: imageData.data,
-      alphaThreshold: PIER_WALK_MAP_ALPHA_THRESHOLD,
+      alphaThreshold: BAIT_SHOP_WALK_MAP_ALPHA_THRESHOLD,
     }),
   );
 }

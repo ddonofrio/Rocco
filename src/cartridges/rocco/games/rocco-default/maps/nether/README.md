@@ -9,6 +9,7 @@ The Nether map owns the current Nether path and the Reset Office branch:
 
 The Reset Office pair remains a separate branch in current gameplay flow, but it is modeled as
 part of the Nether map for structural ownership, reset behavior, and developer-menu grouping.
+Both Reset Office screens expose localized hover guidance over their shared return edge.
 
 This folder also owns the current concrete Nether and Reset Office implementations plus the local
 Nether assets.

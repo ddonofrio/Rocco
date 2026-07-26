@@ -53,6 +53,7 @@ export const spanishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   otherPierPart: 'Ir a la otra parte del muelle',
   otherShopPart: 'Ir a la otra parte de la tienda',
   exitBathroom: 'Salir del ba\u{F1}o',
+  otherOfficePart: 'Ir a la otra parte de la oficina',
 };
 
 export const spanishLevelsText: RoccoTextCatalog['levels'] = {

@@ -59,6 +59,7 @@ export interface RoccoTextCatalog {
     otherPierPart: string;
     otherShopPart: string;
     exitBathroom: string;
+    otherOfficePart: string;
   };
   levels: {
     beginning: string;

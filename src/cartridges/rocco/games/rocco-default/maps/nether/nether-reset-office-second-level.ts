@@ -16,6 +16,10 @@ import {
   type RoccoLevelConnector,
   type RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
+import {
+  installRoccoLevelConnectorTargets,
+  uninstallRoccoLevelConnectorTargets,
+} from '../../../../levels/rocco-level-connector-targets';
 import { netherResetOfficeSecondAssetUrls } from './nether-assets';
 import {
   createNetherWalkMapProfile,
@@ -54,6 +58,7 @@ const NETHER_RESET_OFFICE_SECOND_CONNECTORS: readonly RoccoLevelConnector[] = [
       width: ROCCO_DESIGN_WIDTH,
       height: NETHER_RESET_OFFICE_EXIT_TRIGGER_HEIGHT,
     },
+    exitDescriptionKey: 'otherOfficePart',
     entryPoint: {
       ...NETHER_RESET_OFFICE_CONNECTED_ENTRY_POSITION,
     },
@@ -109,6 +114,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
 
     await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
     engine.loadPlaneScene(scene);
+    installRoccoLevelConnectorTargets(engine, this.id, this.connectors, this.localization);
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
@@ -139,6 +145,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
   unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
+    uninstallRoccoLevelConnectorTargets(engine, this.id, this.connectors);
     uninstallRoccoPlayerSprite(engine);
     engine.video.sprites.unregisterWalkMap(ROCCO_ACTIVE_WALK_MAP_ID);
     this.spriteController = undefined;

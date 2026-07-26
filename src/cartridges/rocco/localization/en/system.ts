@@ -53,6 +53,7 @@ export const englishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   otherPierPart: 'Go to the other part of the pier',
   otherShopPart: 'Go to the other part of the shop',
   exitBathroom: 'Exit the bathroom',
+  otherOfficePart: 'Go to the other part of the office',
 };
 
 export const englishLevelsText: RoccoTextCatalog['levels'] = {

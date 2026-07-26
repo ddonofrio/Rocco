@@ -50,6 +50,9 @@ export const spanishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   ascendingPipes: 'Tuber\u{ED}as ascendentes',
   wheelValve: 'V\u{E1}lvula de volante',
   shopExitDoorDescription: 'Puerta de salida',
+  otherPierPart: 'Ir a la otra parte del muelle',
+  otherShopPart: 'Ir a la otra parte de la tienda',
+  exitBathroom: 'Salir del ba\u{F1}o',
 };
 
 export const spanishLevelsText: RoccoTextCatalog['levels'] = {

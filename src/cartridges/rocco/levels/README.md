@@ -47,8 +47,12 @@ map-specific creation guidance.
 ## Connectors and walk maps
 
 Connectors are the level-to-level travel language. Each connector can define an
-`exitArea`, `entryPoint`, `entryFacing`, an optional inventory `requiresKeys`
-gate, and `preservePlayerPosition`. Walk maps are alpha masks: opaque pixels are
+`exitArea`, `entryPoint`, `entryFacing`, an optional localized
+`exitDescriptionKey`, an optional inventory `requiresKeys` gate, and
+`preservePlayerPosition`. Levels that expose an exit description register a
+look-only scene target over the same `exitArea`; the target provides hover
+guidance while click-to-walk and connector transition intent continue to use
+the connector coordinates. Walk maps are alpha masks: opaque pixels are
 walkable, transparent pixels are blocked.
 
 ## Persistence

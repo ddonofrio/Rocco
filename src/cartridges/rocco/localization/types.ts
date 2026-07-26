@@ -56,6 +56,9 @@ export interface RoccoTextCatalog {
     ascendingPipes: string;
     wheelValve: string;
     shopExitDoorDescription: string;
+    otherPierPart: string;
+    otherShopPart: string;
+    exitBathroom: string;
   };
   levels: {
     beginning: string;

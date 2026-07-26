@@ -38,6 +38,10 @@ import {
   type RoccoLevelConnector,
   type RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
+import {
+  installRoccoLevelConnectorTargets,
+  uninstallRoccoLevelConnectorTargets,
+} from '../../../../levels/rocco-level-connector-targets';
 import { baitShopInteriorAssetUrls, baitShopDoorClosingSoundUrl } from './bait-shop-assets';
 import {
   BaitShopBenchJumpController,
@@ -185,6 +189,7 @@ const BAIT_SHOP_CONNECTORS: readonly RoccoLevelConnector[] = [
       width: ROCCO_DESIGN_WIDTH,
       height: BAIT_SHOP_SECOND_SCREEN_EXIT_TRIGGER_HEIGHT,
     },
+    exitDescriptionKey: 'otherShopPart',
     entryPoint: {
       ...BAIT_SHOP_RETURN_ENTRY_POSITION,
     },
@@ -1349,6 +1354,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
     engine.loadPlaneScene(scene);
     await installBaitShopWalkMap(engine, BAIT_SHOP_WALK_MAP_IMAGE_URL, preloader);
     installBaitShopSceneTargets(engine, this.localization);
+    installRoccoLevelConnectorTargets(engine, this.id, this.connectors, this.localization);
     this.syncSouvenirCloseupPresentation();
     this.syncHiddenKeysTarget();
     this.installActionMenus(engine);
@@ -1464,6 +1470,7 @@ export class RoccoBaitShopLevel implements RoccoLevel, BaitShopBenchJumpControll
   unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
+    uninstallRoccoLevelConnectorTargets(engine, this.id, this.connectors);
     this.scriptedInteractionController?.cancel();
     this.uninstallActionMenus(engine);
     this.souvenirCloseupVisible = false;

@@ -73,6 +73,10 @@ import {
   type RoccoBaitShopSceneDefinition,
 } from './bait-shop-level';
 import {
+  installRoccoLevelConnectorTargets,
+  uninstallRoccoLevelConnectorTargets,
+} from '../../../../levels/rocco-level-connector-targets';
+import {
   BaitShopToiletSeatController,
   type BaitShopToiletSeatControllerHost,
   type BaitShopToiletSeatControllerOptions,
@@ -315,6 +319,7 @@ const BAIT_SHOP_TOILET_CONNECTORS: readonly RoccoLevelConnector[] = [
       width: ROCCO_DESIGN_WIDTH,
       height: BAIT_SHOP_TOILET_RETURN_EXIT_TRIGGER_HEIGHT,
     },
+    exitDescriptionKey: 'exitBathroom',
     entryPoint: {
       ...BAIT_SHOP_TOILET_ENTRY_POSITION,
     },
@@ -3193,6 +3198,7 @@ class RoccoBaitShopToiletController
     preloader: RoccoAssetPreloader | undefined,
   ): Promise<void> {
     engine.loadPlaneScene(assets.scene);
+    installRoccoLevelConnectorTargets(engine, this.id, this.connectors, this.localization);
     this.clearReadingPresentation();
     await installBaitShopWalkMap(engine, baitShopToiletAssetUrls.walkMap, preloader);
     this.loadToiletSpriteDefinitions(engine, assets);
@@ -3266,6 +3272,7 @@ class RoccoBaitShopToiletController
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_SMOKE_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_PORTAL_SPRITE_INSTANCE_ID);
     engine.video.sprites.removeSprite(BAIT_SHOP_TOILET_THROW_RELIC_SPRITE_INSTANCE_ID);
+    uninstallRoccoLevelConnectorTargets(engine, this.id, this.connectors);
     this.unregisterUrgentToiletTarget();
     this.unregisterPortalTarget();
     uninstallRoccoPlayerSprite(engine);

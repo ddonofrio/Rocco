@@ -16,6 +16,10 @@ For every implementation task:
 6. Only after approval, implement or update the automated tests.
 7. During normal iteration, run only tests relevant to the approved behavior.
 
+Visual verification of gameplay screens is performed by the user. Agents must not inspect,
+render, or otherwise use image tools to judge the appearance or behavior of a screen; they
+must provide precise manual verification instructions instead.
+
 Read the required documentation chain and the nearest existing implementation and tests before introducing a new pattern. Gameplay and creative requirements may change during manual verification; tests must codify the approved behavior, not an intermediate interpretation.
 
 Do not run tests before functional approval. Do not run `npm run build` during normal iteration; it is an alias of `build:web` and executes the full quality gate.

@@ -49,6 +49,10 @@ import type {
   RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
 import { findRoccoLevelConnector } from '../../../../levels/rocco-level-types';
+import {
+  installRoccoLevelConnectorTargets,
+  uninstallRoccoLevelConnectorTargets,
+} from '../../../../levels/rocco-level-connector-targets';
 import { ROCCO_PLAYER_CONFIG } from '../../player';
 import { ROCCO_DESIGN_HEIGHT, ROCCO_DESIGN_WIDTH } from '../../game-design';
 import {
@@ -97,6 +101,7 @@ export const ROCCO_PIER_MIDDLE_CONNECTORS: readonly RoccoLevelConnector[] = [
       width: PIER_LEVEL_EXIT_TRIGGER_WIDTH,
       height: ROCCO_DESIGN_HEIGHT,
     },
+    exitDescriptionKey: 'otherPierPart',
     entryPoint: {
       x: PIER_PLAYER_LEFT_ENTRY_X,
       y: DEFAULT_ENTRY_Y,
@@ -111,6 +116,7 @@ export const ROCCO_PIER_MIDDLE_CONNECTORS: readonly RoccoLevelConnector[] = [
       width: PIER_LEVEL_EXIT_TRIGGER_WIDTH,
       height: ROCCO_DESIGN_HEIGHT,
     },
+    exitDescriptionKey: 'otherPierPart',
     entryPoint: {
       x: PIER_PLAYER_RIGHT_ENTRY_X,
       y: DEFAULT_ENTRY_Y,
@@ -270,6 +276,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
       { backgroundScrollX: PIER_BACKGROUND_SCROLL_CENTER_X },
       preloader,
     );
+    installRoccoLevelConnectorTargets(engine, this.id, this.connectors, this.localization);
     return scene;
   }
 
@@ -408,6 +415,7 @@ export class RoccoPierMiddleLevel implements RoccoLevel {
     this.keysController?.cancel();
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
+    uninstallRoccoLevelConnectorTargets(engine, this.id, this.connectors);
     uninstallDefaultFeedingLookActionMenu(engine);
     uninstallDefaultBaitBucket(engine);
     uninstallDefaultKeys(engine);

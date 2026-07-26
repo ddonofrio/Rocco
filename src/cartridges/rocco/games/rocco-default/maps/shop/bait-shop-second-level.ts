@@ -44,6 +44,10 @@ import {
   uninstallBaitShopWalkMap,
   type RoccoBaitShopSceneDefinition,
 } from './bait-shop-level';
+import {
+  installRoccoLevelConnectorTargets,
+  uninstallRoccoLevelConnectorTargets,
+} from '../../../../levels/rocco-level-connector-targets';
 import { ROCCO_INVENTORY_MICROMANIA_CLOSED_ASSET_URL } from '../../../../inventory/rocco-inventory-assets';
 import { pierDoorOpeningSoundUrl } from '../pier/pier-bait-shop-door-assets';
 import { BAIT_SHOP_DOOR_OPENING_SOUND_ID } from '../../../../levels/pier/pier-bait-shop-door';
@@ -123,6 +127,7 @@ const BAIT_SHOP_SECOND_CONNECTORS: readonly RoccoLevelConnector[] = [
       width: ROCCO_DESIGN_WIDTH,
       height: BAIT_SHOP_SECOND_RETURN_EXIT_TRIGGER_HEIGHT,
     },
+    exitDescriptionKey: 'otherShopPart',
     entryPoint: {
       ...BAIT_SHOP_SECOND_ENTRY_POSITION,
     },
@@ -685,6 +690,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
     await (preloader?.preloadSpriteDefinition(engine, magazineDefinition) ??
       engine.video.preloadSpriteDefinition(magazineDefinition));
     engine.loadPlaneScene(scene);
+    installRoccoLevelConnectorTargets(engine, this.id, this.connectors, this.localization);
     await installBaitShopWalkMap(engine, baitShopSecondScreenAssetUrls.walkMap, preloader);
     engine.video.sprites.loadSpriteDefinition(magazineDefinition);
     this.spriteController = await installRoccoPlayerSprite(
@@ -713,6 +719,7 @@ export class RoccoBaitShopSecondLevel implements RoccoLevel {
   unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
+    uninstallRoccoLevelConnectorTargets(engine, this.id, this.connectors);
     this.scriptedInteractionController?.cancel();
     this.uninstallToiletDoorInteractions(engine);
     this.uninstallMagazineInteractions(engine);

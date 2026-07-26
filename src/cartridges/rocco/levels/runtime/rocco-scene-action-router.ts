@@ -25,6 +25,7 @@ import type {
 } from './rocco-inventory-runtime-controller';
 import type { RoccoLevelTransitionController } from './rocco-level-transition-controller';
 import type { RoccoScriptedSequenceController } from './rocco-scripted-sequence-controller';
+import { isRoccoLevelConnectorHoverTarget } from '../rocco-level-connector-targets';
 
 /**
  * Options for {@link RoccoSceneActionRouter}. The router does not import
@@ -104,8 +105,21 @@ export class RoccoSceneActionRouter {
       return preExitIntent.disposition;
     }
 
-    this.options.transitions.updatePendingExitIntent(context.activeLevel, context.action);
+    const pendingExitIntentAction = this.isLevelConnectorHoverTarget(context.action)
+      ? { ...context.action, targetInstanceId: undefined, targetDefinitionId: undefined }
+      : context.action;
+    this.options.transitions.updatePendingExitIntent(context.activeLevel, pendingExitIntentAction);
     return this.registry.dispatch(context, signal);
+  }
+
+  private isLevelConnectorHoverTarget(action: RoccoSceneClickAction): boolean {
+    if (!action.targetInstanceId) {
+      return false;
+    }
+
+    return isRoccoLevelConnectorHoverTarget(
+      this.options.getSdk()?.video.sceneTargets?.getTarget(action.targetInstanceId),
+    );
   }
 
   handleAction(

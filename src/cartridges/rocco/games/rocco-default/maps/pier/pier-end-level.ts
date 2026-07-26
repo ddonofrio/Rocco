@@ -21,6 +21,7 @@ export const PIER_END_CONNECTORS: readonly RoccoLevelConnector[] = [
       width: PIER_LEVEL_EXIT_TRIGGER_WIDTH,
       height: ROCCO_DESIGN_HEIGHT,
     },
+    exitDescriptionKey: 'otherPierPart',
     entryPoint: {
       x: PIER_PLAYER_RIGHT_ENTRY_X,
       y: DEFAULT_ENTRY_Y,

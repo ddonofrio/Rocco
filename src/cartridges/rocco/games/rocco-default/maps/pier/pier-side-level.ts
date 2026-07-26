@@ -16,6 +16,10 @@ import type {
   RoccoLevelMountOptions,
 } from '../../../../levels/rocco-level-types';
 import { findRoccoLevelConnector } from '../../../../levels/rocco-level-types';
+import {
+  installRoccoLevelConnectorTargets,
+  uninstallRoccoLevelConnectorTargets,
+} from '../../../../levels/rocco-level-connector-targets';
 import type { RoccoPierBeginningAmbientPersistentState } from './pier-beginning-ambient';
 import type { RoccoLocalization } from '../../localization';
 import { installDefaultWalkMap, uninstallDefaultWalkMap } from './pier-walkmap';
@@ -131,6 +135,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
       },
       preloader,
     );
+    installRoccoLevelConnectorTargets(engine, this.id, this.connectors, this.localization);
 
     const [cloudController, spriteController, ambientController] = await this.installControllers(
       engine,
@@ -160,6 +165,7 @@ export class RoccoPierSideLevel implements RoccoLevel {
   unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
+    uninstallRoccoLevelConnectorTargets(engine, this.id, this.connectors);
     this.ambientController?.unmount(engine);
     uninstallDefaultCloud(engine);
     uninstallRoccoPlayerSprite(engine);

@@ -6,6 +6,7 @@ import {
   ROCCO_INVENTORY_MENU_ID,
 } from '../../../../src/cartridges/rocco/inventory';
 import { RoccoSceneActionRouter } from '../../../../src/cartridges/rocco/levels/runtime/rocco-scene-action-router';
+import { ROCCO_LEVEL_CONNECTOR_TARGET_DEFINITION_ID } from '../../../../src/cartridges/rocco/levels/rocco-level-connector-targets';
 import type { RoccoLevel } from '../../../../src/cartridges/rocco/levels/rocco-level-types';
 import { DEFAULT_ROCCO_PLAYER_APPEARANCE } from '../../../../src/cartridges/rocco/games/rocco-default/player';
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
@@ -26,6 +27,88 @@ function createLevel(overrides: Partial<RoccoLevel> = {}): RoccoLevel {
 }
 
 describe('RoccoSceneActionRouter', () => {
+  it('keeps connector transition intent when clicking a connector hover target', () => {
+    const activeLevel = createLevel({
+      connectors: [
+        {
+          id: 'south',
+          exitArea: { x: 0, y: 510, width: 960, height: 30 },
+          entryPoint: { x: 250, y: 220 },
+          entryFacing: 'up',
+        },
+      ],
+    });
+    const updatePendingExitIntent = vi.fn();
+    const router = new RoccoSceneActionRouter({
+      localization: createRoccoLocalization('en'),
+      inventory: new RoccoInventory(),
+      transitions: { updatePendingExitIntent } as never,
+      inventoryRuntime: {
+        shouldHandleSceneCarriedItem: vi.fn(() => false),
+        handleCarriedItemSceneClick: vi.fn(),
+        handleGridMenuAction: vi.fn(() => false),
+        togglePlayerInventory: vi.fn(),
+      } as never,
+      droppedInventory: {
+        canHandleSceneClick: vi.fn(() => false),
+        handleSceneClick: vi.fn(() => false),
+        canHandleActionMenu: vi.fn(() => false),
+        handleActionMenu: vi.fn(() => false),
+      } as never,
+      scriptedSequences: {
+        hasBlockingSequence: vi.fn(() => false),
+        hasPendingBaitShopDoorUse: vi.fn(() => false),
+        cancelPendingBaitShopDoorUse: vi.fn(),
+        startStanPoliceDefeat: vi.fn(),
+        startStanMoneyExchange: vi.fn(),
+        startBaitShopDoorUse: vi.fn(),
+      } as never,
+      developerRuntime: {
+        canHandleSceneClick: vi.fn(() => false),
+        handleSceneClick: vi.fn(() => false),
+        canHandleGridMenuAction: vi.fn(() => false),
+        handleGridMenuAction: vi.fn(() => false),
+        canHandlePlayerAction: vi.fn(() => false),
+        handlePlayerAction: vi.fn(() => false),
+        clearTransientState: vi.fn(),
+      } as never,
+      getSdk: () =>
+        ({
+          video: {
+            gridMenus: {
+              getCarriedItem: vi.fn(),
+            },
+            sceneTargets: {
+              getTarget: vi.fn(() => ({
+                definitionId: ROCCO_LEVEL_CONNECTOR_TARGET_DEFINITION_ID,
+              })),
+            },
+          },
+        }) as unknown as CartridgeSdkV1Runtime,
+      getActiveLevel: () => activeLevel,
+      getRoccoAppearance: () => DEFAULT_ROCCO_PLAYER_APPEARANCE,
+      setRoccoAppearance: vi.fn(),
+      isStanIdentified: () => false,
+      isStanAwake: () => false,
+    });
+
+    router.handleAction({
+      kind: 'scene-click',
+      sceneX: 480,
+      sceneY: 520,
+      targetInstanceId: 'rocco-level-connector:bait-shop:south',
+      targetDefinitionId: ROCCO_LEVEL_CONNECTOR_TARGET_DEFINITION_ID,
+    });
+
+    expect(updatePendingExitIntent).toHaveBeenCalledWith(activeLevel, {
+      kind: 'scene-click',
+      sceneX: 480,
+      sceneY: 520,
+      targetInstanceId: undefined,
+      targetDefinitionId: undefined,
+    });
+  });
+
   it('updates exit intent before resolving a carried inventory scene click', () => {
     const localization = createRoccoLocalization('en');
     const callOrder: string[] = [];

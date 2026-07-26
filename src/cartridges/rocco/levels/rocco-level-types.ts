@@ -6,6 +6,7 @@ import type { RoccoPlaneScene } from '../../../console/video/planes';
 import type { RoccoFacingDirection, RoccoPoint } from '../../../console/video/sprites';
 import type { RoccoInventoryItem } from '../inventory';
 import type { RoccoPlayerAppearance } from '../games/rocco-default/player';
+import type { RoccoLocalization } from '../games/rocco-default/localization';
 import { RoccoAssetPreloader } from './rocco-asset-preloader';
 
 export interface RoccoLevelRect {
@@ -20,6 +21,7 @@ export interface RoccoLevelConnector {
   exitArea?: RoccoLevelRect;
   entryPoint: RoccoPoint;
   entryFacing: RoccoFacingDirection;
+  exitDescriptionKey?: keyof RoccoLocalization['text']['descriptions'];
   requiresKeys?: boolean;
   preservePlayerPosition?: boolean;
 }

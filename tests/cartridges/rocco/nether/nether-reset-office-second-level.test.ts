@@ -126,20 +126,34 @@ function createEngine() {
     resolvePlane: vi.fn(() => ({})),
     updatePlane: vi.fn(),
   };
+  const audio = {
+    registerSound: vi.fn(),
+    stopSound: vi.fn(),
+    unregisterSound: vi.fn(),
+    playSound: vi.fn(),
+  };
 
   const engine = {
+    audio,
     storage: {
       loadPlaneSceneRecord: vi.fn(() => Promise.resolve(null)),
       savePlaneScene: vi.fn(() => Promise.resolve()),
     },
     video: {
       actionMenus,
-      messages: { clearMessages: vi.fn() },
+      messages: {
+        clearMessages: vi.fn(),
+        listMessages: vi.fn(() => []),
+        removeMessage: vi.fn(),
+        say: vi.fn(),
+      },
       preloadPlaneScene: vi.fn(() => Promise.resolve()),
       preloadSpriteDefinition: vi.fn(() => Promise.resolve()),
       sprites,
       sceneTargets,
       planes,
+      primitives: { addPrimitive: vi.fn(), removePrimitive: vi.fn() },
+      titles: { addTitle: vi.fn(), removeTitle: vi.fn() },
     },
     acquireInputLease: vi.fn(() => ({ dispose: vi.fn() })),
     loadPlaneScene: vi.fn(),

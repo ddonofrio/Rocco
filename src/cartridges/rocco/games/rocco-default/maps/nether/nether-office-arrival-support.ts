@@ -29,6 +29,30 @@ export function installNetherResetOfficeGuysprite(
   updateGuyspriteFacingTowardsRocco(engine, groundPoint, true);
 }
 
+export function restoreNetherResetOfficeGuyspriteStanding(
+  engine: CartridgeSdkV1Runtime,
+  sceneId: string | undefined,
+  chairPlaneId: string | undefined,
+  groundPoint: { x: number; y: number },
+  scale: number,
+): void {
+  if (sceneId && chairPlaneId) {
+    engine.video.planes.updatePlane(sceneId, chairPlaneId, { enabled: true, visible: true });
+  }
+  installNetherResetOfficeGuysprite(
+    engine,
+    {
+      x: groundPoint.x - ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * scale,
+      y: groundPoint.y - ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * scale,
+    },
+    groundPoint,
+    scale,
+    false,
+  );
+  engine.video.sprites.setInteractive(GUYSPRITE_CONFIG.ids.instance, false);
+  engine.video.sceneTargets?.setEnabled(GUYSPRITE_CONFIG.ids.instance, false);
+}
+
 export function setNetherResetOfficeRoccoSequenceControl(
   engine: CartridgeSdkV1Runtime,
   isEnabled: boolean,

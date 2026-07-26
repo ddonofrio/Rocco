@@ -28,6 +28,7 @@ import {
   resolvePrinterMessageText,
   splitPrinterSpeechText,
 } from './nether-reset-office-second-printer-content';
+import { syncNetherPrinterReadingPresentation } from './nether-printer-reading-presentation';
 
 const PRINTER_TARGET_ID = 'rocco-nether-reset-office-second-printer-target';
 const PRINTER_DEFINITION_ID = 'rocco-nether-printer';
@@ -62,6 +63,8 @@ const PRINTER_READING_SPEECH_SESSION_ID = 'nether-office-second-printer-speech';
 const PRINTER_READING_IMAGE_WIDTH = ROCCO_DESIGN_WIDTH;
 const PRINTER_READING_IMAGE_HEIGHT = 520;
 const PRINTER_READING_FACING = 'up-left' as const;
+
+type NetherOfficeMessageReplyHandler = (messageIndex: number, isCorrect: boolean) => void;
 
 export const NETHER_RESET_OFFICE_SECOND_PRINTER_READING_PLANE: RoccoGraphicPlane = {
   id: PRINTER_READING_PLANE_ID,
@@ -105,11 +108,18 @@ export class NetherResetOfficeSecondPrinterController {
   private readingReplyChoicesVisible = false;
   private readingMessageText: string | undefined;
   private readingMessageContraryText: string | undefined;
+  private readingMessageIndex: number | undefined;
   private speechDialogue: RoccoDialogueSession | undefined;
+  private readonly onMessageReply: NetherOfficeMessageReplyHandler | undefined;
 
-  constructor(localization: RoccoLocalization, sceneId: string) {
+  constructor(
+    localization: RoccoLocalization,
+    sceneId: string,
+    onMessageReply?: NetherOfficeMessageReplyHandler,
+  ) {
     this.localization = localization;
     this.sceneId = sceneId;
+    this.onMessageReply = onMessageReply;
   }
 
   private createActionMenuDefinition(): RoccoActionMenuDefinition {
@@ -212,6 +222,7 @@ export class NetherResetOfficeSecondPrinterController {
     }
 
     this.readingMessageText = messageText;
+    this.readingMessageIndex = PRINTER_READING_TARGET_IDS.indexOf(targetId);
     this.readingMessageContraryText = resolvePrinterMessageContraryText(
       PRINTER_READING_TARGET_IDS,
       targetId,
@@ -229,6 +240,7 @@ export class NetherResetOfficeSecondPrinterController {
     this.readingReplyChoicesVisible = false;
     this.readingMessageText = undefined;
     this.readingMessageContraryText = undefined;
+    this.readingMessageIndex = undefined;
     this.engine?.video.gridMenus?.closeMenu();
     this.syncReadingPresentation();
   }
@@ -246,14 +258,9 @@ export class NetherResetOfficeSecondPrinterController {
     }
 
     const messageText = this.readingMessageText;
+    const messageIndex = this.readingMessageIndex;
     if (replyId === PRINTER_READING_REPLY_SAY_ID) {
-      this.closeReadingDetailToList();
-      this.speechDialogue?.beginLinearSequence({
-        speaker: 'player',
-        lines: [splitPrinterSpeechText(messageText)],
-        lineTtlMs: 60_000,
-        messageOptions: { id: PRINTER_READING_SPEECH_SESSION_ID },
-      });
+      this.speakReadingReply(messageText, messageIndex, true);
       return;
     }
 
@@ -263,13 +270,7 @@ export class NetherResetOfficeSecondPrinterController {
         return;
       }
 
-      this.closeReadingDetailToList();
-      this.speechDialogue?.beginLinearSequence({
-        speaker: 'player',
-        lines: [splitPrinterSpeechText(contraryText)],
-        lineTtlMs: 60_000,
-        messageOptions: { id: PRINTER_READING_SPEECH_SESSION_ID },
-      });
+      this.speakReadingReply(contraryText, messageIndex, false);
       return;
     }
 
@@ -287,6 +288,25 @@ export class NetherResetOfficeSecondPrinterController {
     );
 
     this.closeReadingDetailToList();
+  }
+
+  private speakReadingReply(
+    text: string,
+    messageIndex: number | undefined,
+    isCorrect: boolean,
+  ): void {
+    this.closeReadingDetailToList();
+    this.speechDialogue?.beginLinearSequence({
+      speaker: 'player',
+      lines: [splitPrinterSpeechText(text)],
+      lineTtlMs: 60_000,
+      messageOptions: { id: PRINTER_READING_SPEECH_SESSION_ID },
+      onComplete: () => {
+        if (messageIndex !== undefined) {
+          this.onMessageReply?.(messageIndex, isCorrect);
+        }
+      },
+    });
   }
 
   private reopenReadingMenu(): void {
@@ -318,48 +338,20 @@ export class NetherResetOfficeSecondPrinterController {
       return;
     }
 
-    const readingPlane = this.engine.video.planes?.resolvePlane?.(
+    syncNetherPrinterReadingPresentation(
+      this.engine,
       this.sceneId,
       PRINTER_READING_PLANE_ID,
+      PRINTER_READING_TARGET_IDS,
+      PRINTER_READING_TARGET_DEFINITION_ID,
+      this.readingVisible,
+      PRINTER_READING_TARGET_X,
+      PRINTER_READING_TARGET_Y,
+      PRINTER_READING_TARGET_WIDTH,
+      PRINTER_READING_TARGET_HEIGHT,
+      PRINTER_READING_TARGET_STEP_Y,
+      this.localization,
     );
-    if (readingPlane) {
-      this.engine.video.planes.updatePlane(this.sceneId, PRINTER_READING_PLANE_ID, {
-        visible: this.readingVisible,
-      });
-    }
-
-    for (const targetId of PRINTER_READING_TARGET_IDS) {
-      this.engine.video.sceneTargets?.unregisterTarget(targetId);
-    }
-
-    if (!this.readingVisible) {
-      return;
-    }
-
-    for (const [index, targetId] of PRINTER_READING_TARGET_IDS.entries()) {
-      const messageNumber = index + 1;
-      this.engine.video.sceneTargets?.registerTarget({
-        instanceId: targetId,
-        definitionId: PRINTER_READING_TARGET_DEFINITION_ID,
-        renderPlaneId: PRINTER_READING_PLANE_ID,
-        shape: {
-          kind: 'rect',
-          x: PRINTER_READING_TARGET_X,
-          y: PRINTER_READING_TARGET_Y + index * PRINTER_READING_TARGET_STEP_Y,
-          width: PRINTER_READING_TARGET_WIDTH,
-          height: PRINTER_READING_TARGET_HEIGHT,
-        },
-        priority: 130,
-        suppressDefaultPlayerMove: true,
-        visibleDescription: {
-          enabled: true,
-          text:
-            this.localization.locale === 'es'
-              ? `Leer mensaje ${messageNumber}`
-              : `Read message ${messageNumber}`,
-        },
-      });
-    }
   }
 
   private hideReading(): void {
@@ -368,6 +360,7 @@ export class NetherResetOfficeSecondPrinterController {
     this.readingReplyChoicesVisible = false;
     this.readingMessageText = undefined;
     this.readingMessageContraryText = undefined;
+    this.readingMessageIndex = undefined;
     this.engine?.video.gridMenus?.closeMenu();
     this.syncReadingPresentation();
   }
@@ -418,6 +411,7 @@ export class NetherResetOfficeSecondPrinterController {
     this.readingReplyChoicesVisible = false;
     this.readingMessageText = undefined;
     this.readingMessageContraryText = undefined;
+    this.readingMessageIndex = undefined;
     engine.video.gridMenus?.closeMenu();
     this.speechDialogue = new RoccoDialogueSession({
       id: PRINTER_READING_SPEECH_SESSION_ID,

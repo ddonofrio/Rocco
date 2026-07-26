@@ -9,11 +9,7 @@ import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { ROCCO_PLAYER_CONFIG } from '../../player';
 import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../levels/rocco-level-runtime-ids';
-import {
-  installRoccoPlayerSprite,
-  uninstallRoccoPlayerSprite,
-  type RoccoPlayerSpriteController,
-} from '../../player';
+import { uninstallRoccoPlayerSprite, type RoccoPlayerSpriteController } from '../../player';
 import type { RoccoLocalization } from '../../localization';
 import { createGuyspriteSpriteDefinition, GUYSPRITE_CONFIG } from '../../characters/guysprite';
 import {
@@ -26,13 +22,17 @@ import {
   uninstallRoccoLevelConnectorTargets,
 } from '../../../../levels/rocco-level-connector-targets';
 import { netherResetOfficeAssetUrls } from './nether-assets';
+import { netherYouLoseSoundUrl } from './nether-security-camera-assets';
 import {
   createNetherWalkMapProfile,
   loadOrCreateNetherScene,
   toOriginFromGroundPoint,
 } from './nether-level-support';
 import { ROCCO_LAB_COAT_PLAYER_APPEARANCE } from '../../player';
-import { updateGuyspriteFacingTowardsRocco } from './nether-office-arrival-support';
+import {
+  setNetherResetOfficeRoccoSequenceControl,
+  updateGuyspriteFacingTowardsRocco,
+} from './nether-office-arrival-support';
 import { preloadNetherOfficeArrivalAssets } from './nether-office-arrival-assets';
 import { ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID } from './nether-console-hardware-spawn-level';
 import { RoccoNetherOfficeDialogueController } from './nether-office-dialogue';
@@ -73,6 +73,8 @@ import {
   setNetherOfficeGuyspriteInteractionEnabled,
   unregisterNetherOfficeGuyspriteInteraction,
 } from './nether-office-guysprite-interaction';
+import { NetherOfficePatienceController } from './nether-office-patience';
+import { installNetherOfficePlayer } from './nether-office-player';
 
 type NetherOfficeArrivalPhase =
   | 'speaking'
@@ -81,18 +83,15 @@ type NetherOfficeArrivalPhase =
   | 'defeat-fading'
   | 'defeat-title';
 
-interface NetherOfficeArrivalSequence {
-  phase: NetherOfficeArrivalPhase;
-  elapsedMs: number;
-}
+type NetherOfficeArrivalSequence = { phase: NetherOfficeArrivalPhase; elapsedMs: number };
 
 type NetherOfficeDeparturePhase = 'waiting-for-exit' | 'security-warning';
 
-interface NetherOfficeDepartureSequence {
+type NetherOfficeDepartureSequence = {
   phase: NetherOfficeDeparturePhase;
   elapsedMs: number;
   reminderIndex: number;
-}
+};
 
 export const ROCCO_NETHER_RESET_OFFICE_LEVEL_ID = 'nether-reset-office';
 
@@ -109,12 +108,17 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
   private departureSequence: NetherOfficeDepartureSequence | undefined;
   private arrivalInputLease: { dispose(): void } | undefined;
   private officeDialogue: RoccoNetherOfficeDialogueController | undefined;
+  private readonly officePatience: NetherOfficePatienceController;
   readonly id = ROCCO_NETHER_RESET_OFFICE_LEVEL_ID;
   readonly title: string;
   readonly connectors = NETHER_RESET_OFFICE_CONNECTORS;
 
-  constructor(localization: RoccoLocalization) {
+  constructor(
+    localization: RoccoLocalization,
+    officePatience = new NetherOfficePatienceController(localization),
+  ) {
     this.localization = localization;
+    this.officePatience = officePatience;
     this.title = localization.text.levels.resetOfficeTitle;
   }
 
@@ -128,18 +132,6 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
       NETHER_RESET_OFFICE_OPEN_DOOR_PLANE_ID,
       { enabled: isVisible, visible: isVisible },
     );
-  }
-
-  private setRoccoSequenceControl(isEnabled: boolean): void {
-    if (!this.engine) {
-      return;
-    }
-
-    this.engine.video.sprites.setInteractive(ROCCO_PLAYER_CONFIG.ids.instance, isEnabled);
-    this.engine.video.sprites.setCollisionEnabled(ROCCO_PLAYER_CONFIG.ids.instance, isEnabled);
-    if (!isEnabled) {
-      this.engine.video.sprites.stopMovement(ROCCO_PLAYER_CONFIG.ids.instance);
-    }
   }
 
   private installGuysprite(): void {
@@ -261,8 +253,8 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     if (this.engine) {
       setNetherOfficeGuyspriteInteractionEnabled(this.engine, true);
       this.engine.video.sprites.setInteractive(GUYSPRITE_CONFIG.ids.instance, true);
+      setNetherResetOfficeRoccoSequenceControl(this.engine, true);
     }
-    this.setRoccoSequenceControl(true);
     this.departureSequence = {
       phase: 'waiting-for-exit',
       elapsedMs: 0,
@@ -410,7 +402,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
         restart: true,
       },
     );
-    this.setRoccoSequenceControl(false);
+    setNetherResetOfficeRoccoSequenceControl(this.engine, false);
     this.installGuysprite();
     this.showArrivalLine();
     this.arrivalInputLease = this.engine.acquireInputLease(
@@ -433,6 +425,12 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     this.arrivalInputLease = undefined;
     this.onRestartRequested = options.onRestartRequested;
     this.roccoHasLabCoat = options.roccoAppearance === ROCCO_LAB_COAT_PLAYER_APPEARANCE;
+    engine.audio.registerSound({
+      id: NETHER_RESET_OFFICE_DEFEAT_SOUND_ID,
+      uri: netherYouLoseSoundUrl,
+      volume: 0.25,
+      loop: false,
+    });
 
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
     const initialPosition = entryConnector
@@ -451,30 +449,28 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
       this.localization,
       preloader,
     );
+    this.officePatience.mount(
+      engine,
+      'first',
+      () => this.installGuysprite(),
+      this.onRestartRequested,
+    );
     engine.loadPlaneScene(scene);
     installRoccoLevelConnectorTargets(engine, this.id, this.connectors, this.localization);
     registerNetherOfficeGuyspriteInteraction(engine, this.localization, false);
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
-    this.spriteController = await installRoccoPlayerSprite(
+    this.spriteController = await installNetherOfficePlayer(
       engine,
-      {
-        appearance: options.roccoAppearance,
-        initialFacing,
-        initialPosition: { ...initialPosition },
-        scale: NETHER_RESET_OFFICE_ROCCO_SCALE,
-        tint: NETHER_RESET_OFFICE_ROCCO_TINT,
-        localization: this.localization,
-        playIntro: false,
-        perspectiveAutoAdjust: {
-          farY: walkMapProfile.farY,
-          nearY: walkMapProfile.nearY,
-          farScale: NETHER_RESET_OFFICE_FAR_SCALE,
-          nearScale: 1,
-          scaleCurve: 'linear',
-        },
-      },
+      options,
+      initialFacing,
+      initialPosition,
+      walkMapProfile,
+      NETHER_RESET_OFFICE_ROCCO_SCALE,
+      NETHER_RESET_OFFICE_ROCCO_TINT,
+      NETHER_RESET_OFFICE_FAR_SCALE,
+      this.localization,
       preloader,
     );
 
@@ -494,6 +490,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     engine.audio.unregisterSound(NETHER_RESET_OFFICE_DEFEAT_SOUND_ID);
     engine.video.actionMenus.closeMenu();
     unregisterNetherOfficeGuyspriteInteraction(engine);
+    this.officePatience.unmount(engine);
     engine.video.messages.clearMessages();
     uninstallRoccoLevelConnectorTargets(engine, this.id, this.connectors);
     uninstallRoccoPlayerSprite(engine);
@@ -511,6 +508,7 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
   update(deltaMs: number): void {
     this.spriteController?.update(deltaMs);
     this.officeDialogue?.update(deltaMs);
+    this.officePatience.update(deltaMs);
     if (this.engine) {
       updateGuyspriteFacingTowardsRocco(
         this.engine,

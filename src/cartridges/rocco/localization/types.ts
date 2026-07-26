@@ -267,6 +267,8 @@ export interface RoccoTextCatalog {
       thirdMessageContraryText: string;
       fourthMessageText: string;
       fourthMessageContraryText: string;
+      messageTexts: string[];
+      messageContraryTexts: string[];
       replyToGuyspriteLabel: string;
       readMoreMessagesLabel: string;
       replyReadMessageLabel: string;
@@ -326,6 +328,19 @@ export interface RoccoTextCatalog {
         guyspriteTalkLine: string;
         guyspriteLookLines: string[];
       };
+    };
+    officeReading: {
+      patienceLabel: string;
+      startLine: string;
+      correctLine: string;
+      secondMessageSecurityLine: string;
+      incorrectLines: string[];
+      nextLine: string;
+      repeatedLine: string;
+      repeatedNextLine: string;
+      firstMessageResetLine: string;
+      firstMessageAlertLines: string[];
+      zeroLines: string[];
     };
     doorHandle: {
       lookLines: string[];

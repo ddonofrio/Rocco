@@ -27,3 +27,8 @@ export const netherAmbientSteamMachineAssetUrl = new URL(
   'assets/steam_machine.mp3',
   import.meta.url,
 ).href;
+
+export const netherOfficeConfidenceSoundUrls = {
+  lose: new URL('assets/pierde-confianza.mp3', import.meta.url).href,
+  gain: new URL('assets/ganar-confianza.mp3', import.meta.url).href,
+} as const;

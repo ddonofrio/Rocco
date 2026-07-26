@@ -61,6 +61,14 @@ export class RoccoCheckpointCoordinator {
     return mountOptions;
   }
 
+  private applyRestartInventoryOverride(request: RoccoLevelRestartRequest): void {
+    if (!request.inventoryItems) {
+      return;
+    }
+
+    this.options.inventoryRuntime.getPlayerInventory().replaceItems(request.inventoryItems);
+  }
+
   private createPreparedRestart(data: RoccoRestartPlanData) {
     const { request, rollbackSnapshot, playerSnapshot, mountStateSnapshot, netherReset } = data;
     const targetLevel =
@@ -83,6 +91,7 @@ export class RoccoCheckpointCoordinator {
         this.options.inventoryRuntime.resetRuntimeState();
         if (this.options.worldState.isNetherLevelId(request.levelId)) {
           this.options.worldState.applyNetherEntrySnapshot(rollbackSnapshot.netherEntrySnapshot);
+          this.applyRestartInventoryOverride(request);
         }
       },
       publish: (engine: CartridgeSdkV1Runtime) => {

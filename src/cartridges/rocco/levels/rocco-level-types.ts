@@ -45,6 +45,7 @@ export interface RoccoLevelRestartRequest {
   entryConnectorId?: string;
   entryPosition?: RoccoPoint;
   forceArrivalSequence?: boolean;
+  inventoryItems?: readonly RoccoInventoryItem[];
 }
 
 export interface RoccoLevel {

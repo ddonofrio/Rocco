@@ -118,6 +118,16 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
   },
   {
+    "assetPath": "./assets/ganar-confianza.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/pierde-confianza.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
     "assetPath": "./assets/printer-front.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",

@@ -2,6 +2,48 @@ import type { RoccoTextCatalog } from '../types';
 
 export const spanishNetherText: RoccoTextCatalog['nether'] = {
   arrivalThoughtLine: '\u{BF}qu\u{E9} es este lugar?',
+  printer: {
+    description: 'Impresora',
+    readLabel: 'Leer',
+    grabLines: [
+      'Parece algo muy pesado. Necesitar\u{ED}a una gr\u{FA}a para moverlo.',
+      'Como intente coger eso, me quedo sin espalda.',
+      'Eso no se coge as\u{ED} como as\u{ED}. Pesa una barbaridad.',
+      'Estoy bastante seguro de que esa impresora pesa m\u{E1}s que yo.',
+    ],
+    kickLines: [
+      'Como le d\u{E9} una patada, me rompo una pierna.',
+      'Ni de broma; esa cosa me dejar\u{ED}a el pie hecho polvo.',
+      'La impresora ganar\u{ED}a la pelea y mi pierna perder\u{ED}a.',
+      'Ser\u{ED}a como patear una pared de hierro.',
+    ],
+    firstMessageText:
+      '[OFICINA DEL RESET #01011]\nSprite[0] # Player \u{2192} puntero UNDEFINED.\nBucle activo detectado. Consumo de CPU por encima del umbral.\nSolicitado reinicio inmediato del servicio de hardware Sprite[0].',
+    firstMessageContraryText:
+      '[OFICINA DEL RESET #01011]\nSprite[0] # Player \u{2192} puntero DEFINED.\nBucle inactivo detectado. Consumo de CPU por debajo del umbral.\nNo solicitar reinicio del servicio de hardware Sprite[0].',
+    secondMessageText:
+      '[ALERTA GENERAL #01012]\nPosible salida de portal localizada en el pasillo de acceso\na la Oficina del Reset.\nExtreme la precauci\u{00F3}n. Solicite identificaci\u{00F3}n a toda entidad detectada.',
+    secondMessageContraryText:
+      '[ALERTA GENERAL #01012]\nNo se ha localizado ninguna salida de portal en el pasillo\nde acceso a la Oficina del Reset.\nNo es necesario extremar la precauci\u{00F3}n ni identificar a nadie.',
+    thirdMessageText:
+      '[OFICINA DEL RESET #01013]\nBuenas noticias: un reinicio completo de la consola\nreinsertar\u{00E1} al NPC fugado en el juego.\nAplicar RESET GENERAL inmediatamente.',
+    thirdMessageContraryText:
+      '[OFICINA DEL RESET #01013]\nMalas noticias: un apagado incompleto de la consola\nexpulsar\u{00E1} al NPC atrapado fuera del juego.\nNo aplicar RESET PARTICULAR nunca.',
+    fourthMessageText: '[OFICINA DEL RESET #01014]\nURGENTE: RESETEAR LA CONSOLA\nAHORA MISMO.',
+    fourthMessageContraryText:
+      '[OFICINA DEL RESET #01014]\nNO ES URGENTE: NO RESETEAR LA CONSOLA\nAHORA MISMO.',
+    replyToGuyspriteLabel: 'Contestar a Guysprite',
+    readMoreMessagesLabel: 'Leer m\u{E1}s mensajes',
+    replyReadMessageLabel: 'Contestar lo que dice el mensaje',
+    replyContraryLabel: 'Decir lo contrario al mensaje',
+    replyUnreadableLabel: 'Decir que no se lee bien',
+    replyUnreadableLines: [
+      'No se entiende nada, la impresi\u{00F3}n ha salido fatal.',
+      'El papel est\u{00E1} sucio y las letras casi ni se ven.',
+      'La tinta est\u{00E1} corrida; no hay quien descifre esto.',
+      'Esto se imprimi\u{00F3} con poca tinta... parecen manchas.',
+    ],
+  },
   securityCameraBribe: {
     thanksLine: '\u{A1}Gracias!',
     securityLine: '\u{A1}Seguridad!',

@@ -146,6 +146,7 @@ export function normalizeDefinition(definition: RoccoGridMenuDefinition): RoccoG
     zIndex: definition.zIndex ?? 100,
     closeOnActivate: definition.closeOnActivate ?? false,
     closeOnEmptyClick: definition.closeOnEmptyClick ?? false,
+    closeOnPointerLeave: definition.closeOnPointerLeave ?? true,
     reorderable: definition.reorderable ?? false,
     buttons: definition.buttons?.map((button) => clone(button)) ?? [],
     blockedSlotIndexes: [
@@ -166,5 +167,6 @@ export function normalizeDefinition(definition: RoccoGridMenuDefinition): RoccoG
     hoverStroke: definition.hoverStroke ?? '#8ecf6e',
     textDecorations: definition.textDecorations?.map((decoration) => clone(decoration)) ?? [],
     lineDecorations: definition.lineDecorations?.map((decoration) => clone(decoration)) ?? [],
+    rectDecorations: definition.rectDecorations?.map((decoration) => clone(decoration)) ?? [],
   };
 }

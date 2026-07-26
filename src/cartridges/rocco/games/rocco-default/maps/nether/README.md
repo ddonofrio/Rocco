@@ -39,6 +39,19 @@ are replaced by the 1:1 typing sprite at `(523, 179)`, which randomly changes be
 typing images at random intervals between one and five seconds while the second office remains
 active. Control returns after Guysprite reaches that point and the typing sprite is in place. Leaving
 and returning from the first Reset Office preserves Guysprite seated at the console; the developer
-arrival event explicitly restarts the entrance sequence when requested.
+arrival event explicitly restarts the entrance sequence when requested. The second office also exposes
+a background printer target at `(24, 207)` with size `236 × 295`. Its action menu offers localized
+Read, Kick, and Grab actions; Kick and Grab select non-repeating Rocco thoughts. Read walks Rocco to
+`(260, 492)`, faces him up-left, waits 250 ms, and displays the printer image as an in-scene reading
+overlay. The overlay registers fifteen message placeholders at `x = 234`, `y = 0, 35, …, 490`,
+each with size `492 × 34`; clicking outside those placeholders closes the overlay and restores the
+office scene. Clicking an authored message opens a dark detail presentation with a light bar covering
+the two message areas immediately below the first two message positions, that message's text, and a
+two-choice dialogue-style menu. Messages 1, 2, 3, and 4 are authored; the remaining placeholders consume
+clicks without opening a detail presentation. `Read more messages` returns to the fifteen-message
+overlay. `Reply to Guysprite` opens three Rocco response choices. The first makes Rocco say the
+message in two shorter pages joined with ellipses, the second makes him say that message's awkward
+opposite, and
+the third makes him say that the message is unreadable before returning to the message overlay.
 
 `src/cartridges/rocco/levels/nether/**` re-exports the game-owned implementations from this folder.

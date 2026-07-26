@@ -118,6 +118,11 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
   },
   {
+    "assetPath": "./assets/printer-front.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
     "assetPath": "./assets/reset-office-1-walkpath.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",

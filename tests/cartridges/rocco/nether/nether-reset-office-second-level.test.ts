@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
+import type { RoccoSceneTargetDefinition } from '../../../../src/console/video/scene-targets';
 import { createRoccoLocalization } from '../../../../src/cartridges/rocco/localization';
 import { RoccoNetherResetOfficeSecondLevel } from '../../../../src/cartridges/rocco/games/rocco-default/maps/nether/nether-reset-office-second-level';
 
@@ -67,7 +68,16 @@ vi.mock('../../../../src/cartridges/rocco/levels/rocco-level-connector-targets',
 
 vi.mock(
   '../../../../src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-arrival-support',
-  () => ({ updateGuyspriteFacingTowardsRocco: vi.fn() }),
+  () => ({
+    installNetherResetOfficeGuysprite: vi.fn(),
+    setNetherResetOfficeRoccoSequenceControl: vi.fn((_engine, isEnabled: boolean) => {
+      if (!isEnabled) {
+        mocks.events.push('lock-player-input');
+      }
+    }),
+    startNetherResetOfficeGuyspriteArrival: vi.fn(),
+    updateGuyspriteFacingTowardsRocco: vi.fn(),
+  }),
 );
 
 vi.mock(
@@ -80,11 +90,17 @@ vi.mock(
   }),
 );
 
-function createEngine(): CartridgeSdkV1Runtime {
+function createEngine() {
   const sprites = {
     createSpriteFromDefinition: vi.fn(),
     loadSpriteDefinition: vi.fn(),
     moveTo: vi.fn(),
+    goTo: vi.fn(() => true),
+    isMoving: vi.fn(() => false),
+    getSprite: vi.fn(() => ({ animation: { frameIndex: 0 } })),
+    playAction: vi.fn(),
+    setAnimationFrame: vi.fn(),
+    stopAnimation: vi.fn(),
     registerWalkMap: vi.fn(),
     removeSprite: vi.fn(),
     setCollisionEnabled: vi.fn(),
@@ -96,31 +112,116 @@ function createEngine(): CartridgeSdkV1Runtime {
     }),
     stopMovement: vi.fn(),
   };
+  const actionMenus = {
+    closeMenu: vi.fn(),
+    registerMenu: vi.fn(),
+    unregisterMenu: vi.fn(),
+  };
+  const sceneTargets = {
+    registerTarget: vi.fn<(definition: RoccoSceneTargetDefinition) => void>(),
+    unregisterTarget: vi.fn(),
+    setEnabled: vi.fn(),
+  };
+  const planes = {
+    resolvePlane: vi.fn(() => ({})),
+    updatePlane: vi.fn(),
+  };
 
-  return {
+  const engine = {
     storage: {
       loadPlaneSceneRecord: vi.fn(() => Promise.resolve(null)),
       savePlaneScene: vi.fn(() => Promise.resolve()),
     },
     video: {
-      actionMenus: { closeMenu: vi.fn() },
+      actionMenus,
       messages: { clearMessages: vi.fn() },
       preloadPlaneScene: vi.fn(() => Promise.resolve()),
       preloadSpriteDefinition: vi.fn(() => Promise.resolve()),
       sprites,
+      sceneTargets,
+      planes,
     },
     acquireInputLease: vi.fn(() => ({ dispose: vi.fn() })),
     loadPlaneScene: vi.fn(),
   } as unknown as CartridgeSdkV1Runtime;
+
+  return { engine, actionMenus, sceneTargets, planes, sprites };
 }
 
 describe('Rocco Nether reset office second level', () => {
   it('installs Rocco before locking input for the Guysprite arrival sequence', async () => {
     mocks.events.length = 0;
     const level = new RoccoNetherResetOfficeSecondLevel(createRoccoLocalization('es'));
+    const runtime = createEngine();
 
-    await level.mount(createEngine(), { forceArrivalSequence: true });
+    await level.mount(runtime.engine, { forceArrivalSequence: true });
 
     expect(mocks.events).toEqual(['install-player', 'lock-player-input']);
+    expect(runtime.actionMenus.registerMenu).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({ id: 'read', label: 'Leer' }),
+          expect.objectContaining({ id: 'kick', label: 'Patear' }),
+          expect.objectContaining({ id: 'grab', label: 'Coger' }),
+        ],
+      }),
+    );
+    expect(runtime.sceneTargets.registerTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shape: { kind: 'rect', x: 24, y: 207, width: 236, height: 295 },
+      }),
+    );
+  });
+
+  it('shows the printer reading overlay with fifteen placeholders and closes outside them', async () => {
+    const level = new RoccoNetherResetOfficeSecondLevel(createRoccoLocalization('es'));
+    const runtime = createEngine();
+
+    await level.mount(runtime.engine, { forceArrivalSequence: true });
+    const printerTarget = runtime.sceneTargets.registerTarget.mock.calls[0]?.[0];
+    const printerTargetId = printerTarget?.instanceId;
+
+    level.handleAction({
+      definitionId: 'rocco-nether-reset-office-second-printer-action-menu',
+      targetInstanceId: printerTargetId,
+      targetDefinitionId: 'rocco-nether-printer',
+      itemId: 'read',
+      actionId: 'read',
+    });
+    level.update(0);
+    level.update(250);
+
+    expect(runtime.sprites.goTo).toHaveBeenCalledWith(
+      expect.any(String),
+      260,
+      492,
+      expect.any(Object),
+    );
+    expect(runtime.sprites.playAction).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({ direction: 'up-left' }),
+    );
+    expect(runtime.planes.updatePlane).toHaveBeenCalledWith(
+      'rocco-nether-reset-office-second-scene',
+      'rocco-nether-reset-office-second-printer-reading',
+      { visible: true },
+    );
+    expect(runtime.sceneTargets.registerTarget).toHaveBeenCalledTimes(16);
+    expect(runtime.sceneTargets.registerTarget.mock.calls.at(-1)?.[0]).toMatchObject({
+      instanceId: 'rocco-nether-reset-office-second-printer-reading-target-15',
+      shape: { x: 234, y: 490, width: 492, height: 34 },
+      visibleDescription: { text: 'Leer mensaje 15' },
+    });
+
+    expect(level.handleSceneClick({ kind: 'scene-click', sceneX: 10, sceneY: 10 })).toEqual({
+      consumed: true,
+      defaultPlayerMovement: 'suppress',
+    });
+    expect(runtime.planes.updatePlane).toHaveBeenLastCalledWith(
+      'rocco-nether-reset-office-second-scene',
+      'rocco-nether-reset-office-second-printer-reading',
+      { visible: false },
+    );
   });
 });

@@ -254,6 +254,26 @@ export interface RoccoTextCatalog {
   };
   nether: {
     arrivalThoughtLine: string;
+    printer: {
+      description: string;
+      readLabel: string;
+      grabLines: string[];
+      kickLines: string[];
+      firstMessageText: string;
+      firstMessageContraryText: string;
+      secondMessageText: string;
+      secondMessageContraryText: string;
+      thirdMessageText: string;
+      thirdMessageContraryText: string;
+      fourthMessageText: string;
+      fourthMessageContraryText: string;
+      replyToGuyspriteLabel: string;
+      readMoreMessagesLabel: string;
+      replyReadMessageLabel: string;
+      replyContraryLabel: string;
+      replyUnreadableLabel: string;
+      replyUnreadableLines: string[];
+    };
     securityCameraBribe: {
       thanksLine: string;
       securityLine: string;

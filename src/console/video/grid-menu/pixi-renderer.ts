@@ -235,6 +235,18 @@ export class PixiRoccoGridMenuRenderer {
       child.destroy({ children: true });
     }
 
+    const rectDecorations = definition.rectDecorations ?? [];
+    for (const rectangle of rectDecorations) {
+      const node = new Graphics();
+      node.label = rectangle.id;
+      node.rect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+      if ((rectangle.fillAlpha ?? 0) > 0) {
+        const fill = node.fill.bind(node);
+        fill({ color: rectangle.fill ?? '#ffffff', alpha: rectangle.fillAlpha });
+      }
+      this.decorationRoot.addChild(node);
+    }
+
     const lineDecorations = definition.lineDecorations ?? [];
     for (const line of lineDecorations) {
       this.decorationRoot.addChild(this.createLineDecorationNode(line));

@@ -152,6 +152,12 @@ export class RoccoInputHandler {
     }
 
     if (this.videoSystem.gridMenus.isOpen() && !this.videoSystem.gridMenus.getCarriedItem()) {
+      const activeGridMenu = this.videoSystem.gridMenus.getRenderableMenu();
+      if (activeGridMenu?.definition.closeOnPointerLeave === false) {
+        this.inputPresentation.setHoverDescription(undefined);
+        return;
+      }
+
       const activation = this.videoSystem.gridMenus.activateAt(-1, -1);
       if (activation) {
         this.actionDispatcher.dispatch(activation, { owner: 'grid-menu-leave' });

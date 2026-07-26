@@ -4,6 +4,7 @@ import type {
   RoccoSceneClickAction,
 } from '../../../../../../console/cartridges';
 import type { RoccoActionMenuActivation } from '../../../../../../console/video/action-menu';
+import type { RoccoGridMenuActivation } from '../../../../../../console/video/grid-menu';
 import type { RoccoPlaneScene } from '../../../../../../console/video/planes';
 import type { RoccoFacingDirection } from '../../../../../../console/video/sprites';
 import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
@@ -39,7 +40,16 @@ import {
   GUYSPRITE_CONFIG,
 } from '../../characters/guysprite';
 import { GUYSPRITE_TYPING_DEFINITION_ID } from '../../characters/guysprite/guysprite-typing-sprite-definition';
-import { updateGuyspriteFacingTowardsRocco } from './nether-office-arrival-support';
+import {
+  installNetherResetOfficeGuysprite,
+  setNetherResetOfficeRoccoSequenceControl,
+  startNetherResetOfficeGuyspriteArrival,
+  updateGuyspriteFacingTowardsRocco,
+} from './nether-office-arrival-support';
+import {
+  NetherResetOfficeSecondPrinterController,
+  NETHER_RESET_OFFICE_SECOND_PRINTER_READING_PLANE,
+} from './nether-reset-office-second-printer';
 import {
   didHandleNetherOfficeGuyspriteAction,
   type NetherOfficeGuyspriteTargetShape,
@@ -158,6 +168,7 @@ const NETHER_RESET_OFFICE_SECOND_SCENE_DEFINITION: RoccoNetherSceneDefinition = 
       priority: 0,
       renderLayer: 'world.behind',
     },
+    NETHER_RESET_OFFICE_SECOND_PRINTER_READING_PLANE,
   ],
 };
 
@@ -178,6 +189,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
   private guyspriteTypingActive = false;
   private guyspriteTypingElapsedMs = 0;
   private guyspriteTypingNextFrameDelayMs = 0;
+  private readonly printerController: NetherResetOfficeSecondPrinterController;
   readonly id = ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID;
   readonly title: string;
   readonly connectors = NETHER_RESET_OFFICE_SECOND_CONNECTORS;
@@ -185,63 +197,10 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
   constructor(localization: RoccoLocalization) {
     this.localization = localization;
     this.title = localization.text.levels.resetOfficeTitle;
-  }
-
-  private setRoccoSequenceControl(isEnabled: boolean): void {
-    if (!this.engine) {
-      return;
-    }
-
-    this.engine.video.sprites.setInteractive(ROCCO_PLAYER_CONFIG.ids.instance, isEnabled);
-    this.engine.video.sprites.setCollisionEnabled(ROCCO_PLAYER_CONFIG.ids.instance, isEnabled);
-    if (!isEnabled) {
-      this.engine.video.sprites.stopMovement(ROCCO_PLAYER_CONFIG.ids.instance);
-    }
-  }
-
-  private installGuysprite(
-    engine: CartridgeSdkV1Runtime,
-    groundPoint: { x: number; y: number },
-    isInteractive: boolean,
-  ): void {
-    if (!this.guyspriteDefinition) {
-      return;
-    }
-
-    const scale = NETHER_RESET_OFFICE_GUYSPRITE_SCALE;
-    const origin = toOriginFromGroundPoint(groundPoint, scale);
-    engine.video.sprites.removeSprite(GUYSPRITE_CONFIG.ids.instance);
-    engine.video.sprites.createSpriteFromDefinition(GUYSPRITE_CONFIG.ids.definition, {
-      id: GUYSPRITE_CONFIG.ids.instance,
-      transform: {
-        x: origin.x,
-        y: origin.y,
-        scaleX: scale,
-        scaleY: scale,
-        rotation: 0,
-      },
-      renderLayer: 'world.actors',
-      zIndex: 50,
-      depthMode: 'baseline-sort',
-      interactive: isInteractive,
-      collisionEnabled: false,
-    });
-    updateGuyspriteFacingTowardsRocco(engine, groundPoint, true);
-  }
-
-  private startGuyspriteArrival(engine: CartridgeSdkV1Runtime): void {
-    const target = toOriginFromGroundPoint(
-      NETHER_RESET_OFFICE_GUYSPRITE_TARGET_GROUND_POINT,
-      NETHER_RESET_OFFICE_GUYSPRITE_SCALE,
+    this.printerController = new NetherResetOfficeSecondPrinterController(
+      localization,
+      ROCCO_NETHER_RESET_OFFICE_SECOND_SCENE_ID,
     );
-    this.arrivalSequence = { phase: 'walking', elapsedMs: 0 };
-    engine.video.sprites.moveTo(GUYSPRITE_CONFIG.ids.instance, target.x, target.y, {
-      speed: NETHER_RESET_OFFICE_GUYSPRITE_ARRIVAL_SPEED,
-      action: GUYSPRITE_CONFIG.ids.runAction,
-      idleAction: GUYSPRITE_CONFIG.ids.idleAction,
-      constrainToWalkMap: false,
-      stopDistance: 1,
-    });
   }
 
   private updateGuyspriteArrival(deltaMs: number): void {
@@ -269,7 +228,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     this.arrivalInputLease = undefined;
     this.engine.video.sceneTargets?.setEnabled(GUYSPRITE_CONFIG.ids.instance, true);
     this.engine.video.sprites.setInteractive(GUYSPRITE_CONFIG.ids.instance, true);
-    this.setRoccoSequenceControl(true);
+    setNetherResetOfficeRoccoSequenceControl(this.engine, true);
   }
 
   private setRandomGuyspriteTypingFrame(): void {
@@ -349,6 +308,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
   private resetMountState(engine: CartridgeSdkV1Runtime): void {
     this.engine = engine;
     this.spriteController = undefined;
+    this.printerController.reset(engine);
     this.guyspriteDefinition = createGuyspriteSpriteDefinition(this.localization);
     this.guyspriteTypingDefinition = createGuyspriteTypingSpriteDefinition(this.localization);
     this.arrivalSequence = undefined;
@@ -356,18 +316,6 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     this.guyspriteTypingActive = false;
     this.guyspriteTypingElapsedMs = 0;
     this.guyspriteTypingNextFrameDelayMs = 0;
-  }
-
-  private async preloadMountAssets(
-    engine: CartridgeSdkV1Runtime,
-    scene: RoccoPlaneScene,
-    preloader: RoccoAssetPreloader | undefined,
-  ): Promise<void> {
-    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
-    await (preloader?.preloadSpriteDefinition(engine, this.guyspriteDefinition!) ??
-      engine.video.preloadSpriteDefinition(this.guyspriteDefinition!));
-    await (preloader?.preloadSpriteDefinition(engine, this.guyspriteTypingDefinition!) ??
-      engine.video.preloadSpriteDefinition(this.guyspriteTypingDefinition!));
   }
 
   private async installPlayer(
@@ -414,17 +362,47 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     engine.video.sprites.loadSpriteDefinition(this.guyspriteTypingDefinition!);
     if (shouldPlayArrivalSequence) {
       this.arrivalSequencePlayed = true;
-      this.setRoccoSequenceControl(false);
+      setNetherResetOfficeRoccoSequenceControl(engine, false);
       this.arrivalInputLease = engine.acquireInputLease(
         NETHER_RESET_OFFICE_SECOND_ARRIVAL_INPUT_LEASE_ID,
         'blocked',
       );
-      this.installGuysprite(engine, NETHER_RESET_OFFICE_GUYSPRITE_ENTRY_GROUND_POINT, false);
-      this.startGuyspriteArrival(engine);
+      if (this.guyspriteDefinition) {
+        installNetherResetOfficeGuysprite(
+          engine,
+          toOriginFromGroundPoint(
+            NETHER_RESET_OFFICE_GUYSPRITE_ENTRY_GROUND_POINT,
+            NETHER_RESET_OFFICE_GUYSPRITE_SCALE,
+          ),
+          NETHER_RESET_OFFICE_GUYSPRITE_ENTRY_GROUND_POINT,
+          NETHER_RESET_OFFICE_GUYSPRITE_SCALE,
+          false,
+        );
+      }
+      this.arrivalSequence = { phase: 'walking', elapsedMs: 0 };
+      startNetherResetOfficeGuyspriteArrival(
+        engine,
+        toOriginFromGroundPoint(
+          NETHER_RESET_OFFICE_GUYSPRITE_TARGET_GROUND_POINT,
+          NETHER_RESET_OFFICE_GUYSPRITE_SCALE,
+        ),
+        NETHER_RESET_OFFICE_GUYSPRITE_ARRIVAL_SPEED,
+      );
     } else if (this.guyspriteHasSatAtConsole) {
       this.startGuyspriteTyping();
     } else {
-      this.installGuysprite(engine, NETHER_RESET_OFFICE_GUYSPRITE_TARGET_GROUND_POINT, true);
+      if (this.guyspriteDefinition) {
+        installNetherResetOfficeGuysprite(
+          engine,
+          toOriginFromGroundPoint(
+            NETHER_RESET_OFFICE_GUYSPRITE_TARGET_GROUND_POINT,
+            NETHER_RESET_OFFICE_GUYSPRITE_SCALE,
+          ),
+          NETHER_RESET_OFFICE_GUYSPRITE_TARGET_GROUND_POINT,
+          NETHER_RESET_OFFICE_GUYSPRITE_SCALE,
+          true,
+        );
+      }
     }
   }
 
@@ -451,12 +429,20 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
       netherResetOfficeSecondAssetUrls.walkPath,
     );
 
-    await this.preloadMountAssets(engine, scene, preloader);
+    await (preloader?.preloadPlaneScene(engine, scene) ?? engine.video.preloadPlaneScene(scene));
+    await (preloader?.preloadSpriteDefinition(engine, this.guyspriteDefinition!) ??
+      engine.video.preloadSpriteDefinition(this.guyspriteDefinition!));
+    await (preloader?.preloadSpriteDefinition(engine, this.guyspriteTypingDefinition!) ??
+      engine.video.preloadSpriteDefinition(this.guyspriteTypingDefinition!));
     engine.loadPlaneScene(scene);
     installRoccoLevelConnectorTargets(engine, this.id, this.connectors, this.localization);
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
+    this.printerController.installInteraction(
+      engine,
+      NETHER_RESET_OFFICE_SECOND_SCENE_DEFINITION.planeIds.background,
+    );
     this.spriteController = await this.installPlayer(
       engine,
       options,
@@ -480,6 +466,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
   unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
     unregisterNetherOfficeGuyspriteInteraction(engine);
+    this.printerController.unmount(engine);
     this.arrivalInputLease?.dispose();
     this.arrivalInputLease = undefined;
     this.arrivalSequence = undefined;
@@ -500,6 +487,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
 
   update(deltaMs: number): void {
     this.spriteController?.update(deltaMs);
+    this.printerController.update(deltaMs);
     if (this.engine && !this.guyspriteTypingActive) {
       updateGuyspriteFacingTowardsRocco(
         this.engine,
@@ -514,12 +502,25 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
   }
 
   handleAction(activation: RoccoActionMenuActivation): void {
+    if (this.printerController.handleAction(activation)) {
+      return;
+    }
+
     if (this.engine) {
       didHandleNetherOfficeGuyspriteAction(this.engine, this.localization, activation);
     }
   }
 
+  handleGridMenu(activation: RoccoGridMenuActivation): void {
+    this.printerController.handleGridMenu(activation);
+  }
+
   handleSceneClick(activation: RoccoSceneClickAction): CartridgeActionDisposition | void {
+    const printerDisposition = this.printerController.handleSceneClick(activation);
+    if (printerDisposition) {
+      return printerDisposition;
+    }
+
     if (
       this.engine &&
       canOpenNetherOfficeGuyspriteMenuAt(

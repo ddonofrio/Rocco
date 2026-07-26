@@ -3,6 +3,57 @@ import type { RoccoFacingDirection } from '../../../../../../console/video/sprit
 import { GUYSPRITE_CONFIG } from '../../characters/guysprite';
 import { ROCCO_PLAYER_CONFIG } from '../../player';
 
+export function installNetherResetOfficeGuysprite(
+  engine: CartridgeSdkV1Runtime,
+  origin: { x: number; y: number },
+  groundPoint: { x: number; y: number },
+  scale: number,
+  isInteractive: boolean,
+): void {
+  engine.video.sprites.removeSprite(GUYSPRITE_CONFIG.ids.instance);
+  engine.video.sprites.createSpriteFromDefinition(GUYSPRITE_CONFIG.ids.definition, {
+    id: GUYSPRITE_CONFIG.ids.instance,
+    transform: {
+      x: origin.x,
+      y: origin.y,
+      scaleX: scale,
+      scaleY: scale,
+      rotation: 0,
+    },
+    renderLayer: 'world.actors',
+    zIndex: 50,
+    depthMode: 'baseline-sort',
+    interactive: isInteractive,
+    collisionEnabled: false,
+  });
+  updateGuyspriteFacingTowardsRocco(engine, groundPoint, true);
+}
+
+export function setNetherResetOfficeRoccoSequenceControl(
+  engine: CartridgeSdkV1Runtime,
+  isEnabled: boolean,
+): void {
+  engine.video.sprites.setInteractive(ROCCO_PLAYER_CONFIG.ids.instance, isEnabled);
+  engine.video.sprites.setCollisionEnabled(ROCCO_PLAYER_CONFIG.ids.instance, isEnabled);
+  if (!isEnabled) {
+    engine.video.sprites.stopMovement(ROCCO_PLAYER_CONFIG.ids.instance);
+  }
+}
+
+export function startNetherResetOfficeGuyspriteArrival(
+  engine: CartridgeSdkV1Runtime,
+  target: { x: number; y: number },
+  speed: number,
+): void {
+  engine.video.sprites.moveTo(GUYSPRITE_CONFIG.ids.instance, target.x, target.y, {
+    speed,
+    action: GUYSPRITE_CONFIG.ids.runAction,
+    idleAction: GUYSPRITE_CONFIG.ids.idleAction,
+    constrainToWalkMap: false,
+    stopDistance: 1,
+  });
+}
+
 export function updateGuyspriteFacingTowardsRocco(
   engine: CartridgeSdkV1Runtime,
   guyspriteGroundPoint: { x: number; y: number },

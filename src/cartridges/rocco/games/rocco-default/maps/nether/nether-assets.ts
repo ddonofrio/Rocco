@@ -20,6 +20,7 @@ export const netherResetOfficeSecondAssetUrls = {
   background: new URL('assets/reset-office-2.png', import.meta.url).href,
   walkPath: new URL('assets/reset-office-2-walkpath.png', import.meta.url).href,
   deskChair: new URL('assets/reset-office-2-desk-chair.png', import.meta.url).href,
+  printerFront: new URL('assets/printer-front.png', import.meta.url).href,
 } as const;
 
 export const netherAmbientSteamMachineAssetUrl = new URL(

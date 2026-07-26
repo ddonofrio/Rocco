@@ -2,6 +2,48 @@ import type { RoccoTextCatalog } from '../types';
 
 export const englishNetherText: RoccoTextCatalog['nether'] = {
   arrivalThoughtLine: 'What is this place?',
+  printer: {
+    description: 'Printer',
+    readLabel: 'Read',
+    grabLines: [
+      'That looks very heavy. I would need a crane to move it.',
+      'I would throw my back out trying to pick that up.',
+      'That is not something you just pick up. It weighs a ton.',
+      'I am pretty sure that printer is heavier than I am.',
+    ],
+    kickLines: [
+      'If I kick that, I will break my leg.',
+      'No chance. That thing would turn my foot into a pancake.',
+      'The printer would win that fight and my leg would lose.',
+      'Kicking it would be like kicking an iron wall.',
+    ],
+    firstMessageText:
+      '[RESET OFFICE #01011]\nSprite[0] # Player \u{2192} pointer UNDEFINED.\nActive loop detected. CPU consumption above threshold.\nImmediate restart of Sprite[0] hardware service requested.',
+    firstMessageContraryText:
+      '[RESET OFFICE #01011]\nSprite[0] # Player \u{2192} pointer DEFINED.\nInactive loop detected. CPU consumption below threshold.\nDo not restart the Sprite[0] hardware service.',
+    secondMessageText:
+      '[GENERAL ALERT #01012]\nPossible portal exit located in the access corridor to the Reset Office.\nExercise extreme caution. Request identification from every detected entity.',
+    secondMessageContraryText:
+      '[GENERAL ALERT #01012]\nNo portal exit has been located in the access corridor\nto the Reset Office.\nThere is no need for extreme caution or identification.',
+    thirdMessageText:
+      '[RESET OFFICE #01013]\nGood news: a complete console reboot\nwill reinsert the escaped NPC into the game.\nApply GENERAL RESET immediately.',
+    thirdMessageContraryText:
+      '[RESET OFFICE #01013]\nBad news: an incomplete console shutdown\nwill eject the trapped NPC outside the game.\nNever apply PARTICULAR RESET.',
+    fourthMessageText: '[RESET OFFICE #01014]\nURGENT: RESET THE CONSOLE\nRIGHT NOW.',
+    fourthMessageContraryText:
+      '[RESET OFFICE #01014]\nNOT URGENT: DO NOT RESET THE CONSOLE\nRIGHT NOW.',
+    replyToGuyspriteLabel: 'Reply to Guysprite',
+    readMoreMessagesLabel: 'Read more messages',
+    replyReadMessageLabel: 'Reply with what the message says',
+    replyContraryLabel: 'Say the opposite of the message',
+    replyUnreadableLabel: 'Say that it is not readable',
+    replyUnreadableLines: [
+      'I cannot make any sense of this; the print came out terribly.',
+      'The paper is dirty and the letters are barely visible.',
+      'The ink has run; there is no way to decipher this.',
+      'This was printed with barely any ink... it looks like stains.',
+    ],
+  },
   securityCameraBribe: {
     thanksLine: 'Thanks!',
     securityLine: 'Security!',

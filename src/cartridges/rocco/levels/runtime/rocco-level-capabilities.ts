@@ -71,3 +71,16 @@ export function isRoccoNetherSecurityCameraCapability(
       .beginSecurityCameraBribeSequence === 'function'
   );
 }
+
+export interface RoccoNetherOfficeArrivalCapability {
+  beginNetherOfficeBellArrival(): void;
+}
+
+export function isRoccoNetherOfficeArrivalCapability(
+  level: RoccoLevel,
+): level is RoccoLevel & RoccoNetherOfficeArrivalCapability {
+  return (
+    typeof (level as Partial<RoccoNetherOfficeArrivalCapability>).beginNetherOfficeBellArrival ===
+    'function'
+  );
+}

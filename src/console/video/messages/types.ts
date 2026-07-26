@@ -26,6 +26,7 @@ export interface RoccoSpriteMessageStyle {
   bubbleStroke?: string;
   bubbleStrokeWidth?: number;
   showThoughtTrail?: boolean;
+  showSpeechTail?: boolean;
 }
 
 export interface RoccoSpriteMessageRequest {

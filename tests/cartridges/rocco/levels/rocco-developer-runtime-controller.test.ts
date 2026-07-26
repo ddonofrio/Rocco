@@ -371,7 +371,11 @@ describe('RoccoDeveloperRuntimeController', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(switchToLevel).toHaveBeenCalledWith(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID);
+    expect(switchToLevel).toHaveBeenCalledWith(
+      ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+      undefined,
+      undefined,
+    );
     expect(controller.isJumpPending).toBe(true);
     expect(state.inputEnabledChanges).toEqual([]);
   });

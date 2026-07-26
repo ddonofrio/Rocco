@@ -14,6 +14,7 @@ import type {
 import type { RoccoInventory } from '../../inventory';
 import type { RoccoLocalization } from '../../localization';
 import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
+import type { RoccoPlayerAppearance } from '../../games/rocco-default/player';
 import {
   ROCCO_PIER_END_LEVEL_ID,
   ROCCO_PIER_MIDDLE_LEVEL_ID,
@@ -81,8 +82,14 @@ export interface RoccoDeveloperRuntimeSnapshot {
 export interface RoccoDeveloperRuntimeControllerOptions {
   localization: RoccoLocalization;
   inventory: RoccoInventory;
+  getRoccoAppearance?: () => RoccoPlayerAppearance;
+  setRoccoAppearance?: (appearance: RoccoPlayerAppearance) => void;
   resolveLevelTitle: (levelId: string) => string;
-  switchToLevel: (levelId: string) => Promise<boolean>;
+  switchToLevel: (
+    levelId: string,
+    entryConnectorId?: string,
+    shouldForceArrivalSequence?: boolean,
+  ) => Promise<boolean>;
   canCollectInventoryItem: (itemId: string, isShowFullMessage?: boolean) => boolean;
   refreshStatus: () => void;
   onToiletReuseEventChanged?: () => void;
@@ -94,6 +101,8 @@ const DEVELOPER_SPRITE_CYCLE_FRAME_DURATION_MS = 1000;
 const DEVELOPER_SPRITE_CYCLE_TOP_TITLE_ID = 'rocco-developer-sprite-cycle-top-title';
 const DEVELOPER_SPRITE_CYCLE_SPRITE_TITLE_ID = 'rocco-developer-sprite-cycle-sprite-title';
 const DEVELOPER_ALLOW_TOILET_REUSE_EVENT_ID = 'allow-toilet-reuse';
+const DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_EVENT_ID = 'nether-reset-office-second-arrival';
+const DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_SCREEN_ID = 'nether-reset-office-second-arrival';
 
 export class RoccoDeveloperRuntimeController {
   private readonly localization: RoccoLocalization;
@@ -271,7 +280,11 @@ export class RoccoDeveloperRuntimeController {
       return;
     }
 
-    const isSwitched = await this.options.switchToLevel(screenOption.targetLevelId);
+    const isSwitched = await this.options.switchToLevel(
+      screenOption.targetLevelId,
+      undefined,
+      screenOption.forceArrivalSequence,
+    );
     if (!isSwitched) {
       this.options.refreshStatus();
       return;
@@ -325,6 +338,14 @@ export class RoccoDeveloperRuntimeController {
       this.developerEvents.allowToiletReuseDuringUrgency =
         !this.developerEvents.allowToiletReuseDuringUrgency;
       this.options.onToiletReuseEventChanged?.();
+    }
+
+    if (eventId === DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_EVENT_ID) {
+      void this.prepareDeveloperJump(
+        engine,
+        DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_SCREEN_ID,
+      );
+      return;
     }
 
     if (this.developerEventScreenSelectionId) {
@@ -385,16 +406,32 @@ export class RoccoDeveloperRuntimeController {
   ): RoccoDeveloperLevelOption {
     const netherTitle = resolveLevelTitle(ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID);
     const resetOfficeTitle = resolveLevelTitle(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID);
-    const screens = [
-      [ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID, `${netherTitle} 1`],
-      [ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID, `${netherTitle} 2`],
-      [ROCCO_NETHER_RESET_OFFICE_LEVEL_ID, `${resetOfficeTitle} 1`],
-      [ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID, `${resetOfficeTitle} 2`],
-    ] as const;
+    const screens: readonly RoccoDeveloperLevelOption['screens'][number][] = [
+      {
+        id: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+        title: `${netherTitle} 1`,
+        targetLevelId: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
+      },
+      {
+        id: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
+        title: `${netherTitle} 2`,
+        targetLevelId: ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID,
+      },
+      {
+        id: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+        title: `${resetOfficeTitle} 1`,
+        targetLevelId: ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
+      },
+      {
+        id: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
+        title: `${resetOfficeTitle} 2`,
+        targetLevelId: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
+      },
+    ];
     return {
       id: ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID,
       title: netherTitle,
-      screens: screens.map(([id, title]) => ({ id, title, targetLevelId: id })),
+      screens,
     };
   }
 
@@ -417,6 +454,24 @@ export class RoccoDeveloperRuntimeController {
           },
         ],
       },
+      {
+        id: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
+        title: this.options.resolveLevelTitle(ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID),
+        screens: [
+          {
+            id: `${ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID}-arrival`,
+            title: this.localization.text.developer.resetOfficeSecondArrival,
+            events: [
+              {
+                id: DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_EVENT_ID,
+                text: this.localization.text.developer.resetOfficeSecondArrival,
+                enabled: false,
+                showState: false,
+              },
+            ],
+          },
+        ],
+      },
     ];
   }
 
@@ -429,6 +484,15 @@ export class RoccoDeveloperRuntimeController {
   private findDeveloperScreenOption(
     screenId: string,
   ): RoccoDeveloperLevelOption['screens'][number] | undefined {
+    if (screenId === DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_SCREEN_ID) {
+      return {
+        id: DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_SCREEN_ID,
+        title: this.localization.text.developer.resetOfficeSecondArrival,
+        targetLevelId: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
+        forceArrivalSequence: true,
+      };
+    }
+
     for (const levelOption of this.createDeveloperLevelOptions()) {
       const screenOption = levelOption.screens.find((screen) => screen.id === screenId);
       if (screenOption) {

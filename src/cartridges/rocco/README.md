@@ -6,7 +6,7 @@
 
 - `rocco-default-cartridge.ts` — `RoccoDefaultCartridge`, which mounts the RPCE runtime and delegates gameplay actions into the current game.
 - `rocco-default-manifest.ts` — Cartridge identity and localized menu metadata.
-- `rocco-developer-mode.ts` — Developer-mode menu definitions, inventory seeding, and event-toggle helpers.
+- `rocco-developer-mode.ts` — Developer-mode menu definitions, inventory seeding, and event toggles.
 - `scripted-scene-interaction-controller.ts` — Shared walk-then-react controller for scene-target choreography.
 - `games/rocco-default/` — Current game definition and map-first ownership for Pier, Shop, and Nether.
   - `audio/` — Game music playlist registration and playback.

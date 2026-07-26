@@ -75,7 +75,7 @@ Pier-specific special uses, including interactions involving Stan, money, keys, 
 - Storage-specific items can refuse invalid placements through `allowedStorageIds`.
 - Storages refuse overfill and reject duplicate slot commits, so failed pickups or transfers do not overwrite another item.
 - When the player inventory is full, new pickups are handled as inventory-full cases rather than overwriting existing slots.
-- Developer mode can seed selected inventory items directly, including the Coral Relic, through the cartridge-specific developer inventory menu.
+- Developer mode can seed selected inventory items directly, including the lab coat and Coral Relic, through the cartridge-specific developer inventory menu.
 - The same player inventory stays available after the bait shop transition because `RoccoInventoryRuntimeController` owns it above the active level instance.
 - Inventory snapshots capture the current storage and placement state; restoration rebuilds the player inventory from a snapshot.
 

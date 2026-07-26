@@ -28,6 +28,7 @@ export interface RoccoTextCatalog {
   };
   descriptions: {
     rocco: string;
+    guysprite: string;
     baitBucket: string;
     baitShopDoor: string;
     backRightDoor: string;
@@ -131,12 +132,15 @@ export interface RoccoTextCatalog {
     eventScreenTitle: string;
     eventTitle: string;
     pierLevelLabel: string;
+    resetOfficeSecondArrival: string;
     inventoryTitle: string;
     add: string;
     remove: string;
     on: string;
     off: string;
     allowToiletReuseEvent: string;
+    putLabCoatEvent: string;
+    removeLabCoatEvent: string;
     clickToJumpStatus: string;
     clickToCycleSpriteStatus: string;
   };
@@ -285,6 +289,23 @@ export interface RoccoTextCatalog {
     };
     timbre: {
       lookLines: string[];
+    };
+    officeArrival: {
+      caughtLine: string;
+      welcomeLine: string;
+      dialogue: {
+        firstChoices: { label: string; reply: string }[];
+        firstGuyspriteLines: string[];
+        secondChoices: { label: string; reply: string }[];
+        secondGuyspriteLines: string[];
+        thirdChoices: { label: string; reply: string }[];
+        finalGuyspriteLines: string[];
+        systemBeepsLine: string;
+        postCoffeeGuyspriteLines: string[];
+        departureReminderLines: string[];
+        guyspriteTalkLine: string;
+        guyspriteLookLines: string[];
+      };
     };
     doorHandle: {
       lookLines: string[];

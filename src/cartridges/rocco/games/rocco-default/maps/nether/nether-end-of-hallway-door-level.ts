@@ -208,6 +208,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
   private lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;
   private lightsNoiseTargetRemainingMs = 0;
   private sceneReady = false;
+  private onNetherOfficeBellPressed: (() => void) | undefined;
 
   readonly id = ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID;
   readonly title: string;
@@ -238,6 +239,11 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
   }
 
   private handleTimbreAction(activation: RoccoActionMenuActivation): void {
+    if (activation.actionId === 'press') {
+      this.onNetherOfficeBellPressed?.();
+      return;
+    }
+
     if (activation.actionId !== 'look') {
       return;
     }
@@ -541,6 +547,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
     this.resetMountState(engine);
+    this.onNetherOfficeBellPressed = options.onNetherOfficeBellPressed;
 
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
     const initialPosition = entryConnector
@@ -612,6 +619,7 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
     this.lightsNoiseTargetOpacity = NETHER_LIGHTS_MIN_OPACITY;
     this.lightsNoiseTargetRemainingMs = 0;
     this.sceneReady = false;
+    this.onNetherOfficeBellPressed = undefined;
   }
 
   update(deltaMs: number): void {
@@ -644,10 +652,6 @@ export class RoccoNetherEndOfHallwayDoorLevel implements RoccoLevel {
   }
 
   handleSceneClick(activation: RoccoSceneClickAction): NetherEndOfHallwaySceneClickResult {
-    if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_TIMBRE_TARGET_INSTANCE_ID) {
-      return { suppressDefaultPlayerMove: true };
-    }
-
     if (activation.targetInstanceId === NETHER_END_OF_HALLWAY_DOOR_HANDLE_TARGET_INSTANCE_ID) {
       return { suppressDefaultPlayerMove: true };
     }

@@ -22,6 +22,7 @@ export const englishActionsText: RoccoTextCatalog['actions'] = {
 
 export const englishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   rocco: 'Rocco',
+  guysprite: 'Guysprite',
   baitBucket: 'Bait bucket',
   baitShopDoor: 'Bait shop door',
   backRightDoor: 'Back right door',
@@ -81,11 +82,14 @@ export const englishDeveloperText: RoccoTextCatalog['developer'] = {
   eventScreenTitle: 'Choose screen',
   eventTitle: 'Choose event',
   pierLevelLabel: 'Pier',
+  resetOfficeSecondArrival: 'Reset Office 2 (arrival)',
   inventoryTitle: 'Developer inventory',
   add: 'Add',
   remove: 'Remove',
   on: 'ON',
   off: 'OFF',
+  putLabCoatEvent: 'Put on lab coat',
+  removeLabCoatEvent: 'Take off lab coat',
   allowToiletReuseEvent: 'Allow using toilet more than once',
   clickToJumpStatus: 'Developer mode: click anywhere to jump.',
   clickToCycleSpriteStatus:

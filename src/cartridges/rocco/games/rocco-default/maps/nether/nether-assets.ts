@@ -13,11 +13,13 @@ export const netherEndOfHallwayDoorAssetUrls = {
 export const netherResetOfficeAssetUrls = {
   background: new URL('assets/reset-office-1.png', import.meta.url).href,
   walkPath: new URL('assets/reset-office-1-walkpath.png', import.meta.url).href,
+  openDoor: new URL('assets/reset-office-door-open.png', import.meta.url).href,
 } as const;
 
 export const netherResetOfficeSecondAssetUrls = {
   background: new URL('assets/reset-office-2.png', import.meta.url).href,
   walkPath: new URL('assets/reset-office-2-walkpath.png', import.meta.url).href,
+  deskChair: new URL('assets/reset-office-2-desk-chair.png', import.meta.url).href,
 } as const;
 
 export const netherAmbientSteamMachineAssetUrl = new URL(

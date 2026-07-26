@@ -69,7 +69,11 @@ export interface RoccoGameCompositionRootCallbacks {
   listAccessibleInventoryItemIds: (levelId: string) => string[];
   openInventoryTransferMenu: (storageId: string, onInventoryClosed?: () => void) => void;
   closeInventoryTransferMenu: (storageId: string) => void;
-  switchToLevel: (levelId: string, entryConnectorId?: string) => Promise<boolean>;
+  switchToLevel: (
+    levelId: string,
+    entryConnectorId?: string,
+    shouldForceArrivalSequence?: boolean,
+  ) => Promise<boolean>;
   enterBaitShop: () => Promise<void>;
   canCollectIntoInventory: (itemId: string, shouldShowFullMessage?: boolean) => boolean;
   resolveLevelTitle: (levelId: string) => string;
@@ -148,8 +152,11 @@ function createRuntimeControllers(
   const developerRuntime = new RoccoDeveloperRuntimeController({
     localization,
     inventory,
+    getRoccoAppearance: callbacks.getRoccoAppearance,
+    setRoccoAppearance: callbacks.setRoccoAppearance,
     resolveLevelTitle: callbacks.resolveLevelTitle,
-    switchToLevel: (levelId) => callbacks.switchToLevel(levelId),
+    switchToLevel: (levelId, entryConnectorId, shouldForceArrivalSequence) =>
+      callbacks.switchToLevel(levelId, entryConnectorId, shouldForceArrivalSequence),
     canCollectInventoryItem: callbacks.canCollectIntoInventory,
     refreshStatus: callbacks.refreshStatus,
     onToiletReuseEventChanged: callbacks.onToiletReuseEventChanged,

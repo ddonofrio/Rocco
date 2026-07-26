@@ -4,6 +4,7 @@ import { createRoccoDialogueChoiceMenu } from './rpce/dialogue';
 import type { RoccoLocalization } from './localization';
 import {
   createRoccoCoralRelicInventoryItem,
+  createRoccoBataInventoryItem,
   createRoccoKeysInventoryItem,
   createRoccoMagazineInventoryItem,
   createRoccoMysteriousKeyInventoryItem,
@@ -11,6 +12,7 @@ import {
   type RoccoInventory,
   type RoccoInventoryItem,
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
+  ROCCO_INVENTORY_BATA_ITEM_ID,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
   ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID,
@@ -43,6 +45,7 @@ export interface RoccoDeveloperScreenOption {
   title: string;
   targetLevelId: string;
   requiresPlacementClick?: boolean;
+  forceArrivalSequence?: boolean;
 }
 
 export interface RoccoDeveloperLevelOption {
@@ -55,6 +58,7 @@ export interface RoccoDeveloperEventOption {
   id: string;
   text: string;
   enabled: boolean;
+  showState?: boolean;
 }
 
 export interface RoccoDeveloperEventScreenOption {
@@ -179,10 +183,15 @@ export function createRoccoDeveloperEventMenuDefinition(
   return createRoccoDialogueChoiceMenu({
     id: ROCCO_DEVELOPER_EVENT_MENU_ID,
     title: localization.text.developer.eventTitle,
-    choices: events.map((event) => ({
-      id: event.id,
-      text: `${event.text}: ${event.enabled ? localization.text.developer.on : localization.text.developer.off}`,
-    })),
+    choices: events.map((event) => {
+      const stateLabel = event.enabled
+        ? localization.text.developer.on
+        : localization.text.developer.off;
+      return {
+        id: event.id,
+        text: event.showState === false ? event.text : `${event.text}: ${stateLabel}`,
+      };
+    }),
   }).gridMenu;
 }
 
@@ -193,6 +202,9 @@ export function createRoccoDeveloperInventoryItem(
   switch (itemId) {
     case ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID: {
       return createRoccoCoralRelicInventoryItem(localization);
+    }
+    case ROCCO_INVENTORY_BATA_ITEM_ID: {
+      return createRoccoBataInventoryItem(localization);
     }
     case ROCCO_INVENTORY_KEYS_ITEM_ID: {
       return createRoccoKeysInventoryItem(localization);
@@ -224,6 +236,11 @@ function createRoccoDeveloperInventoryOptions(
     undefined;
 
   return [
+    {
+      itemId: ROCCO_INVENTORY_BATA_ITEM_ID,
+      itemLabel: createRoccoBataInventoryItem(localization).label,
+      present: inventory.hasItem(ROCCO_INVENTORY_BATA_ITEM_ID),
+    },
     {
       itemId: ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
       itemLabel: createRoccoCoralRelicInventoryItem(localization).label,

@@ -21,11 +21,17 @@ walks into the room and stops facing left. The non-cancelable dialogue starts 25
 closes. With the lab coat, it presents the player's truncated replies and Guysprite's advanceable
 lines through the coffee question, followed by the machine-beep message and three separate lines
 that direct Rocco to the other office screen. Control then returns to the player and a 10-second
-reminder sequence warns Rocco before the security defeat presentation. Without the lab coat,
-Guysprite alerts the police and the defeat presentation respawns Rocco at the Nether entry checkpoint.
+reminder sequence warns Rocco before the security defeat presentation. The Nether security camera
+detects Rocco on the exposed left side regardless of whether he wears the lab coat. Without the lab
+coat, Guysprite alerts the police and the defeat presentation respawns Rocco at the Nether entry
+checkpoint.
 During the departure window, Guysprite exposes `See` and `Talk` actions. `Talk` makes him urge
 Rocco to hurry, while `See` selects one of five non-repeating observations. The same interaction
-is available in the second Reset Office screen. On the first arrival in that screen, the desk chair
+is available in the second Reset Office screen. The second office creates Rocco before starting its
+Guysprite arrival sequence so the screen can lock player input during the entrance. On defeat, the
+checkpoint restores the Nether-entry
+inventory snapshot and resets Rocco to his default appearance before mounting the entry screen. On
+the first arrival in that screen, the desk chair
 is shown at its authored position, Rocco remains at the connector entry, and Guysprite walks in from
 the right at 1.5 times his normal movement speed, while keeping the current running animation
 playback, before stopping in front of the chair. After a 250 ms pause, the chair and walking sprite

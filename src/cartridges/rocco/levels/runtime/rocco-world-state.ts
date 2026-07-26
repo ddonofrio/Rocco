@@ -4,7 +4,10 @@ import type { RoccoFacingDirection, RoccoPoint } from '../../../../console/video
 import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
 import { ROCCO_DESIGN_WIDTH } from '../../games/rocco-default/game-design';
 import type { RoccoInventoryItem } from '../../games/rocco-default/inventory';
-import type { RoccoPlayerAppearance } from '../../games/rocco-default/player';
+import {
+  DEFAULT_ROCCO_PLAYER_APPEARANCE,
+  type RoccoPlayerAppearance,
+} from '../../games/rocco-default/player';
 import type { RoccoLevel, RoccoLevelMountOptions } from '../rocco-level-types';
 import { RoccoAssetPreloader } from '../rocco-asset-preloader';
 import { RoccoDeveloperRuntimeController } from './rocco-developer-runtime-controller';
@@ -191,7 +194,7 @@ export class RoccoWorldState {
     }
     const inventory = this.options.inventoryRuntime.getPlayerInventory();
     inventory.replaceItems(snapshot.inventoryItems);
-    this.options.setRoccoAppearance(snapshot.roccoAppearance);
+    this.options.setRoccoAppearance(DEFAULT_ROCCO_PLAYER_APPEARANCE);
   }
 
   createTransitionSnapshot(): RoccoLevelManagerTransitionSnapshot {

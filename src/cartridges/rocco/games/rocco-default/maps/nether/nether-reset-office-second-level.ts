@@ -454,14 +454,6 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     await this.preloadMountAssets(engine, scene, preloader);
     engine.loadPlaneScene(scene);
     installRoccoLevelConnectorTargets(engine, this.id, this.connectors, this.localization);
-    if (options.forceArrivalSequence === true) {
-      this.guyspriteHasSatAtConsole = false;
-    }
-    const shouldPlayArrivalSequence =
-      options.forceArrivalSequence === true ||
-      !this.arrivalSequencePlayed ||
-      !this.guyspriteHasSatAtConsole;
-    this.setupGuyspriteForMount(engine, shouldPlayArrivalSequence);
     engine.video.actionMenus.closeMenu();
     engine.video.messages.clearMessages();
     engine.video.sprites.registerWalkMap(walkMapProfile.walkMap);
@@ -473,6 +465,14 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
       walkMapProfile,
       preloader,
     );
+    if (options.forceArrivalSequence === true) {
+      this.guyspriteHasSatAtConsole = false;
+    }
+    const shouldPlayArrivalSequence =
+      options.forceArrivalSequence === true ||
+      !this.arrivalSequencePlayed ||
+      !this.guyspriteHasSatAtConsole;
+    this.setupGuyspriteForMount(engine, shouldPlayArrivalSequence);
 
     return scene;
   }

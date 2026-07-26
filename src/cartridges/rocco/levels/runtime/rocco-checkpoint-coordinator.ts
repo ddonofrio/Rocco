@@ -1,6 +1,7 @@
 import type { CartridgeSdkV1Runtime } from '../../../../console/cartridges/sdk-v1';
 import type { RoccoPlaneScene } from '../../../../console/video/planes';
 import type { RoccoLevelRestartRequest, RoccoLevel } from '../rocco-level-types';
+import { DEFAULT_ROCCO_PLAYER_APPEARANCE } from '../../games/rocco-default/player';
 import { RoccoDeveloperRuntimeController } from './rocco-developer-runtime-controller';
 import { RoccoDroppedInventoryController } from './rocco-dropped-inventory-controller';
 import { RoccoInventoryRuntimeController } from './rocco-inventory-runtime-controller';
@@ -49,6 +50,17 @@ export class RoccoCheckpointCoordinator {
     };
   }
 
+  private createRestartMountOptions(
+    request: RoccoLevelRestartRequest,
+    mountState: ReturnType<RoccoWorldState['createMountStateSnapshot']>,
+  ) {
+    const mountOptions = this.options.worldState.buildRuntimeMountOptions(mountState);
+    if (this.options.worldState.isNetherLevelId(request.levelId)) {
+      mountOptions.roccoAppearance = DEFAULT_ROCCO_PLAYER_APPEARANCE;
+    }
+    return mountOptions;
+  }
+
   private createPreparedRestart(data: RoccoRestartPlanData) {
     const { request, rollbackSnapshot, playerSnapshot, mountStateSnapshot, netherReset } = data;
     const targetLevel =
@@ -61,7 +73,7 @@ export class RoccoCheckpointCoordinator {
     });
     return {
       targetLevel,
-      mountOptions: this.options.worldState.buildRuntimeMountOptions(targetMountState),
+      mountOptions: this.createRestartMountOptions(request, targetMountState),
       commit: (engine: CartridgeSdkV1Runtime) => {
         this.options.developerRuntime.clearTransientState(engine);
         this.options.transitions.reset();

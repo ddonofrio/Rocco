@@ -21,17 +21,11 @@ const PRINTER_READING_DETAIL_BAR_Y = 70;
 const PRINTER_READING_DETAIL_BAR_WIDTH = 492;
 const PRINTER_READING_DETAIL_BAR_HEIGHT = 69;
 
-type PrinterMessageText = Pick<
-  RoccoLocalization['text']['nether']['printer'],
-  'firstMessageText' | 'secondMessageText' | 'thirdMessageText' | 'fourthMessageText'
->;
+type PrinterMessageText = Pick<RoccoLocalization['text']['nether']['printer'], 'messageTexts'>;
 
 type PrinterContraryText = Pick<
   RoccoLocalization['text']['nether']['printer'],
-  | 'firstMessageContraryText'
-  | 'secondMessageContraryText'
-  | 'thirdMessageContraryText'
-  | 'fourthMessageContraryText'
+  'messageContraryTexts'
 >;
 
 export function splitPrinterSpeechText(text: string): [string, string] {
@@ -46,23 +40,7 @@ export function resolvePrinterMessageText(
   targetId: string,
   printerText: PrinterMessageText,
 ): string | undefined {
-  switch (targetIds.indexOf(targetId)) {
-    case 0: {
-      return printerText.firstMessageText;
-    }
-    case 1: {
-      return printerText.secondMessageText;
-    }
-    case 2: {
-      return printerText.thirdMessageText;
-    }
-    case 3: {
-      return printerText.fourthMessageText;
-    }
-    default: {
-      return undefined;
-    }
-  }
+  return printerText.messageTexts[targetIds.indexOf(targetId)];
 }
 
 export function resolvePrinterMessageContraryText(
@@ -70,23 +48,7 @@ export function resolvePrinterMessageContraryText(
   targetId: string,
   printerText: PrinterContraryText,
 ): string | undefined {
-  switch (targetIds.indexOf(targetId)) {
-    case 0: {
-      return printerText.firstMessageContraryText;
-    }
-    case 1: {
-      return printerText.secondMessageContraryText;
-    }
-    case 2: {
-      return printerText.thirdMessageContraryText;
-    }
-    case 3: {
-      return printerText.fourthMessageContraryText;
-    }
-    default: {
-      return undefined;
-    }
-  }
+  return printerText.messageContraryTexts[targetIds.indexOf(targetId)];
 }
 
 type PrinterMenuText = Pick<

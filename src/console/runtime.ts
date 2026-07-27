@@ -377,6 +377,10 @@ export class GameRuntime implements ConsoleKernel {
     return this.resourceOwner.adoptCompositionSession(session, ownerId);
   }
 
+  requestReset(): void {
+    globalThis.location?.reload();
+  }
+
   setStatus(status: string): void {
     this.statusMessage = status;
     this.options.onStatusChange?.(status);

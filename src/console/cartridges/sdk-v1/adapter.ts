@@ -190,6 +190,13 @@ function selectForCapability<T>(
   return hasCapability(capabilities, capability) ? value : undefined;
 }
 
+function createResetSdk(
+  capabilities: readonly CartridgeCapability[],
+  kernel: ConsoleKernel,
+): (() => void) | undefined {
+  return selectForCapability(capabilities, 'console.reset.v1', kernel.requestReset?.bind(kernel));
+}
+
 function createVideoSdk(
   kernel: ConsoleKernel,
   capabilities: readonly CartridgeCapability[],
@@ -327,6 +334,7 @@ export function createCartridgeSdkV1(options: CreateCartridgeSdkV1Options): Cart
       'composition.v1',
       kernel.beginCompositionSession?.bind(kernel),
     ),
+    requestReset: createResetSdk(capabilities, kernel),
   };
 
   return sdk;

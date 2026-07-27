@@ -18,26 +18,22 @@ import {
   NETHER_RESET_OFFICE_DEFEAT_TITLE_DURATION_MS,
   NETHER_RESET_OFFICE_DEFEAT_TITLE_ID,
 } from './nether-reset-office-scene';
+import {
+  removeNetherOfficePatienceHud,
+  renderNetherOfficePatienceHud,
+} from './nether-office-patience-hud';
 
 export type NetherOfficeRoom = 'first' | 'second';
 export type NetherOfficePatienceTerminalState = 'security' | 'complete' | undefined;
 
-const NETHER_OFFICE_PATIENCE_TITLE_ID = 'rocco-nether-office-patience-title';
-const NETHER_OFFICE_PATIENCE_TRACK_ID = 'rocco-nether-office-patience-track';
-const NETHER_OFFICE_PATIENCE_FILL_ID = 'rocco-nether-office-patience-fill';
 const NETHER_OFFICE_PATIENCE_INITIAL_VALUE = 50;
 const NETHER_OFFICE_PATIENCE_MAX_VALUE = 100;
 const NETHER_OFFICE_PATIENCE_MIN_VALUE = 0;
+const NETHER_OFFICE_PATIENCE_CORRECT_RESPONSE_REWARD = 15;
 const NETHER_OFFICE_PATIENCE_DECAY_INTERVAL_MS = 3000;
 const NETHER_OFFICE_PATIENCE_OTHER_ROOM_DECAY_INTERVAL_MS = 1000;
-const NETHER_OFFICE_PATIENCE_BAR_X = 704;
-const NETHER_OFFICE_PATIENCE_BAR_Y = 35;
-const NETHER_OFFICE_PATIENCE_BAR_WIDTH = 240;
-const NETHER_OFFICE_PATIENCE_BAR_HEIGHT = 16;
-const NETHER_OFFICE_PATIENCE_FILL_INSET = 2;
-const NETHER_OFFICE_PATIENCE_LABEL_X = 948;
-const NETHER_OFFICE_PATIENCE_LABEL_Y = 14;
 const NETHER_OFFICE_PATIENCE_MESSAGE_TTL_MS = 5200;
+const NETHER_OFFICE_PATIENCE_RESET_MESSAGE_INDEXES = new Set([2, 4]);
 const NETHER_OFFICE_PATIENCE_SECURITY_LINE_INDEX = 0;
 const NETHER_OFFICE_PATIENCE_START_MESSAGE_ID = 'rocco-nether-office-first-message-prompt';
 const NETHER_OFFICE_PATIENCE_RESPONSE_MESSAGE_ID = 'rocco-nether-office-response';
@@ -63,6 +59,7 @@ interface ConfidenceAnimation {
   isRepeated: boolean;
   isFirstMessageReset: boolean;
   isSecondMessageSecurity: boolean;
+  isConsoleReset: boolean;
 }
 
 interface PatienceDefeatSequence {
@@ -84,6 +81,7 @@ export class NetherOfficePatienceController {
   private room: NetherOfficeRoom | undefined;
   private onComplete: (() => void) | undefined;
   private onDefeat: ((request?: RoccoLevelRestartRequest) => void) | undefined;
+  private onConsoleResetRequested: (() => void) | undefined;
   private patience = NETHER_OFFICE_PATIENCE_INITIAL_VALUE;
   private decayElapsedMs = 0;
   private started = false;
@@ -92,6 +90,7 @@ export class NetherOfficePatienceController {
   private confidenceAnimation: ConfidenceAnimation | undefined;
   private wrongReplyFollowUpElapsedMs: number | undefined;
   private defeatSequence: PatienceDefeatSequence | undefined;
+  private pendingConsoleReset = false;
   private readonly firstMessageReset: NetherOfficeFirstMessageResetController;
 
   constructor(localization: RoccoLocalization) {
@@ -101,6 +100,46 @@ export class NetherOfficePatienceController {
       (line, id) => this.sayGuysprite(line, id),
       (inventoryItems) => this.beginDefeatFade(inventoryItems),
     );
+  }
+
+  private finishNonSpecialConfidenceAnimation(animation: ConfidenceAnimation): void {
+    if (animation.isRepeated) {
+      this.checkThreshold();
+      if (this.terminalState) {
+        return;
+      }
+
+      this.sayGuysprite(
+        this.localization.text.nether.officeReading.repeatedLine,
+        NETHER_OFFICE_PATIENCE_RESPONSE_MESSAGE_ID,
+      );
+      this.wrongReplyFollowUpElapsedMs = 0;
+      return;
+    }
+
+    if (animation.shouldConfirm) {
+      this.sayGuysprite(
+        this.localization.text.nether.officeReading.correctLine,
+        NETHER_OFFICE_PATIENCE_RESPONSE_MESSAGE_ID,
+      );
+    }
+    this.checkThreshold();
+    if (!animation.shouldConfirm && !this.terminalState) {
+      const lines = this.localization.text.nether.officeReading.incorrectLines;
+      const line = lines[Math.min(resolvePatienceZeroLineIndex(), lines.length - 1)];
+      if (line) {
+        this.sayGuysprite(line, NETHER_OFFICE_PATIENCE_RESPONSE_MESSAGE_ID);
+        this.wrongReplyFollowUpElapsedMs = 0;
+      }
+    }
+  }
+
+  private showConsoleResetConfirmation(): void {
+    this.sayGuysprite(
+      this.localization.text.nether.officeReading.resetCorrectLine,
+      NETHER_OFFICE_PATIENCE_RESPONSE_MESSAGE_ID,
+    );
+    this.pendingConsoleReset = true;
   }
 
   get patiencePercent(): number {
@@ -120,11 +159,13 @@ export class NetherOfficePatienceController {
     room: NetherOfficeRoom,
     onComplete: () => void,
     onDefeat?: (request?: RoccoLevelRestartRequest) => void,
+    onConsoleResetRequested?: () => void,
   ): void {
     this.engine = engine;
     this.room = room;
     this.onComplete = onComplete;
     this.onDefeat = onDefeat;
+    this.onConsoleResetRequested = onConsoleResetRequested;
     this.firstMessageReset.mount(engine);
     this.registerConfidenceSounds(engine);
     if (this.started) {
@@ -143,8 +184,10 @@ export class NetherOfficePatienceController {
     this.room = undefined;
     this.onComplete = undefined;
     this.onDefeat = undefined;
+    this.onConsoleResetRequested = undefined;
     this.wrongReplyFollowUpElapsedMs = undefined;
     this.defeatSequence = undefined;
+    this.pendingConsoleReset = false;
     this.firstMessageReset.unmount(engine);
     engine.video.titles.removeTitle(NETHER_RESET_OFFICE_DEFEAT_TITLE_ID);
     engine.video.primitives.removePrimitive(NETHER_RESET_OFFICE_DEFEAT_FADE_PRIMITIVE_ID);
@@ -163,6 +206,18 @@ export class NetherOfficePatienceController {
       this.localization.text.nether.officeReading.startLine,
       NETHER_OFFICE_PATIENCE_START_MESSAGE_ID,
     );
+  }
+
+  resetForArrival(): void {
+    this.patience = NETHER_OFFICE_PATIENCE_INITIAL_VALUE;
+    this.decayElapsedMs = 0;
+    this.started = false;
+    this.terminalState = undefined;
+    this.readMessageIndexes.clear();
+    this.confidenceAnimation = undefined;
+    this.wrongReplyFollowUpElapsedMs = undefined;
+    this.defeatSequence = undefined;
+    this.pendingConsoleReset = false;
   }
 
   checkThreshold(): void {
@@ -207,6 +262,14 @@ export class NetherOfficePatienceController {
       return;
     }
 
+    if (this.pendingConsoleReset) {
+      if (!this.hasGuyspriteMessage(NETHER_OFFICE_PATIENCE_RESPONSE_MESSAGE_ID)) {
+        this.pendingConsoleReset = false;
+        this.onConsoleResetRequested?.();
+      }
+      return;
+    }
+
     if (this.terminalState) {
       return;
     }
@@ -248,7 +311,8 @@ export class NetherOfficePatienceController {
     const isRepeated = this.readMessageIndexes.has(messageIndex);
     this.readMessageIndexes.add(messageIndex);
     const currentPatience = this.patience;
-    let nextPatience = this.patience + (isCorrect ? 10 : -15);
+    let nextPatience =
+      this.patience + (isCorrect ? NETHER_OFFICE_PATIENCE_CORRECT_RESPONSE_REWARD : -15);
     nextPatience = isRepeated ? Math.floor(this.patience / 2) : nextPatience;
     nextPatience = Math.min(
       NETHER_OFFICE_PATIENCE_MAX_VALUE,
@@ -257,6 +321,8 @@ export class NetherOfficePatienceController {
     const isGain = nextPatience > currentPatience;
     const isFirstMessageReset = messageIndex === 0 && isCorrect && !isRepeated;
     const isSecondMessageSecurity = messageIndex === 1 && isCorrect && !isRepeated;
+    const isConsoleReset =
+      NETHER_OFFICE_PATIENCE_RESET_MESSAGE_INDEXES.has(messageIndex) && isCorrect && !isRepeated;
     this.engine?.audio.playSound(
       isGain ? NETHER_OFFICE_CONFIDENCE_GAIN_SOUND_ID : NETHER_OFFICE_CONFIDENCE_LOSS_SOUND_ID,
       { restart: true },
@@ -272,6 +338,7 @@ export class NetherOfficePatienceController {
       isRepeated,
       isFirstMessageReset,
       isSecondMessageSecurity,
+      isConsoleReset,
     };
   }
 
@@ -310,35 +377,12 @@ export class NetherOfficePatienceController {
       return;
     }
 
-    if (animation.isRepeated) {
-      this.checkThreshold();
-      if (this.terminalState) {
-        return;
-      }
-
-      this.sayGuysprite(
-        this.localization.text.nether.officeReading.repeatedLine,
-        NETHER_OFFICE_PATIENCE_RESPONSE_MESSAGE_ID,
-      );
-      this.wrongReplyFollowUpElapsedMs = 0;
+    if (animation.isConsoleReset) {
+      this.showConsoleResetConfirmation();
       return;
     }
 
-    if (animation.shouldConfirm) {
-      this.sayGuysprite(
-        this.localization.text.nether.officeReading.correctLine,
-        NETHER_OFFICE_PATIENCE_RESPONSE_MESSAGE_ID,
-      );
-    }
-    this.checkThreshold();
-    if (!animation.shouldConfirm && !this.terminalState) {
-      const lines = this.localization.text.nether.officeReading.incorrectLines;
-      const line = lines[Math.min(resolvePatienceZeroLineIndex(), lines.length - 1)];
-      if (line) {
-        this.sayGuysprite(line, NETHER_OFFICE_PATIENCE_RESPONSE_MESSAGE_ID);
-        this.wrongReplyFollowUpElapsedMs = 0;
-      }
-    }
+    this.finishNonSpecialConfidenceAnimation(animation);
   }
 
   beginDefeatFade(inventoryItems?: readonly RoccoInventoryItem[]): void {
@@ -429,62 +473,11 @@ export class NetherOfficePatienceController {
     if (!this.engine || !this.started) {
       return;
     }
-
-    const fillWidth =
-      ((NETHER_OFFICE_PATIENCE_BAR_WIDTH - NETHER_OFFICE_PATIENCE_FILL_INSET * 2) * this.patience) /
-      NETHER_OFFICE_PATIENCE_MAX_VALUE;
-    this.engine.video.primitives.addPrimitive({
-      id: NETHER_OFFICE_PATIENCE_TRACK_ID,
-      kind: 'rect',
-      renderLayer: 'overlay.primitives',
-      zIndex: 800,
-      color: '#d7e6c5',
-      alpha: 0.95,
-      visible: true,
-      x: NETHER_OFFICE_PATIENCE_BAR_X,
-      y: NETHER_OFFICE_PATIENCE_BAR_Y,
-      width: NETHER_OFFICE_PATIENCE_BAR_WIDTH,
-      height: NETHER_OFFICE_PATIENCE_BAR_HEIGHT,
-      strokeWidth: 2,
-      fill: false,
-    });
-    this.engine.video.primitives.addPrimitive({
-      id: NETHER_OFFICE_PATIENCE_FILL_ID,
-      kind: 'rect',
-      renderLayer: 'overlay.primitives',
-      zIndex: 801,
-      color: this.patience <= 20 ? '#c85b4b' : '#8ccf67',
-      alpha: 1,
-      visible: true,
-      x: NETHER_OFFICE_PATIENCE_BAR_X + NETHER_OFFICE_PATIENCE_FILL_INSET,
-      y: NETHER_OFFICE_PATIENCE_BAR_Y + NETHER_OFFICE_PATIENCE_FILL_INSET,
-      width: fillWidth,
-      height: NETHER_OFFICE_PATIENCE_BAR_HEIGHT - NETHER_OFFICE_PATIENCE_FILL_INSET * 2,
-      fill: true,
-    });
-    this.engine.video.titles.addTitle({
-      id: NETHER_OFFICE_PATIENCE_TITLE_ID,
-      text: `${this.localization.text.nether.officeReading.patienceLabel}: ${this.patience}%`,
-      renderLayer: 'overlay.titles',
-      zIndex: 800,
-      x: NETHER_OFFICE_PATIENCE_LABEL_X,
-      y: NETHER_OFFICE_PATIENCE_LABEL_Y,
-      anchor: { x: 1, y: 0 },
-      style: {
-        fill: '#d7e6c5',
-        fontFamily: 'Cascadia Mono, Lucida Console, monospace',
-        fontSize: 16,
-        fontWeight: '700',
-        align: 'right',
-      },
-      visible: true,
-    });
+    renderNetherOfficePatienceHud(this.engine, this.localization, this.patience);
   }
 
   removeHud(engine: CartridgeSdkV1Runtime): void {
-    engine.video.primitives.removePrimitive(NETHER_OFFICE_PATIENCE_TRACK_ID);
-    engine.video.primitives.removePrimitive(NETHER_OFFICE_PATIENCE_FILL_ID);
-    engine.video.titles.removeTitle(NETHER_OFFICE_PATIENCE_TITLE_ID);
+    removeNetherOfficePatienceHud(engine);
   }
 
   registerConfidenceSounds(engine: CartridgeSdkV1Runtime): void {

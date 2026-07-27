@@ -193,6 +193,7 @@ export const englishNetherText: RoccoTextCatalog['nether'] = {
     patienceLabel: 'Guysprite patience',
     startLine: 'Come on, Rulo, read me the first message.',
     correctLine: 'Okay, that is what we will do. And then what does the next message say?',
+    resetCorrectLine: "Great! Let's restart the console, then.",
     secondMessageSecurityLine: 'Okay, show me your ID.',
     incorrectLines: ['Wow, what a strange message!', 'Are you sure that is what they said?'],
     nextLine: 'Read me the next message.',

@@ -68,6 +68,9 @@ export interface ConsoleKernel {
    */
   beginCompositionSession(ownerId: string, options?: { message?: string }): CompositionSession;
 
+  /** Requests a full host reset, including returning to cartridge selection. */
+  requestReset?(): void;
+
   // Logging and status
   setStatus(status: string): void;
   log(channel: string, message: string): void;

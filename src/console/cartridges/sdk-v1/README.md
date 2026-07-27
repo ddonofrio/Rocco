@@ -17,6 +17,10 @@ The adapter returns an object filtered from the negotiated capability list, so m
 
 `CartridgeSdkV1` is composed only from the narrow neutral subsystem interfaces, so host-only members (`video.update`, `video.render`, `video.viewport`, `effects.tick`, `jukebox.unlock`, …) are never part of the contract.
 
+The `console.reset.v1` capability adds `requestReset()`. It asks the host to perform a complete
+application restart and return to the boot-time cartridge menu. It does not expose the cartridge
+manager or any host lifecycle object.
+
 ## Public SDK vs internal required facade
 
 `CartridgeSdkV1` is the public, capability-filtered contract that general cartridge documentation and third-party examples must use.

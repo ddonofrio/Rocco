@@ -333,6 +333,7 @@ export interface RoccoTextCatalog {
       patienceLabel: string;
       startLine: string;
       correctLine: string;
+      resetCorrectLine: string;
       secondMessageSecurityLine: string;
       incorrectLines: string[];
       nextLine: string;

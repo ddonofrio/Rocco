@@ -208,6 +208,7 @@ export const spanishNetherText: RoccoTextCatalog['nether'] = {
     patienceLabel: 'Paciencia de Guysprite',
     startLine: 'Venga, Rulo, léeme el primer mensaje.',
     correctLine: 'Ok, eso haremos. Y luego ¿qué dice el siguiente mensaje?',
+    resetCorrectLine: '\u{00A1}Genial! Reiniciemos la consola, entonces.',
     secondMessageSecurityLine: 'Ok, enséñame tu ID.',
     incorrectLines: ['Vaya, ¡qué mensaje más raro!', '¿Seguro que han dicho eso?'],
     nextLine: 'Léeme el siguiente mensaje.',

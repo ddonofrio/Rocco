@@ -54,12 +54,19 @@ message in two shorter pages joined with ellipses, the second makes him say that
 opposite, and
 the third makes him say that the message is unreadable before returning to the message overlay.
 
+Replying correctly to printer messages 3 or 5 makes Guysprite say the localized reset confirmation.
+When that message is consumed, the cartridge requests a full console reset and the application
+reloads to the boot cartridge menu. Selecting or opening either message alone does not reset the console.
+An incorrect response to either message uses Guysprite's default incorrect-response behavior.
+
 When Guysprite sits at the console, the shared Reset Office patience HUD appears in the upper-right
 corner of both office screens at 50 percent. It loses one point every three seconds in the second
 office and one point every second in the first office, and it remains visible with the same value while
-Rocco crosses between them. An unrepeated correct message response restores 10 points, an unrepeated
+Rocco crosses between them. An unrepeated correct message response restores 15 points, an unrepeated
 contrary response removes 15 points, and replying to a previously read message halves the current
-value. A correct response makes Guysprite say the localized confirmation and ask for the next message.
+value. A new Guysprite arrival starts a fresh patience session at 50 percent; crossing between the
+two office screens preserves the current session value. A correct response makes Guysprite say the
+localized confirmation and ask for the next message, except for the reset responses described above.
 An incorrect response makes Guysprite select one of two localized reactions and then ask Rocco to
 read the next message. Repeating a previously read message halves the current value, makes Guysprite
 warn Rocco that the message was already read, and then asks him to read the next message. At zero,

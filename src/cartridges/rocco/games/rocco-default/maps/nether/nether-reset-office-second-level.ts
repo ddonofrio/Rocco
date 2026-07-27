@@ -436,11 +436,15 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
       engine,
       NETHER_RESET_OFFICE_SECOND_SCENE_DEFINITION.planeIds.background,
     );
+    if (options.forceArrivalSequence === true) this.guyspriteHasSatAtConsole = false;
+    const shouldPlayArrivalSequence = this.shouldPlayArrivalSequence(options);
+    if (shouldPlayArrivalSequence) this.officePatience.resetForArrival();
     this.officePatience.mount(
       engine,
       'second',
       () => this.restoreGuyspriteStanding(),
       options.onRestartRequested,
+      () => engine.requestReset(),
     );
     this.spriteController = await installNetherOfficePlayer(
       engine,
@@ -454,10 +458,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
       this.localization,
       preloader,
     );
-    if (options.forceArrivalSequence === true) {
-      this.guyspriteHasSatAtConsole = false;
-    }
-    this.setupGuyspriteForMount(engine, this.shouldPlayArrivalSequence(options));
+    this.setupGuyspriteForMount(engine, shouldPlayArrivalSequence);
 
     return scene;
   }

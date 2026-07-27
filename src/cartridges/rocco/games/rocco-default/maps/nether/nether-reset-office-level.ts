@@ -22,7 +22,6 @@ import {
   uninstallRoccoLevelConnectorTargets,
 } from '../../../../levels/rocco-level-connector-targets';
 import { netherResetOfficeAssetUrls } from './nether-assets';
-import { netherYouLoseSoundUrl } from './nether-security-camera-assets';
 import {
   createNetherWalkMapProfile,
   loadOrCreateNetherScene,
@@ -425,13 +424,6 @@ export class RoccoNetherResetOfficeLevel implements RoccoLevel {
     this.arrivalInputLease = undefined;
     this.onRestartRequested = options.onRestartRequested;
     this.roccoHasLabCoat = options.roccoAppearance === ROCCO_LAB_COAT_PLAYER_APPEARANCE;
-    engine.audio.registerSound({
-      id: NETHER_RESET_OFFICE_DEFEAT_SOUND_ID,
-      uri: netherYouLoseSoundUrl,
-      volume: 0.25,
-      loop: false,
-    });
-
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
     const initialPosition = entryConnector
       ? {

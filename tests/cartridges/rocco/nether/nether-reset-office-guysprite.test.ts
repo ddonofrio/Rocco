@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { CartridgeSdkV1Runtime } from '../../../../src/console/cartridges/sdk-v1';
 import { RoccoActionMenuSystemSDK } from '../../../../src/console/video/action-menu/system';
@@ -9,7 +9,115 @@ import {
   NETHER_OFFICE_GUYSPRITE_ACTION_MENU_ID,
 } from '../../../../src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-guysprite-interaction';
 
+const mocks = vi.hoisted(() => ({
+  loadScene: vi.fn(() =>
+    Promise.resolve({
+      id: 'rocco-nether-reset-office-scene',
+      clearColor: '#000000',
+      palettes: [],
+      colorRegisterSets: [],
+      attributeMaps: [],
+      planes: [],
+    }),
+  ),
+  createWalkMap: vi.fn(() =>
+    Promise.resolve({
+      walkMap: {
+        id: 'rocco-active-walk-map',
+        width: 1,
+        height: 1,
+        origin: { x: 0, y: 0 },
+        columns: [],
+      },
+      farY: 0,
+      nearY: 1,
+    }),
+  ),
+  installPlayer: vi.fn(() =>
+    Promise.resolve({
+      update: vi.fn(),
+      isIntroActive: () => false,
+      isIntroSpeaking: () => false,
+      cancelIntro: vi.fn(),
+      advanceIntro: vi.fn(),
+    }),
+  ),
+  preloadArrivalAssets: vi.fn((engine: CartridgeSdkV1Runtime) => {
+    engine.audio.registerSound({
+      id: 'rocco-nether-reset-office-defeat-sound',
+      uri: 'mock://you-lose.mp3',
+      volume: 0.25,
+      loop: false,
+    });
+    return Promise.resolve({});
+  }),
+}));
+
+vi.mock(
+  '../../../../src/cartridges/rocco/games/rocco-default/maps/nether/nether-level-support',
+  () => ({
+    createNetherWalkMapProfile: mocks.createWalkMap,
+    loadOrCreateNetherScene: mocks.loadScene,
+    toOriginFromGroundPoint: (point: { x: number; y: number }) => ({ ...point }),
+  }),
+);
+
+vi.mock(
+  '../../../../src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-arrival-assets',
+  () => ({ preloadNetherOfficeArrivalAssets: mocks.preloadArrivalAssets }),
+);
+
+vi.mock(
+  '../../../../src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-player',
+  () => ({ installNetherOfficePlayer: mocks.installPlayer }),
+);
+
+vi.mock('../../../../src/cartridges/rocco/levels/rocco-level-connector-targets', () => ({
+  installRoccoLevelConnectorTargets: vi.fn(),
+  uninstallRoccoLevelConnectorTargets: vi.fn(),
+}));
+
+vi.mock(
+  '../../../../src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-arrival-support',
+  () => ({
+    setNetherResetOfficeRoccoSequenceControl: vi.fn(),
+    updateGuyspriteFacingTowardsRocco: vi.fn(),
+  }),
+);
+
 describe('Rocco Nether reset office Guysprite interaction', () => {
+  it('does not register the office defeat sound twice while mounting', async () => {
+    const registeredSoundIds = new Set<string>();
+    const engine = {
+      audio: {
+        registerSound: vi.fn((definition: { id: string }) => {
+          if (registeredSoundIds.has(definition.id)) {
+            throw new Error(`Duplicate sound registration '${definition.id}'.`);
+          }
+          registeredSoundIds.add(definition.id);
+        }),
+        stopSound: vi.fn(),
+        unregisterSound: vi.fn(),
+        playSound: vi.fn(),
+      },
+      video: {
+        actionMenus: {
+          closeMenu: vi.fn(),
+          unregisterMenu: vi.fn(),
+          registerMenu: vi.fn(),
+        },
+        messages: { clearMessages: vi.fn() },
+        sprites: { registerWalkMap: vi.fn() },
+      },
+      loadPlaneScene: vi.fn(),
+      acquireInputLease: vi.fn(() => ({ dispose: vi.fn() })),
+    } as unknown as CartridgeSdkV1Runtime;
+
+    const level = new RoccoNetherResetOfficeLevel(createRoccoLocalization('es'));
+
+    await expect(level.mount(engine)).resolves.toBeDefined();
+  });
+
   it('opens Ver and Hablar when Rocco clicks Guysprite during the waiting phase', () => {
     const localization = createRoccoLocalization('es');
     const actionMenus = new RoccoActionMenuSystemSDK();

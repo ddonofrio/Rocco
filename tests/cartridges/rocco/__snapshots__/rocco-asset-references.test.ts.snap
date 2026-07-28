@@ -175,7 +175,7 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
   {
     "assetPath": "cartridges/rocco/music/end-music.mp3",
     "resolutionKind": "public-base-url",
-    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-final-screen.ts",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-final-screen-assets.ts",
   },
   {
     "assetPath": "./assets/camera/1.png",

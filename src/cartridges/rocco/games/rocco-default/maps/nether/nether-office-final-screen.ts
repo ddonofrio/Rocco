@@ -1,10 +1,10 @@
 import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
 import { ROCCO_DESIGN_HEIGHT, ROCCO_DESIGN_WIDTH } from '../../game-design';
+import { netherOfficeFinalMusicUri } from './nether-office-final-screen-assets';
 
 const NETHER_OFFICE_FINAL_SCREEN_PRIMITIVE_ID = 'rocco-nether-office-final-screen';
 const NETHER_OFFICE_FINAL_SCREEN_TITLE_ID = 'rocco-nether-office-final-screen-title';
 const NETHER_OFFICE_FINAL_MUSIC_ID = 'rocco-nether-office-final-music';
-const NETHER_OFFICE_FINAL_MUSIC_URI = `${import.meta.env.BASE_URL}cartridges/rocco/music/end-music.mp3`;
 
 function showBlackScreen(engine: CartridgeSdkV1Runtime): void {
   engine.video.actionMenus.closeMenu();
@@ -52,7 +52,7 @@ function startNetherOfficeFinalMusic(engine: CartridgeSdkV1Runtime): void {
   engine.audio.unregisterSound(NETHER_OFFICE_FINAL_MUSIC_ID);
   engine.audio.registerSound({
     id: NETHER_OFFICE_FINAL_MUSIC_ID,
-    uri: NETHER_OFFICE_FINAL_MUSIC_URI,
+    uri: netherOfficeFinalMusicUri,
     volume: 0.5,
   });
   engine.audio.playSound(NETHER_OFFICE_FINAL_MUSIC_ID, {

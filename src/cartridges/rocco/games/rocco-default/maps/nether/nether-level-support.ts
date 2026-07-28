@@ -9,7 +9,7 @@ import { RoccoAssetPreloader } from '../../../../levels/rocco-asset-preloader';
 import { ROCCO_PLAYER_CONFIG } from '../../player';
 import { ROCCO_DESIGN_WIDTH, ROCCO_DESIGN_HEIGHT, ROCCO_BACKGROUND_COLOR } from '../../game-design';
 import { ROCCO_ACTIVE_WALK_MAP_ID } from '../../../../levels/rocco-level-runtime-ids';
-import { PIER_WALK_MAP_ALPHA_THRESHOLD } from '../pier/pier-layout';
+const NETHER_WALK_MAP_ALPHA_THRESHOLD = 16;
 
 export interface RoccoNetherSceneDefinition {
   sceneId: string;
@@ -202,7 +202,7 @@ export async function createNetherWalkMapProfile(
     width: imageData.width,
     height: imageData.height,
     data: imageData.data,
-    alphaThreshold: PIER_WALK_MAP_ALPHA_THRESHOLD,
+    alphaThreshold: NETHER_WALK_MAP_ALPHA_THRESHOLD,
   });
   const depthRange = resolveNetherWalkMapDepthRange(walkMap);
 

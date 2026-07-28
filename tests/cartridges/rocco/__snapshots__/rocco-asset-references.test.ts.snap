@@ -13,6 +13,11 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/audio/rocco-game-music.ts",
   },
   {
+    "assetPath": "./assets/door-closing.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/audio/rocco-shared-sound-assets.ts",
+  },
+  {
     "assetPath": "./assets/run-left-1.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/characters/guysprite/guysprite-assets.ts",
@@ -199,11 +204,6 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
   },
   {
     "assetPath": "./assets/bait-shop-door/opening-door.mp3",
-    "resolutionKind": "module-relative",
-    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-bait-shop-door-assets.ts",
-  },
-  {
-    "assetPath": "./assets/door-closing.mp3",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/pier/pier-bait-shop-door-assets.ts",
   },

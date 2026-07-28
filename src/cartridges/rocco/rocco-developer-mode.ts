@@ -31,6 +31,7 @@ export const ROCCO_DEVELOPER_EVENT_MENU_ID = 'rocco-developer-event-menu';
 export const ROCCO_DEVELOPER_JUMP_CHOICE_ID = 'jump';
 export const ROCCO_DEVELOPER_INVENTORY_CHOICE_ID = 'inventory';
 export const ROCCO_DEVELOPER_EVENTS_CHOICE_ID = 'events';
+export const ROCCO_DEVELOPER_FINAL_SCREEN_CHOICE_ID = 'final-screen';
 export const ROCCO_DEVELOPER_CYCLE_SPRITE_CHOICE_ID = 'cycle-sprite';
 const ROCCO_DEVELOPER_MAGAZINE_CHOICE_ID = 'developer-magazine';
 const ROCCO_DEVELOPER_MICROMANIA_CHOICE_ID = 'developer-micromania';
@@ -122,6 +123,10 @@ export function createRoccoDeveloperRootMenuDefinition(
       {
         id: ROCCO_DEVELOPER_EVENTS_CHOICE_ID,
         text: localization.text.developer.events,
+      },
+      {
+        id: ROCCO_DEVELOPER_FINAL_SCREEN_CHOICE_ID,
+        text: localization.text.developer.finalScreen,
       },
       {
         id: ROCCO_DEVELOPER_CYCLE_SPRITE_CHOICE_ID,

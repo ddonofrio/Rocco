@@ -40,6 +40,7 @@ import {
   ROCCO_DEVELOPER_EVENT_MENU_ID,
   ROCCO_DEVELOPER_EVENT_SCREEN_MENU_ID,
   ROCCO_DEVELOPER_EVENTS_CHOICE_ID,
+  ROCCO_DEVELOPER_FINAL_SCREEN_CHOICE_ID,
   ROCCO_DEVELOPER_INVENTORY_CHOICE_ID,
   ROCCO_DEVELOPER_INVENTORY_MENU_ID,
   ROCCO_DEVELOPER_JUMP_CHOICE_ID,
@@ -57,6 +58,7 @@ import {
   ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
   ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
 } from '../../games/rocco-default/maps/nether';
+import { showNetherOfficeFinalScreen } from '../../games/rocco-default/maps/nether/nether-office-final-screen';
 
 interface RoccoDeveloperEventState {
   allowToiletReuseDuringUrgency: boolean;
@@ -162,6 +164,12 @@ export class RoccoDeveloperRuntimeController {
 
     if (itemId === ROCCO_DEVELOPER_EVENTS_CHOICE_ID) {
       this.openDeveloperEventLevelMenu(engine);
+      return;
+    }
+
+    if (itemId === ROCCO_DEVELOPER_FINAL_SCREEN_CHOICE_ID) {
+      this.clearTransientState(engine);
+      showNetherOfficeFinalScreen(engine);
       return;
     }
 

@@ -75,6 +75,7 @@ export const spanishDeveloperText: RoccoTextCatalog['developer'] = {
   jump: 'Saltar',
   inventory: 'Inventario',
   events: 'Alterar eventos',
+  finalScreen: 'Ver pantalla final',
   cycleSprite: 'Cambiar sprite',
   jumpLevelTitle: 'Saltar a nivel',
   jumpScreenTitle: 'Saltar a pantalla',

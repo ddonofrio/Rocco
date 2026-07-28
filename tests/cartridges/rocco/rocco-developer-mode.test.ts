@@ -13,6 +13,7 @@ import {
   createRoccoDeveloperInventoryMenuDefinition,
   isRoccoDeveloperModeEnabled,
   ROCCO_DEVELOPER_EVENTS_CHOICE_ID,
+  ROCCO_DEVELOPER_FINAL_SCREEN_CHOICE_ID,
   ROCCO_PLAYER_DEVELOPER_ACTION_ID,
 } from '../../../src/cartridges/rocco/rocco-developer-mode';
 import { createRoccoPlayerActionMenuDefinition } from '../../../src/cartridges/rocco/games/rocco-default/player';
@@ -49,6 +50,16 @@ describe('Rocco developer mode', () => {
     expect(
       createRoccoDeveloperRootMenuDefinition(localization).items.some(
         (item) => item.id === ROCCO_DEVELOPER_EVENTS_CHOICE_ID,
+      ),
+    ).toBe(true);
+  });
+
+  it('includes the final screen shortcut in the developer root menu', () => {
+    const localization = createRoccoLocalization('es');
+
+    expect(
+      createRoccoDeveloperRootMenuDefinition(localization).items.some(
+        (item) => item.id === ROCCO_DEVELOPER_FINAL_SCREEN_CHOICE_ID,
       ),
     ).toBe(true);
   });

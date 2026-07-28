@@ -125,6 +125,7 @@ export interface RoccoTextCatalog {
     jump: string;
     inventory: string;
     events: string;
+    finalScreen: string;
     cycleSprite: string;
     jumpLevelTitle: string;
     jumpScreenTitle: string;

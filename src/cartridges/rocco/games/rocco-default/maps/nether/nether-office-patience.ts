@@ -446,6 +446,7 @@ export class NetherOfficePatienceController {
         return;
       }
 
+      this.removeHud(this.engine);
       showNetherOfficeDefeatTitle(this.engine, this.localization);
       this.defeatSequence = { phase: 'title', elapsedMs: 0 };
       return;

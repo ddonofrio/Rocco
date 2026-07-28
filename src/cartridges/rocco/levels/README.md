@@ -15,7 +15,8 @@ Each level implements `RoccoLevel` from `rocco-level-types.ts`:
 - `id` for manager registration and graph connections.
 - `title` for the status line.
 - `connectors` for level-to-level travel.
-- `mount()` to load the scene, walk map, player, level content, and optional scripted transition callbacks.
+- `mount()` to load the scene, walk map, player, level content, and optional scripted transition or
+  state-reset callbacks.
 - `unmount()` to remove runtime content cleanly.
 - `update()` for per-frame behavior.
 - `handleAction()` for radial action menus.

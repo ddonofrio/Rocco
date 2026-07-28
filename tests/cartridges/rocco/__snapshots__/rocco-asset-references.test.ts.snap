@@ -168,6 +168,11 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
   },
   {
+    "assetPath": "cartridges/rocco/music/end-music.mp3",
+    "resolutionKind": "public-base-url",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-final-screen.ts",
+  },
+  {
     "assetPath": "./assets/camera/1.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-security-camera-assets.ts",

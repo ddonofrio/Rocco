@@ -84,3 +84,16 @@ export function isRoccoNetherOfficeArrivalCapability(
     'function'
   );
 }
+
+export interface RoccoNetherOfficeConfidenceCapability {
+  setNetherOfficeConfidenceToMaximum(): void;
+}
+
+export function isRoccoNetherOfficeConfidenceCapability(
+  level: RoccoLevel,
+): level is RoccoLevel & RoccoNetherOfficeConfidenceCapability {
+  return (
+    typeof (level as Partial<RoccoNetherOfficeConfidenceCapability>)
+      .setNetherOfficeConfidenceToMaximum === 'function'
+  );
+}

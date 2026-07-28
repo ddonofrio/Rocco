@@ -39,7 +39,8 @@ are replaced by the 1:1 typing sprite at `(523, 179)`, which randomly changes be
 typing images at random intervals between one and five seconds while the second office remains
 active. Control returns after Guysprite reaches that point and the typing sprite is in place. Leaving
 and returning from the first Reset Office preserves Guysprite seated at the console; the developer
-arrival event explicitly restarts the entrance sequence when requested. The second office also exposes
+arrival event explicitly restarts the entrance sequence when requested and equips Rocco with the lab
+coat if he is not wearing it. The second office also exposes
 a background printer target at `(24, 207)` with size `236 × 295`. Its action menu offers localized
 Read, Kick, and Grab actions; Kick and Grab select non-repeating Rocco thoughts. Read walks Rocco to
 `(260, 492)`, faces him up-left, waits 250 ms, and displays the printer image as an in-scene reading
@@ -71,11 +72,33 @@ An incorrect response makes Guysprite select one of two localized reactions and 
 read the next message. Repeating a previously read message halves the current value, makes Guysprite
 warn Rocco that the message was already read, and then asks him to read the next message. At zero,
 Guysprite selects one of two localized security lines, then the
-defeat presentation appears and respawns Rocco at the Nether entry checkpoint. At 100, the HUD stops
-the reading sequence, restores the desk chair and Guysprite's standing sprite, and leaves the final
-conversation to the later office ending flow. Action-based confidence changes play the corresponding
+defeat presentation appears and respawns Rocco at the Nether entry checkpoint. At 100, the HUD
+cancels any active Guysprite response and disappears before restoring the desk chair and Guysprite's standing sprite.
+If Rocco is in the printer reading flow, the printer session closes and Guysprite says that he knows
+Rocco is there; Rocco then walks to `(405, 459)` and receives four identity replies. The first three
+replies start the release sequence after Rocco's line is consumed. The fourth reply adds Guysprite's
+monkey response, Rocco's follow-up, and Guysprite's final joke before starting the same release
+sequence. Guysprite faces right, walks to `(712, 461)`, runs the existing Rocco reset effect, faces
+left, and returns beside the chair. After the return, Guysprite presents the confession as one
+advanceable line per sentence and opens the three final questions. Each question is read by Rocco,
+receives its corresponding Guysprite reply, and then opens the three escape questions. Action-based confidence changes play the corresponding
 local gain or loss sound before the HUD animates point by point to its new value; gain animation lasts
 500 ms and loss animation lasts 250 ms. Passive time decay has no sound or reward animation.
+Each of those three questions now receives the same choice prompt. Either response leads to Guysprite's
+two-path explanation and then opens the three path choices. Asking for the question again produces three
+progressively more schematic reformulations; after the third request, the menu contains only the two
+path choices. Those choices are the end of the implemented sequence.
+After either path choice is consumed, Guysprite walks back to the console controls at `(712, 461)`;
+the two portals appear there, Guysprite waits 250 ms, and then returns beside the chair. The game
+portal is at `(228, 507)` and the console CPU portal is at `(705, 507)`.
+Once Guysprite returns, scene clicks are limited to those two portals and Guysprite. Guysprite opens
+the existing look/talk action menu. The game portal opens the provisional final screen; clicking that
+screen restarts only the Rocco cartridge and enables developer mode for its next game mount. The CPU
+portal opens the cartridge prompt; `No lo tengo` opens the provisional black final screen, while
+`Ya lo he hecho` shows a black retry interval and then reopens the same prompt. The final screen
+stops the background playlist and plays `end-music.mp3` from the beginning at normal volume.
+The developer menu exposes `Alter events -> Reset Office -> +100% confidence`; selecting it fills the
+active second-office confidence value and starts the normal 100-percent identity sequence.
 Only the current Guysprite message remains visible, and the foreground message can be dismissed by
 clicking. Dismissing a reaction also advances its follow-up without waiting for the full message TTL.
 Guysprite addresses Rulo when he sits. Reading the first message correctly triggers the special reset

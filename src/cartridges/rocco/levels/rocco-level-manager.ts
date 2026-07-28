@@ -33,6 +33,7 @@ import { RoccoInventoryRuntimeController } from './runtime/rocco-inventory-runti
 import { RoccoDroppedInventoryController } from './runtime/rocco-dropped-inventory-controller';
 import { isRoccoToiletLevelCapability } from './runtime/rocco-level-capabilities';
 import { isRoccoNetherOfficeArrivalCapability } from './runtime/rocco-level-capabilities';
+import { isRoccoNetherOfficeConfidenceCapability } from './runtime/rocco-level-capabilities';
 import { RoccoSceneActionRouter } from './runtime/rocco-scene-action-router';
 import { RoccoAssetPreloader } from './rocco-asset-preloader';
 import { RoccoDeveloperRuntimeController } from './runtime/rocco-developer-runtime-controller';
@@ -146,6 +147,11 @@ export class RoccoLevelManager {
             this.activeLevel.refreshDeveloperEventPresentation();
           }
         },
+        onNetherOfficeConfidenceMaxRequested: () => {
+          if (this.activeLevel && isRoccoNetherOfficeConfidenceCapability(this.activeLevel)) {
+            this.activeLevel.setNetherOfficeConfidenceToMaximum();
+          }
+        },
       },
     });
     this.levelRegistry = composition.levelRegistry;
@@ -191,6 +197,11 @@ export class RoccoLevelManager {
         this.requestScriptedConnectorTransition(connectorId),
       onNetherOfficeBellPressed: () => {
         this.transitionTask = this.handleNetherOfficeBellPressed();
+      },
+      onRoccoInventoryResetRequested: () => {
+        this.roccoAppearance = DEFAULT_ROCCO_PLAYER_APPEARANCE;
+        this.inventoryRuntime.getPlayerInventory().clear();
+        this.refreshStatus();
       },
       onRestartRequested: (request) => this.handleRestartRequested(request),
       onPickupRequested: (item) => this.canCollectIntoInventory(item.id),

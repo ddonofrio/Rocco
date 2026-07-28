@@ -91,6 +91,7 @@ export const englishDeveloperText: RoccoTextCatalog['developer'] = {
   putLabCoatEvent: 'Put on lab coat',
   removeLabCoatEvent: 'Take off lab coat',
   allowToiletReuseEvent: 'Allow using toilet more than once',
+  netherOfficeConfidenceMaxEvent: '+100% confidence',
   clickToJumpStatus: 'Developer mode: click anywhere to jump.',
   clickToCycleSpriteStatus:
     'Developer mode: click a sprite to cycle its image. Click outside to exit.',

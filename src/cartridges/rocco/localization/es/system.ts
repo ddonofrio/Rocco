@@ -91,6 +91,7 @@ export const spanishDeveloperText: RoccoTextCatalog['developer'] = {
   putLabCoatEvent: 'Poner bata',
   removeLabCoatEvent: 'Quitar bata',
   allowToiletReuseEvent: 'Permitir usar váter más de una vez',
+  netherOfficeConfidenceMaxEvent: '+100% confianza',
   clickToJumpStatus: 'Modo desarrollador: haz clic en cualquier parte para saltar.',
   clickToCycleSpriteStatus:
     'Modo desarrollador: haz clic en un sprite para cambiar su imagen. Haz clic fuera para salir.',

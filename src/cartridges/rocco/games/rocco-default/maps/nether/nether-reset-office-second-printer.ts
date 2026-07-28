@@ -423,6 +423,13 @@ export class NetherResetOfficeSecondPrinterController {
     });
   }
 
+  cancelReading(): void {
+    this.speechDialogue?.cancel();
+    this.engine?.video.messages.removeMessage(PRINTER_READING_SPEECH_SESSION_ID);
+    this.cancelReadSequence();
+    this.hideReading();
+  }
+
   installInteraction(engine: CartridgeSdkV1Runtime, backgroundPlaneId: string): void {
     engine.video.sceneTargets?.unregisterTarget(PRINTER_TARGET_ID);
     engine.video.sceneTargets?.registerTarget({

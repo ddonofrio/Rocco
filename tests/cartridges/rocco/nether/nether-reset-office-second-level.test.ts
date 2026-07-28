@@ -81,6 +81,23 @@ vi.mock(
 );
 
 vi.mock(
+  '../../../../src/cartridges/rocco/games/rocco-default/maps/nether/nether-arrival-effects',
+  () => ({
+    createNetherArrivalPortalSpriteDefinition: vi.fn(() =>
+      Promise.resolve({
+        definition: { id: 'rocco-nether-arrival-portal' },
+        initialFrameWidth: 64,
+        initialFrameHeight: 64,
+      }),
+    ),
+    NETHER_ARRIVAL_PORTAL_DEFINITION_ID: 'rocco-nether-arrival-portal',
+    NETHER_ARRIVAL_PORTAL_OPEN_ANIMATION_ID: 'nether-arrival-portal-open',
+    NETHER_ARRIVAL_SPELL_SOUND_ID: 'rocco-nether-arrival-spell-sound',
+    NETHER_ARRIVAL_SPELL_SOUND_URL: 'mock-spell-sound.mp3',
+  }),
+);
+
+vi.mock(
   '../../../../src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-guysprite-interaction',
   () => ({
     canOpenNetherOfficeGuyspriteMenuAt: vi.fn(() => false),

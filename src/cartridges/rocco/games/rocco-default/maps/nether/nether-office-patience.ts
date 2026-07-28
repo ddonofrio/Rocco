@@ -4,9 +4,15 @@ import { GUYSPRITE_CONFIG } from '../../characters/guysprite';
 import type { RoccoLocalization } from '../../localization';
 import type { RoccoLevelRestartRequest } from '../../../../levels/rocco-level-types';
 import type { RoccoInventoryItem } from '../../inventory';
-import { netherOfficeConfidenceSoundUrls } from './nether-assets';
-import { netherYouLoseSoundUrl } from './nether-security-camera-assets';
 import { NetherOfficeFirstMessageResetController } from './nether-office-first-message-reset';
+import {
+  NETHER_OFFICE_CONFIDENCE_GAIN_SOUND_ID,
+  NETHER_OFFICE_CONFIDENCE_LOSS_SOUND_ID,
+  NETHER_OFFICE_PATIENCE_DEFEAT_SOUND_ID,
+  NETHER_OFFICE_PATIENCE_DEFEAT_SOUND_VOLUME,
+  registerNetherOfficePatienceSounds,
+  unregisterNetherOfficePatienceSounds,
+} from './nether-office-patience-sounds';
 import {
   beginNetherOfficeDefeatFade,
   isNetherOfficeDefeatFadeComplete,
@@ -43,10 +49,6 @@ const NETHER_OFFICE_SECOND_MESSAGE_SECURITY_MESSAGE_ID =
   'rocco-nether-office-second-message-security';
 const NETHER_OFFICE_SECOND_MESSAGE_SECURITY_FOLLOW_UP_MESSAGE_ID =
   'rocco-nether-office-second-message-security-follow-up';
-const NETHER_OFFICE_CONFIDENCE_GAIN_SOUND_ID = 'rocco-nether-office-confidence-gain';
-const NETHER_OFFICE_CONFIDENCE_LOSS_SOUND_ID = 'rocco-nether-office-confidence-loss';
-const NETHER_OFFICE_PATIENCE_DEFEAT_SOUND_ID = 'rocco-nether-office-patience-defeat-sound';
-const NETHER_OFFICE_PATIENCE_DEFEAT_SOUND_VOLUME = 0.25;
 const NETHER_OFFICE_CONFIDENCE_GAIN_ANIMATION_MS = 500;
 const NETHER_OFFICE_CONFIDENCE_LOSS_ANIMATION_MS = 250;
 
@@ -82,6 +84,7 @@ export class NetherOfficePatienceController {
   private onComplete: (() => void) | undefined;
   private onDefeat: ((request?: RoccoLevelRestartRequest) => void) | undefined;
   private onConsoleResetRequested: (() => void) | undefined;
+  private onRoccoInventoryResetRequested: (() => void) | undefined;
   private patience = NETHER_OFFICE_PATIENCE_INITIAL_VALUE;
   private decayElapsedMs = 0;
   private started = false;
@@ -160,15 +163,17 @@ export class NetherOfficePatienceController {
     onComplete: () => void,
     onDefeat?: (request?: RoccoLevelRestartRequest) => void,
     onConsoleResetRequested?: () => void,
+    onRoccoInventoryResetRequested?: () => void,
   ): void {
     this.engine = engine;
     this.room = room;
     this.onComplete = onComplete;
     this.onDefeat = onDefeat;
     this.onConsoleResetRequested = onConsoleResetRequested;
+    this.onRoccoInventoryResetRequested = onRoccoInventoryResetRequested;
     this.firstMessageReset.mount(engine);
     this.registerConfidenceSounds(engine);
-    if (this.started) {
+    if (this.started && !this.isComplete) {
       this.renderHud();
     }
   }
@@ -185,6 +190,7 @@ export class NetherOfficePatienceController {
     this.onComplete = undefined;
     this.onDefeat = undefined;
     this.onConsoleResetRequested = undefined;
+    this.onRoccoInventoryResetRequested = undefined;
     this.wrongReplyFollowUpElapsedMs = undefined;
     this.defeatSequence = undefined;
     this.pendingConsoleReset = false;
@@ -220,6 +226,23 @@ export class NetherOfficePatienceController {
     this.pendingConsoleReset = false;
   }
 
+  beginRoccoReset(onComplete: () => void): void {
+    this.firstMessageReset.beginRoccoReset(onComplete, this.onRoccoInventoryResetRequested);
+  }
+
+  setConfidenceToMaximum(): void {
+    if (!this.started || this.terminalState) {
+      return;
+    }
+
+    this.confidenceAnimation = undefined;
+    this.wrongReplyFollowUpElapsedMs = undefined;
+    this.pendingConsoleReset = false;
+    this.patience = NETHER_OFFICE_PATIENCE_MAX_VALUE;
+    this.renderHud();
+    this.checkThreshold();
+  }
+
   checkThreshold(): void {
     if (this.patience <= NETHER_OFFICE_PATIENCE_MIN_VALUE) {
       this.patience = NETHER_OFFICE_PATIENCE_MIN_VALUE;
@@ -237,7 +260,10 @@ export class NetherOfficePatienceController {
     if (this.patience >= NETHER_OFFICE_PATIENCE_MAX_VALUE) {
       this.patience = NETHER_OFFICE_PATIENCE_MAX_VALUE;
       this.terminalState = 'complete';
-      this.renderHud();
+      if (this.engine) {
+        this.removeHud(this.engine);
+      }
+      this.clearGuyspriteMessages();
       this.onComplete?.();
     }
   }
@@ -481,42 +507,15 @@ export class NetherOfficePatienceController {
   }
 
   registerConfidenceSounds(engine: CartridgeSdkV1Runtime): void {
-    engine.audio.registerSound({
-      id: NETHER_OFFICE_CONFIDENCE_GAIN_SOUND_ID,
-      uri: netherOfficeConfidenceSoundUrls.gain,
-      volume: 0.45,
-      loop: false,
-    });
-    engine.audio.registerSound({
-      id: NETHER_OFFICE_CONFIDENCE_LOSS_SOUND_ID,
-      uri: netherOfficeConfidenceSoundUrls.lose,
-      volume: 0.45,
-      loop: false,
-    });
-    engine.audio.registerSound({
-      id: NETHER_OFFICE_PATIENCE_DEFEAT_SOUND_ID,
-      uri: netherYouLoseSoundUrl,
-      volume: NETHER_OFFICE_PATIENCE_DEFEAT_SOUND_VOLUME,
-      loop: false,
-    });
+    registerNetherOfficePatienceSounds(engine);
   }
 
   unregisterConfidenceSounds(engine: CartridgeSdkV1Runtime): void {
-    engine.audio.stopSound(NETHER_OFFICE_CONFIDENCE_GAIN_SOUND_ID);
-    engine.audio.stopSound(NETHER_OFFICE_CONFIDENCE_LOSS_SOUND_ID);
-    engine.audio.stopSound(NETHER_OFFICE_PATIENCE_DEFEAT_SOUND_ID);
-    engine.audio.unregisterSound(NETHER_OFFICE_CONFIDENCE_GAIN_SOUND_ID);
-    engine.audio.unregisterSound(NETHER_OFFICE_CONFIDENCE_LOSS_SOUND_ID);
-    engine.audio.unregisterSound(NETHER_OFFICE_PATIENCE_DEFEAT_SOUND_ID);
+    unregisterNetherOfficePatienceSounds(engine);
   }
 
   sayGuysprite(line: string, id?: string): void {
-    const messages = this.engine?.video.messages.listMessages() ?? [];
-    for (const message of messages) {
-      if (message.spriteInstanceId === GUYSPRITE_CONFIG.ids.instance) {
-        this.engine?.video.messages.removeMessage(message.id);
-      }
-    }
+    this.clearGuyspriteMessages();
     this.engine?.video.messages.say(GUYSPRITE_CONFIG.ids.instance, line, {
       id,
       ttlMs: NETHER_OFFICE_PATIENCE_MESSAGE_TTL_MS,
@@ -527,6 +526,15 @@ export class NetherOfficePatienceController {
         bubbleStrokeWidth: 2,
       },
     });
+  }
+
+  clearGuyspriteMessages(): void {
+    const messages = this.engine?.video.messages.listMessages() ?? [];
+    for (const message of messages) {
+      if (message.spriteInstanceId === GUYSPRITE_CONFIG.ids.instance) {
+        this.engine?.video.messages.removeMessage(message.id);
+      }
+    }
   }
 
   hasGuyspriteMessage(id: string): boolean {

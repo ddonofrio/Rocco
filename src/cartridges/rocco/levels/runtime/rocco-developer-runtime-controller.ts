@@ -14,7 +14,10 @@ import type {
 import type { RoccoInventory } from '../../inventory';
 import type { RoccoLocalization } from '../../localization';
 import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
-import type { RoccoPlayerAppearance } from '../../games/rocco-default/player';
+import {
+  ROCCO_LAB_COAT_PLAYER_APPEARANCE,
+  type RoccoPlayerAppearance,
+} from '../../games/rocco-default/player';
 import {
   ROCCO_PIER_END_LEVEL_ID,
   ROCCO_PIER_MIDDLE_LEVEL_ID,
@@ -93,6 +96,7 @@ export interface RoccoDeveloperRuntimeControllerOptions {
   canCollectInventoryItem: (itemId: string, isShowFullMessage?: boolean) => boolean;
   refreshStatus: () => void;
   onToiletReuseEventChanged?: () => void;
+  onNetherOfficeConfidenceMaxRequested?: () => void;
 }
 
 const DEVELOPER_SPRITE_CYCLE_ANIMATION_ID = '__rocco-developer-sprite-cycle__';
@@ -101,6 +105,7 @@ const DEVELOPER_SPRITE_CYCLE_FRAME_DURATION_MS = 1000;
 const DEVELOPER_SPRITE_CYCLE_TOP_TITLE_ID = 'rocco-developer-sprite-cycle-top-title';
 const DEVELOPER_SPRITE_CYCLE_SPRITE_TITLE_ID = 'rocco-developer-sprite-cycle-sprite-title';
 const DEVELOPER_ALLOW_TOILET_REUSE_EVENT_ID = 'allow-toilet-reuse';
+const DEVELOPER_NETHER_RESET_OFFICE_CONFIDENCE_MAX_EVENT_ID = 'nether-reset-office-confidence-max';
 const DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_EVENT_ID = 'nether-reset-office-second-arrival';
 const DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_SCREEN_ID = 'nether-reset-office-second-arrival';
 
@@ -280,6 +285,14 @@ export class RoccoDeveloperRuntimeController {
       return;
     }
 
+    if (
+      screenOption.targetLevelId === ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID &&
+      screenOption.forceArrivalSequence === true &&
+      this.options.getRoccoAppearance?.() !== ROCCO_LAB_COAT_PLAYER_APPEARANCE
+    ) {
+      this.options.setRoccoAppearance?.(ROCCO_LAB_COAT_PLAYER_APPEARANCE);
+    }
+
     const isSwitched = await this.options.switchToLevel(
       screenOption.targetLevelId,
       undefined,
@@ -346,6 +359,10 @@ export class RoccoDeveloperRuntimeController {
         DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_SCREEN_ID,
       );
       return;
+    }
+
+    if (eventId === DEVELOPER_NETHER_RESET_OFFICE_CONFIDENCE_MAX_EVENT_ID) {
+      this.options.onNetherOfficeConfidenceMaxRequested?.();
     }
 
     if (this.developerEventScreenSelectionId) {
@@ -426,6 +443,7 @@ export class RoccoDeveloperRuntimeController {
         id: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
         title: `${resetOfficeTitle} 2`,
         targetLevelId: ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
+        forceArrivalSequence: true,
       },
     ];
     return {
@@ -462,6 +480,12 @@ export class RoccoDeveloperRuntimeController {
             id: `${ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID}-arrival`,
             title: this.localization.text.developer.resetOfficeSecondArrival,
             events: [
+              {
+                id: DEVELOPER_NETHER_RESET_OFFICE_CONFIDENCE_MAX_EVENT_ID,
+                text: this.localization.text.developer.netherOfficeConfidenceMaxEvent,
+                enabled: false,
+                showState: false,
+              },
               {
                 id: DEVELOPER_NETHER_RESET_OFFICE_SECOND_ARRIVAL_EVENT_ID,
                 text: this.localization.text.developer.resetOfficeSecondArrival,

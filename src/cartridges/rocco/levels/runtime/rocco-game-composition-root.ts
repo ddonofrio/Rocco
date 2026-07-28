@@ -84,6 +84,7 @@ export interface RoccoGameCompositionRootCallbacks {
   isStanAwake: () => boolean;
   doesPlayerOverlapBaitShopDoor: () => boolean;
   onToiletReuseEventChanged: () => void;
+  onNetherOfficeConfidenceMaxRequested: () => void;
 }
 
 export interface RoccoGameCompositionRootOptions {
@@ -148,10 +149,9 @@ function createRuntimeControllers(
     syncWorldPresentation: callbacks.syncActiveLevelDroppedInventoryPresentation,
     refreshStatus: callbacks.refreshStatus,
   });
-  const inventory = inventoryRuntime.getPlayerInventory();
   const developerRuntime = new RoccoDeveloperRuntimeController({
     localization,
-    inventory,
+    inventory: inventoryRuntime.getPlayerInventory(),
     getRoccoAppearance: callbacks.getRoccoAppearance,
     setRoccoAppearance: callbacks.setRoccoAppearance,
     resolveLevelTitle: callbacks.resolveLevelTitle,
@@ -160,6 +160,7 @@ function createRuntimeControllers(
     canCollectInventoryItem: callbacks.canCollectIntoInventory,
     refreshStatus: callbacks.refreshStatus,
     onToiletReuseEventChanged: callbacks.onToiletReuseEventChanged,
+    onNetherOfficeConfidenceMaxRequested: callbacks.onNetherOfficeConfidenceMaxRequested,
   });
   return {
     droppedInventory,

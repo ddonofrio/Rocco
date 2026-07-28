@@ -20,6 +20,7 @@ import {
 } from './inventory';
 
 export const ROCCO_PLAYER_DEVELOPER_ACTION_ID = 'open-developer-mode';
+const ROCCO_DEVELOPER_MODE_NEXT_GAME_START_KEY = 'rocco.developer-mode-next-game-start';
 export const ROCCO_DEVELOPER_ROOT_MENU_ID = 'rocco-developer-mode-menu';
 export const ROCCO_DEVELOPER_LEVEL_MENU_ID = 'rocco-developer-level-menu';
 export const ROCCO_DEVELOPER_SCREEN_MENU_ID = 'rocco-developer-screen-menu';
@@ -33,6 +34,30 @@ export const ROCCO_DEVELOPER_EVENTS_CHOICE_ID = 'events';
 export const ROCCO_DEVELOPER_CYCLE_SPRITE_CHOICE_ID = 'cycle-sprite';
 const ROCCO_DEVELOPER_MAGAZINE_CHOICE_ID = 'developer-magazine';
 const ROCCO_DEVELOPER_MICROMANIA_CHOICE_ID = 'developer-micromania';
+
+export function requestRoccoDeveloperModeOnNextGameStart(): void {
+  try {
+    globalThis.localStorage?.setItem(ROCCO_DEVELOPER_MODE_NEXT_GAME_START_KEY, 'true');
+  } catch {
+    return;
+  }
+}
+
+export function requestRoccoDeveloperModeAndRestart(restart: (() => void) | undefined): void {
+  requestRoccoDeveloperModeOnNextGameStart();
+  restart?.();
+}
+
+export function hasRoccoDeveloperModeOnGameStartRequest(): boolean {
+  try {
+    const isEnabled =
+      globalThis.localStorage?.getItem(ROCCO_DEVELOPER_MODE_NEXT_GAME_START_KEY) === 'true';
+    globalThis.localStorage?.removeItem(ROCCO_DEVELOPER_MODE_NEXT_GAME_START_KEY);
+    return isEnabled;
+  } catch {
+    return false;
+  }
+}
 
 export function isRoccoDeveloperModeEnabled(
   engine: Pick<CartridgeSdkV1Runtime, 'isDeveloperModeEnabled'> | null | undefined,

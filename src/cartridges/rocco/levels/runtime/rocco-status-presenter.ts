@@ -26,6 +26,7 @@ export interface RoccoStatusPresenterOptions {
   onKeysCollected: () => void;
   onConnectorTransitionRequested: (connectorId: string) => boolean;
   onNetherOfficeBellPressed: () => void;
+  onRoccoInventoryResetRequested: () => void;
   onRestartRequested: (request?: RoccoLevelRestartRequest) => void;
   onPickupRequested: (item: RoccoInventoryItem) => boolean;
   onPickupCollected: (item: RoccoInventoryItem) => void;
@@ -70,6 +71,7 @@ export class RoccoStatusPresenter {
       onKeysCollected: this.options.onKeysCollected,
       onConnectorTransitionRequested: this.options.onConnectorTransitionRequested,
       onNetherOfficeBellPressed: this.options.onNetherOfficeBellPressed,
+      onRoccoInventoryResetRequested: this.options.onRoccoInventoryResetRequested,
       onRestartRequested: this.options.onRestartRequested,
       onPickupRequested: (item) => this.options.canCollectIntoInventory(item.id),
       onPickupCollected: this.options.onPickupCollected,

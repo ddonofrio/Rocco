@@ -1,30 +1,20 @@
 import type { CartridgeSdkV1Runtime } from '../../../../../../console/cartridges/sdk-v1';
-import {
-  applyRoccoPlayerAppearance,
-  DEFAULT_ROCCO_PLAYER_APPEARANCE,
-  ROCCO_PLAYER_CONFIG,
-} from '../../player';
 import { createRoccoTwentyEurosInventoryItem, type RoccoInventoryItem } from '../../inventory';
 import type { RoccoLocalization } from '../../localization';
-import {
-  createNetherArrivalSmokeSpriteDefinition,
-  NETHER_ARRIVAL_SMOKE_ANIMATION_ID,
-  NETHER_ARRIVAL_SMOKE_DEFINITION_ID,
-  NETHER_ARRIVAL_SMOKE_FRAME_DURATION_MS,
-  NETHER_ARRIVAL_SMOKE_INSTANCE_ID,
-  NETHER_ARRIVAL_SPELL_SOUND_ID,
-  NETHER_ARRIVAL_SPELL_SOUND_URL,
-} from './nether-arrival-effects';
+import { NetherOfficeRoccoResetEffect } from './nether-office-rocco-reset-effect';
 
 const FIRST_MESSAGE_RESET_MESSAGE_ID = 'rocco-nether-office-first-reset';
 const FIRST_MESSAGE_ALERT_MESSAGE_ID = 'rocco-nether-office-first-alert';
 const SECOND_MESSAGE_ALERT_MESSAGE_ID = 'rocco-nether-office-second-alert';
 const MESSAGE_TTL_MS = 5200;
 const RESET_INPUT_LEASE_ID = 'nether-office-first-message-reset';
-const SMOKE_TARGET_HEIGHT = 125;
-const SPELL_SOUND_VOLUME = 0.42;
 
-type FirstMessageResetPhase = 'reset-line' | 'smoke' | 'first-alert' | 'second-alert';
+type FirstMessageResetPhase =
+  | 'reset-line'
+  | 'smoke'
+  | 'first-alert'
+  | 'second-alert'
+  | 'rocco-reset';
 
 interface FirstMessageResetSequence {
   phase: FirstMessageResetPhase;
@@ -38,8 +28,7 @@ export class NetherOfficeFirstMessageResetController {
   private engine: CartridgeSdkV1Runtime | undefined;
   private sequence: FirstMessageResetSequence | undefined;
   private inputLease: { dispose(): void } | undefined;
-  private smokeFrameCount = 0;
-  private smokeScale = 1;
+  private readonly resetEffect: NetherOfficeRoccoResetEffect;
 
   constructor(
     localization: RoccoLocalization,
@@ -49,6 +38,7 @@ export class NetherOfficeFirstMessageResetController {
     this.localization = localization;
     this.sayGuysprite = sayGuysprite;
     this.onDefeat = onDefeat;
+    this.resetEffect = new NetherOfficeRoccoResetEffect(localization);
   }
 
   get isActive(): boolean {
@@ -57,26 +47,28 @@ export class NetherOfficeFirstMessageResetController {
 
   mount(engine: CartridgeSdkV1Runtime): void {
     this.engine = engine;
-    engine.audio.registerSound({
-      id: NETHER_ARRIVAL_SPELL_SOUND_ID,
-      uri: NETHER_ARRIVAL_SPELL_SOUND_URL,
-      volume: SPELL_SOUND_VOLUME,
-      loop: false,
-    });
+    this.resetEffect.mount(engine);
   }
 
   unmount(engine: CartridgeSdkV1Runtime): void {
     this.inputLease?.dispose();
     this.inputLease = undefined;
-    engine.audio.stopSound(NETHER_ARRIVAL_SPELL_SOUND_ID);
-    engine.audio.unregisterSound(NETHER_ARRIVAL_SPELL_SOUND_ID);
-    engine.video.sprites.removeSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
+    this.resetEffect.unmount(engine);
     if (this.engine !== engine) {
       return;
     }
 
     this.engine = undefined;
     this.sequence = undefined;
+  }
+
+  beginRoccoReset(onComplete: () => void, onInventoryResetRequested?: () => void): void {
+    if (!this.engine || this.sequence) {
+      return;
+    }
+
+    this.sequence = { phase: 'rocco-reset', elapsedMs: 0 };
+    this.resetEffect.begin(onComplete, onInventoryResetRequested);
   }
 
   begin(): void {
@@ -100,12 +92,7 @@ export class NetherOfficeFirstMessageResetController {
       return;
     }
 
-    applyRoccoPlayerAppearance(this.engine, DEFAULT_ROCCO_PLAYER_APPEARANCE, this.localization);
-    this.engine.audio.playSound(NETHER_ARRIVAL_SPELL_SOUND_ID, {
-      restart: true,
-      volume: SPELL_SOUND_VOLUME,
-    });
-    void this.prepareSmoke();
+    this.resetEffect.begin();
     this.sequence = { phase: 'smoke', elapsedMs: 0 };
   }
 
@@ -122,7 +109,22 @@ export class NetherOfficeFirstMessageResetController {
     }
 
     if (sequence.phase === 'smoke') {
-      this.updateSmoke(sequence);
+      this.resetEffect.update(deltaMs);
+      if (!this.resetEffect.isActive) {
+        this.sayGuysprite(
+          this.localization.text.nether.officeReading.firstMessageAlertLines[0] ?? '',
+          FIRST_MESSAGE_ALERT_MESSAGE_ID,
+        );
+        this.sequence = { phase: 'first-alert', elapsedMs: 0 };
+      }
+      return;
+    }
+
+    if (sequence.phase === 'rocco-reset') {
+      this.resetEffect.update(deltaMs);
+      if (!this.resetEffect.isActive) {
+        this.sequence = undefined;
+      }
       return;
     }
 
@@ -159,83 +161,6 @@ export class NetherOfficeFirstMessageResetController {
         slotIndex: 0,
       },
     ]);
-  }
-
-  updateSmoke(sequence: FirstMessageResetSequence): void {
-    if (!this.engine || this.smokeFrameCount === 0) {
-      return;
-    }
-
-    const nextFrameIndex = Math.min(
-      this.smokeFrameCount - 1,
-      Math.floor(sequence.elapsedMs / NETHER_ARRIVAL_SMOKE_FRAME_DURATION_MS),
-    );
-    if (this.engine.video.sprites.getSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID)) {
-      this.engine.video.sprites.setAnimationFrame(NETHER_ARRIVAL_SMOKE_INSTANCE_ID, nextFrameIndex);
-    }
-    if (sequence.elapsedMs < this.smokeFrameCount * NETHER_ARRIVAL_SMOKE_FRAME_DURATION_MS) {
-      return;
-    }
-
-    this.engine.video.sprites.removeSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
-    this.sayGuysprite(
-      this.localization.text.nether.officeReading.firstMessageAlertLines[0] ?? '',
-      FIRST_MESSAGE_ALERT_MESSAGE_ID,
-    );
-    this.sequence = { phase: 'first-alert', elapsedMs: 0 };
-  }
-
-  async prepareSmoke(): Promise<void> {
-    if (!this.engine) {
-      return;
-    }
-
-    try {
-      let spriteDefinition = this.engine.video.sprites.getSpriteDefinition(
-        NETHER_ARRIVAL_SMOKE_DEFINITION_ID,
-      );
-      if (!spriteDefinition) {
-        const smoke = await createNetherArrivalSmokeSpriteDefinition();
-        if (!this.engine) {
-          return;
-        }
-        await this.engine.video.preloadSpriteDefinition(smoke.definition);
-        this.engine.video.sprites.loadSpriteDefinition(smoke.definition);
-        spriteDefinition = smoke.definition;
-      }
-
-      const animationFrames =
-        spriteDefinition.animations[NETHER_ARRIVAL_SMOKE_ANIMATION_ID]?.frames ?? [];
-      const initialFrameHeight = spriteDefinition.frames[0]?.rect?.height ?? 1;
-      this.smokeFrameCount = animationFrames.length || spriteDefinition.frames.length;
-      this.smokeScale = SMOKE_TARGET_HEIGHT / Math.max(1, initialFrameHeight);
-      const rocco = this.engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance);
-      if (!rocco || this.smokeFrameCount === 0) {
-        return;
-      }
-
-      this.engine.video.sprites.removeSprite(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
-      this.engine.video.sprites.createSpriteFromDefinition(NETHER_ARRIVAL_SMOKE_DEFINITION_ID, {
-        id: NETHER_ARRIVAL_SMOKE_INSTANCE_ID,
-        transform: {
-          x: rocco.transform.x + ROCCO_PLAYER_CONFIG.frame.groundAnchor.x * rocco.transform.scaleX,
-          y: rocco.transform.y + ROCCO_PLAYER_CONFIG.frame.groundAnchor.y * rocco.transform.scaleY,
-          scaleX: this.smokeScale,
-          scaleY: this.smokeScale,
-          rotation: 0,
-        },
-        renderLayer: 'world.front',
-        zIndex: 1000,
-        depthMode: 'fixed',
-        interactive: false,
-        collisionEnabled: false,
-        ignoreMessages: true,
-      });
-      this.engine.video.sprites.stopAnimation(NETHER_ARRIVAL_SMOKE_INSTANCE_ID);
-      this.engine.video.sprites.setAnimationFrame(NETHER_ARRIVAL_SMOKE_INSTANCE_ID, 0);
-    } catch {
-      this.smokeFrameCount = 1;
-    }
   }
 
   isMessageVisible(id: string): boolean {

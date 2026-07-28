@@ -34,6 +34,8 @@ export interface RoccoLevelMountOptions {
   onKeysCollectRequested?: () => boolean;
   onKeysCollected?: () => void;
   onConnectorTransitionRequested?: (connectorId: string) => boolean;
+  onNetherOfficeBellPressed?: () => void;
+  onRoccoInventoryResetRequested?: () => void;
   onRestartRequested?: (request?: RoccoLevelRestartRequest) => void;
   onPickupRequested?: (item: RoccoInventoryItem) => boolean;
   onPickupCollected?: (item: RoccoInventoryItem) => void;
@@ -44,6 +46,7 @@ export interface RoccoLevelRestartRequest {
   entryConnectorId?: string;
   entryPosition?: RoccoPoint;
   forceArrivalSequence?: boolean;
+  inventoryItems?: readonly RoccoInventoryItem[];
 }
 
 export interface RoccoLevel {

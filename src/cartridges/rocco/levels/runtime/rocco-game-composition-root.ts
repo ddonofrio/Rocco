@@ -69,7 +69,11 @@ export interface RoccoGameCompositionRootCallbacks {
   listAccessibleInventoryItemIds: (levelId: string) => string[];
   openInventoryTransferMenu: (storageId: string, onInventoryClosed?: () => void) => void;
   closeInventoryTransferMenu: (storageId: string) => void;
-  switchToLevel: (levelId: string, entryConnectorId?: string) => Promise<boolean>;
+  switchToLevel: (
+    levelId: string,
+    entryConnectorId?: string,
+    shouldForceArrivalSequence?: boolean,
+  ) => Promise<boolean>;
   enterBaitShop: () => Promise<void>;
   canCollectIntoInventory: (itemId: string, shouldShowFullMessage?: boolean) => boolean;
   resolveLevelTitle: (levelId: string) => string;
@@ -80,6 +84,7 @@ export interface RoccoGameCompositionRootCallbacks {
   isStanAwake: () => boolean;
   doesPlayerOverlapBaitShopDoor: () => boolean;
   onToiletReuseEventChanged: () => void;
+  onNetherOfficeConfidenceMaxRequested: () => void;
 }
 
 export interface RoccoGameCompositionRootOptions {
@@ -144,15 +149,18 @@ function createRuntimeControllers(
     syncWorldPresentation: callbacks.syncActiveLevelDroppedInventoryPresentation,
     refreshStatus: callbacks.refreshStatus,
   });
-  const inventory = inventoryRuntime.getPlayerInventory();
   const developerRuntime = new RoccoDeveloperRuntimeController({
     localization,
-    inventory,
+    inventory: inventoryRuntime.getPlayerInventory(),
+    getRoccoAppearance: callbacks.getRoccoAppearance,
+    setRoccoAppearance: callbacks.setRoccoAppearance,
     resolveLevelTitle: callbacks.resolveLevelTitle,
-    switchToLevel: (levelId) => callbacks.switchToLevel(levelId),
+    switchToLevel: (levelId, entryConnectorId, shouldForceArrivalSequence) =>
+      callbacks.switchToLevel(levelId, entryConnectorId, shouldForceArrivalSequence),
     canCollectInventoryItem: callbacks.canCollectIntoInventory,
     refreshStatus: callbacks.refreshStatus,
     onToiletReuseEventChanged: callbacks.onToiletReuseEventChanged,
+    onNetherOfficeConfidenceMaxRequested: callbacks.onNetherOfficeConfidenceMaxRequested,
   });
   return {
     droppedInventory,

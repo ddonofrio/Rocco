@@ -78,6 +78,21 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/characters/guysprite/guysprite-assets.ts",
   },
   {
+    "assetPath": "./assets/typing-1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/characters/guysprite/guysprite-assets.ts",
+  },
+  {
+    "assetPath": "./assets/typing-2.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/characters/guysprite/guysprite-assets.ts",
+  },
+  {
+    "assetPath": "./assets/typing-3.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/characters/guysprite/guysprite-assets.ts",
+  },
+  {
     "assetPath": "./assets/console-hardware-spawn-background.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
@@ -108,12 +123,32 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
   },
   {
+    "assetPath": "./assets/ganar-confianza.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/pierde-confianza.mp3",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/printer-front.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
     "assetPath": "./assets/reset-office-1-walkpath.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
   },
   {
     "assetPath": "./assets/reset-office-1.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "./assets/reset-office-2-desk-chair.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
   },
@@ -128,9 +163,19 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
   },
   {
+    "assetPath": "./assets/reset-office-door-open.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
     "assetPath": "./assets/steam_machine.mp3",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
+  },
+  {
+    "assetPath": "cartridges/rocco/music/end-music.mp3",
+    "resolutionKind": "public-base-url",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-final-screen.ts",
   },
   {
     "assetPath": "./assets/camera/1.png",

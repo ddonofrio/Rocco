@@ -22,6 +22,7 @@ export const spanishActionsText: RoccoTextCatalog['actions'] = {
 
 export const spanishDescriptionsText: RoccoTextCatalog['descriptions'] = {
   rocco: 'Rocco',
+  guysprite: 'Guysprite',
   baitBucket: 'Cubeta de cebo',
   baitShopDoor: 'Puerta de la tienda de cebo',
   backRightDoor: 'Puerta del fondo a la derecha',
@@ -81,12 +82,16 @@ export const spanishDeveloperText: RoccoTextCatalog['developer'] = {
   eventScreenTitle: 'Elegir pantalla',
   eventTitle: 'Elegir evento',
   pierLevelLabel: 'Muelle',
+  resetOfficeSecondArrival: 'Oficina del reset 2 (entrada)',
   inventoryTitle: 'Inventario de desarrollador',
   add: 'Añadir',
   remove: 'Quitar',
   on: 'ON',
   off: 'OFF',
+  putLabCoatEvent: 'Poner bata',
+  removeLabCoatEvent: 'Quitar bata',
   allowToiletReuseEvent: 'Permitir usar váter más de una vez',
+  netherOfficeConfidenceMaxEvent: '+100% confianza',
   clickToJumpStatus: 'Modo desarrollador: haz clic en cualquier parte para saltar.',
   clickToCycleSpriteStatus:
     'Modo desarrollador: haz clic en un sprite para cambiar su imagen. Haz clic fuera para salir.',

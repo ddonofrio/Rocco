@@ -28,6 +28,7 @@ export interface RoccoTextCatalog {
   };
   descriptions: {
     rocco: string;
+    guysprite: string;
     baitBucket: string;
     baitShopDoor: string;
     backRightDoor: string;
@@ -131,12 +132,16 @@ export interface RoccoTextCatalog {
     eventScreenTitle: string;
     eventTitle: string;
     pierLevelLabel: string;
+    resetOfficeSecondArrival: string;
     inventoryTitle: string;
     add: string;
     remove: string;
     on: string;
     off: string;
     allowToiletReuseEvent: string;
+    netherOfficeConfidenceMaxEvent: string;
+    putLabCoatEvent: string;
+    removeLabCoatEvent: string;
     clickToJumpStatus: string;
     clickToCycleSpriteStatus: string;
   };
@@ -250,6 +255,28 @@ export interface RoccoTextCatalog {
   };
   nether: {
     arrivalThoughtLine: string;
+    printer: {
+      description: string;
+      readLabel: string;
+      grabLines: string[];
+      kickLines: string[];
+      firstMessageText: string;
+      firstMessageContraryText: string;
+      secondMessageText: string;
+      secondMessageContraryText: string;
+      thirdMessageText: string;
+      thirdMessageContraryText: string;
+      fourthMessageText: string;
+      fourthMessageContraryText: string;
+      messageTexts: string[];
+      messageContraryTexts: string[];
+      replyToGuyspriteLabel: string;
+      readMoreMessagesLabel: string;
+      replyReadMessageLabel: string;
+      replyContraryLabel: string;
+      replyUnreadableLabel: string;
+      replyUnreadableLines: string[];
+    };
     securityCameraBribe: {
       thanksLine: string;
       securityLine: string;
@@ -285,6 +312,58 @@ export interface RoccoTextCatalog {
     };
     timbre: {
       lookLines: string[];
+    };
+    officeArrival: {
+      caughtLine: string;
+      welcomeLine: string;
+      dialogue: {
+        firstChoices: { label: string; reply: string }[];
+        firstGuyspriteLines: string[];
+        secondChoices: { label: string; reply: string }[];
+        secondGuyspriteLines: string[];
+        thirdChoices: { label: string; reply: string }[];
+        finalGuyspriteLines: string[];
+        systemBeepsLine: string;
+        postCoffeeGuyspriteLines: string[];
+        departureReminderLines: string[];
+        guyspriteTalkLine: string;
+        guyspriteLookLines: string[];
+      };
+    };
+    officeReading: {
+      patienceLabel: string;
+      startLine: string;
+      correctLine: string;
+      resetCorrectLine: string;
+      identityCallLine: string;
+      identityChoices: string[];
+      identityFoolGuyspriteLine: string;
+      identityFoolRoccoLine: string;
+      identityFoolFinalLine: string;
+      identityConfessionLines: string[];
+      identityFinalChoices: string[];
+      identitySecurityReplyLines: string[];
+      identityHookReplyLine: string;
+      identitySpriteReplyLine: string;
+      identityEscapeIntroLine: string;
+      identityEscapeChoices: string[];
+      identityPathLines: string[];
+      identityPathClarificationLines: string[][];
+      identityPathChoices: string[];
+      gamePortalLabel: string;
+      consoleCpuPortalLabel: string;
+      chapter2CartridgePrompt: string;
+      chapter3CartridgePrompt: string;
+      cartridgeOkButton: string;
+      missingCartridgeButton: string;
+      secondMessageSecurityLine: string;
+      incorrectLines: string[];
+      nextLine: string;
+      repeatedLine: string;
+      repeatedNextLine: string;
+      firstMessageResetLine: string;
+      firstMessageAlertLines: string[];
+      zeroLines: string[];
     };
     doorHandle: {
       lookLines: string[];

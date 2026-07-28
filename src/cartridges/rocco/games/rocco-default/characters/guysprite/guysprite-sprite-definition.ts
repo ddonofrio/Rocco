@@ -63,7 +63,7 @@ export function createGuyspriteSpriteDefinition(
     ...base,
     visibleDescription: {
       enabled: true,
-      text: localization.text.descriptions.rocco,
+      text: localization.text.descriptions.guysprite,
     },
   };
 }

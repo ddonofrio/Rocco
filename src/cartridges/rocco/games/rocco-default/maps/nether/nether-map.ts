@@ -11,6 +11,7 @@ import {
   ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
   ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
 } from './levels';
+import { NetherOfficePatienceController } from './nether-office-patience';
 
 export const ROCCO_DEFAULT_NETHER_MAP_ID = 'nether';
 
@@ -33,15 +34,16 @@ export function createRoccoDefaultNetherMap(
   options: RoccoDefaultNetherMapOptions,
 ): RpceMapDefinition<RoccoLevel> {
   const structure = createRoccoDefaultNetherMapStructure();
+  const officePatience = new NetherOfficePatienceController(options.localization);
   const factories: Record<string, () => RoccoLevel> = {
     [ROCCO_NETHER_CONSOLE_HARDWARE_SPAWN_LEVEL_ID]: () =>
       new RoccoNetherConsoleHardwareSpawnLevel(options.localization),
     [ROCCO_NETHER_END_OF_HALLWAY_DOOR_LEVEL_ID]: () =>
       new RoccoNetherEndOfHallwayDoorLevel(options.localization),
     [ROCCO_NETHER_RESET_OFFICE_LEVEL_ID]: () =>
-      new RoccoNetherResetOfficeLevel(options.localization),
+      new RoccoNetherResetOfficeLevel(options.localization, officePatience),
     [ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID]: () =>
-      new RoccoNetherResetOfficeSecondLevel(options.localization),
+      new RoccoNetherResetOfficeSecondLevel(options.localization, officePatience),
   };
 
   return {

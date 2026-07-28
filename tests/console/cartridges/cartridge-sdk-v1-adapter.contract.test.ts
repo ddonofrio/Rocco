@@ -458,6 +458,7 @@ describe('Cartridge SDK v1 adapter — exact root runtime surface (fully negotia
       'isDeveloperModeEnabled',
       'getConsoleFlags',
       'setConsoleFlags',
+      'requestReset',
       'beginCompositionSession',
     ].toSorted((a, b) => a.localeCompare(b));
 

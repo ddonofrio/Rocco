@@ -32,6 +32,8 @@ import { RoccoLevelRegistry } from './runtime/rocco-level-registry';
 import { RoccoInventoryRuntimeController } from './runtime/rocco-inventory-runtime-controller';
 import { RoccoDroppedInventoryController } from './runtime/rocco-dropped-inventory-controller';
 import { isRoccoToiletLevelCapability } from './runtime/rocco-level-capabilities';
+import { isRoccoNetherOfficeArrivalCapability } from './runtime/rocco-level-capabilities';
+import { isRoccoNetherOfficeConfidenceCapability } from './runtime/rocco-level-capabilities';
 import { RoccoSceneActionRouter } from './runtime/rocco-scene-action-router';
 import { RoccoAssetPreloader } from './rocco-asset-preloader';
 import { RoccoDeveloperRuntimeController } from './runtime/rocco-developer-runtime-controller';
@@ -46,6 +48,7 @@ import { RoccoRuntimeLifecycleCoordinator } from './runtime/rocco-runtime-lifecy
 import { RoccoGameInteractionCoordinator } from './runtime/rocco-game-interaction-coordinator';
 import { RoccoWorldState } from './runtime/rocco-world-state';
 import type { RpceCompiledGame } from '../rpce/core';
+import { ROCCO_NETHER_RESET_OFFICE_LEVEL_ID } from '../games/rocco-default/maps/nether';
 
 export interface RoccoLevelManagerMountResult {
   level: RoccoLevel;
@@ -124,7 +127,8 @@ export class RoccoLevelManager {
         openInventoryTransferMenu: (storageId, onInventoryClosed) =>
           this.openInventoryTransferMenu(storageId, onInventoryClosed),
         closeInventoryTransferMenu: (storageId) => this.closeInventoryTransferMenu(storageId),
-        switchToLevel: (levelId, entryConnectorId) => this.switchToLevel(levelId, entryConnectorId),
+        switchToLevel: (levelId, entryConnectorId, shouldForceArrivalSequence) =>
+          this.switchToLevel(levelId, entryConnectorId, shouldForceArrivalSequence),
         enterBaitShop: () => this.enterBaitShop(),
         canCollectIntoInventory: (itemId, shouldShowFullMessage) =>
           this.canCollectIntoInventory(itemId, shouldShowFullMessage),
@@ -141,6 +145,11 @@ export class RoccoLevelManager {
         onToiletReuseEventChanged: () => {
           if (this.activeLevel && isRoccoToiletLevelCapability(this.activeLevel)) {
             this.activeLevel.refreshDeveloperEventPresentation();
+          }
+        },
+        onNetherOfficeConfidenceMaxRequested: () => {
+          if (this.activeLevel && isRoccoNetherOfficeConfidenceCapability(this.activeLevel)) {
+            this.activeLevel.setNetherOfficeConfidenceToMaximum();
           }
         },
       },
@@ -186,6 +195,14 @@ export class RoccoLevelManager {
       onKeysCollected: () => this.handleKeysCollected(),
       onConnectorTransitionRequested: (connectorId) =>
         this.requestScriptedConnectorTransition(connectorId),
+      onNetherOfficeBellPressed: () => {
+        this.transitionTask = this.handleNetherOfficeBellPressed();
+      },
+      onRoccoInventoryResetRequested: () => {
+        this.roccoAppearance = DEFAULT_ROCCO_PLAYER_APPEARANCE;
+        this.inventoryRuntime.getPlayerInventory().clear();
+        this.refreshStatus();
+      },
       onRestartRequested: (request) => this.handleRestartRequested(request),
       onPickupRequested: (item) => this.canCollectIntoInventory(item.id),
       onPickupCollected: (item) => this.handlePickupCollected(item),
@@ -316,8 +333,35 @@ export class RoccoLevelManager {
     this.worldState.setSceneId(sceneId);
   }
 
-  private async switchToLevel(levelId: string, entryConnectorId?: string): Promise<boolean> {
-    return this.transitionPlanFactory.switchToLevel(levelId, entryConnectorId);
+  private async switchToLevel(
+    levelId: string,
+    entryConnectorId?: string,
+    shouldForceArrivalSequence?: boolean,
+  ): Promise<boolean> {
+    return this.transitionPlanFactory.switchToLevel(
+      levelId,
+      entryConnectorId,
+      shouldForceArrivalSequence,
+    );
+  }
+
+  private handleNetherOfficeBellPressed(): Promise<void> {
+    return (async () => {
+      try {
+        const isSwitched = await this.switchToLevel(ROCCO_NETHER_RESET_OFFICE_LEVEL_ID);
+        if (
+          !isSwitched ||
+          !this.activeLevel ||
+          !isRoccoNetherOfficeArrivalCapability(this.activeLevel)
+        ) {
+          return;
+        }
+
+        this.activeLevel.beginNetherOfficeBellArrival();
+      } finally {
+        this.transitionTask = null;
+      }
+    })();
   }
 
   private async transitionThrough(transition: RoccoResolvedLevelTransition): Promise<void> {

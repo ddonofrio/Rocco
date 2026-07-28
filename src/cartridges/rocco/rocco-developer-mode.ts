@@ -4,6 +4,7 @@ import { createRoccoDialogueChoiceMenu } from './rpce/dialogue';
 import type { RoccoLocalization } from './localization';
 import {
   createRoccoCoralRelicInventoryItem,
+  createRoccoBataInventoryItem,
   createRoccoKeysInventoryItem,
   createRoccoMagazineInventoryItem,
   createRoccoMysteriousKeyInventoryItem,
@@ -11,6 +12,7 @@ import {
   type RoccoInventory,
   type RoccoInventoryItem,
   ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
+  ROCCO_INVENTORY_BATA_ITEM_ID,
   ROCCO_INVENTORY_KEYS_ITEM_ID,
   ROCCO_INVENTORY_MAGAZINE_ITEM_ID,
   ROCCO_INVENTORY_MYSTERIOUS_KEY_ITEM_ID,
@@ -18,6 +20,7 @@ import {
 } from './inventory';
 
 export const ROCCO_PLAYER_DEVELOPER_ACTION_ID = 'open-developer-mode';
+const ROCCO_DEVELOPER_MODE_NEXT_GAME_START_KEY = 'rocco.developer-mode-next-game-start';
 export const ROCCO_DEVELOPER_ROOT_MENU_ID = 'rocco-developer-mode-menu';
 export const ROCCO_DEVELOPER_LEVEL_MENU_ID = 'rocco-developer-level-menu';
 export const ROCCO_DEVELOPER_SCREEN_MENU_ID = 'rocco-developer-screen-menu';
@@ -32,6 +35,30 @@ export const ROCCO_DEVELOPER_CYCLE_SPRITE_CHOICE_ID = 'cycle-sprite';
 const ROCCO_DEVELOPER_MAGAZINE_CHOICE_ID = 'developer-magazine';
 const ROCCO_DEVELOPER_MICROMANIA_CHOICE_ID = 'developer-micromania';
 
+export function requestRoccoDeveloperModeOnNextGameStart(): void {
+  try {
+    globalThis.localStorage?.setItem(ROCCO_DEVELOPER_MODE_NEXT_GAME_START_KEY, 'true');
+  } catch {
+    return;
+  }
+}
+
+export function requestRoccoDeveloperModeAndRestart(restart: (() => void) | undefined): void {
+  requestRoccoDeveloperModeOnNextGameStart();
+  restart?.();
+}
+
+export function hasRoccoDeveloperModeOnGameStartRequest(): boolean {
+  try {
+    const isEnabled =
+      globalThis.localStorage?.getItem(ROCCO_DEVELOPER_MODE_NEXT_GAME_START_KEY) === 'true';
+    globalThis.localStorage?.removeItem(ROCCO_DEVELOPER_MODE_NEXT_GAME_START_KEY);
+    return isEnabled;
+  } catch {
+    return false;
+  }
+}
+
 export function isRoccoDeveloperModeEnabled(
   engine: Pick<CartridgeSdkV1Runtime, 'isDeveloperModeEnabled'> | null | undefined,
 ): boolean {
@@ -43,6 +70,7 @@ export interface RoccoDeveloperScreenOption {
   title: string;
   targetLevelId: string;
   requiresPlacementClick?: boolean;
+  forceArrivalSequence?: boolean;
 }
 
 export interface RoccoDeveloperLevelOption {
@@ -55,6 +83,7 @@ export interface RoccoDeveloperEventOption {
   id: string;
   text: string;
   enabled: boolean;
+  showState?: boolean;
 }
 
 export interface RoccoDeveloperEventScreenOption {
@@ -179,10 +208,15 @@ export function createRoccoDeveloperEventMenuDefinition(
   return createRoccoDialogueChoiceMenu({
     id: ROCCO_DEVELOPER_EVENT_MENU_ID,
     title: localization.text.developer.eventTitle,
-    choices: events.map((event) => ({
-      id: event.id,
-      text: `${event.text}: ${event.enabled ? localization.text.developer.on : localization.text.developer.off}`,
-    })),
+    choices: events.map((event) => {
+      const stateLabel = event.enabled
+        ? localization.text.developer.on
+        : localization.text.developer.off;
+      return {
+        id: event.id,
+        text: event.showState === false ? event.text : `${event.text}: ${stateLabel}`,
+      };
+    }),
   }).gridMenu;
 }
 
@@ -193,6 +227,9 @@ export function createRoccoDeveloperInventoryItem(
   switch (itemId) {
     case ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID: {
       return createRoccoCoralRelicInventoryItem(localization);
+    }
+    case ROCCO_INVENTORY_BATA_ITEM_ID: {
+      return createRoccoBataInventoryItem(localization);
     }
     case ROCCO_INVENTORY_KEYS_ITEM_ID: {
       return createRoccoKeysInventoryItem(localization);
@@ -224,6 +261,11 @@ function createRoccoDeveloperInventoryOptions(
     undefined;
 
   return [
+    {
+      itemId: ROCCO_INVENTORY_BATA_ITEM_ID,
+      itemLabel: createRoccoBataInventoryItem(localization).label,
+      present: inventory.hasItem(ROCCO_INVENTORY_BATA_ITEM_ID),
+    },
     {
       itemId: ROCCO_INVENTORY_CORAL_RELIC_ITEM_ID,
       itemLabel: createRoccoCoralRelicInventoryItem(localization).label,

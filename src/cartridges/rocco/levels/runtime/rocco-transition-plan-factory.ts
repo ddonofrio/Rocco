@@ -122,12 +122,16 @@ export class RoccoTransitionPlanFactory {
     this.options.updateStatus(restoredScene);
   }
 
-  async switchToLevel(levelId: string, entryConnectorId?: string): Promise<boolean> {
+  async switchToLevel(
+    levelId: string,
+    entryConnectorId?: string,
+    shouldForceArrivalSequence?: boolean,
+  ): Promise<boolean> {
     const activeLevel = this.options.getActiveLevel();
     if (!this.options.getEngine() || !activeLevel) {
       return false;
     }
-    if (activeLevel.id === levelId) {
+    if (activeLevel.id === levelId && !shouldForceArrivalSequence) {
       return true;
     }
     const preparation = this.options.worldState.prepareLevelTransition(levelId);
@@ -136,7 +140,10 @@ export class RoccoTransitionPlanFactory {
         id: `switch-to-${levelId}`,
         targetLevelId: levelId,
         preparation,
-        createMountState: () => ({ entryConnectorId }),
+        createMountState: () => ({
+          entryConnectorId,
+          forceArrivalSequence: shouldForceArrivalSequence,
+        }),
         shouldSetCooldown: false,
         shopExitConnectorId: entryConnectorId === 'shop-exit' ? 'shop-exit' : undefined,
       }),

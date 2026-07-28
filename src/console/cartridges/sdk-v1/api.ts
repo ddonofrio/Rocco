@@ -244,6 +244,8 @@ export interface CartridgeSdkV1 {
    * stable SDK v1 surface. See capability `composition.v1`.
    */
   beginCompositionSession?: (ownerId: string, options?: { message?: string }) => CompositionSession;
+  /** Requests a full console restart that returns to the boot cartridge menu. */
+  requestReset?: () => void;
 }
 
 /**
@@ -275,5 +277,6 @@ export type CartridgeSdkV1Runtime = Omit<CartridgeSdkV1, 'video'> & {
       | 'getConsoleFlags'
       | 'setConsoleFlags'
       | 'beginCompositionSession'
+      | 'requestReset'
     >
   >;

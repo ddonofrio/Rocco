@@ -94,6 +94,10 @@ function drawSpeechTail(
   targetLocalX: number,
   targetLocalY: number,
 ): void {
+  if (message.style?.showSpeechTail === false) {
+    return;
+  }
+
   if (message.mode === 'think') {
     if (message.style?.showThoughtTrail === false) {
       return;

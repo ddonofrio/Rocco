@@ -19,6 +19,7 @@ import type {
 import { RpceAssetPreloader, RpceGameRuntime } from './rpce/core';
 import type { RpceAssetPreloaderProgress } from './rpce/core/rpce-asset-preloader';
 import { roccoDefaultCartridgeManifest } from './rocco-default-manifest';
+import { hasRoccoDeveloperModeOnGameStartRequest } from './rocco-developer-mode';
 
 type RoccoCartridgeSdk = CartridgeSdkV1Runtime;
 
@@ -58,6 +59,9 @@ export class RoccoDefaultCartridge implements RoccoCartridge {
 
   async mount(context: CartridgeContextV1): Promise<void> {
     const sdk = context.sdk as RoccoCartridgeSdk;
+    if (hasRoccoDeveloperModeOnGameStartRequest()) {
+      sdk.setConsoleFlags?.({ developerModeEnabled: true });
+    }
     this.mountContext = { ...context };
     this.cancelActiveActions?.('cartridge-remount:rocco-default');
     this.gameRuntime?.unmount();

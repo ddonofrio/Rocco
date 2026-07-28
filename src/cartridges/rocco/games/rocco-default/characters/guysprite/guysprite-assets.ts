@@ -18,3 +18,9 @@ export const guyspriteStandingAssetUrls = {
   right: new URL('assets/stand-right.png', import.meta.url).href,
   'down-right': new URL('assets/stand-down-right.png', import.meta.url).href,
 } as const;
+
+export const guyspriteTypingAssetUrls = [
+  new URL('assets/typing-1.png', import.meta.url).href,
+  new URL('assets/typing-2.png', import.meta.url).href,
+  new URL('assets/typing-3.png', import.meta.url).href,
+] as const;

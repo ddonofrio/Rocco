@@ -41,6 +41,16 @@ export interface RoccoGridMenuLineDecoration {
   width?: number;
 }
 
+export interface RoccoGridMenuRectDecoration {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fill?: string;
+  fillAlpha?: number;
+}
+
 export type RoccoGridMenuLayout = 'grid' | 'text-list';
 
 export interface RoccoGridMenuDefinition {
@@ -66,10 +76,12 @@ export interface RoccoGridMenuDefinition {
   columnOffsets?: number[];
   textDecorations?: RoccoGridMenuTextDecoration[];
   lineDecorations?: RoccoGridMenuLineDecoration[];
+  rectDecorations?: RoccoGridMenuRectDecoration[];
   renderLayer?: string;
   zIndex?: number;
   closeOnActivate?: boolean;
   closeOnEmptyClick?: boolean;
+  closeOnPointerLeave?: boolean;
   reorderable?: boolean;
   backdropFill?: string;
   backdropAlpha?: number;

@@ -30,7 +30,7 @@ import {
   type RoccoPlayerSpriteController,
 } from '../../player';
 import { RoccoScriptedSceneInteractionController } from '../../../../scripted-scene-interaction-controller';
-import { ROCCO_LAB_COAT_PLAYER_APPEARANCE, type RoccoPlayerAppearance } from '../../player';
+import type { RoccoPlayerAppearance } from '../../player';
 import {
   findRoccoLevelConnector,
   type RoccoLevel,
@@ -1570,11 +1570,6 @@ class RoccoNetherConsoleHardwareSpawnController
       this.arrivalSequence ||
       this.securityDefeatSequence
     ) {
-      return;
-    }
-
-    if (this.options.roccoAppearance === ROCCO_LAB_COAT_PLAYER_APPEARANCE) {
-      this.leftSideExposureElapsedMs = 0;
       return;
     }
 

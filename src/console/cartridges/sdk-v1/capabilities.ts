@@ -18,6 +18,7 @@ export type CartridgeCapability =
   | 'input.v1'
   | 'storage.v1'
   | 'composition.v1'
+  | 'console.reset.v1'
   | 'logger.v1'
   | 'scope.v1';
 
@@ -32,6 +33,7 @@ export const CONSOLE_SUPPORTED_CAPABILITIES: readonly CartridgeCapability[] = [
   'input.v1',
   'storage.v1',
   'composition.v1',
+  'console.reset.v1',
   'logger.v1',
   'scope.v1',
 ];

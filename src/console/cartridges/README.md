@@ -24,6 +24,10 @@ Actual cartridge implementations live in `src/cartridges`.
 
 ## Lifecycle invariant
 
+The `console.reset.v1` capability exposes `requestReset()` for cartridge events that require a full
+host restart. The host owns the restart boundary; the cartridge does not control cartridge
+selection or lifecycle teardown directly.
+
 `RoccoCartridgeManager` validates the manifest `runtime` block with `assertCartridgeSdkCompatibility` before mounting and rejects a missing `runtime` block, incompatible SDK ranges, or unknown capabilities. Validation lives in `sdk-v1/`.
 
 ## Extension rule

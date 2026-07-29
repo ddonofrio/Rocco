@@ -3,7 +3,7 @@ import type { RoccoPlaneScene } from '../../../../console/video/planes';
 import { PIER_LEVEL_TRANSITION_COOLDOWN_MS } from '../../games/rocco-default/maps/pier/pier-layout';
 import { ROCCO_PIER_START_LEVEL_ID } from '../../games/rocco-default/maps/pier/pier-level-ids';
 import { ROCCO_BAIT_SHOP_LEVEL_ID } from '../../games/rocco-default/maps/shop';
-import type { RoccoLevel } from '../rocco-level-types';
+import type { RoccoLevel, RoccoLevelMountOptions } from '../rocco-level-types';
 import { RoccoDeveloperRuntimeController } from './rocco-developer-runtime-controller';
 import { RoccoLevelRegistry } from './rocco-level-registry';
 import {
@@ -11,7 +11,11 @@ import {
   type RoccoResolvedLevelTransition,
 } from './rocco-level-transition-controller';
 import { RoccoLevelTransitionService } from './rocco-level-transition-service';
-import { RoccoWorldState, type RoccoLevelTransitionPreparation } from './rocco-world-state';
+import {
+  RoccoWorldState,
+  type RoccoLevelManagerMountStateSnapshot,
+  type RoccoLevelTransitionPreparation,
+} from './rocco-world-state';
 
 export interface RoccoTransitionPlanFactoryOptions {
   getEngine: () => CartridgeSdkV1Runtime | null;
@@ -33,6 +37,7 @@ interface TransitionPlanOptions {
   createMountState: () => Parameters<RoccoWorldState['createMountStateSnapshot']>[0];
   shouldSetCooldown: boolean;
   shopExitConnectorId?: string;
+  extraMountOptions?: Partial<RoccoLevelMountOptions>;
 }
 
 export class RoccoTransitionPlanFactory {
@@ -58,7 +63,10 @@ export class RoccoTransitionPlanFactory {
     );
     return {
       targetLevel,
-      mountOptions: this.options.worldState.buildRuntimeMountOptions(targetMountState),
+      mountOptions: {
+        ...this.options.worldState.buildRuntimeMountOptions(targetMountState),
+        ...options.extraMountOptions,
+      },
       commit: (engine: CartridgeSdkV1Runtime) => {
         this.options.developerRuntime.clearTransientState(engine);
         this.options.transitions.clearPendingExitIntent();
@@ -126,6 +134,7 @@ export class RoccoTransitionPlanFactory {
     levelId: string,
     entryConnectorId?: string,
     shouldForceArrivalSequence?: boolean,
+    extraMountOptions?: Partial<RoccoLevelMountOptions>,
   ): Promise<boolean> {
     const activeLevel = this.options.getActiveLevel();
     if (!this.options.getEngine() || !activeLevel) {
@@ -146,6 +155,25 @@ export class RoccoTransitionPlanFactory {
         }),
         shouldSetCooldown: false,
         shopExitConnectorId: entryConnectorId === 'shop-exit' ? 'shop-exit' : undefined,
+        extraMountOptions,
+      }),
+    );
+  }
+
+  async returnToLevel(
+    levelId: string,
+    mountState: RoccoLevelManagerMountStateSnapshot | null,
+  ): Promise<boolean> {
+    const activeLevel = this.options.getActiveLevel();
+    if (!this.options.getEngine() || !activeLevel) return false;
+    const preparation = this.options.worldState.prepareLevelTransition(levelId, false);
+    return this.options.levelTransitionService.run(
+      this.createPlan({
+        id: `return-to-${levelId}`,
+        targetLevelId: levelId,
+        preparation,
+        createMountState: () => mountState ?? {},
+        shouldSetCooldown: false,
       }),
     );
   }

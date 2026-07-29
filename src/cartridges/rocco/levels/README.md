@@ -42,8 +42,9 @@ Two screen patterns are supported:
 - Shared panorama: several connected screens share one painted background, chosen by changing plane scroll and aligning the walk map origin to the scroll.
 - Dedicated full-screen: a room has its own background and walk map drawn into one canvas at mount.
 
-New screens follow the pattern used by their map. The map folder owns
-map-specific creation guidance.
+New screens follow the pattern used by their map. The final credits screen is a dedicated
+full-screen level with no player, walk map, or connectors; its runtime entry and continuation are
+owned by the cartridge level runtime.
 
 ## Connectors and walk maps
 

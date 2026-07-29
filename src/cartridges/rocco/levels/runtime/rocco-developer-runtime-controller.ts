@@ -58,7 +58,7 @@ import {
   ROCCO_NETHER_RESET_OFFICE_LEVEL_ID,
   ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID,
 } from '../../games/rocco-default/maps/nether';
-import { showNetherOfficeFinalScreen } from '../../games/rocco-default/maps/nether/nether-office-final-screen';
+import type { RoccoFinalScreenInvocation } from './rocco-final-screen-session';
 
 interface RoccoDeveloperEventState {
   allowToiletReuseDuringUrgency: boolean;
@@ -95,6 +95,7 @@ export interface RoccoDeveloperRuntimeControllerOptions {
     entryConnectorId?: string,
     shouldForceArrivalSequence?: boolean,
   ) => Promise<boolean>;
+  requestFinalScreen?: (invocation: RoccoFinalScreenInvocation) => void;
   canCollectInventoryItem: (itemId: string, isShowFullMessage?: boolean) => boolean;
   refreshStatus: () => void;
   onToiletReuseEventChanged?: () => void;
@@ -168,8 +169,7 @@ export class RoccoDeveloperRuntimeController {
     }
 
     if (itemId === ROCCO_DEVELOPER_FINAL_SCREEN_CHOICE_ID) {
-      this.clearTransientState(engine);
-      showNetherOfficeFinalScreen(engine, this.localization);
+      this.options.requestFinalScreen?.({ kind: 'developer-preview' });
       return;
     }
 
@@ -879,6 +879,10 @@ export class RoccoDeveloperRuntimeController {
     return (
       this.isDeveloperModeEnabled(engine) && this.isDeveloperGridMenuId(activation.definitionId)
     );
+  }
+
+  reopenDeveloperRootMenu(engine: CartridgeSdkV1Runtime): void {
+    this.openDeveloperRootMenu(engine);
   }
 
   canHandleSceneClick(engine: CartridgeSdkV1Runtime, _activation?: RoccoSceneClickAction): boolean {

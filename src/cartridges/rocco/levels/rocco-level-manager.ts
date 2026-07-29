@@ -49,6 +49,17 @@ import { RoccoGameInteractionCoordinator } from './runtime/rocco-game-interactio
 import { RoccoWorldState } from './runtime/rocco-world-state';
 import type { RpceCompiledGame } from '../rpce/core';
 import { ROCCO_NETHER_RESET_OFFICE_LEVEL_ID } from '../games/rocco-default/maps/nether';
+import { ROCCO_FINAL_SCREEN_LEVEL_ID } from '../games/rocco-default/maps/final';
+import { playRoccoGameMusic } from '../games/rocco-default/audio';
+import {
+  RoccoFinalScreenSession,
+  type RoccoFinalScreenInvocation,
+} from './runtime/rocco-final-screen-session';
+import { requestRoccoDeveloperModeAndRestart } from '../rocco-developer-mode';
+import type {
+  RoccoLevelManagerPlayerSnapshot,
+  RoccoLevelTransitionPreparation,
+} from './runtime/rocco-world-state';
 
 export interface RoccoLevelManagerMountResult {
   level: RoccoLevel;
@@ -94,6 +105,7 @@ export class RoccoLevelManager {
   private readonly localization: RoccoLocalization;
   private roccoAppearance: RoccoPlayerAppearance = DEFAULT_ROCCO_PLAYER_APPEARANCE;
   private transitionTask: Promise<void> | null = null;
+  private readonly finalScreenSession = new RoccoFinalScreenSession();
 
   constructor(options: RoccoLevelManagerOptions = {}) {
     this.options = {
@@ -113,6 +125,8 @@ export class RoccoLevelManager {
         },
         cancelActiveActions: (reason) => this.options.cancelActiveActions?.(reason),
         createMountOptions: () => this.createLevelMountOptions(),
+        requestFinalScreen: (invocation) => this.requestFinalScreen(invocation),
+        finalScreenSession: this.finalScreenSession,
         resolvePlayerGroundPoint: () => this.resolvePlayerGroundPoint(),
         resolvePlayerBaseScale: () => this.resolvePlayerBaseScale(),
         resolveDroppedInventoryGroundPoint: () => this.resolveDroppedInventoryGroundPoint(),
@@ -204,6 +218,7 @@ export class RoccoLevelManager {
         this.refreshStatus();
       },
       onRestartRequested: (request) => this.handleRestartRequested(request),
+      onFinalScreenRequested: (invocation) => this.requestFinalScreen(invocation),
       onPickupRequested: (item) => this.canCollectIntoInventory(item.id),
       onPickupCollected: (item) => this.handlePickupCollected(item),
     });
@@ -345,6 +360,91 @@ export class RoccoLevelManager {
     );
   }
 
+  private requestFinalScreen(invocation: RoccoFinalScreenInvocation): void {
+    const engine = this.engine;
+    const sourceLevel = this.activeLevel;
+    if (
+      !engine ||
+      !sourceLevel ||
+      this.finalScreenSession.isActive ||
+      this.levelTransitionService.isTransitioning
+    ) {
+      return;
+    }
+
+    const preparation = this.worldState.prepareLevelTransition(ROCCO_FINAL_SCREEN_LEVEL_ID);
+    const context = {
+      sourceLevelId: sourceLevel.id,
+      preparation,
+      playerSnapshot: preparation.playerSnapshot,
+      reopenDeveloperMenu: invocation.kind === 'developer-preview',
+    };
+    const session = this.finalScreenSession.begin(invocation, () =>
+      this.completeFinalScreen(invocation, context),
+    );
+    if (!session) return;
+
+    engine.video.actionMenus.closeMenu();
+    engine.video.gridMenus.closeMenu();
+    this.transitionTask = this.launchFinalScreen(session.id, session.invocation);
+  }
+
+  private async launchFinalScreen(
+    sessionId: string,
+    invocation: RoccoFinalScreenInvocation,
+  ): Promise<void> {
+    const isSwitched = await this.transitionPlanFactory.switchToLevel(
+      ROCCO_FINAL_SCREEN_LEVEL_ID,
+      undefined,
+      false,
+      { finalScreenSessionId: sessionId, finalScreenInvocation: invocation },
+    );
+    if (!isSwitched) {
+      this.finalScreenSession.cancel(sessionId);
+    }
+  }
+
+  private completeFinalScreen(
+    invocation: RoccoFinalScreenInvocation,
+    context: {
+      sourceLevelId: string;
+      preparation: RoccoLevelTransitionPreparation;
+      playerSnapshot: RoccoLevelManagerPlayerSnapshot | null;
+      reopenDeveloperMenu: boolean;
+    },
+  ): void {
+    if (invocation.kind === 'game-superpowers') {
+      requestRoccoDeveloperModeAndRestart(this.options.onRestartRequested);
+      return;
+    }
+    this.transitionTask = this.returnFromFinalScreen(context);
+  }
+
+  private async returnFromFinalScreen(context: {
+    sourceLevelId: string;
+    preparation: RoccoLevelTransitionPreparation;
+    playerSnapshot: RoccoLevelManagerPlayerSnapshot | null;
+    reopenDeveloperMenu: boolean;
+  }): Promise<void> {
+    const isReturned = await this.transitionPlanFactory.returnToLevel(
+      context.sourceLevelId,
+      context.preparation.mountStateSnapshot,
+    );
+    const engine = this.engine;
+    if (!isReturned || !engine) {
+      return;
+    }
+    this.worldState.restoreTransitionSnapshot(context.preparation.rollbackSnapshot, engine);
+    this.worldState.restorePlayerSnapshot(engine, context.playerSnapshot);
+    this.refreshStatus();
+    try {
+      await playRoccoGameMusic(engine);
+    } catch {
+      engine.log('System', 'Background music could not resume after the final screen.');
+    }
+    if (context.reopenDeveloperMenu) this.developerRuntime.reopenDeveloperRootMenu(engine);
+  }
+
   private handleNetherOfficeBellPressed(): Promise<void> {
     return (async () => {
       try {
@@ -474,6 +574,7 @@ export class RoccoLevelManager {
   }
 
   unmount(): void {
+    this.finalScreenSession.cancel();
     this.lifecycleCoordinator.unmount();
   }
 

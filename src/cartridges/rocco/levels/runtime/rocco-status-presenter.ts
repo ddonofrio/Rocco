@@ -12,6 +12,7 @@ import type {
   RoccoLevelRestartRequest,
 } from '../rocco-level-types';
 import { RoccoDeveloperRuntimeController } from './rocco-developer-runtime-controller';
+import type { RoccoFinalScreenInvocation } from './rocco-final-screen-session';
 
 export interface RoccoStatusPresenterOptions {
   localization: RoccoLocalization;
@@ -28,6 +29,7 @@ export interface RoccoStatusPresenterOptions {
   onNetherOfficeBellPressed: () => void;
   onRoccoInventoryResetRequested: () => void;
   onRestartRequested: (request?: RoccoLevelRestartRequest) => void;
+  onFinalScreenRequested: (invocation: RoccoFinalScreenInvocation) => void;
   onPickupRequested: (item: RoccoInventoryItem) => boolean;
   onPickupCollected: (item: RoccoInventoryItem) => void;
 }
@@ -73,6 +75,7 @@ export class RoccoStatusPresenter {
       onNetherOfficeBellPressed: this.options.onNetherOfficeBellPressed,
       onRoccoInventoryResetRequested: this.options.onRoccoInventoryResetRequested,
       onRestartRequested: this.options.onRestartRequested,
+      onFinalScreenRequested: this.options.onFinalScreenRequested,
       onPickupRequested: (item) => this.options.canCollectIntoInventory(item.id),
       onPickupCollected: this.options.onPickupCollected,
     };

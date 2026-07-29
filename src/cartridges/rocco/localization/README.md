@@ -31,16 +31,17 @@ This directory contains the canonical Rocco localization catalogs and locale-res
 
 Each locale has its own directory. The directory `index.ts` assembles a complete `RoccoTextCatalog` from smaller domain files.
 
-| Path                                   | Contents                                                                                    |
-| -------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `en/`                                  | English source catalog                                                                      |
-| `es/`                                  | Spanish catalog                                                                             |
-| `en/system.ts`, `es/system.ts`         | Manifest metadata, action labels, visible descriptions, level labels, and developer UI text |
-| `en/inventory.ts`, `es/inventory.ts`   | Inventory labels, crafted-item labels, and item-use responses                               |
-| `en/pier.ts`, `es/pier.ts`             | Pier object, feeding, keys, and Pier Middle lines                                           |
-| `en/characters.ts`, `es/characters.ts` | Rocco, Pelikan, and Stan action-menu lines                                                  |
-| `en/bait-shop.ts`, `es/bait-shop.ts`   | Bait shop interior text                                                                     |
-| `en/stan/`, `es/stan/`                 | Stan branching dialogue, split by top-level dialogue route                                  |
+| Path                                       | Contents                                                                                    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `en/`                                      | English source catalog                                                                      |
+| `es/`                                      | Spanish catalog                                                                             |
+| `en/system.ts`, `es/system.ts`             | Manifest metadata, action labels, visible descriptions, level labels, and developer UI text |
+| `en/inventory.ts`, `es/inventory.ts`       | Inventory labels, crafted-item labels, and item-use responses                               |
+| `en/pier.ts`, `es/pier.ts`                 | Pier object, feeding, keys, and Pier Middle lines                                           |
+| `en/characters.ts`, `es/characters.ts`     | Rocco, Pelikan, and Stan action-menu lines                                                  |
+| `en/bait-shop.ts`, `es/bait-shop.ts`       | Bait shop interior text                                                                     |
+| `en/stan/`, `es/stan/`                     | Stan branching dialogue, split by top-level dialogue route                                  |
+| `en/final-screen.ts`, `es/final-screen.ts` | Final dedication and ordered credit catalogs                                                |
 
 ## Coverage
 
@@ -57,7 +58,8 @@ Catalogs cover:
 - Stan dialogue;
 - Pier interactions;
 - bait-shop interactions and toilet sequences;
-- Nether interactions, intercom dialogue, and final-screen credits;
+- Nether interactions and intercom dialogue;
+- final-screen dedication and credits;
 - defeat and restart text.
 
 ## Dialogue ownership

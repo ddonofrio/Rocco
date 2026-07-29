@@ -11,9 +11,14 @@ import {
   type RoccoDefaultShopMapOptions,
   ROCCO_BAIT_SHOP_TOILET_LEVEL_ID,
 } from './maps/shop';
+import { createRoccoDefaultFinalMap, type RoccoDefaultFinalMapOptions } from './maps/final';
 
 export interface RoccoDefaultGameMapsOptions
-  extends RoccoDefaultPierMapOptions, RoccoDefaultShopMapOptions, RoccoDefaultNetherMapOptions {}
+  extends
+    RoccoDefaultPierMapOptions,
+    RoccoDefaultShopMapOptions,
+    RoccoDefaultNetherMapOptions,
+    RoccoDefaultFinalMapOptions {}
 
 const ROCCO_BAIT_SHOP_TOILET_PORTAL_CONNECTOR_ID = 'portal';
 const ROCCO_NETHER_ENTRY_CONNECTOR_ID = 'entry';
@@ -43,5 +48,6 @@ export function createRoccoDefaultGameMaps(
     createRoccoDefaultPierMap(options),
     createRoccoDefaultShopMap(options),
     createRoccoDefaultNetherMap(options),
+    createRoccoDefaultFinalMap(options),
   ];
 }

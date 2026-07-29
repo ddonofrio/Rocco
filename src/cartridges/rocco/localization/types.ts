@@ -365,9 +365,6 @@ export interface RoccoTextCatalog {
       identityPathChoices: string[];
       gamePortalLabel: string;
       consoleCpuPortalLabel: string;
-      finalDedicationLine: string;
-      finalDedicationName: string;
-      finalCredits: RoccoFinalCreditEntry[];
       chapter2CartridgePrompt: string;
       chapter3CartridgePrompt: string;
       cartridgeOkButton: string;
@@ -391,6 +388,11 @@ export interface RoccoTextCatalog {
       lookLines: string[];
       grabLines: string[];
     };
+  };
+  finalScreen: {
+    dedicationLine: string;
+    dedicationName: string;
+    credits: RoccoFinalCreditEntry[];
   };
 }
 

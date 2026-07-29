@@ -19,9 +19,12 @@ This directory contains the cartridge-runtime coordination layer used by `RoccoL
 ## Coordination invariants
 
 - The composition root creates object relationships but does not replace `RoccoLevelManager` as the owner of the active runtime.
+- `rocco-final-screen-session.ts` owns one active final-screen invocation at a time and carries its
+  transient completion continuation without storing callbacks in scene or world snapshots.
 - The scene-action router assembles interaction context and delegates actions to the interaction registry; feature behavior belongs to the registry and the active map implementations, not the router.
 - The inventory runtime controller owns storage mechanics and delegates special carried-item target behavior through the interaction router.
 - Transitions separate concerns: the transition controller resolves connector intent and cooldown, the plan factory prepares plans, the transition service executes them within a transaction, and world state captures the snapshot needed for rollback or remount.
+- Developer-preview returns use a captured transition snapshot and a dedicated return plan so utility-map travel does not recapture Nether entry state.
 
 ## Reading next
 

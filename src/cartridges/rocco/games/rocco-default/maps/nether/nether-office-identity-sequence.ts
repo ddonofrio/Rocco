@@ -50,8 +50,9 @@ interface IdentitySequenceOptions {
   onGuyspriteHome: () => void;
   choicePortals: NetherOfficeChoicePortalController;
   guyspriteTargetShape: NetherOfficeGuyspriteTargetShape;
-  showFinalScreen: () => void;
-  onFinalScreenClick: () => void;
+  requestFinalScreen: (
+    invocation: import('../../../../levels/runtime/rocco-final-screen-session').RoccoFinalScreenInvocation,
+  ) => void;
 }
 
 interface IdentityChoice {
@@ -76,8 +77,7 @@ export class NetherOfficeIdentitySequenceController {
       localization,
       options.choicePortals,
       options.guyspriteTargetShape,
-      options.showFinalScreen,
-      options.onFinalScreenClick,
+      options.requestFinalScreen,
     );
   }
 

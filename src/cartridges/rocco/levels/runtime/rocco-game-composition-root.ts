@@ -36,6 +36,10 @@ import type { RoccoLocalization } from '../../games/rocco-default/localization';
 import type { RoccoPlayerAppearance } from '../../games/rocco-default/player';
 import type { RoccoPoint } from '../../../../console/video/sprites';
 import type { RoccoInventoryItem } from '../../games/rocco-default/inventory';
+import {
+  RoccoFinalScreenSession,
+  type RoccoFinalScreenInvocation,
+} from './rocco-final-screen-session';
 
 import { ROCCO_PLAYER_CONFIG } from '../../games/rocco-default/player/rocco-player-config';
 import { PIER_BAIT_SHOP_DOOR_CONFIG } from '../../games/rocco-default/maps/pier/pier-bait-shop-door-config';
@@ -74,6 +78,7 @@ export interface RoccoGameCompositionRootCallbacks {
     entryConnectorId?: string,
     shouldForceArrivalSequence?: boolean,
   ) => Promise<boolean>;
+  requestFinalScreen: (invocation: RoccoFinalScreenInvocation) => void;
   enterBaitShop: () => Promise<void>;
   canCollectIntoInventory: (itemId: string, shouldShowFullMessage?: boolean) => boolean;
   resolveLevelTitle: (levelId: string) => string;
@@ -85,6 +90,7 @@ export interface RoccoGameCompositionRootCallbacks {
   doesPlayerOverlapBaitShopDoor: () => boolean;
   onToiletReuseEventChanged: () => void;
   onNetherOfficeConfidenceMaxRequested: () => void;
+  finalScreenSession: RoccoFinalScreenSession;
 }
 
 export interface RoccoGameCompositionRootOptions {
@@ -149,19 +155,7 @@ function createRuntimeControllers(
     syncWorldPresentation: callbacks.syncActiveLevelDroppedInventoryPresentation,
     refreshStatus: callbacks.refreshStatus,
   });
-  const developerRuntime = new RoccoDeveloperRuntimeController({
-    localization,
-    inventory: inventoryRuntime.getPlayerInventory(),
-    getRoccoAppearance: callbacks.getRoccoAppearance,
-    setRoccoAppearance: callbacks.setRoccoAppearance,
-    resolveLevelTitle: callbacks.resolveLevelTitle,
-    switchToLevel: (levelId, entryConnectorId, shouldForceArrivalSequence) =>
-      callbacks.switchToLevel(levelId, entryConnectorId, shouldForceArrivalSequence),
-    canCollectInventoryItem: callbacks.canCollectIntoInventory,
-    refreshStatus: callbacks.refreshStatus,
-    onToiletReuseEventChanged: callbacks.onToiletReuseEventChanged,
-    onNetherOfficeConfidenceMaxRequested: callbacks.onNetherOfficeConfidenceMaxRequested,
-  });
+  const developerRuntime = createDeveloperRuntimeController(options, inventoryRuntime);
   return {
     droppedInventory,
     scriptedSequences,
@@ -175,6 +169,27 @@ function createRuntimeControllers(
       transitions = value;
     },
   };
+}
+
+function createDeveloperRuntimeController(
+  options: RoccoGameCompositionRootOptions,
+  inventoryRuntime: RoccoInventoryRuntimeController,
+): RoccoDeveloperRuntimeController {
+  const { callbacks, localization } = options;
+  return new RoccoDeveloperRuntimeController({
+    localization,
+    inventory: inventoryRuntime.getPlayerInventory(),
+    getRoccoAppearance: callbacks.getRoccoAppearance,
+    setRoccoAppearance: callbacks.setRoccoAppearance,
+    resolveLevelTitle: callbacks.resolveLevelTitle,
+    switchToLevel: (levelId, entryConnectorId, shouldForceArrivalSequence) =>
+      callbacks.switchToLevel(levelId, entryConnectorId, shouldForceArrivalSequence),
+    requestFinalScreen: callbacks.requestFinalScreen,
+    canCollectInventoryItem: callbacks.canCollectIntoInventory,
+    refreshStatus: callbacks.refreshStatus,
+    onToiletReuseEventChanged: callbacks.onToiletReuseEventChanged,
+    onNetherOfficeConfidenceMaxRequested: callbacks.onNetherOfficeConfidenceMaxRequested,
+  });
 }
 
 function transitionControllerOrThrow(
@@ -203,6 +218,7 @@ function createCompiledGame(
   const inventory = controllers.inventoryRuntime.getPlayerInventory();
   const compiledMaps = createRoccoDefaultGameMaps({
     localization,
+    finalScreenSession: callbacks.finalScreenSession,
     mountPierBeginningAmbient: (
       engine,
       _localization,

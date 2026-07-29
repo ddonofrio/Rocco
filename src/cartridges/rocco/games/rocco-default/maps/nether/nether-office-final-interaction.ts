@@ -17,7 +17,11 @@ import {
   NETHER_OFFICE_CARTRIDGE_MISSING_BUTTON_ID,
   NETHER_OFFICE_CARTRIDGE_READY_BUTTON_ID,
 } from './nether-office-cartridge-menu';
-import { showNetherOfficeBlackScreen } from './nether-office-final-screen';
+import {
+  clearNetherOfficeRetryBlackout,
+  showNetherOfficeRetryBlackout,
+} from './nether-office-blackout';
+import type { RoccoFinalScreenInvocation } from '../../../../levels/runtime/rocco-final-screen-session';
 import type {
   NetherOfficeChoicePortalController,
   NetherOfficePortalChoice,
@@ -36,11 +40,9 @@ export class NetherOfficeFinalInteractionController {
   private readonly localization: RoccoLocalization;
   private readonly choicePortals: NetherOfficeChoicePortalController;
   private readonly guyspriteTargetShape: NetherOfficeGuyspriteTargetShape;
-  private readonly showFinalScreen: () => void;
-  private readonly onFinalScreenClick: () => void;
+  private readonly requestFinalScreen: (invocation: RoccoFinalScreenInvocation) => void;
   private engine: CartridgeSdkV1Runtime | undefined;
   private active = false;
-  private finalScreenActive = false;
   private cartridgeRetryChoice: NetherOfficePortalChoice | undefined;
   private cartridgeRetryElapsedMs = 0;
   private cartridgeRetryDurationMs = 0;
@@ -49,14 +51,13 @@ export class NetherOfficeFinalInteractionController {
     localization: RoccoLocalization,
     choicePortals: NetherOfficeChoicePortalController,
     guyspriteTargetShape: NetherOfficeGuyspriteTargetShape,
-    showFinalScreen: () => void,
-    onFinalScreenClick: () => void,
+    requestFinalScreen: (invocation: RoccoFinalScreenInvocation) => void,
+    _legacyCompletion?: () => void,
   ) {
     this.localization = localization;
     this.choicePortals = choicePortals;
     this.guyspriteTargetShape = guyspriteTargetShape;
-    this.showFinalScreen = showFinalScreen;
-    this.onFinalScreenClick = onFinalScreenClick;
+    this.requestFinalScreen = requestFinalScreen;
   }
 
   private get text() {
@@ -78,8 +79,7 @@ export class NetherOfficeFinalInteractionController {
 
   private openPortalMenu(choice: NetherOfficePortalChoice): void {
     if (choice === 'game') {
-      this.finalScreenActive = true;
-      this.showFinalScreen();
+      this.requestFinalScreen({ kind: 'game-superpowers' });
       return;
     }
     this.openCartridgeMenu(choice);
@@ -94,7 +94,7 @@ export class NetherOfficeFinalInteractionController {
       NETHER_OFFICE_CARTRIDGE_RETRY_MIN_MS +
       resolveRandomUnit() *
         (NETHER_OFFICE_CARTRIDGE_RETRY_MAX_MS - NETHER_OFFICE_CARTRIDGE_RETRY_MIN_MS);
-    showNetherOfficeBlackScreen(this.engine);
+    showNetherOfficeRetryBlackout(this.engine);
   }
 
   private handleCartridgeMenu(activation: RoccoGridMenuActivation): boolean {
@@ -103,7 +103,7 @@ export class NetherOfficeFinalInteractionController {
     if (activation.interaction !== 'button') return true;
     if (activation.buttonId === NETHER_OFFICE_CARTRIDGE_MISSING_BUTTON_ID) {
       this.active = false;
-      this.showFinalScreen();
+      this.requestFinalScreen({ kind: 'game-console-missing' });
     }
     if (activation.buttonId === NETHER_OFFICE_CARTRIDGE_READY_BUTTON_ID) this.beginCartridgeRetry();
     return true;
@@ -112,23 +112,23 @@ export class NetherOfficeFinalInteractionController {
   activate(engine: CartridgeSdkV1Runtime): void {
     this.engine = engine;
     this.active = true;
-    this.finalScreenActive = false;
     this.cartridgeRetryChoice = undefined;
     this.cartridgeRetryElapsedMs = 0;
     this.cartridgeRetryDurationMs = 0;
   }
 
   unmount(): void {
+    if (this.engine) clearNetherOfficeRetryBlackout(this.engine);
     this.engine = undefined;
     this.active = false;
-    this.finalScreenActive = false;
     this.cartridgeRetryChoice = undefined;
     this.cartridgeRetryElapsedMs = 0;
     this.cartridgeRetryDurationMs = 0;
   }
 
   update(deltaMs: number): void {
-    if (!this.cartridgeRetryChoice || !Number.isFinite(deltaMs) || deltaMs <= 0) return;
+    if (!this.engine || !this.cartridgeRetryChoice || !Number.isFinite(deltaMs) || deltaMs <= 0)
+      return;
     this.cartridgeRetryElapsedMs += deltaMs;
     if (this.cartridgeRetryElapsedMs < this.cartridgeRetryDurationMs) return;
     const choice = this.cartridgeRetryChoice;
@@ -136,6 +136,7 @@ export class NetherOfficeFinalInteractionController {
     this.cartridgeRetryElapsedMs = 0;
     this.cartridgeRetryDurationMs = 0;
     this.active = true;
+    clearNetherOfficeRetryBlackout(this.engine);
     this.openCartridgeMenu(choice);
   }
 
@@ -150,10 +151,6 @@ export class NetherOfficeFinalInteractionController {
 
   handleSceneClick(activation: RoccoSceneClickAction): CartridgeActionDisposition | void {
     if (!this.active || !this.engine) return undefined;
-    if (this.finalScreenActive) {
-      this.onFinalScreenClick();
-      return { consumed: true, defaultPlayerMovement: 'suppress' };
-    }
     const portalChoice = this.choicePortals.getChoiceAt(activation.sceneX, activation.sceneY);
     if (portalChoice) {
       this.openPortalMenu(portalChoice);

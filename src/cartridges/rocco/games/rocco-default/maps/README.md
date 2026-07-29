@@ -16,3 +16,4 @@ Concrete game behavior lives in the map folders, not in this directory.
 - [`pier/README.md`](pier/README.md) — the exterior Pier levels and their horizontal connection graph.
 - [`shop/README.md`](shop/README.md) — the bait shop front room, back room, and toilet branch.
 - [`nether/README.md`](nether/README.md) — the Nether path and the Reset Office branch.
+- [`final/README.md`](final/README.md) — the independent final credits level and end images.

@@ -9,6 +9,7 @@ import type { RpceGameDefinition } from '../../rpce/core';
 import { createRoccoDefaultNetherMapStructure } from './maps/nether';
 import { createRoccoDefaultPierMapStructure } from './maps/pier';
 import { createRoccoDefaultShopMapStructure } from './maps/shop';
+import { createRoccoDefaultFinalMapStructure } from './maps/final';
 import { ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS } from './game-structure';
 
 export const ROCCO_DEFAULT_GAME_ID = 'rocco-default-game';
@@ -24,6 +25,7 @@ export function createRoccoDefaultGameDefinition(
       createRoccoDefaultPierMapStructure(),
       createRoccoDefaultShopMapStructure(),
       createRoccoDefaultNetherMapStructure(),
+      createRoccoDefaultFinalMapStructure(),
     ],
     connections: ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS,
     createRuntimeController: (options) =>

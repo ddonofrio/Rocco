@@ -8,6 +8,7 @@ import type { RoccoInventoryItem } from '../inventory';
 import type { RoccoPlayerAppearance } from '../games/rocco-default/player';
 import type { RoccoLocalization } from '../games/rocco-default/localization';
 import { RoccoAssetPreloader } from './rocco-asset-preloader';
+import type { RoccoFinalScreenInvocation } from './runtime/rocco-final-screen-session';
 
 export interface RoccoLevelRect {
   x: number;
@@ -37,6 +38,9 @@ export interface RoccoLevelMountOptions {
   onNetherOfficeBellPressed?: () => void;
   onRoccoInventoryResetRequested?: () => void;
   onRestartRequested?: (request?: RoccoLevelRestartRequest) => void;
+  onFinalScreenRequested?: (invocation: RoccoFinalScreenInvocation) => void;
+  finalScreenSessionId?: string;
+  finalScreenInvocation?: RoccoFinalScreenInvocation;
   onPickupRequested?: (item: RoccoInventoryItem) => boolean;
   onPickupCollected?: (item: RoccoInventoryItem) => void;
 }

@@ -17,6 +17,7 @@
   - `maps/pier/` — Pier outdoor levels, characters, props, and video effects.
   - `maps/shop/` — Bait shop interior and toilet levels.
   - `maps/nether/` — Nether path levels including console hardware and reset office.
+  - `maps/final/` — the independent final credits level and its end-image assets.
   - `preload/` — Shared asset manifest that aggregates preloadable assets from domain owners.
   - `game-design.ts` — Shared design dimensions and background color.
 
@@ -33,7 +34,7 @@
 
 ## RPCE and game boundary
 
-The cartridge bootstrap mounts RPCE, RPCE mounts the current `rocco-default` game, and the game owns Pier, Shop, and Nether map definitions plus the concrete implementations under `games/rocco-default/maps/*`. The `levels/pier`, `levels/bait-shop`, and `levels/nether` folders re-export those game-owned map implementations. New implementation work belongs in the owning map directory under `games/rocco-default/maps`.
+The cartridge bootstrap mounts RPCE, RPCE mounts the current `rocco-default` game, and the game owns Pier, Shop, Nether, and Final map definitions plus the concrete implementations under `games/rocco-default/maps/*`. The `levels/pier`, `levels/bait-shop`, and `levels/nether` folders re-export those game-owned map implementations. New implementation work belongs in the owning map directory under `games/rocco-default/maps`.
 
 ## Localization
 

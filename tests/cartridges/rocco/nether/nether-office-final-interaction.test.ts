@@ -30,14 +30,12 @@ describe('Nether Office final portal interaction', () => {
   it('opens the final screen when the first portal is clicked', () => {
     const localization = createRoccoLocalization('es');
     const portals = new NetherOfficeChoicePortalController(localization);
-    const showFinalScreen = vi.fn();
-    const onFinalScreenClick = vi.fn();
+    const requestFinalScreen = vi.fn();
     const controller = new NetherOfficeFinalInteractionController(
       localization,
       portals,
       GUYSPRITE_TARGET_SHAPE,
-      showFinalScreen,
-      onFinalScreenClick,
+      requestFinalScreen,
     );
 
     controller.activate({} as CartridgeSdkV1Runtime);
@@ -46,11 +44,10 @@ describe('Nether Office final portal interaction', () => {
       consumed: true,
       defaultPlayerMovement: 'suppress',
     });
-    expect(showFinalScreen).toHaveBeenCalledOnce();
-    expect(onFinalScreenClick).not.toHaveBeenCalled();
+    expect(requestFinalScreen).toHaveBeenCalledWith({ kind: 'game-superpowers' });
 
     controller.handleSceneClick({ kind: 'scene-click', sceneX: 480, sceneY: 270 });
-    expect(onFinalScreenClick).toHaveBeenCalledOnce();
+    expect(requestFinalScreen).toHaveBeenCalledOnce();
   });
 
   it('retries the CPU cartridge prompt after selecting that it is ready', () => {

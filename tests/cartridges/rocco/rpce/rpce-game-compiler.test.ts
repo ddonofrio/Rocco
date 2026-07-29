@@ -89,8 +89,8 @@ describe('RpceGameCompiler', () => {
 
     expect(game.initialMapId).toBe('pier');
     expect(game.initialLevelId).toBe('pier-middle');
-    expect(game.mapsById.size).toBe(3);
-    expect(game.levelsById.size).toBe(10);
+    expect(game.mapsById.size).toBe(4);
+    expect(game.levelsById.size).toBe(11);
   });
 
   it('indexes intra-map and cross-map connections for O(1) lookup', () => {

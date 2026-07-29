@@ -93,6 +93,31 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "sourceFile": "src/cartridges/rocco/games/rocco-default/characters/guysprite/guysprite-assets.ts",
   },
   {
+    "assetPath": "./assets/end-images/Rocco & Guysprite.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/final/final-screen-assets.ts",
+  },
+  {
+    "assetPath": "./assets/end-images/Rocco & Pelikan.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/final/final-screen-assets.ts",
+  },
+  {
+    "assetPath": "./assets/end-images/Rocco & Stan.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/final/final-screen-assets.ts",
+  },
+  {
+    "assetPath": "./assets/end-images/Rocco Film day at shop.png",
+    "resolutionKind": "module-relative",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/final/final-screen-assets.ts",
+  },
+  {
+    "assetPath": "cartridges/rocco/music/end-music.mp3",
+    "resolutionKind": "public-base-url",
+    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/final/final-screen-assets.ts",
+  },
+  {
     "assetPath": "./assets/console-hardware-spawn-background.png",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
@@ -171,11 +196,6 @@ exports[`Rocco asset references > keeps an explicit snapshot of the declared car
     "assetPath": "./assets/steam_machine.mp3",
     "resolutionKind": "module-relative",
     "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-assets.ts",
-  },
-  {
-    "assetPath": "cartridges/rocco/music/end-music.mp3",
-    "resolutionKind": "public-base-url",
-    "sourceFile": "src/cartridges/rocco/games/rocco-default/maps/nether/nether-office-final-screen-assets.ts",
   },
   {
     "assetPath": "./assets/camera/1.png",

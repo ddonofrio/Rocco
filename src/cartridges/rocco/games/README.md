@@ -14,4 +14,4 @@ Scope boundary:
 ## Reading next
 
 - [`rocco-default/README.md`](rocco-default/README.md) — the `rocco-default` game graph and shared game-owned barrels.
-- [`rocco-default/maps/README.md`](rocco-default/maps/README.md) — map ownership and the Pier, Shop, and Nether maps.
+- [`rocco-default/maps/README.md`](rocco-default/maps/README.md) — map ownership and the Pier, Shop, Nether, and Final maps.

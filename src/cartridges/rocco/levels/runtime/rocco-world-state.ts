@@ -314,15 +314,34 @@ export class RoccoWorldState {
     };
   }
 
-  prepareLevelTransition(targetLevelId: string): RoccoLevelTransitionPreparation {
+  restorePlayerSnapshot(
+    engine: CartridgeSdkV1Runtime,
+    snapshot: RoccoLevelManagerPlayerSnapshot | null,
+  ): void {
+    if (!snapshot || !engine.video.sprites.getSprite(ROCCO_PLAYER_CONFIG.ids.instance)) return;
+    engine.video.sprites.stopMovement(ROCCO_PLAYER_CONFIG.ids.instance);
+    engine.video.sprites.setPosition(
+      ROCCO_PLAYER_CONFIG.ids.instance,
+      snapshot.position.x,
+      snapshot.position.y,
+      { constrainToWalkMap: false },
+    );
+    engine.video.sprites.setFacing(ROCCO_PLAYER_CONFIG.ids.instance, snapshot.facing);
+  }
+
+  prepareLevelTransition(
+    targetLevelId: string,
+    shouldCaptureNetherEntry = true,
+  ): RoccoLevelTransitionPreparation {
     const activeLevelId = this.options.getActiveLevel()?.id ?? '';
     return {
       rollbackSnapshot: this.createTransitionSnapshot(),
       playerSnapshot: this.capturePlayerSnapshot(),
       mountStateSnapshot: this.cloneMountStateSnapshot(this.activeMountState),
-      enteringNetherSnapshot: this.isEnteringNether(activeLevelId, targetLevelId)
-        ? this.createNetherEntrySnapshot()
-        : null,
+      enteringNetherSnapshot:
+        shouldCaptureNetherEntry && this.isEnteringNether(activeLevelId, targetLevelId)
+          ? this.createNetherEntrySnapshot()
+          : null,
     };
   }
 

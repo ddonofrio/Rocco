@@ -3,6 +3,7 @@ import { spanishBaitShopText } from './bait-shop';
 import { spanishPelikanText, spanishRoccoText, spanishStanText } from './characters';
 import { spanishInventoryText } from './inventory';
 import { spanishNetherText } from './nether';
+import { spanishFinalScreenText } from './final-screen';
 import {
   spanishBaitBucketText,
   spanishFeedingText,
@@ -35,4 +36,5 @@ export const roccoSpanishText: RoccoTextCatalog = {
   pierDoor: spanishPierDoorText,
   baitShop: spanishBaitShopText,
   nether: spanishNetherText,
+  finalScreen: spanishFinalScreenText,
 };

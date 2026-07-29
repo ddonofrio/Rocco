@@ -9,6 +9,7 @@ Current map model:
 - `pier` for the exterior panorama
 - `shop` for the bait shop and bathroom branch
 - `nether` for the hardware spawn, hallway, and Reset Office path
+- `final` for the independent final credits level
 
 Reset Office is modeled as part of the Nether map. It remains a separate branch in current
 behavior, but it is not treated as a separate map in the structural model.
@@ -29,6 +30,7 @@ Map folders are the structural ownership point:
 - `maps/pier/`
 - `maps/shop/`
 - `maps/nether/`
+- `maps/final/`
 
 Each map folder exports its map definition, the concrete level implementations, and the local
 asset surface for that map. The `src/cartridges/rocco/levels/**` folders re-export
@@ -40,6 +42,7 @@ from these game-owned paths.
 the per-map `*MapStructure()` builders (the canonical literal structure of ids, levels,
 connections, and `initialLevelId`) plus the game-level cross-map connections exported as
 `ROCCO_DEFAULT_GAME_CROSS_CONNECTIONS` (the bait-shop toilet portal into the Nether entry).
+The final map has no connectors and is entered through an explicit runtime final-screen request.
 
 The functional `createRoccoDefault*Map(options)` builders derive their level list from the same
 `*MapStructure()` source and only attach the runtime `createLevel` factories. There is no second,

@@ -52,11 +52,6 @@ import {
 import { NetherOfficePatienceController } from './nether-office-patience';
 import { NetherOfficeIdentitySequenceController } from './nether-office-identity-sequence';
 import { NetherOfficeChoicePortalController } from './nether-office-choice-portals';
-import { requestRoccoDeveloperModeAndRestart } from '../../../../rocco-developer-mode';
-import {
-  clearNetherOfficeFinalScreen,
-  showNetherOfficeFinalScreen,
-} from './nether-office-final-screen';
 import { installNetherOfficePlayer } from './nether-office-player';
 import {
   NETHER_RESET_OFFICE_SECOND_CHAIR_PLANE_ID,
@@ -154,7 +149,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
   private readonly identitySequence: NetherOfficeIdentitySequenceController;
   private readonly choicePortals: NetherOfficeChoicePortalController;
   private readonly printerController: NetherResetOfficeSecondPrinterController;
-  private onRestartRequested: (() => void) | undefined;
+  private onFinalScreenRequested: RoccoLevelMountOptions['onFinalScreenRequested'];
   readonly id = ROCCO_NETHER_RESET_OFFICE_SECOND_LEVEL_ID;
   readonly title: string;
   readonly connectors = NETHER_RESET_OFFICE_SECOND_CONNECTORS;
@@ -174,8 +169,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
       onGuyspriteHome: () => this.restoreGuyspriteStanding(),
       choicePortals: this.choicePortals,
       guyspriteTargetShape: NETHER_RESET_OFFICE_GUYSPRITE_TARGET_SHAPE,
-      showFinalScreen: () => showNetherOfficeFinalScreen(this.engine!, this.localization),
-      onFinalScreenClick: () => requestRoccoDeveloperModeAndRestart(this.onRestartRequested),
+      requestFinalScreen: (invocation) => this.onFinalScreenRequested?.(invocation),
     });
     this.title = localization.text.levels.resetOfficeTitle;
     this.printerController = new NetherResetOfficeSecondPrinterController(
@@ -284,12 +278,9 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     this.scheduleNextGuyspriteTypingFrame();
   }
 
-  private resetMountState(
-    engine: CartridgeSdkV1Runtime,
-    onRestartRequested: (() => void) | undefined,
-  ): void {
+  private resetMountState(engine: CartridgeSdkV1Runtime, options: RoccoLevelMountOptions): void {
     this.engine = engine;
-    this.onRestartRequested = onRestartRequested;
+    this.onFinalScreenRequested = options.onFinalScreenRequested;
     this.spriteController = undefined;
     this.printerController.reset(engine);
     this.identitySequence.mount(engine);
@@ -402,7 +393,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     options: RoccoLevelMountOptions = {},
     preloader?: RoccoAssetPreloader,
   ): Promise<RoccoPlaneScene> {
-    this.resetMountState(engine, options.onRestartRequested);
+    this.resetMountState(engine, options);
 
     const entryConnector = findRoccoLevelConnector(this.connectors, options.entryConnectorId);
     const initialPosition = entryConnector
@@ -463,7 +454,6 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
 
   unmount(engine: CartridgeSdkV1Runtime): void {
     engine.video.actionMenus.closeMenu();
-    clearNetherOfficeFinalScreen(engine);
     unregisterNetherOfficeGuyspriteInteraction(engine);
     this.identitySequence.unmount();
     this.choicePortals.unmount(engine);
@@ -480,7 +470,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
     engine.video.sprites.unregisterSpriteDefinition(GUYSPRITE_TYPING_DEFINITION_ID);
     engine.video.sprites.unregisterWalkMap(ROCCO_ACTIVE_WALK_MAP_ID);
     this.engine = undefined;
-    this.onRestartRequested = undefined;
+    this.onFinalScreenRequested = undefined;
     this.guyspriteDefinition = undefined;
     this.guyspriteTypingDefinition = undefined;
     this.guyspriteTypingActive = false;

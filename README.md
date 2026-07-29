@@ -86,7 +86,7 @@ The GitHub Actions workflow publishes these downloadable artifacts:
 
 ### ROCCO Default Cartridge
 
-`rocco-default` is the main demo cartridge. It implements the Pier exterior, the bait shop interior, the Nether path including the Reset Office branch, and the cartridge-owned inventory systems that tie those spaces together.
+`rocco-default` is the main demo cartridge. It implements the Pier exterior, the bait shop interior, the Nether path including the Reset Office branch, the independent final credits level, and the cartridge-owned inventory systems that tie those spaces together.
 
 See [`src/cartridges/rocco/README.md`](src/cartridges/rocco/README.md) for cartridge ownership, map structure, interactions, and localization details.
 

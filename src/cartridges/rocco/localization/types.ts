@@ -15,6 +15,18 @@ export interface RoccoLocalizedManifestText {
   tags?: string[];
 }
 
+export interface RoccoFinalCreditColumn {
+  role: string;
+  name: string;
+}
+
+export type RoccoFinalCreditSpeed = 'fast' | 'slow';
+
+export type RoccoFinalCreditEntry =
+  | { kind: 'title'; text: string; speed?: RoccoFinalCreditSpeed }
+  | { kind: 'credit'; columns: RoccoFinalCreditColumn[]; speed?: RoccoFinalCreditSpeed }
+  | { kind: 'message'; lines: string[]; speed?: RoccoFinalCreditSpeed };
+
 export interface RoccoTextCatalog {
   manifest: RoccoLocalizedManifestText;
   actions: {
@@ -353,6 +365,9 @@ export interface RoccoTextCatalog {
       identityPathChoices: string[];
       gamePortalLabel: string;
       consoleCpuPortalLabel: string;
+      finalDedicationLine: string;
+      finalDedicationName: string;
+      finalCredits: RoccoFinalCreditEntry[];
       chapter2CartridgePrompt: string;
       chapter3CartridgePrompt: string;
       cartridgeOkButton: string;

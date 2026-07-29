@@ -62,8 +62,9 @@ describe('Nether Office final portal interaction', () => {
         actionMenus: { closeMenu: vi.fn() },
         gridMenus: { closeMenu: vi.fn(), openMenu },
         messages: { clearMessages: vi.fn() },
-        titles: { removeTitle: vi.fn() },
-        primitives: { addPrimitive: vi.fn() },
+        titles: { listTitles: vi.fn(() => []), removeTitle: vi.fn() },
+        planes: { resolvePlane: vi.fn(), updatePlane: vi.fn() },
+        primitives: { addPrimitive: vi.fn(), removePrimitive: vi.fn() },
       },
     } as unknown as CartridgeSdkV1Runtime;
     const controller = new NetherOfficeFinalInteractionController(

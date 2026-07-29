@@ -78,6 +78,8 @@ export class RoccoInputHandler {
       return;
     }
 
+    this.inputPresentation.setHoverDescription(undefined);
+
     if (inputMode === 'advance-only') {
       this.handleAdvanceOnlyCursorAction(event, x, y);
       return;
@@ -118,6 +120,7 @@ export class RoccoInputHandler {
 
   private readonly handleCursorMove = (event: RoccoCursorMoveEvent): void => {
     if (this.getInputMode() !== 'interactive') {
+      this.inputPresentation.setHoverDescription(undefined);
       return;
     }
 

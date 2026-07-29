@@ -169,7 +169,7 @@ export class RoccoDeveloperRuntimeController {
 
     if (itemId === ROCCO_DEVELOPER_FINAL_SCREEN_CHOICE_ID) {
       this.clearTransientState(engine);
-      showNetherOfficeFinalScreen(engine);
+      showNetherOfficeFinalScreen(engine, this.localization);
       return;
     }
 

@@ -174,7 +174,7 @@ export class RoccoNetherResetOfficeSecondLevel implements RoccoLevel {
       onGuyspriteHome: () => this.restoreGuyspriteStanding(),
       choicePortals: this.choicePortals,
       guyspriteTargetShape: NETHER_RESET_OFFICE_GUYSPRITE_TARGET_SHAPE,
-      showFinalScreen: () => this.engine && showNetherOfficeFinalScreen(this.engine),
+      showFinalScreen: () => showNetherOfficeFinalScreen(this.engine!, this.localization),
       onFinalScreenClick: () => requestRoccoDeveloperModeAndRestart(this.onRestartRequested),
     });
     this.title = localization.text.levels.resetOfficeTitle;

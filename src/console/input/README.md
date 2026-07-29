@@ -86,7 +86,8 @@ caller's lock; nested input policies remain independent.
 `GameRuntime` owns one `InputPolicyStackImpl` and injects
 `getInputMode: () => inputPolicy.getEffectiveMode()` into `RoccoInputHandler`.
 The handler routes clicks as advance/disabled actions whenever the mode is not
-`'interactive'`.
+`'interactive'`. Cursor movement also clears hover descriptions while a lease
+holds a non-interactive mode.
 
 ## Files
 

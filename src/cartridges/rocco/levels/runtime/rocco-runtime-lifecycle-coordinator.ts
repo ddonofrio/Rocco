@@ -17,6 +17,7 @@ import type { RoccoLevelTransitionService } from './rocco-level-transition-servi
 import type { RoccoSceneActionRouter } from './rocco-scene-action-router';
 import type { RoccoLevelRegistry } from './rocco-level-registry';
 import type { RoccoWorldState } from './rocco-world-state';
+import { updateNetherOfficeFinalScreen } from '../../games/rocco-default/maps/nether/nether-office-final-screen';
 
 import type { RoccoSharedAssetManifest } from './rocco-shared-asset-manifest';
 
@@ -153,6 +154,9 @@ export class RoccoRuntimeLifecycleCoordinator {
 
   update(deltaMs: number): void {
     const engine = this.options.getEngine();
+    if (engine) {
+      updateNetherOfficeFinalScreen(engine, deltaMs);
+    }
     if (this.options.scriptedSequences.hasBlockingSequence()) {
       if (engine) {
         this.options.scriptedSequences.updateBlockingSequence(engine, deltaMs);

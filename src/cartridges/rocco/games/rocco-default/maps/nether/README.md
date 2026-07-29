@@ -92,11 +92,15 @@ After either path choice is consumed, Guysprite walks back to the console contro
 the two portals appear there, Guysprite waits 250 ms, and then returns beside the chair. The game
 portal is at `(228, 507)` and the console CPU portal is at `(705, 507)`.
 Once Guysprite returns, scene clicks are limited to those two portals and Guysprite. Guysprite opens
-the existing look/talk action menu. The game portal opens the provisional final screen; clicking that
+the existing look/talk action menu. The game portal opens the final credit screen; clicking that
 screen restarts only the Rocco cartridge and enables developer mode for its next game mount. The CPU
-portal opens the cartridge prompt; `No lo tengo` opens the provisional black final screen, while
+portal opens the cartridge prompt; `No lo tengo` opens the same final credit screen, while
 `Ya lo he hecho` shows a black retry interval and then reopens the same prompt. The final screen
-stops the background playlist and plays `end-music.mp3` from the beginning at normal volume.
+uses the Rocco background color, scrolls the localized dedication and detailed credit sequence from
+below the viewport to above it, starts the detailed credits only after the dedication has exited,
+blocks pointer interaction while the credits are visible, and plays `end-music.mp3` from the
+beginning at 76.5 percent of the original volume. Detailed credits use a smaller role size, a
+larger name size, cinematic spacing, and two-column rows where the layout supports them.
 The developer menu exposes `Alter events -> Reset Office -> +100% confidence`; selecting it fills the
 active second-office confidence value and starts the normal 100-percent identity sequence.
 Only the current Guysprite message remains visible, and the foreground message can be dismissed by

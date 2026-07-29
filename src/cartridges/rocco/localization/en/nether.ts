@@ -257,6 +257,158 @@ export const englishNetherText: RoccoTextCatalog['nether'] = {
     ],
     gamePortalLabel: 'Portal to the game',
     consoleCpuPortalLabel: 'Portal to the console CPU',
+    finalDedicationLine: 'In memory of',
+    finalDedicationName: 'Juan José Correa',
+    finalCredits: [
+      { kind: 'title', text: 'ROCCO' },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Written, directed and produced by', name: "Diego D'Onofrio" }],
+      },
+      { kind: 'credit', columns: [{ role: 'Creative director', name: "Diego D'Onofrio" }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Visual effects supervision', name: "Diego D'Onofrio" }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Generative art direction', name: "Diego D'Onofrio" }],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Visual development', name: 'DALL\u{00B7}E' },
+          { role: 'Background and environment design', name: 'DALL\u{00B7}E' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Concept art', name: 'DALL\u{00B7}E' },
+          { role: 'Character design', name: 'DALL\u{00B7}E' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Custom cuts and visual sequences', name: 'DALL\u{00B7}E' }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Props and graphic elements', name: 'DALL\u{00B7}E' }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Textures and atmosphere', name: 'DALL\u{00B7}E' }],
+      },
+      { kind: 'credit', columns: [{ role: 'Music supervision', name: "Diego D'Onofrio" }] },
+      { kind: 'credit', columns: [{ role: 'Music direction', name: "Diego D'Onofrio" }] },
+      { kind: 'credit', columns: [{ role: 'Music composition', name: "Diego D'Onofrio" }] },
+      { kind: 'credit', columns: [{ role: 'Music production', name: "Diego D'Onofrio" }] },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Generative music', name: 'Suno' },
+          { role: 'Additional generative music', name: 'Udio' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Assisted orchestration', name: 'AIVA' },
+          { role: 'Generative sound design', name: 'Stable Audio' },
+        ],
+      },
+      { kind: 'credit', columns: [{ role: 'Musical experimentation', name: 'MusicGen' }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Music editing and mixing', name: "Diego D'Onofrio" }],
+      },
+      { kind: 'credit', columns: [{ role: 'Sound design', name: "Diego D'Onofrio" }] },
+      { kind: 'credit', columns: [{ role: 'Sound effects', name: "Diego D'Onofrio" }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Lead software engineering', name: 'omnicoder-9b' }],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'AI-assisted programming', name: 'omnicoder-9b' },
+          { role: 'Code engineering', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Systems development', name: 'omnicoder-9b' },
+          { role: 'Architecture assistance', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Technical reasoning', name: 'omnicoder-9b' },
+          { role: 'Code generation and review', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Agentic programming', name: 'omnicoder-9b' },
+          { role: 'Additional agentic programming', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Local model integration', name: 'omnicoder-9b' },
+          { role: 'Local inference', name: 'omnicoder-9b' },
+        ],
+      },
+      { kind: 'credit', columns: [{ role: 'Quality direction', name: 'omnicoder-9b' }] },
+      { kind: 'credit', columns: [{ role: 'Quality Assurance Lead', name: 'omnicoder-9b' }] },
+      { kind: 'credit', columns: [{ role: 'Quality engineering', name: 'omnicoder-9b' }] },
+      { kind: 'credit', columns: [{ role: 'Test design', name: 'omnicoder-9b' }] },
+      { kind: 'credit', columns: [{ role: 'Test automation', name: 'omnicoder-9b' }] },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Assisted technical review', name: 'omnicoder-9b' },
+          { role: 'Defect analysis', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Functional validation', name: 'omnicoder-9b' },
+          { role: 'Architecture review', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Static analysis and reasoning', name: 'omnicoder-9b' },
+          { role: 'Code review', name: 'omnicoder-9b' },
+        ],
+      },
+      { kind: 'credit', columns: [{ role: 'Exploratory testing', name: 'omnicoder-9b' }] },
+      { kind: 'credit', columns: [{ role: 'Continuity control', name: "Diego D'Onofrio" }] },
+      { kind: 'credit', columns: [{ role: 'Narrative supervision', name: "Diego D'Onofrio" }] },
+      { kind: 'credit', columns: [{ role: 'Dialogue direction', name: "Diego D'Onofrio" }] },
+      { kind: 'credit', columns: [{ role: 'Experience design', name: "Diego D'Onofrio" }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Research and documentation', name: "Diego D'Onofrio" }],
+      },
+      { kind: 'credit', columns: [{ role: 'Independent production', name: "Diego D'Onofrio" }] },
+      { kind: 'credit', columns: [{ role: 'An interactive film by', name: "Diego D'Onofrio" }] },
+      {
+        kind: 'message',
+        speed: 'slow',
+        lines: ['Made with code, pixels', 'and an irresponsible amount of artificial intelligence'],
+      },
+      { kind: 'title', speed: 'slow', text: 'ROCCO' },
+      { kind: 'message', speed: 'slow', lines: ["\u{00A9} 2026 Diego D'Onofrio"] },
+    ],
     chapter2CartridgePrompt: 'Insert the Rocco 2 cartridge (adventures in the console)',
     chapter3CartridgePrompt: 'Insert the Rocco chapter 3 cartridge',
     cartridgeOkButton: 'I have done it',

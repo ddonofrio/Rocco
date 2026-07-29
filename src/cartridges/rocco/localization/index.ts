@@ -12,7 +12,10 @@ export {
   ROCCO_DEFAULT_LOCALE,
   ROCCO_SUPPORTED_LOCALES,
   type RoccoLocale,
+  type RoccoFinalCreditEntry,
+  type RoccoFinalCreditSpeed,
   type RoccoLocalization,
+  type RoccoFinalCreditColumn,
   type RoccoLocalizedManifestText,
   type RoccoTextCatalog,
 } from './types';

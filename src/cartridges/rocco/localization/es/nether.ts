@@ -277,6 +277,194 @@ export const spanishNetherText: RoccoTextCatalog['nether'] = {
     ],
     gamePortalLabel: 'Portal al juego',
     consoleCpuPortalLabel: 'Portal al CPU de la consola',
+    finalDedicationLine: 'A la memoria de',
+    finalDedicationName: 'Juan Jos\u{00E9} Correa',
+    finalCredits: [
+      { kind: 'title', text: 'ROCCO' },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Escrito, dirigido y producido por', name: "Diego D'Onofrio" }],
+      },
+      { kind: 'credit', columns: [{ role: 'Director creativo', name: "Diego D'Onofrio" }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Supervisi\u{00F3}n de efectos visuales', name: "Diego D'Onofrio" }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Direcci\u{00F3}n de arte generativo', name: "Diego D'Onofrio" }],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Desarrollo visual', name: 'DALL\u{00B7}E' },
+          { role: 'Dise\u{00F1}o de fondos y escenarios', name: 'DALL\u{00B7}E' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Concept art', name: 'DALL\u{00B7}E' },
+          { role: 'Dise\u{00F1}o de personajes', name: 'DALL\u{00B7}E' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Custom cuts y secuencias visuales', name: 'DALL\u{00B7}E' }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Atrezzo y elementos gr\u{00E1}ficos', name: 'DALL\u{00B7}E' }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Texturas y ambientaci\u{00F3}n', name: 'DALL\u{00B7}E' }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Supervisi\u{00F3}n musical', name: "Diego D'Onofrio" }],
+      },
+      { kind: 'credit', columns: [{ role: 'Direcci\u{00F3}n musical', name: "Diego D'Onofrio" }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Composici\u{00F3}n musical', name: "Diego D'Onofrio" }],
+      },
+      { kind: 'credit', columns: [{ role: 'Producci\u{00F3}n musical', name: "Diego D'Onofrio" }] },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'M\u{00FA}sica generativa', name: 'Suno' },
+          { role: 'M\u{00FA}sica generativa adicional', name: 'Udio' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Orquestaci\u{00F3}n asistida', name: 'AIVA' },
+          { role: 'Dise\u{00F1}o sonoro generativo', name: 'Stable Audio' },
+        ],
+      },
+      { kind: 'credit', columns: [{ role: 'Experimentaci\u{00F3}n musical', name: 'MusicGen' }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Edici\u{00F3}n y mezcla musical', name: "Diego D'Onofrio" }],
+      },
+      { kind: 'credit', columns: [{ role: 'Dise\u{00F1}o de sonido', name: "Diego D'Onofrio" }] },
+      { kind: 'credit', columns: [{ role: 'Efectos de sonido', name: "Diego D'Onofrio" }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Ingenier\u{00ED}a principal de software', name: 'omnicoder-9b' }],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          {
+            role: 'Programaci\u{00F3}n asistida por inteligencia artificial',
+            name: 'omnicoder-9b',
+          },
+          { role: 'Ingenier\u{00ED}a de c\u{00F3}digo', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Desarrollo de sistemas', name: 'omnicoder-9b' },
+          { role: 'Asistencia de arquitectura', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Razonamiento t\u{00E9}cnico', name: 'omnicoder-9b' },
+          { role: 'Generaci\u{00F3}n y revisi\u{00F3}n de c\u{00F3}digo', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Programaci\u{00F3}n agentic', name: 'omnicoder-9b' },
+          { role: 'Programaci\u{00F3}n agentic adicional', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Integraci\u{00F3}n de modelos locales', name: 'omnicoder-9b' },
+          { role: 'Inferencia local', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Direcci\u{00F3}n de calidad', name: 'omnicoder-9b' }],
+      },
+      { kind: 'credit', columns: [{ role: 'Quality Assurance Lead', name: 'omnicoder-9b' }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Ingenier\u{00ED}a de calidad', name: 'omnicoder-9b' }],
+      },
+      { kind: 'credit', columns: [{ role: 'Dise\u{00F1}o de pruebas', name: 'omnicoder-9b' }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Automatizaci\u{00F3}n de pruebas', name: 'omnicoder-9b' }],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Revisi\u{00F3}n t\u{00E9}cnica asistida', name: 'omnicoder-9b' },
+          { role: 'An\u{00E1}lisis de defectos', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'Validaci\u{00F3}n funcional', name: 'omnicoder-9b' },
+          { role: 'Revisi\u{00F3}n de arquitectura', name: 'omnicoder-9b' },
+        ],
+      },
+      {
+        kind: 'credit',
+        columns: [
+          { role: 'An\u{00E1}lisis est\u{00E1}tico y razonamiento', name: 'omnicoder-9b' },
+          { role: 'Revisi\u{00F3}n de c\u{00F3}digo', name: 'omnicoder-9b' },
+        ],
+      },
+      { kind: 'credit', columns: [{ role: 'Pruebas exploratorias', name: 'omnicoder-9b' }] },
+      { kind: 'credit', columns: [{ role: 'Control de continuidad', name: "Diego D'Onofrio" }] },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Supervisi\u{00F3}n narrativa', name: "Diego D'Onofrio" }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Direcci\u{00F3}n de di\u{00E1}logos', name: "Diego D'Onofrio" }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Dise\u{00F1}o de experiencia', name: "Diego D'Onofrio" }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Investigaci\u{00F3}n y documentaci\u{00F3}n', name: "Diego D'Onofrio" }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Producci\u{00F3}n independiente', name: "Diego D'Onofrio" }],
+      },
+      {
+        kind: 'credit',
+        columns: [{ role: 'Una pel\u{00ED}cula interactiva de', name: "Diego D'Onofrio" }],
+      },
+      {
+        kind: 'message',
+        speed: 'slow',
+        lines: [
+          'Hecho con c\u{00F3}digo, p\u{00ED}xeles',
+          'y una cantidad irresponsable de inteligencia artificial',
+        ],
+      },
+      { kind: 'title', speed: 'slow', text: 'ROCCO' },
+      { kind: 'message', speed: 'slow', lines: ["\u{00A9} 2026 Diego D'Onofrio"] },
+    ],
     chapter2CartridgePrompt: 'Insertar el cartucho Rocco 2 (aventuras en la consola)',
     chapter3CartridgePrompt: 'Insertar el cartucho Rocco capítulo 3',
     cartridgeOkButton: 'Ya lo he hecho',

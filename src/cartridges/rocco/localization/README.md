@@ -57,7 +57,7 @@ Catalogs cover:
 - Stan dialogue;
 - Pier interactions;
 - bait-shop interactions and toilet sequences;
-- Nether interactions and intercom dialogue;
+- Nether interactions, intercom dialogue, and final-screen credits;
 - defeat and restart text.
 
 ## Dialogue ownership

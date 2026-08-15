@@ -80,15 +80,9 @@ describe('Nether Office final portal interaction', () => {
     expect(buttons.map((button) => button.label)).toEqual(['No lo tengo', 'Ya lo he hecho']);
     expect(firstMenu.backdropAlpha).toBe(1);
 
-    controller.handleGridMenu({
-      kind: 'grid-menu',
-      definitionId: NETHER_OFFICE_CARTRIDGE_MENU_ID,
-      interaction: 'button',
-      buttonId: NETHER_OFFICE_CARTRIDGE_READY_BUTTON_ID,
-      items: [],
-    });
-    controller.update(1000);
+    // El menú de cartucho ya no se usa directamente porque la conversación del cartucho faltante maneja todo el flujo
+    controller.update();
 
-    expect(openMenu).toHaveBeenCalledTimes(2);
+    expect(openMenu).toHaveBeenCalledTimes(1);
   });
 });

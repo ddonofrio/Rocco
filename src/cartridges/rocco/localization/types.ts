@@ -369,6 +369,11 @@ export interface RoccoTextCatalog {
       chapter3CartridgePrompt: string;
       cartridgeOkButton: string;
       missingCartridgeButton: string;
+      roccoMissingCartridgeQuestion: string;
+      guyspriteCartridgeExplanation: string;
+      roccoSecondQuestion: string;
+      guyspriteMicrowavePizzas: string;
+      roccoAgrees: string;
       secondMessageSecurityLine: string;
       incorrectLines: string[];
       nextLine: string;

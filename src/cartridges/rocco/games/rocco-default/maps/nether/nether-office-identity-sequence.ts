@@ -531,18 +531,19 @@ export class NetherOfficeIdentitySequenceController {
     this.updateMovement();
   }
 
-  handleAction(_activation: any): boolean {
-    return false;
+  handleAction(
+    activation: import('../../../../../../console/video/action-menu').RoccoActionMenuActivation,
+  ): boolean {
+    return this.finalInteraction.handleAction(activation);
   }
 
-  handleGridMenu(_activation: RoccoGridMenuActivation): boolean {
-    // No se usa en esta secuencia después de la conversación del cartucho faltante
-    return false;
+  handleGridMenu(activation: RoccoGridMenuActivation): boolean {
+    if (this.finalInteraction.handleGridMenu(activation)) return true;
+    return this.handleMenuActivation(activation);
   }
 
-  handleSceneClick(_action: RoccoSceneClickAction): CartridgeActionDisposition | void {
-    // El handler del cartucho faltante no se usa directamente aquí
-    const finalDisposition = this.finalInteraction.handleSceneClick(_action);
+  handleSceneClick(_activation: RoccoSceneClickAction): CartridgeActionDisposition | void {
+    const finalDisposition = this.finalInteraction.handleSceneClick(_activation);
     if (finalDisposition) return finalDisposition;
     if (!this.isActive) {
       return undefined;

@@ -94,6 +94,9 @@ export class RoccoViewportHost {
   private readonly onWindowResize = (): void => {
     this.resize();
   };
+  private readonly onOrientationChange = (): void => {
+    this.resize();
+  };
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (this.scaleMode !== 'cover' || event.button !== 0) {
       return;
@@ -247,6 +250,9 @@ export class RoccoViewportHost {
     this.cursorHost.mount();
     this.rootElement.append(this.hostElement);
     window.addEventListener('resize', this.onWindowResize);
+    addEventListener('orientationchange', this.onOrientationChange);
+    globalThis.visualViewport?.addEventListener('resize', this.onWindowResize);
+    screen.orientation?.addEventListener('change', this.onOrientationChange);
 
     this.mounted = true;
     this.resize();
@@ -258,6 +264,9 @@ export class RoccoViewportHost {
     }
 
     window.removeEventListener('resize', this.onWindowResize);
+    removeEventListener('orientationchange', this.onOrientationChange);
+    globalThis.visualViewport?.removeEventListener('resize', this.onWindowResize);
+    screen.orientation?.removeEventListener('change', this.onOrientationChange);
     this.cursorHost.unmount();
     this.displayProfileRenderer.unmount();
     this.buildBadgeRenderer.unmount();
@@ -275,16 +284,9 @@ export class RoccoViewportHost {
     const viewportWidth = Math.max(1, this.hostElement.clientWidth || window.innerWidth || 1);
     const viewportHeight = Math.max(1, this.hostElement.clientHeight || window.innerHeight || 1);
 
-    const viewportAspect = viewportWidth / viewportHeight;
-    const designAspect = this.designWidth / this.designHeight;
+    const resolvedScaleMode = this.explicitScaleMode ?? 'contain';
 
-    const autoScaleMode = viewportAspect < designAspect ? 'cover' : 'contain';
-
-    if (this.scaleMode === 'cover' && autoScaleMode === 'contain') {
-      this.panX = 0;
-      this.panY = 0;
-    }
-    this.scaleMode = this.explicitScaleMode ?? autoScaleMode;
+    this.scaleMode = resolvedScaleMode;
 
     let scale: number;
     let renderWidth: number;

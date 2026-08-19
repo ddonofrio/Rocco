@@ -13,8 +13,10 @@ The viewport subsystem hosts the entire console inside the browser window. It ow
 
 - Creates the fixed full-window host element and the scaled stage element.
 - Maintains `RoccoViewportMetrics` with viewport size, design size, scale, render size, and offsets.
-- Applies `contain` or `cover` scaling for the fixed `960 x 540` design resolution.
-- Supports drag panning while `cover` mode is active so tall mobile viewports can explore the widened stage safely across remounts.
+- Applies `contain` scaling by default for the fixed `960 x 540` design resolution, keeping the complete stage visible across viewport proportions.
+- Supports explicit `cover` scaling when a caller needs a stage that fills the viewport and can be panned.
+- Supports drag panning while explicit `cover` mode is active so a widened stage remains safely explorable across remounts.
+- Recalculates the stage after browser resize, visual viewport resize, and screen orientation changes.
 - Forwards metrics to `RoccoDisplayProfileRenderer` and `RoccoCursorHost`.
 - Owns cursor action, move, leave, and attachment plumbing used by `RoccoInputHandler`.
 

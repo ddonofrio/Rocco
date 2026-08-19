@@ -149,6 +149,7 @@ describe('RoccoViewportHost display profile integration', () => {
       root,
       designWidth: 960,
       designHeight: 540,
+      scaleMode: 'cover',
     });
 
     host.mount();

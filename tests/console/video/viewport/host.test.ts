@@ -50,7 +50,7 @@ describe('RoccoViewportHost', () => {
     host.unmount();
   });
 
-  it('uses cover mode when viewport is narrower than design aspect', () => {
+  it('uses contain mode when viewport is narrower than design aspect', () => {
     setViewportSize(375, 812);
 
     const root = document.createElement('div');
@@ -65,12 +65,37 @@ describe('RoccoViewportHost', () => {
     host.mount();
 
     const metrics = host.getMetrics();
-    expect(metrics.scaleMode).toBe('cover');
-    expect(metrics.scale).toBeCloseTo(812 / 540, 5);
-    expect(metrics.renderWidth).toBeCloseTo(960 * (812 / 540), 5);
-    expect(metrics.renderHeight).toBeCloseTo(812, 5);
-    expect(metrics.offsetX).toBeCloseTo((375 - metrics.renderWidth) / 2, 5);
-    expect(metrics.offsetY).toBeCloseTo(0, 5);
+    expect(metrics.scaleMode).toBe('contain');
+    expect(metrics.scale).toBeCloseTo(375 / 960, 5);
+    expect(metrics.renderWidth).toBeCloseTo(375, 5);
+    expect(metrics.renderHeight).toBeCloseTo(540 * (375 / 960), 5);
+    expect(metrics.offsetX).toBeCloseTo(0, 5);
+    expect(metrics.offsetY).toBeCloseTo((812 - metrics.renderHeight) / 2, 5);
+
+    host.unmount();
+  });
+
+  it('recalculates the stage when the device orientation changes', () => {
+    setViewportSize(375, 812);
+
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    const host = new RoccoViewportHost({
+      root,
+      designWidth: 960,
+      designHeight: 540,
+    });
+
+    host.mount();
+    setViewportSize(812, 375);
+    dispatchEvent(new Event('orientationchange'));
+
+    const metrics = host.getMetrics();
+    expect(metrics.viewportWidth).toBe(812);
+    expect(metrics.viewportHeight).toBe(375);
+    expect(metrics.renderWidth).toBeCloseTo(960 * (375 / 540), 5);
+    expect(metrics.renderHeight).toBeCloseTo(375, 5);
 
     host.unmount();
   });
@@ -96,7 +121,7 @@ describe('RoccoViewportHost', () => {
     host.unmount();
   });
 
-  it('resets pan when switching from cover to contain', () => {
+  it('keeps explicit cover mode across viewport changes', () => {
     setViewportSize(375, 812);
 
     const root = document.createElement('div');
@@ -106,6 +131,7 @@ describe('RoccoViewportHost', () => {
       root,
       designWidth: 960,
       designHeight: 540,
+      scaleMode: 'cover',
     });
 
     host.mount();
@@ -117,7 +143,8 @@ describe('RoccoViewportHost', () => {
     host.resize();
 
     metrics = host.getMetrics();
-    expect(metrics.scaleMode).toBe('contain');
+    expect(metrics.scaleMode).toBe('cover');
+    expect(metrics.scale).toBeCloseTo(1280 / 960, 5);
     expect(metrics.offsetX).toBeCloseTo(0, 5);
     expect(metrics.offsetY).toBeCloseTo(0, 5);
 
@@ -134,6 +161,7 @@ describe('RoccoViewportHost', () => {
       root,
       designWidth: 960,
       designHeight: 540,
+      scaleMode: 'cover',
     });
 
     host.mount();
@@ -182,6 +210,7 @@ describe('RoccoViewportHost', () => {
       root,
       designWidth: 960,
       designHeight: 540,
+      scaleMode: 'cover',
       onCursorMove: () => {},
     });
 
@@ -239,7 +268,7 @@ describe('RoccoViewportHost', () => {
 
     const pointerDown = new PointerEvent('pointerdown', {
       clientX: 100,
-      clientY: 100,
+      clientY: 350,
       button: 0,
       pointerId: 1,
     });
@@ -247,7 +276,7 @@ describe('RoccoViewportHost', () => {
 
     const pointerUp = new PointerEvent('pointerup', {
       clientX: 100,
-      clientY: 100,
+      clientY: 350,
       pointerId: 1,
     });
     hostElement.dispatchEvent(pointerUp);
@@ -267,6 +296,7 @@ describe('RoccoViewportHost', () => {
       root,
       designWidth: 960,
       designHeight: 540,
+      scaleMode: 'cover',
     });
     const hostElement = host.getRootElement();
     const addEventListenerSpy = vi.spyOn(hostElement, 'addEventListener');
